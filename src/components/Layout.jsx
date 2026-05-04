@@ -5,19 +5,17 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const esAdmin = usuario.rol === 'admin'
 
   const navItems = [
-    { id: 'dashboard', icon: '◉', label: 'Inicio' },
+    { id: 'dashboard',  icon: '◉', label: 'Inicio' },
     { id: 'inventario', icon: '▤', label: 'Inventario' },
     ...(esAdmin ? [
-      { id: 'categorias', icon: '◈', label: 'Categorías' },
       { id: 'usuarios', icon: '◎', label: 'Usuarios' },
     ] : [])
   ]
 
   const titulos = {
-    dashboard: 'Inicio',
+    dashboard:  'Inicio',
     inventario: 'Inventario de Bienes',
-    categorias: 'Categorías',
-    usuarios: 'Gestión de Usuarios'
+    usuarios:   'Gestión de Usuarios',
   }
 
   return (

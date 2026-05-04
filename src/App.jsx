@@ -1,12 +1,25 @@
 import { useState } from 'react'
-import Login from './pages/Login'
 import Layout from './components/Layout'
+import Login from './pages/Login'
+import Inventario from './pages/Inventario'
+import Dashboard from './pages/Dashboard'
 
-function App() {
+export default function App() {
   const [usuario, setUsuario] = useState(null)
   const [pagina, setPagina] = useState('dashboard')
 
-  if (!usuario) return <Login onLogin={setUsuario} />
+  if (!usuario) {
+    return <Login onLogin={setUsuario} />
+  }
+
+  const renderPagina = () => {
+    switch (pagina) {
+      case 'inventario': return <Inventario />
+      case 'dashboard':  return <Dashboard usuario={usuario} />
+      // agrega más páginas aquí
+      default:           return <Dashboard usuario={usuario} />
+    }
+  }
 
   return (
     <Layout
@@ -15,9 +28,7 @@ function App() {
       paginaActual={pagina}
       setPagina={setPagina}
     >
-      <p>Página: {pagina}</p>
+      {renderPagina()}
     </Layout>
   )
 }
-
-export default App

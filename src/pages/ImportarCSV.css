@@ -1,0 +1,300 @@
+/* ── ImportarCSV.css ─────────────────────────────────────────────────── */
+/* Paleta base: azul #3b82f6, bordes #e5e7eb, border-radius 8–12px        */
+
+.importar-wrap {
+  margin-top: 1rem;
+}
+
+/* ── Drop Zone ─────────────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: #fafafa;
+}
+.drop-zone:hover,
+.drop-zone.dragging {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.drop-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+.drop-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 0.25rem;
+}
+.drop-sub {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem;
+}
+.drop-formats {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.drop-error {
+  margin-top: 1rem;
+  color: #ef4444;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ── Preview Panel ─────────────────────────────────────────────────────── */
+.preview-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.2rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.preview-title {
+  font-size: 0.9rem;
+  color: #374151;
+}
+.preview-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+/* Aviso categorías desconocidas */
+.cats-aviso {
+  background: #fffbeb;
+  border-bottom: 1px solid #fde68a;
+  padding: 0.9rem 1.2rem;
+}
+.cats-aviso-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #92400e;
+  margin: 0 0 0.6rem;
+}
+.cat-map-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+.cat-map-orig {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #b45309;
+  font-family: monospace;
+  background: #fef3c7;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.cat-map-arrow {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+.cat-map-select {
+  font-size: 0.82rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: #374151;
+  background: white;
+  cursor: pointer;
+}
+
+/* Opciones duplicados */
+.dup-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1.2rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.dup-label {
+  font-size: 0.82rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+.dup-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: #374151;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.15s;
+  user-select: none;
+}
+.dup-opt input { display: none; }
+.dup-opt.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+.dup-opt:hover:not(.active) { background: #f3f4f6; }
+
+/* Tabla preview */
+.preview-table-wrap {
+  overflow-x: auto;
+  border-bottom: 1px solid #e5e7eb;
+}
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.preview-table thead tr {
+  background: #f3f4f6;
+}
+.preview-table th {
+  padding: 0.55rem 0.9rem;
+  text-align: left;
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  border-bottom: 1px solid #e5e7eb;
+}
+.preview-table td {
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  white-space: nowrap;
+}
+.preview-table tr.fila-dup td {
+  background: #fffbeb;
+}
+.preview-table tr:last-child td {
+  border-bottom: none;
+}
+.td-num { color: #9ca3af; text-align: right; width: 32px; }
+.badge-dup {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 600;
+}
+.badge-nuevo {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 600;
+}
+.preview-mas {
+  font-size: 0.78rem;
+  color: #9ca3af;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Acciones preview */
+.preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0.9rem 1.2rem;
+  background: #f8fafc;
+}
+
+/* ── Importando ────────────────────────────────────────────────────────── */
+.importando-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+/* ── Resultado ─────────────────────────────────────────────────────────── */
+.resultado-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+.resultado-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.resultado-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 1.5rem;
+}
+.resultado-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1rem;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+.stat-num {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-lbl {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stat-ok .stat-num  { color: #16a34a; }
+.stat-skip .stat-num { color: #d97706; }
+.stat-err .stat-num  { color: #ef4444; }
+
+.errores-lista {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  max-height: 160px;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+.errores-titulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b91c1c;
+  margin: 0 0 0.4rem;
+}
+.error-item {
+  font-size: 0.78rem;
+  color: #991b1b;
+  margin: 0.15rem 0;
+  font-family: monospace;
+}
