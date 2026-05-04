@@ -356,7 +356,7 @@ export default function Inventario() {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="btn-import" onClick={exportarCSV}>📤 Exportar CSV</button>
           <button className="btn-import" onClick={() => setModalImportar(true)}>📥 Importar CSV</button>
-          <button className="btn-add" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
+          <button className="btn-import" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
             {mostrarForm && !editandoId ? '✕ Cancelar' : '+ Agregar bien'}
           </button>
         </div>
