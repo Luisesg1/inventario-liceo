@@ -707,3 +707,87 @@ tr.fila-editando td { background: #fffbeb; }
   .detalle-grid-3 { grid-template-columns: 1fr 1fr; }
   .detalle-campo strong { font-size: 0.82rem; }
 }
+
+/* ── Drag & Drop + Pin categorías ────────────────────── */
+
+/* Handle de arrastre */
+.cat-drag-handle {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 13px;
+  color: #d1d5db;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.cat-card:hover .cat-drag-handle { opacity: 1; }
+.cat-card:active .cat-drag-handle { cursor: grabbing; }
+
+/* Estado arrastrando */
+.cat-dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+  border-style: dashed !important;
+}
+
+/* Estado objetivo drop */
+.cat-dragover {
+  border-color: #6366f1 !important;
+  background: #eef2ff !important;
+  transform: scale(1.03);
+  box-shadow: 0 0 0 2px #6366f1;
+}
+
+/* Tarjeta fijada */
+.cat-pinned {
+  border-color: #fbbf24 !important;
+  background: #fffbeb;
+}
+.cat-pinned .cat-name  { color: #92400e; }
+.cat-pinned .cat-count { color: #b45309; }
+.cat-pinned.active {
+  border-color: #f59e0b !important;
+  background: #fef3c7;
+}
+
+/* Tarjeta "Todos" siempre fija */
+.cat-pinned-fixed {
+  border-color: #bfdbfe;
+}
+
+/* Badge pin visible en tarjeta fijada — esquina superior derecha */
+.cat-pin-badge {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+/* Botón pin en cat-actions */
+.btn-pin-cat {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.btn-pin-cat:hover { background: #fef9c3; }
+
+/* Separador visual entre pinned y no pinned */
+.cats-grid {
+  position: relative;
+}
+
+/* Animación suave al reordenar */
+.cat-card {
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s, opacity 0.15s;
+}
+
+@media (max-width: 768px) {
+  /* Handle más visible en móvil */
+  .cat-drag-handle { opacity: 0.35; }
+}

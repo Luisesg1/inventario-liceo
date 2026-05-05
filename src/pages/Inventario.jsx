@@ -23,7 +23,10 @@ const formVacioComp = {
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
 }
 
-export default function Inventario() {
+export default function Inventario({ usuario }) {
+  const esAdmin  = usuario?.rol === 'admin'
+  const esEditor = usuario?.rol === 'editor'
+  const puedeEditar = esAdmin || esEditor
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
   const [cargando, setCargando]       = useState(true)
@@ -50,6 +53,13 @@ export default function Inventario() {
   const [menuExportar, setMenuExportar] = useState(false)
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
+  // Drag & drop + pin
+  const [catOrder, setCatOrder]     = useState([]) // orden de ids
+  const [pinnedCats, setPinnedCats] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('inv_pinned') || '[]') } catch { return [] }
+  })
+  const [dragOver, setDragOver]     = useState(null) // id sobre el que se arrastra
+  const [dragging, setDragging]     = useState(null) // id que se arrastra
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -61,8 +71,58 @@ export default function Inventario() {
     ])
     setCategorias(cats ?? [])
     setBienes(bs ?? [])
+    // Inicializar orden desde localStorage o por defecto
+    const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
+    const ids = (cats ?? []).map(c => c.id)
+    setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
     setCargando(false)
   }
+
+  // Orden final: pinned primero, luego el resto según catOrder
+  const categoriasOrdenadas = () => {
+    const pinned = catOrder.filter(id => pinnedCats.includes(id))
+    const rest   = catOrder.filter(id => !pinnedCats.includes(id))
+    const ordered = [...pinned, ...rest]
+    return ordered.map(id => categorias.find(c => c.id === id)).filter(Boolean)
+  }
+
+  const togglePin = (id, e) => {
+    e.stopPropagation()
+    setPinnedCats(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      localStorage.setItem('inv_pinned', JSON.stringify(next))
+      return next
+    })
+  }
+
+  const onDragStart = (e, id) => {
+    setDragging(id)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+  }
+  const onDragOver = (e, id) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (id !== dragging) setDragOver(id)
+  }
+  const onDrop = (e, targetId) => {
+    e.preventDefault()
+    const srcId = e.dataTransfer.getData('text/plain') || dragging
+    if (!srcId || srcId === targetId) { setDragging(null); setDragOver(null); return }
+    setCatOrder(prev => {
+      const next = [...prev]
+      const from = next.indexOf(srcId)
+      const to   = next.indexOf(targetId)
+      if (from === -1 || to === -1) return prev
+      next.splice(from, 1)
+      next.splice(to, 0, srcId)
+      localStorage.setItem('inv_cat_order', JSON.stringify(next))
+      return next
+    })
+    setDragging(null)
+    setDragOver(null)
+  }
+  const onDragEnd = () => { setDragging(null); setDragOver(null) }
 
   const bienCount   = (id) => id === 'todos' ? bienes.length : bienes.filter(b => b.categoria === id).length
   const filtradosBase = catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
@@ -515,26 +575,53 @@ export default function Inventario() {
 
         {catsVisible && (
         <div className="cats-grid">
-          <div className={`cat-card ${catActual === 'todos' ? 'active' : ''}`} onClick={() => { seleccionarCat('todos'); if (window.innerWidth < 768) setCatsVisible(false) }}>
+          {/* Tarjeta "Todos" — fija siempre al inicio */}
+          <div
+            className={`cat-card ${catActual === 'todos' ? 'active' : ''} cat-pinned-fixed`}
+            onClick={() => { seleccionarCat('todos'); if (window.innerWidth < 768) setCatsVisible(false) }}
+          >
             <span className="cat-icon">◉</span>
             <span className="cat-name">Todos</span>
             <span className="cat-count">{bienes.length} bien{bienes.length !== 1 ? 'es' : ''}</span>
           </div>
-          {categorias.map(cat => (
-            <div key={cat.id} className={`cat-card ${catActual === cat.id ? 'active' : ''}`} onClick={() => { seleccionarCat(cat.id); if (window.innerWidth < 768) setCatsVisible(false) }}>
-              <div className="cat-actions">
-                <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>
-                <button className="btn-del-cat"  title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>
+
+          {categoriasOrdenadas().map(cat => {
+            const isPinned   = pinnedCats.includes(cat.id)
+            const isDragging = dragging === cat.id
+            const isOver     = dragOver === cat.id
+            return (
+              <div
+                key={cat.id}
+                data-catid={cat.id}
+                className={`cat-card ${catActual === cat.id ? 'active' : ''} ${isPinned ? 'cat-pinned' : ''} ${isDragging ? 'cat-dragging' : ''} ${isOver ? 'cat-dragover' : ''}`}
+                draggable
+                onDragStart={e => onDragStart(e, cat.id)}
+                onDragOver={e => onDragOver(e, cat.id)}
+                onDrop={e => onDrop(e, cat.id)}
+                onDragEnd={onDragEnd}
+                onClick={() => { if (!dragging) { seleccionarCat(cat.id); if (window.innerWidth < 768) setCatsVisible(false) } }}
+              >
+                <div className="cat-actions">
+                  <button className="btn-pin-cat" title={isPinned ? 'Desfijar' : 'Fijar al inicio'} onClick={e => togglePin(cat.id, e)}>
+                    {isPinned ? '📌' : '📍'}
+                  </button>
+                  {esAdmin && <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>}
+                  {esAdmin && <button className="btn-del-cat" title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>}
+                </div>
+                <span className="cat-drag-handle" title="Arrastrar para reordenar">⠿</span>
+                <span className="cat-icon">{cat.icon}</span>
+                <span className="cat-name">{cat.label}</span>
+                <span className="cat-count">{bienCount(cat.id)} bien{bienCount(cat.id) !== 1 ? 'es' : ''}</span>
               </div>
-              <span className="cat-icon">{cat.icon}</span>
-              <span className="cat-name">{cat.label}</span>
-              <span className="cat-count">{bienCount(cat.id)} bien{bienCount(cat.id) !== 1 ? 'es' : ''}</span>
+            )
+          })}
+
+          {esAdmin && (
+            <div className="cat-card cat-nueva" onClick={abrirModalCat}>
+              <span className="cat-icon add-icon">＋</span>
+              <span className="cat-name">Nueva categoría</span>
             </div>
-          ))}
-          <div className="cat-card cat-nueva" onClick={abrirModalCat}>
-            <span className="cat-icon add-icon">＋</span>
-            <span className="cat-name">Nueva categoría</span>
-          </div>
+          )}
         </div>
         )}
       </div>
@@ -587,13 +674,17 @@ export default function Inventario() {
             )}
           </div>
 
-          <button className="btn-import" onClick={() => setModalImportar(true)}>
-            <span className="btn-label-full">📥 Importar CSV</span>
-            <span className="btn-label-short">📥</span>
-          </button>
-          <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
-            {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
-          </button>
+          {puedeEditar && (
+            <button className="btn-import" onClick={() => setModalImportar(true)}>
+              <span className="btn-label-full">📥 Importar CSV</span>
+              <span className="btn-label-short">📥</span>
+            </button>
+          )}
+          {puedeEditar && (
+            <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
+              {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1296,7 +1387,7 @@ export default function Inventario() {
       )}
 
       {/* Barra selección múltiple */}
-      {seleccion.size > 0 && (
+      {esAdmin && seleccion.size > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 14px', marginBottom: '0.75rem' }}>
           <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600 }}>
             {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
@@ -1315,22 +1406,24 @@ export default function Inventario() {
         <div className="empty">
           <div className="empty-icon">📭</div>
           <p>{hayFiltrosActivos ? 'No hay resultados para estos filtros' : 'No hay bienes registrados en esta categoría'}</p>
-          {!hayFiltrosActivos && <button className="btn-add" style={{ marginTop: '1rem' }} onClick={abrirFormNuevo}>+ Agregar el primer bien</button>}
+          {!hayFiltrosActivos && puedeEditar && <button className="btn-add" style={{ marginTop: '1rem' }} onClick={abrirFormNuevo}>+ Agregar el primer bien</button>}
         </div>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th style={{ width: '36px' }}>
-                  <input
-                    type="checkbox"
-                    checked={seleccion.size === filtrados.length && filtrados.length > 0}
-                    ref={el => { if (el) el.indeterminate = seleccion.size > 0 && seleccion.size < filtrados.length }}
-                    onChange={toggleTodos}
-                    style={{ cursor: 'pointer', width: '15px', height: '15px' }}
-                  />
-                </th>
+                {esAdmin && (
+                  <th style={{ width: '36px' }}>
+                    <input
+                      type="checkbox"
+                      checked={seleccion.size === filtrados.length && filtrados.length > 0}
+                      ref={el => { if (el) el.indeterminate = seleccion.size > 0 && seleccion.size < filtrados.length }}
+                      onChange={toggleTodos}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                    />
+                  </th>
+                )}
                 <th>Código</th>
                 <th>Nombre</th>
                 {catActual === 'todos'        && <th className="th-hide-mobile">Categoría</th>}
@@ -1344,14 +1437,16 @@ export default function Inventario() {
             <tbody>
               {filtrados.map(b => (
                 <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''}`}>
-                  <td style={{ textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={seleccion.has(b.id)}
-                      onChange={() => toggleSeleccion(b.id)}
-                      style={{ cursor: 'pointer', width: '15px', height: '15px' }}
-                    />
-                  </td>
+                  {esAdmin && (
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={seleccion.has(b.id)}
+                        onChange={() => toggleSeleccion(b.id)}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px' }}
+                      />
+                    </td>
+                  )}
                   <td className="td-code">{b.codigo}</td>
                   <td className="td-name">
                     {b.nombre}
@@ -1382,8 +1477,8 @@ export default function Inventario() {
                   <td>
                     <div className="acciones">
                       <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
-                      <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>
-                      <button className="btn-del"  onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>
+                      {puedeEditar && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
+                      {esAdmin && <button className="btn-del"  onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
                     </div>
                   </td>
                 </tr>

@@ -1,25 +1,30 @@
 import { useState } from 'react'
+import { supabase } from '../supabase'
 import './Login.css'
 
-// Usuarios de prueba hasta conectar Supabase
-const USUARIOS = [
-  { id: 1, nombre: 'Administrador', usuario: 'admin', pass: '1234', rol: 'admin' },
-  { id: 2, nombre: 'Juan Encargado', usuario: 'encargado', pass: '1234', rol: 'encargado' }
-]
-
 export default function Login({ onLogin }) {
-  const [usuario, setUsuario] = useState('')
+  const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault()
-    const found = USUARIOS.find(u => u.usuario === usuario && u.pass === pass)
-    if (found) {
-      onLogin(found)
-    } else {
-      setError('Usuario o contraseña incorrectos')
+    setError('')
+    setCargando(true)
+
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass
+    })
+
+    if (authError) {
+      setError('Correo o contraseña incorrectos')
+      setCargando(false)
     }
+    // Si el login es exitoso, onAuthStateChange en App.jsx
+    // captura la sesión y setea el usuario automáticamente.
+    // No hace falta llamar onLogin() aquí.
   }
 
   return (
@@ -31,13 +36,14 @@ export default function Login({ onLogin }) {
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label>Usuario</label>
+            <label>Correo</label>
             <input
-              type="text"
-              value={usuario}
-              onChange={e => setUsuario(e.target.value)}
-              placeholder="usuario"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="correo@liceo.cl"
               autoFocus
+              required
             />
           </div>
           <div className="form-group">
@@ -47,15 +53,16 @@ export default function Login({ onLogin }) {
               value={pass}
               onChange={e => setPass(e.target.value)}
               placeholder="••••••"
+              required
             />
           </div>
 
           {error && <p className="error">{error}</p>}
 
-          <button type="submit" className="btn-login">Ingresar</button>
+          <button type="submit" className="btn-login" disabled={cargando}>
+            {cargando ? 'Ingresando...' : 'Ingresar'}
+          </button>
         </form>
-
-        <p className="hint">admin / 1234 &nbsp;·&nbsp; encargado / 1234</p>
       </div>
     </div>
   )
