@@ -47,6 +47,9 @@ export default function Inventario() {
   const [filtroEstado, setFiltroEstado] = useState('')
   const [seleccion, setSeleccion]     = useState(new Set()) // ids seleccionados
   const [filtros, setFiltros]         = useState({}) // filtros dinámicos { campo: valor }
+  const [menuExportar, setMenuExportar] = useState(false)
+  const [catsVisible, setCatsVisible] = useState(true)
+  const [filtrosOpen, setFiltrosOpen] = useState(false)
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -83,38 +86,194 @@ export default function Inventario() {
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
+
+  // ── Datos y columnas para exportar ───────────────────────────────────────
+  const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
+  const COLUMNAS_EXPORT = [
+    'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
+    'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
+    'memoria','tipo_almacenamiento','sistema_operativo',
+    'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
+    'licencia_office','off_version','off_proveedor','off_factura','off_fecha_factura','off_orden',
+    'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
+  ]
+  const getCatLabel2 = () => catActual === 'todos' ? 'todos' : (categorias.find(c => c.id === catActual)?.label ?? catActual)
+  const nombreArchivo = (ext) => `inventario_${getCatLabel2().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.${ext}`
+
   const exportarCSV = () => {
-    const datos = catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
-    if (!datos.length) { setAviso('No hay bienes para exportar en esta categoría.'); return }
-
-    const columnas = [
-      'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
-      'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
-      'memoria','tipo_almacenamiento','sistema_operativo',
-      'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
-      'licencia_office','off_version','off_proveedor','off_factura','off_fecha_factura','off_orden',
-      'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
-    ]
-
-    const escapar = (v) => {
-      if (v === null || v === undefined) return ''
-      const s = String(v)
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
-    }
-
-    const filas = [
-      columnas.join(','),
-      ...datos.map(b => columnas.map(c => escapar(b[c])).join(',')),
-    ]
-
+    const datos = getDatosExportar()
+    if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const escapar = (v) => { if (v === null || v === undefined) return ''; const s = String(v); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s }
+    const filas = [COLUMNAS_EXPORT.join(','), ...datos.map(b => COLUMNAS_EXPORT.map(c => escapar(b[c])).join(','))]
     const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    const catLabel = catActual === 'todos' ? 'todos' : (categorias.find(c => c.id === catActual)?.label ?? catActual)
-    a.href = url
-    a.download = `inventario_${catLabel.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('csv'); a.click(); URL.revokeObjectURL(url)
+    setMenuExportar(false)
+  }
+
+  const exportarExcel = () => {
+    const datos = getDatosExportar()
+    if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const cargarYExportar = () => {
+      const wb = window.XLSX.utils.book_new()
+      const filas = [COLUMNAS_EXPORT, ...datos.map(b => COLUMNAS_EXPORT.map(c => b[c] ?? ''))]
+      const ws = window.XLSX.utils.aoa_to_sheet(filas)
+      // Estilo encabezado (ancho de columnas)
+      ws['!cols'] = COLUMNAS_EXPORT.map(() => ({ wch: 18 }))
+      window.XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
+      window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
+      setMenuExportar(false)
+    }
+    if (window.XLSX) { cargarYExportar(); return }
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    script.onload = cargarYExportar
+    script.onerror = () => setAviso('No se pudo cargar la librería de Excel.')
+    document.head.appendChild(script)
+  }
+
+  const exportarPDF = () => {
+    const datos = getDatosExportar()
+    if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const catLabel = getCatLabel2()
+    const fecha = new Date().toLocaleDateString('es-CL')
+    const cols = ['codigo','nombre','estado','ubicacion','responsable','marca','modelo','cpu','ram','sistema_operativo']
+    const headers = ['Código','Nombre','Estado','Ubicación','Responsable','Marca','Modelo','CPU','RAM','S.O.']
+
+    const filaColor = (estado) => {
+      if (estado === 'Bueno')   return '#dcfce7'
+      if (estado === 'Regular') return '#fef9c3'
+      if (estado === 'Malo')    return '#fee2e2'
+      if (estado === 'Baja')    return '#f3f4f6'
+      return '#ffffff'
+    }
+
+    const htmlContent = `
+      <html><head><meta charset="utf-8"><style>
+        body { font-family: Arial, sans-serif; font-size: 11px; color: #111; margin: 0; padding: 20px; }
+        h1 { font-size: 16px; margin: 0 0 4px 0; color: #1e3a8a; }
+        .sub { font-size: 11px; color: #6b7280; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #1e3a8a; color: white; padding: 6px 8px; text-align: left; font-size: 10px; }
+        td { padding: 5px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
+        tr:nth-child(even) td { background: #f9fafb; }
+        .badge { display:inline-block; padding: 2px 7px; border-radius: 20px; font-size: 9px; font-weight: 700; }
+      </style></head><body>
+        <h1>📦 Inventario de Bienes — ${catLabel}</h1>
+        <p class="sub">Generado el ${fecha} · ${datos.length} registro${datos.length !== 1 ? 's' : ''}</p>
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>
+            ${datos.map(b => `<tr>${cols.map((c,i) => {
+              const val = b[c] ?? '—'
+              if (c === 'estado') return `<td><span class="badge" style="background:${filaColor(val)};color:#374151">${val}</span></td>`
+              return `<td>${val}</td>`
+            }).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+      </body></html>`
+
+    const cargarYExportar = () => {
+      const opt = {
+        margin: [10,8,10,8],
+        filename: nombreArchivo('pdf'),
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+      }
+      const el = document.createElement('div')
+      el.innerHTML = htmlContent
+      document.body.appendChild(el)
+      window.html2pdf().set(opt).from(el).save().then(() => { document.body.removeChild(el) })
+      setMenuExportar(false)
+    }
+    if (window.html2pdf) { cargarYExportar(); return }
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+    script.onload = cargarYExportar
+    script.onerror = () => setAviso('No se pudo cargar la librería de PDF.')
+    document.head.appendChild(script)
+  }
+
+  const exportarWord = () => {
+    const datos = getDatosExportar()
+    if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const catLabel = getCatLabel2()
+    const fecha = new Date().toLocaleDateString('es-CL')
+    const cols = ['codigo','nombre','estado','ubicacion','responsable','marca','modelo','cpu','ram','sistema_operativo']
+    const headers = ['Código','Nombre','Estado','Ubicación','Responsable','Marca','Modelo','CPU','RAM','S.O.']
+    const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+      <head><meta charset="utf-8"><style>
+        body { font-family: Calibri, sans-serif; font-size: 10pt; }
+        h1 { font-size: 14pt; color: #1e3a8a; }
+        table { border-collapse: collapse; width: 100%; }
+        th { background: #1e3a8a; color: white; padding: 5px 8px; font-size: 9pt; border: 1px solid #ccc; }
+        td { padding: 4px 8px; font-size: 9pt; border: 1px solid #ddd; }
+        tr:nth-child(even) td { background: #f0f4ff; }
+      </style></head><body>
+        <h1>Inventario de Bienes — ${catLabel}</h1>
+        <p style="color:#6b7280;font-size:9pt">Generado el ${fecha} · ${datos.length} registros</p>
+        <table>
+          <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+          <tbody>${datos.map(b => `<tr>${cols.map(c => `<td>${b[c] ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </body></html>`
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('doc'); a.click(); URL.revokeObjectURL(url)
+    setMenuExportar(false)
+  }
+
+  const exportarImagen = () => {
+    const datos = getDatosExportar()
+    if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const catLabel = getCatLabel2()
+    const fecha = new Date().toLocaleDateString('es-CL')
+    const cols = ['codigo','nombre','estado','ubicacion','marca','modelo','cpu','ram']
+    const headers = ['Código','Nombre','Estado','Ubicación','Marca','Modelo','CPU','RAM']
+    const FILA_H = 32, HEAD_H = 80, PAD = 24
+    const colW = [90,160,70,120,90,110,130,70]
+    const totalW = colW.reduce((a,b)=>a+b,0) + PAD*2
+    const totalH = HEAD_H + 36 + FILA_H * datos.length + PAD*2
+
+    const canvas = document.createElement('canvas')
+    canvas.width = totalW; canvas.height = totalH
+    const ctx = canvas.getContext('2d')
+
+    ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,totalW,totalH)
+    ctx.fillStyle = '#1e3a8a'; ctx.fillRect(0,0,totalW,60)
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 18px Arial'
+    ctx.fillText(`Inventario — ${catLabel}`, PAD, 36)
+    ctx.font = '12px Arial'; ctx.fillStyle = '#bfdbfe'
+    ctx.fillText(`${fecha}  ·  ${datos.length} registros`, PAD, 52)
+
+    let x = PAD, y = HEAD_H
+    ctx.fillStyle = '#1e40af'
+    ctx.fillRect(0, y, totalW, 36)
+    headers.forEach((h, i) => {
+      ctx.fillStyle = '#e0e7ff'; ctx.font = 'bold 11px Arial'
+      ctx.fillText(h, x+6, y+22); x += colW[i]
+    })
+
+    datos.forEach((b, ri) => {
+      y = HEAD_H + 36 + ri * FILA_H
+      ctx.fillStyle = ri % 2 === 0 ? '#ffffff' : '#f0f4ff'
+      ctx.fillRect(0, y, totalW, FILA_H)
+      x = PAD
+      const vals = cols.map(c => String(b[c] ?? '—').slice(0,18))
+      vals.forEach((v, i) => {
+        ctx.fillStyle = '#111827'; ctx.font = '10px Arial'
+        ctx.fillText(v, x+6, y+19); x += colW[i]
+      })
+      ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 0.5
+      ctx.beginPath(); ctx.moveTo(0, y+FILA_H); ctx.lineTo(totalW, y+FILA_H); ctx.stroke()
+    })
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('png'); a.click(); URL.revokeObjectURL(url)
+    })
+    setMenuExportar(false)
   }
 
   // ── Categorías ────────────────────────────────────────
@@ -316,6 +475,24 @@ export default function Inventario() {
     )
   }
 
+  const descargarPDF = () => {
+    const el = document.getElementById('detalle-pdf-content')
+    if (!el || !verDetalle) return
+    // Ocultar botones durante la captura
+    const btns = el.querySelectorAll('button')
+    btns.forEach(b => { b.style.visibility = 'hidden' })
+    const opt = {
+      margin:      [10, 10, 10, 10],
+      filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
+      image:       { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    }
+    window.html2pdf().set(opt).from(el).save().then(() => {
+      btns.forEach(b => { b.style.visibility = '' })
+    })
+  }
+
   if (cargando) return (
     <div className="cargando">
       <div className="spinner"></div>
@@ -326,165 +503,189 @@ export default function Inventario() {
   return (
     <div className="inv">
 
-      {/* Grilla categorías */}
-      <div className="cats-grid">
-        <div className={`cat-card ${catActual === 'todos' ? 'active' : ''}`} onClick={() => seleccionarCat('todos')}>
-          <span className="cat-icon">◉</span>
-          <span className="cat-name">Todos</span>
-          <span className="cat-count">{bienes.length} bien{bienes.length !== 1 ? 'es' : ''}</span>
-        </div>
-        {categorias.map(cat => (
-          <div key={cat.id} className={`cat-card ${catActual === cat.id ? 'active' : ''}`} onClick={() => seleccionarCat(cat.id)}>
-            <div className="cat-actions">
-              <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>
-              <button className="btn-del-cat"  title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>
-            </div>
-            <span className="cat-icon">{cat.icon}</span>
-            <span className="cat-name">{cat.label}</span>
-            <span className="cat-count">{bienCount(cat.id)} bien{bienCount(cat.id) !== 1 ? 'es' : ''}</span>
+      {/* Grilla categorías con toggle */}
+      <div className="cats-section">
+        <button className="cats-toggle" onClick={() => setCatsVisible(v => !v)}>
+          <span className="cats-toggle-label">
+            {catInfo ? `${catInfo.icon} ${catInfo.label}` : '◉ Todos'}
+            <span className="cats-toggle-count">({filtrados.length})</span>
+          </span>
+          <span className="cats-toggle-arrow">{catsVisible ? '▲' : '▼'} Categorías</span>
+        </button>
+
+        {catsVisible && (
+        <div className="cats-grid">
+          <div className={`cat-card ${catActual === 'todos' ? 'active' : ''}`} onClick={() => { seleccionarCat('todos'); if (window.innerWidth < 768) setCatsVisible(false) }}>
+            <span className="cat-icon">◉</span>
+            <span className="cat-name">Todos</span>
+            <span className="cat-count">{bienes.length} bien{bienes.length !== 1 ? 'es' : ''}</span>
           </div>
-        ))}
-        <div className="cat-card cat-nueva" onClick={abrirModalCat}>
-          <span className="cat-icon add-icon">＋</span>
-          <span className="cat-name">Nueva categoría</span>
+          {categorias.map(cat => (
+            <div key={cat.id} className={`cat-card ${catActual === cat.id ? 'active' : ''}`} onClick={() => { seleccionarCat(cat.id); if (window.innerWidth < 768) setCatsVisible(false) }}>
+              <div className="cat-actions">
+                <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>
+                <button className="btn-del-cat"  title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>
+              </div>
+              <span className="cat-icon">{cat.icon}</span>
+              <span className="cat-name">{cat.label}</span>
+              <span className="cat-count">{bienCount(cat.id)} bien{bienCount(cat.id) !== 1 ? 'es' : ''}</span>
+            </div>
+          ))}
+          <div className="cat-card cat-nueva" onClick={abrirModalCat}>
+            <span className="cat-icon add-icon">＋</span>
+            <span className="cat-name">Nueva categoría</span>
+          </div>
         </div>
+        )}
       </div>
 
       {/* Cabecera */}
       <div className="section-header">
-        <span className="section-title">{catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})</span>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn-import" onClick={exportarCSV}>📤 Exportar CSV</button>
-          <button className="btn-import" onClick={() => setModalImportar(true)}>📥 Importar CSV</button>
-          <button className="btn-import" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
-            {mostrarForm && !editandoId ? '✕ Cancelar' : '+ Agregar bien'}
+        <span className="section-title section-title-desktop">{catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})</span>
+        <div className="section-actions">
+
+          {/* Botón exportar con dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button className="btn-import" onClick={() => setMenuExportar(v => !v)}>
+              📤 Exportar ▾
+            </button>
+            {menuExportar && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
+                  background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', overflow: 'hidden',
+                }}>
+                  <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                    Formato de exportación
+                  </p>
+                  {[
+                    { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas', fn: exportarCSV },
+                    { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',    fn: exportarExcel },
+                    { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',          fn: exportarPDF },
+                    { icon: '📝', label: 'Word',   desc: 'Documento .doc',           fn: exportarWord },
+                    { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',             fn: exportarImagen },
+                  ].map(({ icon, label, desc, fn }) => (
+                    <button key={label} onClick={fn} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                      padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          <button className="btn-import" onClick={() => setModalImportar(true)}>
+            <span className="btn-label-full">📥 Importar CSV</span>
+            <span className="btn-label-short">📥</span>
+          </button>
+          <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
+            {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
           </button>
         </div>
       </div>
 
       {/* Barra de búsqueda y filtros */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
-        {/* Fila 1: solo buscador */}
-        <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.9rem' }}>🔍</span>
-          <input
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar por nombre, código, marca, serie, ubicación..."
-            style={{ width: '100%', paddingLeft: '32px', paddingRight: '10px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none' }}
-          />
-          {busqueda && (
-            <button onClick={() => setBusqueda('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}>✕</button>
-          )}
-        </div>
+      {(() => {
+        const camposComp   = [
+          { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
+          { campo: 'ram', label: 'RAM' }, { campo: 'sistema_operativo', label: 'S.O.' },
+          { campo: 'ubicacion', label: 'Ubicación' },
+        ]
+        const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
+        const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
+        const campos = esComp(catActual) ? camposComp : catActual === 'todos' ? camposTodos : camposOtros
+        const filtrosActivos = Object.values(filtros).filter(Boolean).length + (filtroEstado ? 1 : 0)
 
-        {/* Fila 2: filtros dinámicos según categoría */}
-        {esComp(catActual) && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-              style={{ height: '32px', borderRadius: '8px', border: filtroEstado ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtroEstado ? '#eef2ff' : 'white', color: filtroEstado ? '#4338ca' : '#9ca3af', minWidth: '150px' }}>
-              <option value="">Todos los estados</option>
-              <option value="Bueno">✅ Bueno</option>
-              <option value="Regular">⚠️ Regular</option>
-              <option value="Malo">❌ Malo</option>
-              <option value="Baja">🗑 Baja</option>
-            </select>
-            {[
-              { campo: 'marca',            label: 'Marca' },
-              { campo: 'tipo',             label: 'Tipo' },
-              { campo: 'ram',              label: 'RAM' },
-              { campo: 'sistema_operativo',label: 'Sistema operativo' },
-              { campo: 'ubicacion',        label: 'Ubicación' },
-            ].map(({ campo, label }) => {
-              const opciones = unicos(campo)
-              if (opciones.length < 2) return null
-              return (
-                <select key={campo} value={filtros[campo] || ''}
-                  onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))}
-                  style={{ height: '32px', borderRadius: '8px', border: filtros[campo] ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtros[campo] ? '#eef2ff' : 'white', color: filtros[campo] ? '#4338ca' : '#9ca3af', minWidth: '130px' }}>
-                  <option value="">{label}</option>
-                  {opciones.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              )
-            })}
-            {hayFiltrosActivos && (
-              <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltros({}) }}
-                style={{ height: '32px', padding: '0 12px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                ✕ Limpiar
+        const selectStyle = (activo) => ({
+          height: '34px', borderRadius: '8px',
+          border: activo ? '1.5px solid #6366f1' : '1px solid #e5e7eb',
+          fontSize: '0.82rem', padding: '0 8px',
+          background: activo ? '#eef2ff' : 'white',
+          color: activo ? '#4338ca' : '#6b7280',
+          minWidth: '130px', flex: '1',
+        })
+
+        return (
+          <div className="filtros-zona">
+            {/* Fila buscador + botón filtros */}
+            <div className="filtros-top">
+              <div style={{ position: 'relative', flex: 1 }}>
+                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.9rem' }}>🔍</span>
+                <input
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, código, marca, serie, ubicación..."
+                  style={{ width: '100%', paddingLeft: '32px', paddingRight: busqueda ? '32px' : '10px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none' }}
+                />
+                {busqueda && (
+                  <button onClick={() => setBusqueda('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}>✕</button>
+                )}
+              </div>
+
+              {/* Botón filtros — siempre visible, en móvil abre panel */}
+              <button
+                className={`btn-filtros ${filtrosOpen ? 'active' : ''}`}
+                onClick={() => setFiltrosOpen(v => !v)}
+              >
+                <span>⚙</span>
+                <span className="btn-filtros-label">Filtros</span>
+                {filtrosActivos > 0 && <span className="filtros-badge">{filtrosActivos}</span>}
+                <span style={{ fontSize: '10px', marginLeft: '2px' }}>{filtrosOpen ? '▲' : '▼'}</span>
               </button>
+            </div>
+
+            {/* Panel de filtros: inline en desktop, dropdown en móvil */}
+            {filtrosOpen && (
+              <div className="filtros-panel">
+                <div className="filtros-panel-grid">
+                  <div className="filtros-field">
+                    <label>Estado</label>
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={selectStyle(!!filtroEstado)}>
+                      <option value="">Todos</option>
+                      <option value="Bueno">✅ Bueno</option>
+                      <option value="Regular">⚠️ Regular</option>
+                      <option value="Malo">❌ Malo</option>
+                      <option value="Baja">🗑 Baja</option>
+                    </select>
+                  </div>
+                  {campos.map(({ campo, label }) => {
+                    const opciones = unicos(campo)
+                    if (opciones.length < 2) return null
+                    return (
+                      <div key={campo} className="filtros-field">
+                        <label>{label}</label>
+                        <select value={filtros[campo] || ''} onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))} style={selectStyle(!!filtros[campo])}>
+                          <option value="">Todos</option>
+                          {opciones.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      </div>
+                    )
+                  })}
+                </div>
+                {hayFiltrosActivos && (
+                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltros({}) }}
+                    style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>
+                    ✕ Limpiar filtros
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
-
-        {!esComp(catActual) && catActual !== 'todos' && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-              style={{ height: '32px', borderRadius: '8px', border: filtroEstado ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtroEstado ? '#eef2ff' : 'white', color: filtroEstado ? '#4338ca' : '#9ca3af', minWidth: '150px' }}>
-              <option value="">Todos los estados</option>
-              <option value="Bueno">✅ Bueno</option>
-              <option value="Regular">⚠️ Regular</option>
-              <option value="Malo">❌ Malo</option>
-              <option value="Baja">🗑 Baja</option>
-            </select>
-            {[
-              { campo: 'ubicacion',  label: 'Ubicación' },
-              { campo: 'responsable',label: 'Responsable' },
-            ].map(({ campo, label }) => {
-              const opciones = unicos(campo)
-              if (opciones.length < 2) return null
-              return (
-                <select key={campo} value={filtros[campo] || ''}
-                  onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))}
-                  style={{ height: '32px', borderRadius: '8px', border: filtros[campo] ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtros[campo] ? '#eef2ff' : 'white', color: filtros[campo] ? '#4338ca' : '#9ca3af', minWidth: '130px' }}>
-                  <option value="">{label}</option>
-                  {opciones.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              )
-            })}
-            {hayFiltrosActivos && (
-              <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltros({}) }}
-                style={{ height: '32px', padding: '0 12px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                ✕ Limpiar
-              </button>
-            )}
-          </div>
-        )}
-
-        {catActual === 'todos' && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-              style={{ height: '32px', borderRadius: '8px', border: filtroEstado ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtroEstado ? '#eef2ff' : 'white', color: filtroEstado ? '#4338ca' : '#9ca3af', minWidth: '150px' }}>
-              <option value="">Todos los estados</option>
-              <option value="Bueno">✅ Bueno</option>
-              <option value="Regular">⚠️ Regular</option>
-              <option value="Malo">❌ Malo</option>
-              <option value="Baja">🗑 Baja</option>
-            </select>
-            {[
-              { campo: 'ubicacion',  label: 'Ubicación' },
-              { campo: 'responsable',label: 'Responsable' },
-              { campo: 'marca',      label: 'Marca' },
-            ].map(({ campo, label }) => {
-              const opciones = unicos(campo)
-              if (opciones.length < 2) return null
-              return (
-                <select key={campo} value={filtros[campo] || ''}
-                  onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))}
-                  style={{ height: '32px', borderRadius: '8px', border: filtros[campo] ? '1.5px solid #6366f1' : '1px solid #e5e7eb', fontSize: '0.82rem', padding: '0 8px', background: filtros[campo] ? '#eef2ff' : 'white', color: filtros[campo] ? '#4338ca' : '#9ca3af', minWidth: '130px' }}>
-                  <option value="">{label}</option>
-                  {opciones.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              )
-            })}
-            {hayFiltrosActivos && (
-              <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltros({}) }}
-                style={{ height: '32px', padding: '0 12px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                ✕ Limpiar
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+        )
+      })()}
 {/* Modal importar CSV */}
 {modalImportar && (
   <div className="modal-overlay" onClick={() => setModalImportar(false)}>
@@ -1132,11 +1333,11 @@ export default function Inventario() {
                 </th>
                 <th>Código</th>
                 <th>Nombre</th>
-                {catActual === 'todos'        && <th>Categoría</th>}
-                {catActual === 'computadores' && <><th>Tipo</th><th>Marca / Modelo</th><th>CPU</th><th>RAM</th><th>SO</th></>}
-                {catActual !== 'computadores' && <th>Cant.</th>}
+                {catActual === 'todos'        && <th className="th-hide-mobile">Categoría</th>}
+                {catActual === 'computadores' && <><th className="th-hide-mobile">Tipo</th><th className="th-hide-mobile">Marca / Modelo</th><th className="th-hide-mobile">CPU</th><th className="th-hide-mobile">RAM</th><th className="th-hide-mobile">SO</th></>}
+                {catActual !== 'computadores' && <th className="th-hide-mobile">Cant.</th>}
                 <th>Estado</th>
-                <th>Ubicación</th>
+                <th className="th-hide-mobile">Ubicación</th>
                 <th></th>
               </tr>
             </thead>
@@ -1155,23 +1356,29 @@ export default function Inventario() {
                   <td className="td-name">
                     {b.nombre}
                     {b.numero_serie && <div className="td-sub">S/N: {b.numero_serie}</div>}
+                    {/* Info extra visible solo en móvil */}
+                    <div className="td-mobile-extra">
+                      {b.ubicacion && <span>{b.ubicacion}</span>}
+                      {catActual === 'todos' && b.categoria && <span>{getCatLabel(b.categoria)}</span>}
+                      {catActual === 'computadores' && b.marca && <span>{b.marca}{b.modelo ? ` ${b.modelo}` : ''}</span>}
+                    </div>
                   </td>
-                  {catActual === 'todos'        && <td className="td-muted">{getCatLabel(b.categoria)}</td>}
+                  {catActual === 'todos'        && <td className="td-muted td-hide-mobile">{getCatLabel(b.categoria)}</td>}
                   {catActual === 'computadores' && (
                     <>
-                      <td className="td-muted">{b.tipo ?? '—'}</td>
-                      <td>
+                      <td className="td-muted td-hide-mobile">{b.tipo ?? '—'}</td>
+                      <td className="td-hide-mobile">
                         <span style={{ fontWeight: 600, fontSize: '13px' }}>{b.marca ?? '—'}</span>
                         {b.modelo && <div className="td-sub">{b.modelo}</div>}
                       </td>
-                      <td className="td-muted td-trunc">{b.cpu ?? '—'}</td>
-                      <td className="td-muted">{b.ram ?? '—'}</td>
-                      <td className="td-muted">{b.sistema_operativo ?? '—'}</td>
+                      <td className="td-muted td-trunc td-hide-mobile">{b.cpu ?? '—'}</td>
+                      <td className="td-muted td-hide-mobile">{b.ram ?? '—'}</td>
+                      <td className="td-muted td-hide-mobile">{b.sistema_operativo ?? '—'}</td>
                     </>
                   )}
-                  {catActual !== 'computadores' && <td>{b.cantidad}</td>}
+                  {catActual !== 'computadores' && <td className="td-hide-mobile">{b.cantidad}</td>}
                   <td><span className={`badge ${ESTADO_BADGE[b.estado] ?? ''}`}>{b.estado}</span></td>
-                  <td className="td-muted">{b.ubicacion}</td>
+                  <td className="td-muted td-hide-mobile">{b.ubicacion}</td>
                   <td>
                     <div className="acciones">
                       <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
@@ -1189,32 +1396,35 @@ export default function Inventario() {
       {/* Ficha de detalle — modal */}
       {verDetalle && (
         <div className="modal-overlay" onClick={() => setVerDetalle(null)}>
-          <div className="modal modal-importar" style={{ maxWidth: '900px', width: '95vw', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }} onClick={e => e.stopPropagation()}>
+          <div className="modal modal-detalle" onClick={e => e.stopPropagation()}>
+
+            <div id="detalle-pdf-content" style={{ background: '#ffffff' }}>
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.4rem' }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', color: '#111827' }}>{verDetalle.nombre}</p>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
+            <div className="detalle-header-modal">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{verDetalle.nombre}</p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="detalle-header-actions">
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
+                <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
               </div>
             </div>
 
             {/* Fila 1: Identificación + Asignación */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div className="detalle-seccion" style={{ margin: 0 }}>
+            <div className="detalle-grid-2">
+              <div className="detalle-seccion">
                 <p className="detalle-titulo">Identificación</p>
                 <div className="detalle-fila"><span>Código</span><strong>{verDetalle.codigo}</strong></div>
                 <div className="detalle-fila"><span>Categoría</span><strong>{getCatLabel(verDetalle.categoria)}</strong></div>
                 {!esComp(verDetalle.categoria) && <div className="detalle-fila"><span>Cantidad</span><strong>{verDetalle.cantidad}</strong></div>}
               </div>
-              <div className="detalle-seccion" style={{ margin: 0 }}>
+              <div className="detalle-seccion">
                 <p className="detalle-titulo">Asignación</p>
                 <div className="detalle-fila"><span>Ubicación</span><strong>{verDetalle.ubicacion || 'N/A'}</strong></div>
                 <div className="detalle-fila"><span>Responsable</span><strong>{verDetalle.responsable || 'N/A'}</strong></div>
@@ -1223,10 +1433,10 @@ export default function Inventario() {
 
             {esComp(verDetalle.categoria) && (<>
 
-              {/* Fila 2: Hardware */}
-              <div className="detalle-seccion" style={{ marginBottom: '1rem' }}>
+              {/* Hardware */}
+              <div className="detalle-seccion">
                 <p className="detalle-titulo">Hardware</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem 1.5rem' }}>
+                <div className="detalle-grid-3">
                   {[
                     ['Tipo', verDetalle.tipo],
                     ['Marca', verDetalle.marca],
@@ -1238,17 +1448,17 @@ export default function Inventario() {
                     ['Almacenamiento', verDetalle.tipo_almacenamiento ? (verDetalle.tipo_almacenamiento + ' ' + (verDetalle.memoria || '')).trim() : verDetalle.memoria],
                     ['Sistema operativo', verDetalle.sistema_operativo],
                   ].map(([label, val]) => (
-                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-                      <strong style={{ fontSize: '0.88rem', color: '#111827' }}>{val || 'N/A'}</strong>
+                    <div key={label} className="detalle-campo">
+                      <span>{label}</span>
+                      <strong>{val || 'N/A'}</strong>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Fila 3: Licencias Windows + Office lado a lado */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div className="detalle-seccion" style={{ margin: 0 }}>
+              {/* Licencias */}
+              <div className="detalle-grid-2">
+                <div className="detalle-seccion">
                   <p className="detalle-titulo">🪟 Licencia Windows</p>
                   <div className="detalle-fila"><span>Clave</span><strong className="mono-small">{verDetalle.licencia_windows || 'N/A'}</strong></div>
                   <div className="detalle-fila"><span>Versión</span><strong>{verDetalle.win_version || 'N/A'}</strong></div>
@@ -1257,7 +1467,7 @@ export default function Inventario() {
                   <div className="detalle-fila"><span>Fecha factura</span><strong>{verDetalle.win_fecha_factura || 'N/A'}</strong></div>
                   <div className="detalle-fila"><span>N° Orden</span><strong>{verDetalle.win_orden || 'N/A'}</strong></div>
                 </div>
-                <div className="detalle-seccion" style={{ margin: 0 }}>
+                <div className="detalle-seccion">
                   <p className="detalle-titulo">📊 Licencia Office</p>
                   <div className="detalle-fila"><span>Clave</span><strong className="mono-small">{verDetalle.licencia_office || 'N/A'}</strong></div>
                   <div className="detalle-fila"><span>Versión</span><strong>{verDetalle.off_version || 'N/A'}</strong></div>
@@ -1268,10 +1478,10 @@ export default function Inventario() {
                 </div>
               </div>
 
-              {/* Fila 4: Adquisición */}
-              <div className="detalle-seccion" style={{ marginBottom: '1rem' }}>
+              {/* Adquisición */}
+              <div className="detalle-seccion">
                 <p className="detalle-titulo">Adquisición</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem 1.5rem' }}>
+                <div className="detalle-grid-3">
                   {[
                     ['Fecha', verDetalle.fecha_adquisicion],
                     ['Proveedor', verDetalle.proveedor],
@@ -1280,9 +1490,9 @@ export default function Inventario() {
                     ['Fondo', verDetalle.fondo],
                     ['Garantía', verDetalle.garantia],
                   ].map(([label, val]) => (
-                    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <span style={{ fontSize: '0.72rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
-                      <strong style={{ fontSize: '0.88rem', color: '#111827' }}>{val || 'N/A'}</strong>
+                    <div key={label} className="detalle-campo">
+                      <span>{label}</span>
+                      <strong>{val || 'N/A'}</strong>
                     </div>
                   ))}
                 </div>
@@ -1295,6 +1505,7 @@ export default function Inventario() {
                 <p className="detalle-obs-texto">{verDetalle.obs}</p>
               </div>
             )}
+            </div>{/* fin detalle-pdf-content */}
           </div>
         </div>
       )}
