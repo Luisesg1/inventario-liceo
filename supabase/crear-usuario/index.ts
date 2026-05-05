@@ -1,6 +1,7 @@
 // supabase/functions/crear-usuario/index.ts
 // Edge Function para crear usuarios desde el frontend de forma segura.
 // Requiere que el solicitante esté autenticado y tenga rol 'admin'.
+// Usa inviteUserByEmail para que el usuario establezca su propia contraseña.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -49,47 +50,47 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Acceso denegado: solo los administradores pueden crear usuarios." }, 403);
     }
 
-    // ── 4. Leer y validar el body ──────────────────────────────────────────
+    // ── 4. Leer y validar el body (sin campo password) ─────────────────────
     const body = await req.json();
-    const { nombre, email, password, rol } = body as {
+    const { nombre, email, rol } = body as {
       nombre?: string;
       email?: string;
-      password?: string;
       rol?: string;
     };
 
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
-    if (!password)       return json({ error: "El campo 'password' es requerido." }, 400);
-    if (password.length < 6) return json({ error: "La contraseña debe tener al menos 6 caracteres." }, 400);
 
     const rolesValidos = ["admin", "editor", "encargado"];
     const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "encargado";
 
-    // ── 5. Cliente admin (service_role) para crear el auth user ───────────
+    // ── 5. Cliente admin (service_role) ────────────────────────────────────
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    const { data: nuevoAuth, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: email.trim(),
-      password,
-      email_confirm: true, // lo confirma automáticamente (sin email de verificación)
-    });
+    // ── 6. Enviar invitación por email (el usuario establece su contraseña) ─
+    const siteUrl = Deno.env.get("SITE_URL") ?? "";
+    const { data: inviteData, error: inviteError } =
+      await supabaseAdmin.auth.admin.inviteUserByEmail(email.trim(), {
+        data: { nombre: nombre.trim(), rol: rolFinal },
+        redirectTo: `${siteUrl}/set-password`,
+      });
 
-    if (createError || !nuevoAuth.user) {
-      // Supabase devuelve "User already registered" si el email ya existe
-      const msg = createError?.message ?? "Error desconocido al crear el usuario en Auth.";
+    if (inviteError || !inviteData.user) {
+      const msg = inviteError?.message ?? "Error desconocido al enviar la invitación.";
       return json({ error: msg }, 400);
     }
 
-    // ── 6. Insertar en la tabla pública 'usuarios' ─────────────────────────
+    const nuevoUserId = inviteData.user.id;
+
+    // ── 7. Insertar en la tabla pública 'usuarios' ─────────────────────────
     const { data: usuarioInsertado, error: insertError } = await supabaseAdmin
       .from("usuarios")
       .insert({
-        id:     nuevoAuth.user.id,
+        id:     nuevoUserId,
         nombre: nombre.trim(),
         email:  email.trim().toLowerCase(),
         rol:    rolFinal,
@@ -98,13 +99,33 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (insertError) {
-      // Si falló el insert, intentamos limpiar el usuario de Auth para no dejar huérfanos
-      await supabaseAdmin.auth.admin.deleteUser(nuevoAuth.user.id);
-      return json({ error: `Usuario creado en Auth pero falló el registro en la tabla: ${insertError.message}` }, 500);
+      // Si falló el insert, limpiar el usuario de Auth para no dejar huérfanos
+      await supabaseAdmin.auth.admin.deleteUser(nuevoUserId);
+      return json({
+        error: `Usuario invitado pero falló el registro en la tabla: ${insertError.message}`,
+      }, 500);
     }
 
-    // ── 7. Respuesta exitosa ───────────────────────────────────────────────
-    return json({ usuario: usuarioInsertado }, 200);
+    // ── 8. Insertar permisos por defecto según rol ─────────────────────────
+    const permisosDefault = getPermisosDefault(rolFinal);
+    const { error: permisosError } = await supabaseAdmin
+      .from("permisos_usuario")
+      .insert({
+        usuario_id: nuevoUserId,
+        permisos:   permisosDefault,
+        categorias: ["todos"],
+      });
+
+    if (permisosError) {
+      // No es crítico: el usuario se creó; los permisos se pueden asignar luego
+      console.warn("Advertencia: no se pudieron insertar permisos por defecto:", permisosError.message);
+    }
+
+    // ── 9. Respuesta exitosa ───────────────────────────────────────────────
+    return json({
+      usuario: usuarioInsertado,
+      mensaje: `Invitación enviada a ${email.trim()}`,
+    }, 200);
 
   } catch (err) {
     console.error("Error inesperado en crear-usuario:", err);
@@ -112,7 +133,31 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-// ── Helper ──────────────────────────────────────────────────────────────────
+// ── Permisos por defecto según rol ──────────────────────────────────────────
+function getPermisosDefault(rol: string): Record<string, boolean> {
+  const base = {
+    ver_inventario:       false,
+    agregar_bien:         false,
+    editar_bien:          false,
+    eliminar_bien:        false,
+    eliminar_lote:        false,
+    gestionar_categorias: false,
+    importar_csv:         false,
+    gestionar_usuarios:   false,
+    exportar:             false,
+  };
+
+  switch (rol) {
+    case "admin":
+      return Object.fromEntries(Object.keys(base).map((k) => [k, true]));
+    case "editor":
+      return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true };
+    default: // encargado
+      return { ...base, ver_inventario: true, exportar: true };
+  }
+}
+
+// ── Helper JSON response ─────────────────────────────────────────────────────
 function json(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,

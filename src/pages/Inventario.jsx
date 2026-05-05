@@ -25,8 +25,30 @@ const formVacioComp = {
 
 export default function Inventario({ usuario }) {
   const esAdmin  = usuario?.rol === 'admin'
-  const esEditor = usuario?.rol === 'editor'
-  const puedeEditar = esAdmin || esEditor
+
+  // ── Permisos granulares ───────────────────────────────────────────────────
+  // Admin: permisos completos siempre. Otros: se cargan desde permisos_usuario.
+  const [permisos, setPermisos] = useState(() =>
+    usuario?.rol === 'admin'
+      ? { ver_inventario: true, agregar_bien: true, editar_bien: true,
+          eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
+          importar_csv: true, gestionar_usuarios: true, exportar: true }
+      : { ver_inventario: true, agregar_bien: false, editar_bien: false,
+          eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+          importar_csv: false, gestionar_usuarios: false, exportar: false }
+  )
+  // ['todos'] = acceso a todas las categorías; si no, lista de keys permitidas
+  const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
+
+  // Variables derivadas (reemplazan las de rol)
+  const puedeEditar        = permisos.editar_bien   || permisos.agregar_bien
+  const puedeAgregar       = permisos.agregar_bien
+  const puedeEliminar      = permisos.eliminar_bien
+  const puedeEliminarLote  = permisos.eliminar_lote
+  const puedeExportar      = permisos.exportar
+  const puedeImportar      = permisos.importar_csv
+  const puedeGestionarCats = permisos.gestionar_categorias
+
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
   const [cargando, setCargando]       = useState(true)
@@ -65,17 +87,63 @@ export default function Inventario({ usuario }) {
 
   const cargarDatos = async () => {
     setCargando(true)
-    const [{ data: cats }, { data: bs }] = await Promise.all([
+
+    // Defaults por rol (fallback si no hay fila en BD)
+    const defaultsPorRol = {
+      admin: {
+        ver_inventario: true, agregar_bien: true, editar_bien: true,
+        eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
+        importar_csv: true, gestionar_usuarios: true, exportar: true,
+      },
+      editor: {
+        ver_inventario: true, agregar_bien: true, editar_bien: true,
+        eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+        importar_csv: false, gestionar_usuarios: false, exportar: true,
+      },
+      encargado: {
+        ver_inventario: true, agregar_bien: false, editar_bien: false,
+        eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+        importar_csv: false, gestionar_usuarios: false, exportar: true,
+      },
+    }
+
+    // Cargar todo en paralelo
+    const queries = [
       supabase.from('categorias').select('*').order('creado_en'),
       supabase.from('bienes').select('*').order('creado_en', { ascending: false }),
-    ])
-    setCategorias(cats ?? [])
-    setBienes(bs ?? [])
+    ]
+    if (!esAdmin && usuario?.id) {
+      queries.push(
+        supabase.from('permisos_usuario').select('permisos, categorias')
+          .eq('usuario_id', usuario.id).maybeSingle()
+      )
+    }
+
+    const results = await Promise.all(queries)
+    const cats = results[0].data ?? []
+    const bs   = results[1].data ?? []
+    const pd   = results[2]?.data ?? null
+
+    // Resolver permisos finales
+    const rol = usuario?.rol ?? 'encargado'
+    const permisosFinales = esAdmin
+      ? defaultsPorRol.admin
+      : pd?.permisos
+        ? { ...(defaultsPorRol[rol] ?? defaultsPorRol.encargado), ...pd.permisos }
+        : (defaultsPorRol[rol] ?? defaultsPorRol.encargado)
+    const catsFinales = pd?.categorias ?? ['todos']
+
     // Inicializar orden desde localStorage o por defecto
     const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
-    const ids = (cats ?? []).map(c => c.id)
+    const ids = cats.map(c => c.id)
+
+    // Setear todo junto para que el render ocurra con datos completos
+    setCategorias(cats)
+    setBienes(bs)
     setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
-    setCargando(false)
+    setPermisos(permisosFinales)
+    setCategoriasPermitidas(catsFinales)
+    setCargando(false)  // render final con todo listo
   }
 
   // Orden final: pinned primero, luego el resto según catOrder
@@ -124,8 +192,15 @@ export default function Inventario({ usuario }) {
   }
   const onDragEnd = () => { setDragging(null); setDragOver(null) }
 
-  const bienCount   = (id) => id === 'todos' ? bienes.length : bienes.filter(b => b.categoria === id).length
-  const filtradosBase = catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
+  // Bienes permitidos por categoría según permisos del usuario
+  const tieneAccesoCat = (catId) => {
+    if (esAdmin) return true
+    if (categoriasPermitidas.includes('todos')) return true
+    return categoriasPermitidas.includes(catId)
+  }
+  const bienesPermitidos = bienes.filter(b => tieneAccesoCat(b.categoria))
+  const bienCount   = (id) => id === 'todos' ? bienesPermitidos.length : bienesPermitidos.filter(b => b.categoria === id).length
+  const filtradosBase = catActual === 'todos' ? bienesPermitidos : bienesPermitidos.filter(b => b.categoria === catActual)
   const filtrados = filtradosBase.filter(b => {
     const q = busqueda.toLowerCase()
     const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
@@ -585,7 +660,7 @@ export default function Inventario({ usuario }) {
             <span className="cat-count">{bienes.length} bien{bienes.length !== 1 ? 'es' : ''}</span>
           </div>
 
-          {categoriasOrdenadas().map(cat => {
+          {categoriasOrdenadas().filter(cat => tieneAccesoCat(cat.id)).map(cat => {
             const isPinned   = pinnedCats.includes(cat.id)
             const isDragging = dragging === cat.id
             const isOver     = dragOver === cat.id
@@ -605,8 +680,8 @@ export default function Inventario({ usuario }) {
                   <button className="btn-pin-cat" title={isPinned ? 'Desfijar' : 'Fijar al inicio'} onClick={e => togglePin(cat.id, e)}>
                     {isPinned ? '📌' : '📍'}
                   </button>
-                  {esAdmin && <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>}
-                  {esAdmin && <button className="btn-del-cat" title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>}
+                  {puedeGestionarCats && <button className="btn-edit-cat" title="Editar" onClick={e => abrirEditCat(cat, e)}>✏️</button>}
+                  {puedeGestionarCats && <button className="btn-del-cat" title="Eliminar" onClick={e => { e.stopPropagation(); eliminarCategoria(cat.id) }}>✕</button>}
                 </div>
                 <span className="cat-drag-handle" title="Arrastrar para reordenar">⠿</span>
                 <span className="cat-icon">{cat.icon}</span>
@@ -616,7 +691,7 @@ export default function Inventario({ usuario }) {
             )
           })}
 
-          {esAdmin && (
+          {puedeGestionarCats && (
             <div className="cat-card cat-nueva" onClick={abrirModalCat}>
               <span className="cat-icon add-icon">＋</span>
               <span className="cat-name">Nueva categoría</span>
@@ -632,7 +707,7 @@ export default function Inventario({ usuario }) {
         <div className="section-actions">
 
           {/* Botón exportar con dropdown */}
-          <div style={{ position: 'relative' }}>
+          {puedeExportar && <div style={{ position: 'relative' }}>
             <button className="btn-import" onClick={() => setMenuExportar(v => !v)}>
               📤 Exportar ▾
             </button>
@@ -672,15 +747,15 @@ export default function Inventario({ usuario }) {
                 </div>
               </>
             )}
-          </div>
+          </div>}
 
-          {puedeEditar && (
+          {puedeImportar && (
             <button className="btn-import" onClick={() => setModalImportar(true)}>
               <span className="btn-label-full">📥 Importar CSV</span>
               <span className="btn-label-short">📥</span>
             </button>
           )}
-          {puedeEditar && (
+          {puedeAgregar && (
             <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
               {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
             </button>
@@ -1387,7 +1462,7 @@ export default function Inventario({ usuario }) {
       )}
 
       {/* Barra selección múltiple */}
-      {esAdmin && seleccion.size > 0 && (
+      {puedeEliminarLote && seleccion.size > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 14px', marginBottom: '0.75rem' }}>
           <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600 }}>
             {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
@@ -1406,14 +1481,14 @@ export default function Inventario({ usuario }) {
         <div className="empty">
           <div className="empty-icon">📭</div>
           <p>{hayFiltrosActivos ? 'No hay resultados para estos filtros' : 'No hay bienes registrados en esta categoría'}</p>
-          {!hayFiltrosActivos && puedeEditar && <button className="btn-add" style={{ marginTop: '1rem' }} onClick={abrirFormNuevo}>+ Agregar el primer bien</button>}
+          {!hayFiltrosActivos && puedeAgregar && <button className="btn-add" style={{ marginTop: '1rem' }} onClick={abrirFormNuevo}>+ Agregar el primer bien</button>}
         </div>
       ) : (
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                {esAdmin && (
+                {puedeEliminarLote && (
                   <th style={{ width: '36px' }}>
                     <input
                       type="checkbox"
@@ -1437,7 +1512,7 @@ export default function Inventario({ usuario }) {
             <tbody>
               {filtrados.map(b => (
                 <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''}`}>
-                  {esAdmin && (
+                  {puedeEliminarLote && (
                     <td style={{ textAlign: 'center' }}>
                       <input
                         type="checkbox"
@@ -1477,8 +1552,8 @@ export default function Inventario({ usuario }) {
                   <td>
                     <div className="acciones">
                       <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
-                      {puedeEditar && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
-                      {esAdmin && <button className="btn-del"  onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
+                      {(permisos.editar_bien) && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
+                      {puedeEliminar && <button className="btn-del"  onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
                     </div>
                   </td>
                 </tr>

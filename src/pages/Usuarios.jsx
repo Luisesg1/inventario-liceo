@@ -1,530 +1,918 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../supabase";
-import "./Usuarios.css";
+// src/pages/Usuarios.jsx
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '../supabase'
+import './Usuarios.css'
 
-const EDGE_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`;
+// ── Constantes ─────────────────────────────────────────────────────────────
+const ACCIONES = [
+  { key: 'ver_inventario',       label: 'Ver inventario',      labelCorto: 'Ver inv.' },
+  { key: 'agregar_bien',         label: 'Agregar bien',         labelCorto: 'Agregar' },
+  { key: 'editar_bien',          label: 'Editar bien',          labelCorto: 'Editar' },
+  { key: 'eliminar_bien',        label: 'Eliminar bien',        labelCorto: 'Eliminar' },
+  { key: 'eliminar_lote',        label: 'Eliminar en lote',     labelCorto: 'Lote' },
+  { key: 'gestionar_categorias', label: 'Gestionar categorías', labelCorto: 'Categ.' },
+  { key: 'importar_csv',         label: 'Importar CSV',         labelCorto: 'CSV' },
+  { key: 'gestionar_usuarios',   label: 'Gestionar usuarios',   labelCorto: 'Usuarios' },
+  { key: 'exportar',             label: 'Exportar',             labelCorto: 'Exportar' },
+]
 
-const COLORES_ROL = {
-  admin: { bg: "#dbeafe", color: "#1d4ed8", label: "Admin" },
-  editor: { bg: "#ede9fe", color: "#6d28d9", label: "Editor" },
-  encargado: { bg: "#f3f4f6", color: "#4b5563", label: "Encargado" },
-};
+const CATEGORIAS = [
+  { key: 'todos',                label: 'Todos' },
+  { key: 'computadores',         label: 'Computadores' },
+  { key: 'art_tecnologicos',     label: 'Art. Tecnológicos' },
+  { key: 'otros',                label: 'Otros' },
+  { key: 'muebles',              label: 'Muebles' },
+  { key: 'biblioteca',           label: 'Biblioteca' },
+  { key: 'libreria',             label: 'Librería' },
+  { key: 'articulos_deportivos', label: 'Art. Deportivos' },
+]
 
-export default function Usuarios({ usuario }) {
-  const [usuarios, setUsuarios] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(null);
+// Acciones que aplican por categoría (las demás son globales)
+const ACCIONES_POR_CATEGORIA = [
+  'ver_inventario', 'agregar_bien', 'editar_bien',
+  'eliminar_bien', 'eliminar_lote', 'importar_csv', 'exportar',
+]
+// Acciones globales (no dependen de categoría)
+const ACCIONES_GLOBALES = [
+  'gestionar_categorias', 'gestionar_usuarios',
+]
 
-  // Estado formulario de creación
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [form, setForm] = useState({ nombre: "", email: "", password: "", rol: "encargado" });
-  const [creando, setCreando] = useState(false);
-  const [errorForm, setErrorForm] = useState(null);
-  const [exitoForm, setExitoForm] = useState(null);
+const PERMISOS_POR_ROL = {
+  admin: {
+    permisos:   Object.fromEntries(ACCIONES.map((a) => [a.key, true])),
+    categorias: ['todos'],
+  },
+  editor: {
+    permisos: {
+      ver_inventario: true, agregar_bien: true, editar_bien: true,
+      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+      importar_csv: false, gestionar_usuarios: false, exportar: true,
+    },
+    categorias: ['todos'],
+  },
+  encargado: {
+    permisos: {
+      ver_inventario: true, agregar_bien: false, editar_bien: false,
+      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+      importar_csv: false, gestionar_usuarios: false, exportar: false,
+    },
+    categorias: ['todos'],
+  },
+}
 
-  // Estado para cambio de rol
-  const [cambiandoRol, setCambiandoRol] = useState(null);
+const ROL_COLORES = {
+  admin:     { bg: '#dbeafe', color: '#1d4ed8' },
+  editor:    { bg: '#dcfce7', color: '#15803d' },
+  encargado: { bg: '#f3f4f6', color: '#374151' },
+}
 
-  // Estado para eliminación con confirmación modal
-  const [eliminando, setEliminando] = useState(null);
-  const [confirmEliminar, setConfirmEliminar] = useState(null); // { id, nombre }
+// ══════════════════════════════════════════════════════════════════════════
+// Tabla cruzada: filas = categorías, columnas = acciones
+// La fila "Todos" muestra ✓/✕ que activan el permiso globalmente.
+// Las demás filas muestran si esa categoría está permitida (col Acceso)
+// y los checks de acción solo se activan si la categoría tiene acceso.
+// ══════════════════════════════════════════════════════════════════════════
+function TablaPermisos({ draft, onChange }) {
+  if (!draft) return <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando…</p>
 
-  // Estado para edición
-  const [editando, setEditando] = useState(null); // id del usuario que se está editando
-  const [formEditar, setFormEditar] = useState({ nombre: "", email: "", password: "" });
-  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
-  const [errorEdicion, setErrorEdicion] = useState(null);
+  const accCat    = ACCIONES.filter((a) => ACCIONES_POR_CATEGORIA.includes(a.key))
+  const accGlobal = ACCIONES.filter((a) => ACCIONES_GLOBALES.includes(a.key))
 
-  // esAdmin: usa la lista cargada como fuente de verdad (más confiable que el prop)
-  const usuarioEnLista = usuarios.find((u) => u.id === usuario?.id);
-  const esAdmin = (usuarioEnLista?.rol ?? usuario?.rol) === "admin";
+  // ¿Tiene acceso a una categoría específica?
+  const tieneAccesoCat = (catKey) =>
+    draft.categorias?.includes('todos') || draft.categorias?.includes(catKey)
 
-  useEffect(() => {
-    cargarUsuarios();
-  }, []);
-
-  async function cargarUsuarios() {
-    setCargando(true);
-    setError(null);
-    const { data, error } = await supabase
-      .from("usuarios")
-      .select("*")
-      .order("nombre");
-    if (error) {
-      setError("No se pudieron cargar los usuarios.");
+  // Toggle acceso a una categoría específica (excluye 'todos')
+  function toggleCat(catKey) {
+    const cats = draft.categorias ?? []
+    let nuevas
+    if (cats.includes(catKey)) {
+      nuevas = cats.filter((c) => c !== catKey && c !== 'todos')
     } else {
-      setUsuarios(data || []);
+      const sinTodos    = cats.filter((c) => c !== 'todos')
+      nuevas            = [...sinTodos, catKey]
+      const especificas = CATEGORIAS.filter((c) => c.key !== 'todos').map((c) => c.key)
+      if (especificas.every((c) => nuevas.includes(c))) nuevas = ['todos']
     }
-    setCargando(false);
+    onChange({ ...draft, categorias: nuevas })
   }
 
-  // ─── Crear usuario via Edge Function ────────────────────────────────────────
-  async function handleCrearUsuario(e) {
-    e.preventDefault();
-    setCreando(true);
-    setErrorForm(null);
-    setExitoForm(null);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        setErrorForm("Tu sesión expiró. Por favor recarga la página.");
-        setCreando(false);
-        return;
-      }
-
-      const res = await fetch(EDGE_FUNCTION_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        setErrorForm(json.error || "Error al crear el usuario.");
-      } else {
-        setExitoForm(`Usuario "${json.usuario.nombre}" creado exitosamente.`);
-        setForm({ nombre: "", email: "", password: "", rol: "encargado" });
-        await cargarUsuarios();
-        setTimeout(() => {
-          setMostrarForm(false);
-          setExitoForm(null);
-        }, 2000);
-      }
-    } catch (err) {
-      setErrorForm("Error de red al contactar el servidor.");
-    } finally {
-      setCreando(false);
-    }
+  // Toggle "Todos" — activa/desactiva acceso a TODAS las categorías
+  function toggleTodas() {
+    const tieneTodasActivas = draft.categorias?.includes('todos')
+    onChange({
+      ...draft,
+      categorias: tieneTodasActivas ? [] : ['todos'],
+    })
   }
 
-  // ─── Cambiar rol ────────────────────────────────────────────────────────────
-  async function handleCambiarRol(id, nuevoRol) {
-    setCambiandoRol(id);
-    const { error } = await supabase
-      .from("usuarios")
-      .update({ rol: nuevoRol })
-      .eq("id", id);
-    if (!error) {
-      setUsuarios((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, rol: nuevoRol } : u))
-      );
-    }
-    setCambiandoRol(null);
+  // Toggle permiso de acción
+  function toggleAccion(key) {
+    onChange({ ...draft, permisos: { ...draft.permisos, [key]: !draft.permisos[key] } })
   }
 
-  // ─── Confirmar eliminación ───────────────────────────────────────────────────
-  function handleSolicitarEliminar(u) {
-    setConfirmEliminar({ id: u.id, nombre: u.nombre });
-  }
+  // ¿Todas las categorías tienen acceso?
+  const todasActivas = draft.categorias?.includes('todos')
 
-  async function handleEliminarConfirmado() {
-    if (!confirmEliminar) return;
-    setEliminando(confirmEliminar.id);
-    const { error } = await supabase.from("usuarios").delete().eq("id", confirmEliminar.id);
-    if (!error) {
-      setUsuarios((prev) => prev.filter((u) => u.id !== confirmEliminar.id));
-    }
-    setEliminando(null);
-    setConfirmEliminar(null);
-  }
+  // Categorías específicas (sin "Todos")
+  const catsSinTodos = CATEGORIAS.filter((c) => c.key !== 'todos')
 
-  // ─── Editar usuario ─────────────────────────────────────────────────────────
-  function handleAbrirEdicion(u) {
-    setEditando(u.id);
-    setFormEditar({ nombre: u.nombre, email: u.email, password: "" });
-    setErrorEdicion(null);
-  }
-
-  function handleCerrarEdicion() {
-    setEditando(null);
-    setFormEditar({ nombre: "", email: "", password: "" });
-    setErrorEdicion(null);
-  }
-
-  async function handleGuardarEdicion(id) {
-    setGuardandoEdicion(true);
-    setErrorEdicion(null);
-
-    const updates = { nombre: formEditar.nombre, email: formEditar.email };
-
-    const { error } = await supabase
-      .from("usuarios")
-      .update(updates)
-      .eq("id", id);
-
-    if (error) {
-      setErrorEdicion("Error al guardar los cambios.");
-    } else {
-      setUsuarios((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, ...updates } : u))
-      );
-      // Si hay nueva contraseña, actualizarla via auth admin (requeriría Edge Function)
-      // Por ahora solo actualizamos nombre y email en la tabla
-      handleCerrarEdicion();
-    }
-
-    setGuardandoEdicion(false);
-  }
-
-  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px 16px" }}>
+    <div>
+      {/* ── Tabla principal ── */}
+      <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #dbeafe', marginBottom: 16 }}>
+        <table style={tb.table}>
+          <thead>
+            <tr>
+              <th style={tb.thCat}>Categoría</th>
+              {/* Columna Acceso */}
+              <th style={{ ...tb.thAccion, color: '#cbd5e1' }} title="Acceso a esta categoría">
+                Acceso
+              </th>
+              {/* Columnas de acciones */}
+              {accCat.map((a) => (
+                <th key={a.key} style={tb.thAccion} title={a.label}>
+                  {a.labelCorto}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
 
-      {/* ── Modal de confirmación de eliminación ── */}
-      {confirmEliminar && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: "#fff", borderRadius: 14, padding: 28,
-            maxWidth: 380, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-          }}>
-            <div style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>🗑️</div>
-            <h3 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 600, textAlign: "center" }}>
-              ¿Eliminar usuario?
-            </h3>
-            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#6b7280", textAlign: "center" }}>
-              Estás a punto de eliminar a <strong>{confirmEliminar.nombre}</strong>. Esta acción no se puede deshacer.
+            {/* ── Fila especial "Todos" — check/cross por columna ── */}
+            <tr style={{ background: '#1e293b' }}>
+              <td style={{ ...tb.tdCheck, background: '#1e293b' }}>
+                <span style={{ color: '#22c55e', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>✓</span>
+              </td>
+              {/* Check de acceso global */}
+              <td style={{ ...tb.tdCheck, background: '#1e293b' }}>
+                <CheckBtn activo={todasActivas} onClick={toggleTodas} />
+              </td>
+              {/* Check de acción global */}
+              {accCat.map((a) => {
+                const activo = draft.permisos?.[a.key] ?? false
+                return (
+                  <td key={a.key} style={{ ...tb.tdCheck, background: '#1e293b' }}>
+                    <CheckBtn activo={activo} onClick={() => toggleAccion(a.key)} />
+                  </td>
+                )
+              })}
+            </tr>
+
+            {/* ── Separador ── */}
+            <tr>
+              <td colSpan={2 + accCat.length} style={{
+                padding: '3px 14px', fontSize: 10, fontWeight: 700,
+                color: '#9ca3af', letterSpacing: '0.08em',
+                textTransform: 'uppercase', background: '#f1f5f9',
+                borderBottom: '1px solid #e5e7eb',
+              }}>
+                Por categoría
+              </td>
+            </tr>
+
+            {/* ── Filas de categorías específicas ── */}
+            {catsSinTodos.map((cat, idx) => {
+              const tieneAcceso = tieneAccesoCat(cat.key)
+              return (
+                <tr key={cat.key} style={{ background: idx % 2 === 0 ? '#fff' : '#f8faff' }}>
+                  <td style={tb.tdCat}>{cat.label}</td>
+                  {/* Toggle acceso a esta categoría */}
+                  <td style={tb.tdCheck}>
+                    <CheckBtn activo={tieneAcceso} onClick={() => toggleCat(cat.key)} />
+                  </td>
+                  {/* Acciones — solo check si tiene acceso, si no → guión */}
+                  {accCat.map((a) => {
+                    const activo = draft.permisos?.[a.key] ?? false
+                    return (
+                      <td key={a.key} style={tb.tdCheck}>
+                        {tieneAcceso
+                          ? <CheckBtn activo={activo} onClick={() => toggleAccion(a.key)} />
+                          : <span style={tb.dashDisabled}>—</span>
+                        }
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Acciones globales ── */}
+      <p style={tb.secLabel}>Acciones globales</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {accGlobal.map((a) => {
+          const activo = draft.permisos?.[a.key] ?? false
+          return (
+            <button
+              key={a.key}
+              onClick={() => toggleAccion(a.key)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '7px 16px', borderRadius: 8, border: '1.5px solid',
+                fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.14s',
+                backgroundColor: activo ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.06)',
+                borderColor:     activo ? '#22c55e' : '#fca5a5',
+                color:           activo ? '#15803d' : '#ef4444',
+              }}
+            >
+              <span style={{
+                width: 20, height: 20, borderRadius: 5, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: activo ? '#22c55e' : '#fca5a5',
+                color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+              }}>
+                {activo ? '✓' : '✕'}
+              </span>
+              {a.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Leyenda */}
+      <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#22c55e' }} />Con permiso</span>
+        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#fca5a5' }} />Sin permiso</span>
+        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#d1d5db' }} />Sin acceso a esa categoría</span>
+      </div>
+    </div>
+  )
+}
+
+// Botón check/cross reutilizable
+function CheckBtn({ activo, onClick, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        width: 30, height: 30, borderRadius: 7,
+        border: `1.5px solid ${activo ? '#22c55e' : '#fca5a5'}`,
+        background: activo ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'all 0.14s', outline: 'none',
+        opacity: disabled ? 0.4 : 1,
+      }}
+      title={activo ? 'Quitar permiso' : 'Dar permiso'}
+    >
+      {activo
+        ? <span style={{ color: '#16a34a', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>✓</span>
+        : <span style={{ color: '#ef4444', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✕</span>
+      }
+    </button>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Panel de permisos inline (para usuario existente)
+// ══════════════════════════════════════════════════════════════════════════
+function PanelPermisos({ usuario: u, onCerrar }) {
+  const [cargando, setCargando]   = useState(true)
+  const [draft, setDraft]         = useState(null)
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
+  const [confirmar, setConfirmar] = useState(false)
+
+  useEffect(() => { cargar() }, [u.id]) // eslint-disable-line
+
+  async function cargar() {
+    setCargando(true)
+    const { data } = await supabase
+      .from('permisos_usuario')
+      .select('permisos, categorias')
+      .eq('usuario_id', u.id)
+      .maybeSingle()
+    const def = PERMISOS_POR_ROL[u.rol] ?? PERMISOS_POR_ROL.encargado
+    setDraft(data
+      ? { permisos: { ...data.permisos }, categorias: [...(data.categorias ?? def.categorias)] }
+      : { permisos: { ...def.permisos }, categorias: [...def.categorias] }
+    )
+    setCargando(false)
+  }
+
+  async function guardar() {
+    setGuardando(true)
+    setMensaje({ tipo: '', texto: '' })
+    const { error } = await supabase
+      .from('permisos_usuario')
+      .upsert(
+        { usuario_id: u.id, permisos: draft.permisos, categorias: draft.categorias },
+        { onConflict: 'usuario_id' }
+      )
+    setGuardando(false)
+    setConfirmar(false)
+    if (error) {
+      setMensaje({ tipo: 'error', texto: 'Error: ' + error.message })
+    } else {
+      setMensaje({ tipo: 'exito', texto: '¡Permisos guardados!' })
+      setTimeout(() => { setMensaje({ tipo: '', texto: '' }); onCerrar() }, 1400)
+    }
+  }
+
+  return (
+    <div style={{ ...ps.panel, borderTopColor: '#bfdbfe', background: '#f8fbff' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#1d4ed8' }}>
+          🔐 Permisos de {u.nombre}
+        </p>
+        <span style={ps.rolTag}>base: {u.rol}</span>
+      </div>
+
+      {cargando
+        ? <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando permisos…</p>
+        : <TablaPermisos draft={draft} onChange={setDraft} />
+      }
+
+      {mensaje.texto && (
+        <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
+          {mensaje.texto}
+        </div>
+      )}
+
+      {!cargando && (
+        <div className="form-acciones" style={{ marginTop: 16 }}>
+          <button className="btn-secundario" onClick={onCerrar}>Cancelar</button>
+          <button className="btn-primario" onClick={() => setConfirmar(true)} disabled={guardando}>
+            Guardar permisos
+          </button>
+        </div>
+      )}
+
+      {confirmar && (
+        <div style={ps.modalOverlay} onClick={() => setConfirmar(false)}>
+          <div style={ps.modal} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: '#111827' }}>
+              ¿Confirmar cambios?
             </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => setConfirmEliminar(null)}
-                style={{
-                  flex: 1, border: "1px solid #d1d5db", background: "#fff",
-                  borderRadius: 8, padding: "10px 0", cursor: "pointer",
-                  fontWeight: 500, fontSize: 14,
-                }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEliminarConfirmado}
-                disabled={!!eliminando}
-                style={{
-                  flex: 1, background: eliminando ? "#fca5a5" : "#dc2626",
-                  color: "#fff", border: "none", borderRadius: 8,
-                  padding: "10px 0", cursor: eliminando ? "not-allowed" : "pointer",
-                  fontWeight: 500, fontSize: 14,
-                }}
-              >
-                {eliminando ? "Eliminando..." : "Sí, eliminar"}
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>
+              Se actualizarán los permisos de <strong>{u.nombre}</strong> de inmediato.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn-secundario" onClick={() => setConfirmar(false)}>Cancelar</button>
+              <button className="btn-primario" onClick={guardar} disabled={guardando} style={{ minWidth: 100 }}>
+                {guardando ? 'Guardando…' : 'Sí, guardar'}
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
 
-      {/* ── Header ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 600 }}>Gestión de usuarios</h2>
+// ══════════════════════════════════════════════════════════════════════════
+// Modal: Crear usuario + asignar permisos en el mismo flujo
+// ══════════════════════════════════════════════════════════════════════════
+function ModalCrearUsuario({ onCerrar, onCreado }) {
+  const [paso, setPaso]           = useState(1) // 1 = datos, 2 = permisos
+  const [nombre, setNombre]       = useState('')
+  const [email, setEmail]         = useState('')
+  const [rol, setRol]             = useState('encargado')
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
+  const [usuarioCreado, setUsuarioCreado] = useState(null) // { id, nombre, rol }
+
+  // Draft de permisos: se inicializa según el rol seleccionado
+  const [draft, setDraft] = useState(() => {
+    const def = PERMISOS_POR_ROL.encargado
+    return { permisos: { ...def.permisos }, categorias: [...def.categorias] }
+  })
+
+  // Actualizar draft cuando cambia el rol (solo en paso 1)
+  function cambiarRol(nuevoRol) {
+    setRol(nuevoRol)
+    const def = PERMISOS_POR_ROL[nuevoRol] ?? PERMISOS_POR_ROL.encargado
+    setDraft({ permisos: { ...def.permisos }, categorias: [...def.categorias] })
+  }
+
+  // Paso 1: crear usuario y pasar a permisos
+  async function handleCrear() {
+    if (!nombre.trim() || !email.trim()) {
+      setMensaje({ tipo: 'error', texto: 'Nombre y email son requeridos.' }); return
+    }
+    setGuardando(true)
+    setMensaje({ tipo: '', texto: '' })
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), rol }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok) {
+        setMensaje({ tipo: 'error', texto: json.error ?? 'Error desconocido.' })
+      } else {
+        setUsuarioCreado(json.usuario)
+        setPaso(2)
+        setMensaje({ tipo: '', texto: '' })
+      }
+    } catch {
+      setMensaje({ tipo: 'error', texto: 'No se pudo conectar.' })
+    }
+    setGuardando(false)
+  }
+
+  // Paso 2: guardar permisos
+  async function handleGuardarPermisos() {
+    if (!usuarioCreado) return
+    setGuardando(true)
+    const { error } = await supabase
+      .from('permisos_usuario')
+      .upsert(
+        { usuario_id: usuarioCreado.id, permisos: draft.permisos, categorias: draft.categorias },
+        { onConflict: 'usuario_id' }
+      )
+    setGuardando(false)
+    if (error) {
+      setMensaje({ tipo: 'error', texto: 'Error al guardar permisos: ' + error.message })
+    } else {
+      setMensaje({ tipo: 'exito', texto: `✓ Usuario creado e invitación enviada a ${email}` })
+      setTimeout(() => { onCreado(); onCerrar() }, 1600)
+    }
+  }
+
+  return (
+    <div style={ps.modalOverlay} onClick={onCerrar}>
+      <div
+        style={{
+          ...ps.modal,
+          maxWidth: paso === 2 ? 780 : 440,
+          width: '95%',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Indicador de pasos */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+          {[
+            { n: 1, label: 'Datos del usuario' },
+            { n: 2, label: 'Permisos' },
+          ].map((p, i) => (
+            <div key={p.n} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 13, fontWeight: 700,
+                background: paso >= p.n ? '#2563eb' : '#e5e7eb',
+                color: paso >= p.n ? '#fff' : '#9ca3af',
+                transition: 'all 0.2s',
+              }}>
+                {paso > p.n ? '✓' : p.n}
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 500, color: paso >= p.n ? '#111827' : '#9ca3af' }}>
+                {p.label}
+              </span>
+              {i < 1 && <span style={{ color: '#d1d5db', fontSize: 18 }}>›</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* ── Paso 1: Datos ── */}
+        {paso === 1 && (
+          <>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 16, color: '#111827' }}>
+              Invitar nuevo usuario
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>
+              Se enviará un email de invitación para que establezca su contraseña.
+            </p>
+            <div className="form-grid">
+              <label className="form-label">
+                Nombre
+                <input className="form-input" placeholder="Nombre completo"
+                  value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              </label>
+              <label className="form-label">
+                Email
+                <input className="form-input" type="email" placeholder="correo@ejemplo.com"
+                  value={email} onChange={(e) => setEmail(e.target.value)} />
+              </label>
+              <label className="form-label">
+                Rol
+                <select className="form-select" value={rol} onChange={(e) => cambiarRol(e.target.value)}>
+                  <option value="encargado">Encargado</option>
+                  <option value="editor">Editor</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </label>
+            </div>
+            {mensaje.texto && (
+              <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
+                {mensaje.texto}
+              </div>
+            )}
+            <div className="form-acciones" style={{ marginTop: 20 }}>
+              <button className="btn-secundario" onClick={onCerrar}>Cancelar</button>
+              <button className="btn-primario" onClick={handleCrear} disabled={guardando}>
+                {guardando ? 'Creando usuario…' : 'Crear y asignar permisos →'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Paso 2: Permisos ── */}
+        {paso === 2 && (
+          <>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 16, color: '#111827' }}>
+              Permisos de {usuarioCreado?.nombre}
+            </p>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
+              Ajusta los permisos según necesites. Los valores iniciales corresponden al rol <strong>{rol}</strong>.
+            </p>
+
+            <TablaPermisos draft={draft} onChange={setDraft} />
+
+            {mensaje.texto && (
+              <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
+                {mensaje.texto}
+              </div>
+            )}
+            <div className="form-acciones" style={{ marginTop: 20 }}>
+              <button className="btn-secundario" onClick={onCerrar}>
+                Omitir y cerrar
+              </button>
+              <button className="btn-primario" onClick={handleGuardarPermisos} disabled={guardando}>
+                {guardando ? 'Guardando…' : 'Guardar permisos y finalizar'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Componente principal
+// ══════════════════════════════════════════════════════════════════════════
+export default function Usuarios({ usuario }) {
+  const [usuarios, setUsuarios] = useState([])
+  const [estado, setEstado]     = useState('cargando')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [busqueda, setBusqueda] = useState('')
+  const [modalCrear, setModalCrear] = useState(false)
+
+  // Eliminación
+  const [confirmandoId, setConfirmandoId] = useState(null)
+  const [eliminandoId, setEliminandoId]   = useState(null)
+
+  // Panel activo: null | { id, modo: 'editar'|'permisos' }
+  const [panelActivo, setPanelActivo] = useState(null)
+
+  // Edición
+  const [editNombre, setEditNombre]       = useState('')
+  const [editEmail, setEditEmail]         = useState('')
+  const [editRol, setEditRol]             = useState('encargado')
+  const [guardandoEdit, setGuardandoEdit] = useState(false)
+  const [mensajeEdit, setMensajeEdit]     = useState({ tipo: '', texto: '' })
+
+  const esAdmin = usuario?.rol === 'admin'
+
+  const cargarUsuarios = useCallback(async () => {
+    setEstado('cargando')
+    const { data, error } = await supabase
+      .from('usuarios').select('*').order('nombre')
+    if (error) { setEstado('error'); setErrorMsg(error.message) }
+    else { setUsuarios(data || []); setEstado('ok') }
+  }, [])
+
+  useEffect(() => { cargarUsuarios() }, [cargarUsuarios])
+
+  const usuariosFiltrados = usuarios.filter((u) =>
+    u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+    u.email?.toLowerCase().includes(busqueda.toLowerCase())
+  )
+
+  function togglePanel(userId, modo) {
+    if (panelActivo?.id === userId && panelActivo?.modo === modo) {
+      setPanelActivo(null); return
+    }
+    const u = usuarios.find((u) => u.id === userId)
+    setPanelActivo({ id: userId, modo })
+    if (modo === 'editar') {
+      setEditNombre(u.nombre); setEditEmail(u.email); setEditRol(u.rol)
+      setMensajeEdit({ tipo: '', texto: '' })
+    }
+  }
+
+  async function cambiarRol(userId, nuevoRolVal) {
+    await supabase.from('usuarios').update({ rol: nuevoRolVal }).eq('id', userId)
+    setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, rol: nuevoRolVal } : u))
+  }
+
+  async function eliminarUsuario(userId) {
+    setEliminandoId(userId)
+    const { error } = await supabase.from('usuarios').delete().eq('id', userId)
+    if (error) { alert('Error al eliminar: ' + error.message) }
+    else {
+      setUsuarios((prev) => prev.filter((u) => u.id !== userId))
+      setConfirmandoId(null)
+      if (panelActivo?.id === userId) setPanelActivo(null)
+    }
+    setEliminandoId(null)
+  }
+
+  async function guardarEdicion(userId) {
+    setGuardandoEdit(true)
+    setMensajeEdit({ tipo: '', texto: '' })
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ nombre: editNombre.trim(), email: editEmail.trim(), rol: editRol })
+      .eq('id', userId)
+    if (error) {
+      setMensajeEdit({ tipo: 'error', texto: error.message })
+    } else {
+      setMensajeEdit({ tipo: 'exito', texto: 'Cambios guardados.' })
+      await cargarUsuarios()
+      setTimeout(() => { setPanelActivo(null); setMensajeEdit({ tipo: '', texto: '' }) }, 1200)
+    }
+    setGuardandoEdit(false)
+  }
+
+  if (estado === 'cargando') return <div className="usuarios-estado">Cargando usuarios…</div>
+  if (estado === 'error')    return <div className="usuarios-estado error">{errorMsg}</div>
+
+  return (
+    <div className="usuarios-page">
+
+      {/* Header */}
+      <div className="usuarios-header">
+        <h2 className="usuarios-titulo">Usuarios</h2>
         {esAdmin && (
-          <button
-            onClick={() => { setMostrarForm(!mostrarForm); setErrorForm(null); setExitoForm(null); }}
-            style={{
-              background: "#2563eb", color: "#fff", border: "none",
-              borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 500,
-            }}
-          >
-            {mostrarForm ? "Cancelar" : "+ Nuevo usuario"}
+          <button className="btn-nuevo-usuario" onClick={() => setModalCrear(true)}>
+            + Invitar usuario
           </button>
         )}
       </div>
 
-      {/* ── Formulario de creación ── */}
-      {mostrarForm && esAdmin && (
-        <form
-          onSubmit={handleCrearUsuario}
+      {/* Buscador */}
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <span style={{
+          position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 15, color: '#9ca3af', pointerEvents: 'none',
+        }}>🔍</span>
+        <input
+          type="text"
+          placeholder="Buscar por nombre o email…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
           style={{
-            background: "#f9fafb", border: "1px solid #e5e7eb",
-            borderRadius: 12, padding: 24, marginBottom: 24,
+            width: '100%', boxSizing: 'border-box',
+            padding: '9px 36px 9px 36px',
+            border: '1px solid #d1d5db', borderRadius: 8,
+            fontSize: 14, color: '#111827', background: '#fff',
+            outline: 'none',
           }}
-        >
-          <h3 style={{ margin: "0 0 16px", fontSize: 16, fontWeight: 600 }}>Crear nuevo usuario</h3>
-
-          <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <label style={estiloLabel}>
-                Nombre
-                <input
-                  required
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  placeholder="Nombre completo"
-                  style={estiloInput}
-                />
-              </label>
-              <label style={estiloLabel}>
-                Rol
-                <select
-                  value={form.rol}
-                  onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                  style={estiloInput}
-                >
-                  <option value="encargado">Encargado</option>
-                  <option value="editor">Editor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </label>
-            </div>
-            <label style={estiloLabel}>
-              Correo electrónico
-              <input
-                required
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="correo@liceo.cl"
-                style={estiloInput}
-              />
-            </label>
-            <label style={estiloLabel}>
-              Contraseña
-              <input
-                required
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Mínimo 6 caracteres"
-                minLength={6}
-                style={estiloInput}
-              />
-            </label>
-          </div>
-
-          {errorForm && (
-            <p style={{ color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", margin: "12px 0 0", fontSize: 14 }}>
-              {errorForm}
-            </p>
-          )}
-          {exitoForm && (
-            <p style={{ color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", margin: "12px 0 0", fontSize: 14 }}>
-              ✓ {exitoForm}
-            </p>
-          )}
-
-          <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={() => setMostrarForm(false)}
-              style={{ border: "1px solid #d1d5db", background: "#fff", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={creando}
-              style={{
-                background: creando ? "#93c5fd" : "#2563eb",
-                color: "#fff", border: "none", borderRadius: 8,
-                padding: "8px 20px", cursor: creando ? "not-allowed" : "pointer", fontWeight: 500,
-              }}
-            >
-              {creando ? "Creando..." : "Crear usuario"}
-            </button>
-          </div>
-        </form>
+          onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)' }}
+          onBlur={(e)  => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none' }}
+        />
+        {busqueda && (
+          <button onClick={() => setBusqueda('')} style={{
+            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', color: '#9ca3af',
+            cursor: 'pointer', fontSize: 16, lineHeight: 1,
+          }}>✕</button>
+        )}
+      </div>
+      {busqueda && (
+        <p style={{ fontSize: 12, color: '#6b7280', margin: '-8px 0 12px' }}>
+          {usuariosFiltrados.length === 0 ? 'Sin resultados'
+            : `${usuariosFiltrados.length} resultado${usuariosFiltrados.length !== 1 ? 's' : ''}`}
+        </p>
       )}
 
-      {/* ── Lista de usuarios ── */}
-      {cargando ? (
-        <p style={{ color: "#6b7280", textAlign: "center", padding: 40 }}>Cargando usuarios...</p>
-      ) : error ? (
-        <p style={{ color: "#dc2626", textAlign: "center", padding: 40 }}>{error}</p>
-      ) : (
-        <div className="usuarios-lista" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {usuarios.map((u) => {
-            const esYo = u.id === usuario?.id;
-            const esEsteAdmin = u.rol === "admin";
-            const colRol = COLORES_ROL[u.rol] || COLORES_ROL.encargado;
-            const estaEditando = editando === u.id;
+      {/* Lista */}
+      <div className="usuarios-lista">
+        {usuariosFiltrados.map((u) => {
+          const esYo        = u.id === usuario?.id
+          const colores     = ROL_COLORES[u.rol] ?? ROL_COLORES.encargado
+          const eliminando  = eliminandoId === u.id
+          const confirmando = confirmandoId === u.id
+          const editando    = panelActivo?.id === u.id && panelActivo?.modo === 'editar'
+          const permisosOpen= panelActivo?.id === u.id && panelActivo?.modo === 'permisos'
 
-            return (
-              <div
-                key={u.id}
-                style={{
-                  background: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 10,
-                  opacity: eliminando === u.id ? 0.5 : 1,
-                  transition: "opacity 0.2s",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Fila principal */}
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "14px 16px",
-                }}>
-                  {/* Avatar */}
-                  <div style={{
-                    width: 40, height: 40, borderRadius: "50%",
-                    background: colRol.bg, color: colRol.color,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontWeight: 600, fontSize: 16, flexShrink: 0,
-                  }}>
-                    {u.nombre?.charAt(0).toUpperCase() || "?"}
+          return (
+            <div key={u.id} style={{
+              borderRadius: 10, overflow: 'hidden',
+              border: `1px solid ${permisosOpen ? '#93c5fd' : editando ? '#93c5fd' : '#e5e7eb'}`,
+              background: '#fff',
+              boxShadow: (editando || permisosOpen) ? '0 2px 12px rgba(0,0,0,0.07)' : undefined,
+              transition: 'border-color 0.2s',
+            }}>
+
+              {/* Fila principal */}
+              <div className={`usuario-card${eliminando ? ' eliminando' : ''}`}
+                style={{ border: 'none', borderRadius: 0 }}>
+
+                <div className="usuario-avatar" style={{ background: colores.bg, color: colores.color }}>
+                  {u.nombre?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div className="usuario-info">
+                  <div className="usuario-nombre">
+                    {u.nombre}
+                    {esYo && <span className="badge-yo">Tú</span>}
                   </div>
+                  <div className="usuario-email">{u.email}</div>
+                </div>
 
-                  {/* Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, fontSize: 15, display: "flex", alignItems: "center", gap: 6 }}>
-                      {u.nombre}
-                      {esYo && (
-                        <span style={{ fontSize: 11, background: "#dbeafe", color: "#1d4ed8", borderRadius: 4, padding: "1px 6px" }}>
-                          Tú
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#6b7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {u.email}
-                    </div>
-                  </div>
-
-                  {/* Selector de rol — bloqueado para el admin propio */}
-                  <select
+                {esAdmin && !esYo ? (
+                  <select className="rol-select"
+                    style={{ background: colores.bg, color: colores.color }}
                     value={u.rol}
-                    disabled={cambiandoRol === u.id || esYo || !esAdmin}
-                    onChange={(e) => handleCambiarRol(u.id, e.target.value)}
-                    style={{
-                      border: "none", borderRadius: 6, padding: "4px 8px",
-                      background: colRol.bg, color: colRol.color,
-                      fontWeight: 500, fontSize: 13,
-                      cursor: (esYo || !esAdmin) ? "not-allowed" : "pointer",
-                      appearance: "none",
-                      // Mostrar flecha solo si el admin puede cambiarlo
-                      paddingRight: (esAdmin && !esYo) ? 20 : 8,
-                    }}
-                  >
+                    onChange={(e) => cambiarRol(u.id, e.target.value)}
+                    disabled={eliminando}>
                     <option value="encargado">Encargado</option>
                     <option value="editor">Editor</option>
                     <option value="admin">Admin</option>
                   </select>
+                ) : (
+                  <span className="rol-select"
+                    style={{ background: colores.bg, color: colores.color, cursor: 'default' }}>
+                    {u.rol.charAt(0).toUpperCase() + u.rol.slice(1)}
+                  </span>
+                )}
 
-                  {/* Acciones — solo admin, no sobre sí mismo */}
-                  {esAdmin && !esYo && (
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                      {/* Botón editar */}
-                      <button
-                        onClick={() => estaEditando ? handleCerrarEdicion() : handleAbrirEdicion(u)}
-                        title="Editar usuario"
-                        style={{
-                          background: estaEditando ? "#e0e7ff" : "none",
-                          border: estaEditando ? "1px solid #c7d2fe" : "none",
-                          color: estaEditando ? "#4338ca" : "#9ca3af",
-                          cursor: "pointer", padding: "4px 8px",
-                          borderRadius: 6, flexShrink: 0, fontSize: 14,
-                        }}
-                      >
-                        ✏️
-                      </button>
+                {esAdmin && !esYo && !confirmando && (
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
+                      background: editando ? '#dbeafe' : 'none',
+                      border: `1px solid ${editando ? '#93c5fd' : '#e5e7eb'}`,
+                      color: editando ? '#1d4ed8' : '#9ca3af',
+                      borderRadius: 6, padding: '5px 9px',
+                      fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                    }}>✏️</button>
+                    <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
+                      background: permisosOpen ? '#dbeafe' : 'none',
+                      border: `1px solid ${permisosOpen ? '#93c5fd' : '#e5e7eb'}`,
+                      color: permisosOpen ? '#1d4ed8' : '#9ca3af',
+                      borderRadius: 6, padding: '5px 9px',
+                      fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                    }}>🔐</button>
+                    <button className="btn-eliminar-icono" title="Eliminar"
+                      onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                  </div>
+                )}
 
-                      {/* Botón eliminar */}
-                      <button
-                        onClick={() => handleSolicitarEliminar(u)}
-                        title="Eliminar usuario"
-                        style={{
-                          background: "none", border: "none",
-                          color: "#9ca3af", cursor: "pointer",
-                          padding: "4px 8px", borderRadius: 6, flexShrink: 0,
-                        }}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Panel de edición inline */}
-                {estaEditando && esAdmin && (
-                  <div style={{
-                    borderTop: "1px solid #e5e7eb",
-                    padding: "16px",
-                    background: "#f9fafb",
-                  }}>
-                    <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 600, color: "#374151" }}>
-                      Editar datos del usuario
-                    </p>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                      <label style={estiloLabel}>
-                        Nombre
-                        <input
-                          value={formEditar.nombre}
-                          onChange={(e) => setFormEditar({ ...formEditar, nombre: e.target.value })}
-                          style={estiloInput}
-                        />
-                      </label>
-                      <label style={estiloLabel}>
-                        Correo electrónico
-                        <input
-                          type="email"
-                          value={formEditar.email}
-                          onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
-                          style={estiloInput}
-                        />
-                      </label>
-                    </div>
-                    <label style={{ ...estiloLabel, marginBottom: 12 }}>
-                      Nueva contraseña <span style={{ color: "#9ca3af", fontWeight: 400 }}>(dejar vacío para no cambiar)</span>
-                      <input
-                        type="password"
-                        value={formEditar.password}
-                        onChange={(e) => setFormEditar({ ...formEditar, password: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
-                        minLength={6}
-                        style={estiloInput}
-                      />
-                    </label>
-
-                    {errorEdicion && (
-                      <p style={{ color: "#dc2626", fontSize: 13, margin: "0 0 10px" }}>{errorEdicion}</p>
-                    )}
-
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button
-                        onClick={handleCerrarEdicion}
-                        style={{
-                          border: "1px solid #d1d5db", background: "#fff",
-                          borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontSize: 13,
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => handleGuardarEdicion(u.id)}
-                        disabled={guardandoEdicion}
-                        style={{
-                          background: guardandoEdicion ? "#93c5fd" : "#2563eb",
-                          color: "#fff", border: "none", borderRadius: 8,
-                          padding: "7px 16px", cursor: guardandoEdicion ? "not-allowed" : "pointer",
-                          fontWeight: 500, fontSize: 13,
-                        }}
-                      >
-                        {guardandoEdicion ? "Guardando..." : "Guardar cambios"}
-                      </button>
-                    </div>
+                {esAdmin && !esYo && confirmando && (
+                  <div className="confirm-eliminar">
+                    <button className="btn-confirmar-eliminar"
+                      onClick={() => eliminarUsuario(u.id)} disabled={eliminando}>
+                      {eliminando ? 'Eliminando…' : 'Sí, eliminar'}
+                    </button>
+                    <button className="btn-cancelar-eliminar"
+                      onClick={() => setConfirmandoId(null)} disabled={eliminando}>
+                      Cancelar
+                    </button>
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
+
+              {/* Panel editar */}
+              {editando && (
+                <div style={ps.panel}>
+                  <p style={ps.panelTitulo}>Editar usuario</p>
+                  <div className="form-grid">
+                    <label className="form-label">Nombre
+                      <input className="form-input" value={editNombre}
+                        onChange={(e) => setEditNombre(e.target.value)} />
+                    </label>
+                    <div className="form-row-2">
+                      <label className="form-label">Email
+                        <input className="form-input" type="email" value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)} />
+                      </label>
+                      <label className="form-label">Rol
+                        <select className="form-select" value={editRol}
+                          onChange={(e) => setEditRol(e.target.value)}>
+                          <option value="encargado">Encargado</option>
+                          <option value="editor">Editor</option>
+                          <option value="admin">Administrador</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+                  {mensajeEdit.texto && (
+                    <div className={`form-mensaje ${mensajeEdit.tipo}`}>{mensajeEdit.texto}</div>
+                  )}
+                  <div className="form-acciones">
+                    <button className="btn-secundario" onClick={() => setPanelActivo(null)}>Cancelar</button>
+                    <button className="btn-primario" onClick={() => guardarEdicion(u.id)} disabled={guardandoEdit}>
+                      {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Panel permisos */}
+              {permisosOpen && (
+                <PanelPermisos usuario={u} onCerrar={() => setPanelActivo(null)} />
+              )}
+            </div>
+          )
+        })}
+
+        {usuariosFiltrados.length === 0 && (
+          <div className="usuarios-estado">
+            {busqueda ? 'Sin resultados para esa búsqueda.' : 'No hay usuarios registrados.'}
+          </div>
+        )}
+      </div>
+
+      {/* Modal crear usuario */}
+      {modalCrear && (
+        <ModalCrearUsuario
+          onCerrar={() => setModalCrear(false)}
+          onCreado={cargarUsuarios}
+        />
       )}
     </div>
-  );
+  )
 }
 
-const estiloLabel = {
-  display: "flex", flexDirection: "column", gap: 4, fontSize: 13, fontWeight: 500, color: "#374151",
-};
-const estiloInput = {
-  border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 10px",
-  fontSize: 14, outline: "none", background: "#fff", width: "100%", boxSizing: "border-box",
-};
+// ── Estilos tabla ───────────────────────────────────────────────────────────
+const tb = {
+  table: {
+    width: '100%', borderCollapse: 'collapse', fontSize: 12,
+  },
+  thCat: {
+    padding: '9px 14px', textAlign: 'left',
+    background: '#1e293b', color: '#f1f5f9',
+    fontWeight: 700, fontSize: 11,
+    borderBottom: '2px solid #334155',
+    minWidth: 130, whiteSpace: 'nowrap',
+  },
+  thAccion: {
+    padding: '9px 8px', textAlign: 'center',
+    background: '#1e293b', color: '#94a3b8',
+    fontWeight: 600, fontSize: 10,
+    borderBottom: '2px solid #334155',
+    minWidth: 60, whiteSpace: 'nowrap',
+    letterSpacing: '0.02em',
+  },
+  tdCat: {
+    padding: '9px 14px', color: '#374151',
+    fontWeight: 500, fontSize: 13,
+    borderBottom: '1px solid #e5e7eb',
+    whiteSpace: 'nowrap',
+  },
+  tdCheck: {
+    padding: '6px 8px', textAlign: 'center',
+    borderBottom: '1px solid #e5e7eb',
+  },
+  dashDisabled: {
+    display: 'inline-block', color: '#d1d5db',
+    fontSize: 14, userSelect: 'none',
+  },
+  secLabel: {
+    fontSize: 10, fontWeight: 800, color: '#9ca3af',
+    textTransform: 'uppercase', letterSpacing: '0.1em',
+    margin: '0 0 8px',
+  },
+  leyenda: {
+    display: 'flex', alignItems: 'center', gap: 5,
+    fontSize: 11, color: '#6b7280',
+  },
+  leyendaDot: {
+    width: 10, height: 10, borderRadius: 3, display: 'inline-block',
+  },
+}
+
+// ── Estilos panel inline ────────────────────────────────────────────────────
+const ps = {
+  panel: {
+    borderTop: '1px solid #e5e7eb',
+    background: '#f9fafb',
+    padding: '18px 20px 20px',
+    animation: 'slideDown 0.18s ease',
+  },
+  panelTitulo: {
+    margin: '0 0 14px', fontWeight: 600, fontSize: 14, color: '#374151',
+  },
+  rolTag: {
+    fontSize: 11, color: '#6b7280',
+    background: '#e5e7eb', borderRadius: 20, padding: '2px 10px',
+  },
+  modalOverlay: {
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.45)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 1000, animation: 'fadeIn 0.15s ease',
+  },
+  modal: {
+    background: '#fff', borderRadius: 14,
+    padding: '28px 28px 24px',
+    boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+    border: '1px solid #e5e7eb',
+    animation: 'slideUp 0.18s ease',
+  },
+}

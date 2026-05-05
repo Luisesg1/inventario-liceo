@@ -5,15 +5,30 @@ import Login from './pages/Login'
 import Inventario from './pages/Inventario'
 import Dashboard from './pages/Dashboard'
 import Usuarios from './pages/Usuarios'
+import SetPassword from './pages/SetPassword'
 
 export default function App() {
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [pagina, setPagina] = useState('dashboard')
+  const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
 
   useEffect(() => {
+    // Detectar si la URL contiene un token de invitación o recuperación
+    const hash = window.location.hash
+    const esEnlaceInvitacion =
+      hash.includes('type=invite') ||
+      hash.includes('type=recovery') ||
+      (hash.includes('access_token') && hash.includes('refresh_token'))
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        if (esEnlaceInvitacion) {
+          // Tiene sesión Y viene de enlace de invitación → mostrar SetPassword
+          setMostrarSetPassword(true)
+          setCargando(false)
+          return
+        }
         supabase.from('usuarios').select('*').eq('id', session.user.id).single()
           .then(({ data }) => { setUsuario(data); setCargando(false) })
       } else {
@@ -21,14 +36,37 @@ export default function App() {
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) { setUsuario(null); return }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        setUsuario(null)
+        setMostrarSetPassword(false)
+        return
+      }
+
+      // Eventos que indican que el usuario llegó desde un enlace de invitación
+      if (event === 'SIGNED_IN' && esEnlaceInvitacion) {
+        setMostrarSetPassword(true)
+        return
+      }
+
       supabase.from('usuarios').select('*').eq('id', session.user.id).single()
         .then(({ data }) => setUsuario(data))
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Callback al completar SetPassword: limpiar hash y cargar usuario normal
+  function handlePasswordSet() {
+    window.history.replaceState(null, '', window.location.pathname)
+    setMostrarSetPassword(false)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        supabase.from('usuarios').select('*').eq('id', session.user.id).single()
+          .then(({ data }) => setUsuario(data))
+      }
+    })
+  }
 
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f9fafb' }}>
@@ -39,6 +77,9 @@ export default function App() {
       </div>
     </div>
   )
+
+  // Pantalla de establecer contraseña (desde enlace de invitación)
+  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} />
 
   if (!usuario) return <Login onLogin={setUsuario} />
 
