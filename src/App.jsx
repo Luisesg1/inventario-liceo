@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -13,59 +13,78 @@ export default function App() {
   const [pagina, setPagina] = useState('dashboard')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
 
-  useEffect(() => {
-    // Detectar si la URL contiene un token de invitación o recuperación
-    const hash = window.location.hash
-    const esEnlaceInvitacion =
-      hash.includes('type=invite') ||
-      hash.includes('type=recovery') ||
-      (hash.includes('access_token') && hash.includes('refresh_token'))
+  // Bloquea el listener de auth mientras se procesa el cambio de contraseña
+  const procesandoCambio = useRef(false)
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        if (esEnlaceInvitacion) {
-          // Tiene sesión Y viene de enlace de invitación → mostrar SetPassword
-          setMostrarSetPassword(true)
-          setCargando(false)
-          return
-        }
-        supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-          .then(({ data }) => { setUsuario(data); setCargando(false) })
-      } else {
-        setCargando(false)
-      }
-    })
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('error=access_denied') || hash.includes('type=invite')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
+      if (procesandoCambio.current) return
+
+      if (event === 'SIGNED_OUT' || !session) {
         setUsuario(null)
         setMostrarSetPassword(false)
+        setCargando(false)
         return
       }
 
-      // Eventos que indican que el usuario llegó desde un enlace de invitación
-      if (event === 'SIGNED_IN' && esEnlaceInvitacion) {
-        setMostrarSetPassword(true)
-        return
-      }
+      cargarPerfil(session.user.id)
+    })
 
-      supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-        .then(({ data }) => setUsuario(data))
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) setCargando(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // Callback al completar SetPassword: limpiar hash y cargar usuario normal
-  function handlePasswordSet() {
-    window.history.replaceState(null, '', window.location.pathname)
+  async function cargarPerfil(userId) {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[App] Error cargando perfil:', error.message)
+      setCargando(false)
+      return
+    }
+
+    if (!data) {
+      console.warn('[App] Usuario sin perfil en tabla usuarios:', userId)
+      setCargando(false)
+      return
+    }
+
+    setUsuario(data)
+    setMostrarSetPassword(data.debe_cambiar_password === true)
+    setCargando(false)
+  }
+
+  async function handlePasswordSet() {
+    procesandoCambio.current = true
+
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ debe_cambiar_password: false })
+      .eq('id', usuario.id)
+
+    if (error) {
+      console.error('[App] Error actualizando debe_cambiar_password:', error.message)
+    }
+
+    // Resetear UI antes del signOut para evitar parpadeos
     setMostrarSetPassword(false)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-          .then(({ data }) => setUsuario(data))
-      }
-    })
+    setUsuario(null)
+    setCargando(false)
+
+    await supabase.auth.signOut()
+    procesandoCambio.current = false
   }
 
   if (cargando) return (
@@ -78,12 +97,9 @@ export default function App() {
     </div>
   )
 
-  // Pantalla de establecer contraseña (desde enlace de invitación)
-  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} />
-
+  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} />
 
-  // Redirigir encargado si intenta acceder a página de admin
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina
 
   const renderPagina = () => {
