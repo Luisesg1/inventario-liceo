@@ -506,8 +506,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
                       <td className="td-num">{i + 1}</td>
                       <td className="td-code">{codigo || <em className="td-muted">auto</em>}</td>
                       <td>{catLabel}</td>
-                      <td>{[normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.nombre) || '—'}</td>
-                      <td className="td-muted">{normalizar(row.numero_serie) || '—'}</td>
+                      <td>{[normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'}</td>
+                      <td className="td-muted">{normalizar(row.numero_serie) || normalizar(row['n°_de_serie']) || normalizar(row['n_de_serie']) || '—'}</td>
                       <td>{normalizar(row.estado) || 'Bueno'}</td>
                       <td>{esDup ? <span className="badge-dup">{duplicados === 'omitir' ? 'se omitirá' : 'sobreescribirá'}</span> : <span className="badge-nuevo">nuevo</span>}</td>
                     </tr>
