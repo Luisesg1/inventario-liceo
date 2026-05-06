@@ -1,0 +1,61 @@
+/* ── Dashboard responsive ─────────────────────────────── */
+
+.dash-wrap {
+  padding: 1.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* KPI grid */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Donut + Barras */
+.dash-charts {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Grilla final de categorías */
+.dash-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+/* ── Tablet ── */
+@media (max-width: 700px) {
+  .dash-charts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .dash-wrap {
+    padding: 1rem 0.85rem;
+  }
+
+  .dash-kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-charts {
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-cat-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+  }
+}

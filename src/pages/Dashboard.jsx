@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import './Dashboard.css'
 
 const ESTADO_COLOR  = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
 const ESTADO_BG     = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
@@ -100,7 +101,7 @@ export default function Dashboard({ usuario }) {
     : b.nombre
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1100, margin: '0 auto', fontFamily: '"Segoe UI", system-ui, sans-serif' }}>
+    <div className="dash-wrap">
 
       {/* Saludo */}
       <div style={{ marginBottom: '1.5rem' }}>
@@ -113,7 +114,7 @@ export default function Dashboard({ usuario }) {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="dash-kpis">
         {[
           { label: 'Total de bienes',    valor: total,     icono: '📦', color: '#2563eb', bg: '#eff6ff' },
           { label: 'Categorías',         valor: totalCats, icono: '📂', color: '#7c3aed', bg: '#f5f3ff' },
@@ -133,7 +134,7 @@ export default function Dashboard({ usuario }) {
       </div>
 
       {/* Dona + Barras */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="dash-charts">
 
         {/* Dona de estados */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.4rem' }}>
@@ -214,7 +215,7 @@ export default function Dashboard({ usuario }) {
       {/* Grilla de categorías */}
       <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.4rem' }}>
         <p style={s.secTitle}>Todas las categorías</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
+        <div className="dash-cat-grid">
           {catGrid.map(c => (
             <div key={c.id} style={{ background: c.count > 0 ? '#f8faff' : '#f9fafb', border: `1px solid ${c.count > 0 ? '#bfdbfe' : '#e5e7eb'}`, borderRadius: 10, padding: '0.9rem', textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 6 }}>{c.icon}</div>
