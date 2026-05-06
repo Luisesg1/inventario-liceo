@@ -227,7 +227,7 @@ const leerXLSX = (file) => new Promise((resolve, reject) => {
 })
 
 // ════════════════════════════════════════════════════════════════════════════
-export default function ImportarCSV({ categorias, bienesExistentes, onImportado }) {
+export default function ImportarCSV({ categorias, bienesExistentes, onImportado, catInicial }) {
   const [fase, setFase]             = useState('idle') // idle | preview | importando | resultado
   const [filas, setFilas]           = useState([])
   const [errParse, setErrParse]     = useState(null)
@@ -291,8 +291,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
       const mapInicial = {}
       pendientes.forEach(c => { mapInicial[c] = categorias[0]?.id || 'otros' })
       setMapCats(mapInicial)
-      // Categoría global por defecto: primera categoría disponible
-      setCatGlobal(categorias[0]?.id || 'otros')
+      // Categoría global: usar la activa en el inventario si existe, si no la primera disponible
+      setCatGlobal(catInicial || categorias[0]?.id || 'otros')
       setFilas(filasMapeadas)
       setFase('preview')
     } catch (err) {

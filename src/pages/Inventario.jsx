@@ -915,6 +915,7 @@ export default function Inventario({ usuario }) {
       <ImportarCSV
         categorias={categorias}
         bienesExistentes={bienes}
+        catInicial={catActual !== 'todos' ? catActual : undefined}
         onImportado={() => { cargarDatos(); setModalImportar(false) }}
       />
     </div>
