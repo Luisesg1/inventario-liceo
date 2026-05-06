@@ -13,7 +13,7 @@ const REQUISITOS = [
   { id: 'symbol', label: 'Al menos 1 símbolo especial', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ]
 
-export default function SetPassword({ onComplete }) {
+export default function SetPassword({ onComplete, usuario }) {
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [loading, setLoading]     = useState(false)
