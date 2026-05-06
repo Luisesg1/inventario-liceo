@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -13,58 +13,96 @@ export default function App() {
   const [pagina, setPagina] = useState('dashboard')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
 
-  useEffect(() => {
-    // Detectar si la URL contiene un token de invitación o recuperación
-    const hash = window.location.hash
-    const esEnlaceInvitacion =
-      hash.includes('type=invite') ||
-      hash.includes('type=recovery') ||
-      (hash.includes('access_token') && hash.includes('refresh_token'))
+  // Flag en memoria: una vez que el usuario cambió su contraseña,
+  // ignoramos cualquier evento hasta que haga login manual
+  const passwordCambiada = useRef(false)
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        if (esEnlaceInvitacion) {
-          // Tiene sesión Y viene de enlace de invitación → mostrar SetPassword
-          setMostrarSetPassword(true)
-          setCargando(false)
-          return
-        }
-        supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-          .then(({ data }) => { setUsuario(data); setCargando(false) })
-      } else {
-        setCargando(false)
-      }
-    })
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('error=access_denied') || hash.includes('type=invite')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
+      console.log('[App] onAuthStateChange →', event, '| user:', session?.user?.email ?? 'null', '| passChanged:', passwordCambiada.current)
+
+      // Si ya cambió la contraseña, ignorar todo hasta SIGNED_OUT
+      if (passwordCambiada.current && event !== 'SIGNED_OUT') {
+        console.log('[App] ignorando evento post-cambio de contraseña')
+        return
+      }
+
+      if (event === 'SIGNED_OUT' || !session) {
+        passwordCambiada.current = false
         setUsuario(null)
         setMostrarSetPassword(false)
+        setCargando(false)
         return
       }
 
-      // Eventos que indican que el usuario llegó desde un enlace de invitación
-      if (event === 'SIGNED_IN' && esEnlaceInvitacion) {
-        setMostrarSetPassword(true)
+      // Ignorar los SIGNED_IN automáticos que Supabase emite tras signOut
+      if (event === 'SIGNED_IN' && passwordCambiada.current) {
+        console.log('[App] ignorando SIGNED_IN automático post-cambio')
         return
       }
 
-      supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-        .then(({ data }) => setUsuario(data))
+      cargarPerfil(session.user.id)
+    })
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) setCargando(false)
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
-  // Callback al completar SetPassword: limpiar hash y cargar usuario normal
-  function handlePasswordSet() {
-    window.history.replaceState(null, '', window.location.pathname)
+  async function cargarPerfil(userId) {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[App] Error cargando perfil:', error.message)
+      setCargando(false)
+      return
+    }
+
+    if (!data) {
+      console.warn('[App] Usuario sin perfil en tabla usuarios:', userId)
+      setCargando(false)
+      return
+    }
+
+    if (data.debe_cambiar_password) {
+      setUsuario(data)
+      setMostrarSetPassword(true)
+    } else {
+      setUsuario(data)
+      setMostrarSetPassword(false)
+    }
+    setCargando(false)
+  }
+
+  async function handlePasswordSet() {
+    // Marcar en memoria ANTES de hacer cualquier cosa
+    passwordCambiada.current = true
+
+    if (usuario?.id) {
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ debe_cambiar_password: false })
+        .eq('id', usuario.id)
+      console.log('[App] update debe_cambiar_password:', error ? error.message : 'OK')
+    }
+
     setMostrarSetPassword(false)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        supabase.from('usuarios').select('*').eq('id', session.user.id).single()
-          .then(({ data }) => setUsuario(data))
-      }
+    setUsuario(null)
+    await supabase.auth.signOut({ scope: 'local' })
+    // Limpiar localStorage para evitar que Supabase restaure la sesión automáticamente
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('sb-')) localStorage.removeItem(key)
     })
   }
 
@@ -78,12 +116,9 @@ export default function App() {
     </div>
   )
 
-  // Pantalla de establecer contraseña (desde enlace de invitación)
-  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} />
-
   if (!usuario) return <Login onLogin={setUsuario} />
+  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
 
-  // Redirigir encargado si intenta acceder a página de admin
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina
 
   const renderPagina = () => {

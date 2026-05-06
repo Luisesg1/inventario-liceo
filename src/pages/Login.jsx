@@ -7,6 +7,7 @@ export default function Login({ onLogin }) {
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [showPass, setShowPass] = useState(false)
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -48,13 +49,36 @@ export default function Login({ onLogin }) {
           </div>
           <div className="form-group">
             <label>Contraseña</label>
-            <input
-              type="password"
-              value={pass}
-              onChange={e => setPass(e.target.value)}
-              placeholder="••••••"
-              required
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                type={showPass ? 'text' : 'password'}
+                value={pass}
+                onChange={e => setPass(e.target.value)}
+                placeholder="••••••"
+                required
+                style={{ width: '100%', paddingRight: 38, boxSizing: 'border-box' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                tabIndex={-1}
+                style={{
+                  position: 'absolute',
+                  right: 10,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  padding: 0,
+                  lineHeight: 1,
+                  color: '#9ca3af',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {showPass ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           {error && <p className="error">{error}</p>}
