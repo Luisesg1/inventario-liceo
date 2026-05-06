@@ -932,7 +932,7 @@ export default function Inventario({ usuario }) {
                   value={busqueda}
                   onChange={e => setBusqueda(e.target.value)}
                   placeholder="Buscar por nombre, código, marca, serie, ubicación..."
-                  style={{ width: '100%', paddingLeft: '32px', paddingRight: busqueda ? '32px' : '10px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ width: '100%', paddingLeft: '32px', paddingRight: busqueda ? '32px' : '10px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: '#111827' }}
                 />
                 {busqueda && (
                   <button onClick={() => setBusqueda('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}>✕</button>
