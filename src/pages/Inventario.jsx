@@ -41,40 +41,29 @@ function ComboField({ name, value, onChange, placeholder, opciones = [], maxLeng
     .slice(0, 14)
 
   return (
-    <div ref={refDiv} style={{ position: 'relative' }}>
-      <div style={{ position: 'relative' }}>
-        <input
-          name={name}
-          value={value ?? ''}
-          onChange={onChange}
-          onFocus={() => setAbierto(true)}
-          onBlur={() => setTimeout(() => setAbierto(false), 160)}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          className={className}
-          autoComplete="off"
-          style={{ paddingRight: opciones.length > 0 ? '26px' : undefined }}
-        />
-        {opciones.length > 0 && (
-          <span
-            onMouseDown={e => { e.preventDefault(); setAbierto(a => !a) }}
-            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#9ca3af', fontSize: '9px', userSelect: 'none' }}
-          >▼</span>
-        )}
-      </div>
+    <div ref={refDiv} className="combo-wrap">
+      <input
+        name={name}
+        value={value ?? ''}
+        onChange={onChange}
+        onFocus={() => setAbierto(true)}
+        onBlur={() => setTimeout(() => setAbierto(false), 160)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className={className}
+        autoComplete="off"
+        style={{ paddingRight: opciones.length > 0 ? '26px' : undefined }}
+      />
+      {opciones.length > 0 && (
+        <span className="combo-chevron" onMouseDown={e => { e.preventDefault(); setAbierto(a => !a) }}>▼</span>
+      )}
       {abierto && filtradas.length > 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, zIndex: 300,
-          background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: '200px', overflowY: 'auto',
-        }}>
+        <div className="combo-dropdown">
           {filtradas.map((o, i) => (
             <div
               key={i}
+              className="combo-option"
               onMouseDown={e => { e.preventDefault(); onChange({ target: { name, value: o } }); setAbierto(false) }}
-              style={{ padding: '7px 12px', cursor: 'pointer', fontSize: '0.83rem', color: '#374151', borderBottom: i < filtradas.length - 1 ? '1px solid #f3f4f6' : 'none' }}
-              onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
-              onMouseLeave={e => e.currentTarget.style.background = ''}
             >
               {o}
             </div>

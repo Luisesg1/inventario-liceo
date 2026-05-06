@@ -791,3 +791,44 @@ tr.fila-editando td { background: #fffbeb; }
   /* Handle más visible en móvil */
   .cat-drag-handle { opacity: 0.35; }
 }
+/* ── ComboField ─────────────────────────────────────────────────────────── */
+.combo-wrap {
+  position: relative;
+}
+.combo-chevron {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: #9ca3af;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: all;
+}
+.combo-dropdown {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.combo-option {
+  padding: 8px 12px;
+  font-size: 0.83rem;
+  color: #374151 !important;
+  background: #ffffff !important;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+.combo-option:last-child { border-bottom: none; }
+.combo-option:hover {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
