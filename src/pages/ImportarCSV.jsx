@@ -45,6 +45,11 @@ const ALIAS = {
   'orden_de_compra': 'numero_orden',
   'orden_compra': 'numero_orden',
   'nro_orden': 'numero_orden',
+  // Personas / responsable
+  'usuario': 'responsable',
+  'user': 'responsable',
+  'encargado': 'responsable',
+  'asignado_a': 'responsable',
 }
 
 const CATEGORIAS_COMP = new Set(['computadores', 'computador', 'computadoras', 'all in one', 'all-in-one', 'aio', 'laptop', 'desktop', 'notebook', 'pc'])
