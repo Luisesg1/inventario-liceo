@@ -1905,12 +1905,12 @@ export default function Inventario({ usuario }) {
                       ['N° Orden', verDetalle.numero_orden],
                       ['Fondo', verDetalle.fondo],
                       ['Garantía', verDetalle.garantia],
-                    ].map(([label, val]) => val ? (
+                    ].map(([label, val]) => (
                       <div key={label} className="detalle-campo">
                         <span>{label}</span>
-                        <strong>{val}</strong>
+                        <strong>{val || '—'}</strong>
                       </div>
-                    ) : null)}
+                    ))}
                   </div>
                 </div>
               </>
