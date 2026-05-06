@@ -22,7 +22,7 @@
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #111827;
+  color: #ffffff;
   letter-spacing: -0.3px;
 }
 
@@ -333,11 +333,11 @@
 .usuarios-estado {
   text-align: center;
   padding: 48px 16px;
-  color: #6b7280;
+  color: rgba(255,255,255,0.65);
   font-size: 15px;
 }
 .usuarios-estado.error {
-  color: #dc2626;
+  color: #fca5a5;
 }
 /* ── Animaciones para modal de confirmación ── */
 @keyframes fadeIn {
