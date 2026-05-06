@@ -198,11 +198,14 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
   const [catsPendientes, setCatsPendientes] = useState([]) // categorías nuevas detectadas
   const [mapCats, setMapCats]       = useState({})        // { catDesconocida: 'computadores' | 'crear' | 'otros' }
   const [duplicados, setDuplicados] = useState('omitir')  // 'omitir' | 'sobreescribir'
+  const [catGlobal, setCatGlobal]   = useState('')        // categoría por defecto cuando no hay columna categoria
+  const [tieneCatCol, setTieneCatCol] = useState(false)   // si el Excel tenía columna "categoria"
   const inputRef = useRef()
 
   const resetear = () => {
     setFase('idle'); setFilas([]); setErrParse(null)
     setFileName(''); setResultado(null); setCatsPendientes([]); setMapCats({})
+    setCatGlobal(''); setTieneCatCol(false)
   }
 
   // ── Procesar archivo ───────────────────────────────────────────────────
@@ -220,6 +223,11 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
 
       if (!rows.length) { setErrParse('El archivo está vacío o no tiene filas de datos.'); return }
 
+      // Detectar si el archivo tiene columna "categoria"
+      const primeraFila = rows[0] ? Object.keys(rows[0]).map(k => k.toLowerCase().trim()) : []
+      const hayColCat = primeraFila.some(k => k === 'categoria' || k === 'categoría' || k === 'category')
+      setTieneCatCol(hayColCat)
+
       // Mapear filas y detectar categorías desconocidas
       const catSet = new Set()
       const filasMapeadas = rows.map(row => {
@@ -227,13 +235,13 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
         const normRow = {}
         for (const [k, v] of Object.entries(row)) normRow[k.toLowerCase().trim().replace(/\s+/g, '_')] = v
 
-        let cat = normalizar(normRow.categoria || '').toLowerCase().trim()
-        if (!cat || cat === 'nan') cat = 'otros'
+        let cat = hayColCat ? normalizar(normRow.categoria || '').toLowerCase().trim() : ''
+        if (!cat || cat === 'nan') cat = ''
 
-        const catFija = categorias.find(c => c.id === cat || c.label?.toLowerCase() === cat)
-        const esCompAlias = CATEGORIAS_COMP.has(cat)
+        const catFija = cat ? categorias.find(c => c.id === cat || c.label?.toLowerCase() === cat) : null
+        const esCompAlias = cat ? CATEGORIAS_COMP.has(cat) : false
 
-        if (!catFija && !esCompAlias) catSet.add(cat)
+        if (cat && !catFija && !esCompAlias) catSet.add(cat)
         normRow._catOriginal = cat
         return normRow
       })
@@ -242,8 +250,10 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
       const pendientes = [...catSet]
       setCatsPendientes(pendientes)
       const mapInicial = {}
-      pendientes.forEach(c => { mapInicial[c] = 'computadores' })
+      pendientes.forEach(c => { mapInicial[c] = categorias[0]?.id || 'otros' })
       setMapCats(mapInicial)
+      // Categoría global por defecto: primera categoría disponible
+      setCatGlobal(categorias[0]?.id || 'otros')
       setFilas(filasMapeadas)
       setFase('preview')
     } catch (err) {
@@ -263,10 +273,11 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
 
   // ── Resolver categoría de una fila ────────────────────────────────────
   const resolverCategoria = (catOriginal) => {
+    if (!catOriginal) return catGlobal || categorias[0]?.id || 'otros'
     const catFija = categorias.find(c => c.id === catOriginal || c.label?.toLowerCase() === catOriginal)
     if (catFija) return catFija.id
     if (CATEGORIAS_COMP.has(catOriginal)) return 'computadores'
-    return mapCats[catOriginal] || 'otros'
+    return mapCats[catOriginal] || catGlobal || 'otros'
   }
 
   // ── Construir payload final ────────────────────────────────────────────
@@ -434,6 +445,23 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
                   </select>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Selector de categoría global (cuando el archivo no tiene columna categoria) */}
+          {!tieneCatCol && (
+            <div className="cat-global-row">
+              <span className="dup-label">📂 Categoría de destino:</span>
+              <select
+                value={catGlobal}
+                onChange={e => setCatGlobal(e.target.value)}
+                className="cat-map-select"
+                style={{ fontWeight: 600 }}
+              >
+                {categorias.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+                ))}
+              </select>
             </div>
           )}
 
