@@ -23,6 +23,14 @@ const formVacioComp = {
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
 }
 
+const formVacioTecno = {
+  nombre: '', categoria: '', codigo: '', cantidad: 1,
+  estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  tipo: '', tecnologia: '', marca: '', modelo: '', numero_serie: '',
+  consumible: '', proveedor: '', numero_factura: '', numero_orden: '',
+  fecha_adquisicion: '', fondo: '',
+}
+
 export default function Inventario({ usuario }) {
   const esAdmin  = usuario?.rol === 'admin'
 
@@ -215,7 +223,13 @@ export default function Inventario({ usuario }) {
   const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
   const getCatLabel = (id) => categorias.find(c => c.id === id)?.label ?? id
   const catInfo     = [{ id: 'todos', label: 'Todos', icon: '◉' }, ...categorias].find(c => c.id === catActual)
-  const esComp      = (cat) => cat === 'computadores'
+  const esComp   = (cat) => cat === 'computadores'
+  const esTecno  = (cat) => {
+    if (!cat) return false
+    const obj = categorias.find(c => c.id === cat)
+    const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return label.includes('tecnol')
+  }
 
   const seleccionarCat = (id) => { setCatActual(id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
 
@@ -461,7 +475,7 @@ export default function Inventario({ usuario }) {
   const abrirFormNuevo = () => {
     setEditandoId(null)
     const cat = catActual !== 'todos' ? catActual : (categorias[0]?.id ?? 'otros')
-    const base = esComp(cat) ? { ...formVacioComp } : { ...formVacio }
+    const base = esComp(cat) ? { ...formVacioComp } : esTecno(cat) ? { ...formVacioTecno } : { ...formVacio }
     base.categoria = cat
     // Generar código único que no exista en bienes
     const codigos = new Set(bienes.map(b => b.codigo))
@@ -476,7 +490,7 @@ export default function Inventario({ usuario }) {
 
   const abrirFormEditar = (bien) => {
     setEditandoId(bien.id)
-    const base = esComp(bien.categoria) ? { ...formVacioComp, ...bien } : { ...formVacio, ...bien }
+    const base = esComp(bien.categoria) ? { ...formVacioComp, ...bien } : esTecno(bien.categoria) ? { ...formVacioTecno, ...bien } : { ...formVacio, ...bien }
     // Normalizar nulos a string vacío
     Object.keys(base).forEach(k => { if (base[k] === null) base[k] = '' })
     if (!base.win_tipo_licencia) base.win_tipo_licencia = 'key'
@@ -509,10 +523,13 @@ export default function Inventario({ usuario }) {
     if (name === 'categoria') {
       const cambiaAComp  = esComp(value)
       const cambiaDeComp = esComp(form.categoria)
+      const cambiaATecno = esTecno(value)
+      const camiaDeTecno = esTecno(form.categoria)
       const comun = { nombre: form.nombre, codigo: form.codigo, cantidad: form.cantidad, estado: form.estado, ubicacion: form.ubicacion, responsable: form.responsable, obs: form.obs, categoria: value }
-      if (cambiaAComp && !cambiaDeComp)       setForm({ ...formVacioComp, ...comun })
-      else if (!cambiaAComp && cambiaDeComp)  setForm({ ...formVacio, ...comun })
-      else                                     setForm(prev => ({ ...prev, categoria: value }))
+      if (cambiaAComp && !cambiaDeComp)                                         setForm({ ...formVacioComp, ...comun })
+      else if (cambiaATecno && !camiaDeTecno)                                   setForm({ ...formVacioTecno, ...comun })
+      else if (!cambiaAComp && !cambiaATecno && (cambiaDeComp || camiaDeTecno)) setForm({ ...formVacio, ...comun })
+      else                                                                       setForm(prev => ({ ...prev, categoria: value }))
     } else {
       setForm(prev => {
         const updated = { ...prev, [name]: value }
@@ -556,7 +573,7 @@ export default function Inventario({ usuario }) {
 
   const guardarBien = async () => {
     const errs = {}
-    if (!esComp(form.categoria) && !form.nombre.trim()) errs.nombre = true
+    if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre.trim()) errs.nombre = true
     if (!form.codigo.trim()) errs.codigo = true
     if (Object.keys(errs).length) { setErrores(errs); return }
 
@@ -564,7 +581,9 @@ export default function Inventario({ usuario }) {
     // Para computadores, el nombre se genera automáticamente desde marca + modelo
     const nombreFinal = esComp(form.categoria)
       ? ([form.marca, form.modelo].filter(Boolean).join(' ') || 'Computador')
-      : form.nombre
+      : esTecno(form.categoria)
+        ? ([form.tipo, form.marca, form.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico')
+        : form.nombre
     const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1 }
     if (!payload.fecha_adquisicion) payload.fecha_adquisicion = null
     if (!payload.win_fecha_factura) payload.win_fecha_factura = null
@@ -597,7 +616,9 @@ export default function Inventario({ usuario }) {
     const bien = bienes.find(b => b.id === id)
     const nombreMostrar = esComp(bien?.categoria)
       ? [bien?.marca, bien?.modelo].filter(Boolean).join(' ') || 'Computador'
-      : bien?.nombre
+      : esTecno(bien?.categoria)
+        ? [bien?.tipo, bien?.marca, bien?.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
+        : bien?.nombre
     pedirConfirmacion(
       `¿Eliminar "${nombreMostrar}" del inventario?`,
       async () => {
@@ -908,10 +929,10 @@ export default function Inventario({ usuario }) {
               <div className="modal modal-importar" style={{ maxWidth: '780px', maxHeight: '88vh', overflowY: 'auto', padding: '1.5rem' }} onClick={e => e.stopPropagation()}>
                 <div className="form-panel" style={{ boxShadow: 'none', border: 'none', padding: 0, marginBottom: 0 }}>
 
-          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : 'Nuevo bien')}</p>
+          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : esTecno(form.categoria) ? '✏️ Editar artículo tecnológico' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : esTecno(form.categoria) ? 'Nuevo artículo tecnológico' : 'Nuevo bien')}</p>
 
           <div className="form-row">
-            {!esComp(form.categoria) && (
+            {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
                 <label>Nombre *</label>
                 <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
@@ -1218,6 +1239,79 @@ export default function Inventario({ usuario }) {
             </>
           )}
 
+          {esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Tipo</label>
+                  <input list="tecno-tipos" name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} />
+                  <datalist id="tecno-tipos">
+                    <option value="Impresora" />
+                    <option value="Escáner" />
+                    <option value="Proyector" />
+                    <option value="Tablet" />
+                    <option value="Smart TV" />
+                    <option value="Fotocopiadora" />
+                    <option value="Impresora/Escáner" />
+                    <option value="Cámara" />
+                    <option value="Equipo de Audio" />
+                    <option value="Router" />
+                    <option value="Switch" />
+                  </datalist>
+                </div>
+                <div className="field">
+                  <label>Tecnología</label>
+                  <input name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet, LED" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Marca</label>
+                  <input name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Modelo</label>
+                  <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
+                </div>
+                <div className="field">
+                  <label>N° de serie</label>
+                  <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Consumible</label>
+                  <input name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} />
+                </div>
+              </div>
+
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Proveedor</label>
+                  <input name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                </div>
+                <div className="field">
+                  <label>Nº Factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fecha Factura</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Orden de Compra</label>
+                  <input name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <input name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
@@ -1237,10 +1331,10 @@ export default function Inventario({ usuario }) {
           ) : (
             <div className="form-panel">
 
-          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : 'Nuevo bien')}</p>
+          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : esTecno(form.categoria) ? '✏️ Editar artículo tecnológico' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : esTecno(form.categoria) ? 'Nuevo artículo tecnológico' : 'Nuevo bien')}</p>
 
           <div className="form-row">
-            {!esComp(form.categoria) && (
+            {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
                 <label>Nombre *</label>
                 <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
@@ -1542,6 +1636,79 @@ export default function Inventario({ usuario }) {
                 <div className="field">
                   <label>Garantía</label>
                   <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Tipo</label>
+                  <input list="tecno-tipos" name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} />
+                  <datalist id="tecno-tipos">
+                    <option value="Impresora" />
+                    <option value="Escáner" />
+                    <option value="Proyector" />
+                    <option value="Tablet" />
+                    <option value="Smart TV" />
+                    <option value="Fotocopiadora" />
+                    <option value="Impresora/Escáner" />
+                    <option value="Cámara" />
+                    <option value="Equipo de Audio" />
+                    <option value="Router" />
+                    <option value="Switch" />
+                  </datalist>
+                </div>
+                <div className="field">
+                  <label>Tecnología</label>
+                  <input name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet, LED" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Marca</label>
+                  <input name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Modelo</label>
+                  <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
+                </div>
+                <div className="field">
+                  <label>N° de serie</label>
+                  <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Consumible</label>
+                  <input name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} />
+                </div>
+              </div>
+
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Proveedor</label>
+                  <input name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                </div>
+                <div className="field">
+                  <label>Nº Factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fecha Factura</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Orden de Compra</label>
+                  <input name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <input name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
                 </div>
               </div>
             </>
