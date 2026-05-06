@@ -10,7 +10,9 @@ import SetPassword from './pages/SetPassword'
 export default function App() {
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
-  const [pagina, setPagina] = useState('dashboard')
+  const [pagina, setPagina] = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
+
+  const cambiarPagina = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
 
   // Bloquea el listener de auth mientras se procesa el cambio de contraseña
@@ -116,7 +118,7 @@ export default function App() {
       usuario={usuario}
       onLogout={() => supabase.auth.signOut()}
       paginaActual={paginaSegura}
-      setPagina={setPagina}
+      setPagina={cambiarPagina}
     >
       {renderPagina()}
     </Layout>

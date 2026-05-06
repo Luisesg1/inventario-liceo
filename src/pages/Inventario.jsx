@@ -103,7 +103,7 @@ export default function Inventario({ usuario }) {
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
   const [cargando, setCargando]       = useState(true)
-  const [catActual, setCatActual]     = useState('todos')
+  const [catActual, setCatActual]     = useState(() => localStorage.getItem('inv_catActual') || 'todos')
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm]               = useState(formVacio)
   const [errores, setErrores]         = useState({})
@@ -293,7 +293,7 @@ export default function Inventario({ usuario }) {
     }
   }, [bienes, categorias])
 
-  const seleccionarCat = (id) => { setCatActual(id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
+  const seleccionarCat = (id) => { setCatActual(id); localStorage.setItem('inv_catActual', id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
@@ -498,7 +498,7 @@ export default function Inventario({ usuario }) {
     if (error) { setAviso('Error al crear categoría: ' + error.message); return }
     setCategorias(prev => [...prev, { id, label, icon: nuevaCat.icon, fija: false }])
     setModalCat(false)
-    setCatActual(id)
+    setCatActual(id); localStorage.setItem('inv_catActual', id)
   }
 
   const eliminarCategoria = async (id) => {
@@ -513,7 +513,7 @@ export default function Inventario({ usuario }) {
         const { error } = await supabase.from('categorias').delete().eq('id', id)
         if (error) { setAviso('Error al eliminar: ' + error.message); return }
         setCategorias(prev => prev.filter(c => c.id !== id))
-        if (catActual === id) setCatActual('todos')
+        if (catActual === id) { setCatActual('todos'); localStorage.setItem('inv_catActual', 'todos') }
       }
     )
   }
