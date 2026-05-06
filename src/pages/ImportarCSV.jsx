@@ -157,6 +157,14 @@ const mapearFila = (fila, categoriasFijas) => {
   return { data: mapped, catDesconocida: fila._catDesconocida }
 }
 
+// Palabras clave que indican que una fila es la cabecera real de la tabla
+const HEADER_HINTS = new Set([
+  'marca', 'modelo', 'tipo', 'serie', 'estado', 'ubicacion', 'ubicación',
+  'nombre', 'categoria', 'categoría', 'responsable', 'usuario', 'código', 'codigo',
+  'proveedor', 'factura', 'fondo', 'consumible', 'tecnología', 'tecnologia',
+  'pantalla', 'cpu', 'ram', 'memoria', 'almacenamiento', 'procesador',
+])
+
 // ── Leer XLSX con SheetJS (si está disponible) via script dinámico ───────
 const leerXLSX = (file) => new Promise((resolve, reject) => {
   const existingScript = document.getElementById('sheetjs-script')
@@ -167,13 +175,39 @@ const leerXLSX = (file) => new Promise((resolve, reject) => {
         const data = new Uint8Array(e.target.result)
         const wb = window.XLSX.read(data, { type: 'array' })
         const ws = wb.Sheets[wb.SheetNames[0]]
-        const json = window.XLSX.utils.sheet_to_json(ws, { defval: '' })
-        // Normalizar headers a lowercase
-        const normalizado = json.map(row => {
-          const n = {}
-          for (const [k, v] of Object.entries(row)) n[k.toLowerCase().trim().replace(/\s+/g, '_')] = v
-          return n
-        })
+
+        // Leer como arrays crudos para detectar la fila de cabecera correcta.
+        // Muchos Excel tienen una fila de título arriba antes de los encabezados reales.
+        const rawArrays = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+
+        // Puntuar cada fila: las celdas que coinciden con palabras clave de columna suman más
+        let headerRowIdx = 0
+        let maxScore = -1
+        for (let i = 0; i < Math.min(6, rawArrays.length); i++) {
+          const row = rawArrays[i]
+          let score = 0, nonEmpty = 0
+          for (const cell of row) {
+            const s = String(cell).toLowerCase().trim()
+            if (!s) continue
+            nonEmpty++
+            if (HEADER_HINTS.has(s)) score += 3
+            else if (typeof cell === 'string' && !/^\d+(\.\d+)?$/.test(s)) score += 1
+          }
+          if (nonEmpty >= 3 && score > maxScore) { maxScore = score; headerRowIdx = i }
+        }
+
+        const headers = rawArrays[headerRowIdx].map(h =>
+          String(h).toLowerCase().trim().replace(/\s+/g, '_')
+        )
+
+        const normalizado = rawArrays.slice(headerRowIdx + 1)
+          .filter(row => row.some(cell => cell !== '' && cell !== null && cell !== undefined))
+          .map(row => {
+            const n = {}
+            headers.forEach((h, idx) => { if (h) n[h] = row[idx] ?? '' })
+            return n
+          })
+
         resolve(normalizado)
       } catch (err) { reject(err) }
     }
