@@ -104,6 +104,7 @@ export default function Inventario({ usuario }) {
   const [categorias, setCategorias]   = useState([])
   const [cargando, setCargando]       = useState(true)
   const [catActual, setCatActual]     = useState(() => localStorage.getItem('inv_catActual') || 'todos')
+  const [verTodosTodos, setVerTodosTodos] = useState(false)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm]               = useState(formVacio)
   const [errores, setErrores]         = useState({})
@@ -261,7 +262,7 @@ export default function Inventario({ usuario }) {
       const numB = parseInt((b.codigo || '').replace(/\D/g, '')) || 0
       return numB - numA
     })
-    return hayFiltrosActivos ? todos : todos.slice(0, 25)
+    return (hayFiltrosActivos || verTodosTodos) ? todos : todos.slice(0, 25)
   })()
 
   const filtrados = filtradosBase.filter(b => {
@@ -828,9 +829,17 @@ export default function Inventario({ usuario }) {
         <span className="section-title section-title-desktop">
           {catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})
           {catActual === 'todos' && !hayFiltrosActivos && bienesPermitidos.length > 25 && (
-            <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
-              últimos 25 de {bienesPermitidos.length}
-            </span>
+            <>
+              <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
+                {verTodosTodos ? `todos (${bienesPermitidos.length})` : `últimos 25 de ${bienesPermitidos.length}`}
+              </span>
+              <button
+                onClick={() => setVerTodosTodos(v => !v)}
+                style={{ marginLeft: 8, fontSize: '0.72rem', padding: '2px 10px', border: '1px solid #d1d5db', borderRadius: 99, background: '#fff', color: '#374151', cursor: 'pointer', fontWeight: 500 }}
+              >
+                {verTodosTodos ? 'Ver últimos 25' : 'Ver todos'}
+              </button>
+            </>
           )}
         </span>
         <div className="section-actions">

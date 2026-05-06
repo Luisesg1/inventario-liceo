@@ -26,10 +26,10 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
 
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
-          <span>📋</span>
-          <div>
+          <img src="/logo-liceo.png" alt="Logo" className="sidebar-logo-img" />
+          <div style={{ minWidth: 0 }}>
             <p className="sidebar-title">Inventario</p>
-            <p className="sidebar-sub">Liceo</p>
+            <p className="sidebar-sub">Liceo JHJ</p>
           </div>
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>

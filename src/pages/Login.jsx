@@ -13,85 +13,72 @@ export default function Login({ onLogin }) {
     e.preventDefault()
     setError('')
     setCargando(true)
-
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password: pass
-    })
-
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password: pass })
     if (authError) {
       setError('Correo o contraseña incorrectos')
       setCargando(false)
     }
-    // Si el login es exitoso, onAuthStateChange en App.jsx
-    // captura la sesión y setea el usuario automáticamente.
-    // No hace falta llamar onLogin() aquí.
   }
 
   return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div className="login-logo">
-          <img src="/logo-liceo.png" alt="Logo Liceo" className="login-logo-img" />
+    <div className="login-bg">
+      <div className="login-panel">
+
+        {/* Banda izquierda decorativa */}
+        <div className="login-side">
+          <img src="/logo-liceo.png" alt="Logo Liceo" className="login-side-logo" />
+          <h1 className="login-side-title">Liceo Bicentenario<br/>Juvenal Hernández Jaque</h1>
+          <p className="login-side-sub">El Carmen · Sistema de Inventario</p>
         </div>
-        <h2>Inventario de Bienes</h2>
-        <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 500 }}>
-          Liceo Bicentenario Juvenal Hernández Jaque
-        </p>
-        <p>Ingresa con tus credenciales</p>
 
-        <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label>Correo</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="correo@liceo.cl"
-              autoFocus
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Contraseña</label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
-                type={showPass ? 'text' : 'password'}
-                value={pass}
-                onChange={e => setPass(e.target.value)}
-                placeholder="••••••"
-                required
-                style={{ width: '100%', paddingRight: 38, boxSizing: 'border-box' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
-                tabIndex={-1}
-                style={{
-                  position: 'absolute',
-                  right: 10,
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 15,
-                  padding: 0,
-                  lineHeight: 1,
-                  color: '#9ca3af',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                {showPass ? '🙈' : '👁️'}
-              </button>
+        {/* Formulario derecho */}
+        <div className="login-form-wrap">
+          <div className="login-form-inner">
+            <div className="login-form-header">
+              <div className="login-form-icon">📋</div>
+              <h2>Bienvenido</h2>
+              <p>Ingresa tus credenciales para continuar</p>
             </div>
+
+            <form onSubmit={handleLogin}>
+              <div className="login-field">
+                <label>Correo electrónico</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="correo@liceo.cl"
+                  autoFocus
+                  required
+                />
+              </div>
+
+              <div className="login-field">
+                <label>Contraseña</label>
+                <div className="login-pass-wrap">
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    value={pass}
+                    onChange={e => setPass(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button type="button" className="login-eye" onClick={() => setShowPass(!showPass)} tabIndex={-1}>
+                    {showPass ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              {error && <p className="login-error">⚠️ {error}</p>}
+
+              <button type="submit" className="login-btn" disabled={cargando}>
+                {cargando ? <span className="login-spinner" /> : null}
+                {cargando ? 'Ingresando...' : 'Ingresar'}
+              </button>
+            </form>
           </div>
+        </div>
 
-          {error && <p className="error">{error}</p>}
-
-          <button type="submit" className="btn-login" disabled={cargando}>
-            {cargando ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
       </div>
     </div>
   )
