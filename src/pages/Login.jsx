@@ -31,8 +31,13 @@ export default function Login({ onLogin }) {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div className="login-logo">📋</div>
-        <h2>Inventario Liceo</h2>
+        <div className="login-logo">
+          <img src="/logo-liceo.png" alt="Logo Liceo" className="login-logo-img" />
+        </div>
+        <h2>Inventario de Bienes</h2>
+        <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 4, fontWeight: 500 }}>
+          Liceo Bicentenario Juvenal Hernández Jaque
+        </p>
         <p>Ingresa con tus credenciales</p>
 
         <form onSubmit={handleLogin}>

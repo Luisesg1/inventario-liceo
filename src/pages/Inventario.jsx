@@ -251,7 +251,19 @@ export default function Inventario({ usuario }) {
   }
   const bienesPermitidos = bienes.filter(b => tieneAccesoCat(b.categoria))
   const bienCount   = (id) => id === 'todos' ? bienesPermitidos.length : bienesPermitidos.filter(b => b.categoria === id).length
-  const filtradosBase = catActual === 'todos' ? bienesPermitidos : bienesPermitidos.filter(b => b.categoria === catActual)
+
+  // En "Todos" sin filtros activos: mostrar solo los 25 más recientes (por código desc)
+  const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
+  const filtradosBase = (() => {
+    if (catActual !== 'todos') return bienesPermitidos.filter(b => b.categoria === catActual)
+    const todos = [...bienesPermitidos].sort((a, b) => {
+      const numA = parseInt((a.codigo || '').replace(/\D/g, '')) || 0
+      const numB = parseInt((b.codigo || '').replace(/\D/g, '')) || 0
+      return numB - numA
+    })
+    return hayFiltrosActivos ? todos : todos.slice(0, 25)
+  })()
+
   const filtrados = filtradosBase.filter(b => {
     const q = busqueda.toLowerCase()
     const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
@@ -263,7 +275,6 @@ export default function Inventario({ usuario }) {
 
   // Valores únicos para dropdowns dinámicos
   const unicos = (campo) => [...new Set(filtradosBase.map(b => b[campo]).filter(Boolean))].sort()
-  const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
   const getCatLabel = (id) => categorias.find(c => c.id === id)?.label ?? id
   const catInfo     = [{ id: 'todos', label: 'Todos', icon: '◉' }, ...categorias].find(c => c.id === catActual)
   const esComp   = (cat) => cat === 'computadores'
@@ -814,7 +825,14 @@ export default function Inventario({ usuario }) {
 
       {/* Cabecera */}
       <div className="section-header">
-        <span className="section-title section-title-desktop">{catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})</span>
+        <span className="section-title section-title-desktop">
+          {catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})
+          {catActual === 'todos' && !hayFiltrosActivos && bienesPermitidos.length > 25 && (
+            <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
+              últimos 25 de {bienesPermitidos.length}
+            </span>
+          )}
+        </span>
         <div className="section-actions">
 
           {/* Botón exportar con dropdown */}

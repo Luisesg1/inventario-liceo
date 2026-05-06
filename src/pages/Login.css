@@ -22,8 +22,17 @@ body {
 }
 
 .login-logo {
-  font-size: 32px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: center;
+}
+.login-logo-img {
+  width: 110px;
+  height: 110px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #1a2a6c;
+  padding: 4px;
 }
 
 .login-card h2 {
