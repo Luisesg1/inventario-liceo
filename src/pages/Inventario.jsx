@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../supabase'
 import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
@@ -29,6 +29,60 @@ const formVacioTecno = {
   tipo: '', tecnologia: '', marca: '', modelo: '', numero_serie: '',
   consumible: '', proveedor: '', numero_factura: '', numero_orden: '',
   fecha_adquisicion: '', fondo: '',
+}
+
+// ── ComboField: input con sugerencias desde la BD ─────────────────────────
+function ComboField({ name, value, onChange, placeholder, opciones = [], maxLength, className }) {
+  const [abierto, setAbierto] = useState(false)
+  const refDiv = useRef()
+
+  const filtradas = opciones
+    .filter(o => o && o.toLowerCase().includes((value || '').toLowerCase()))
+    .slice(0, 14)
+
+  return (
+    <div ref={refDiv} style={{ position: 'relative' }}>
+      <div style={{ position: 'relative' }}>
+        <input
+          name={name}
+          value={value ?? ''}
+          onChange={onChange}
+          onFocus={() => setAbierto(true)}
+          onBlur={() => setTimeout(() => setAbierto(false), 160)}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          className={className}
+          autoComplete="off"
+          style={{ paddingRight: opciones.length > 0 ? '26px' : undefined }}
+        />
+        {opciones.length > 0 && (
+          <span
+            onMouseDown={e => { e.preventDefault(); setAbierto(a => !a) }}
+            style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#9ca3af', fontSize: '9px', userSelect: 'none' }}
+          >▼</span>
+        )}
+      </div>
+      {abierto && filtradas.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, zIndex: 300,
+          background: '#fff', border: '1px solid #d1d5db', borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)', maxHeight: '200px', overflowY: 'auto',
+        }}>
+          {filtradas.map((o, i) => (
+            <div
+              key={i}
+              onMouseDown={e => { e.preventDefault(); onChange({ target: { name, value: o } }); setAbierto(false) }}
+              style={{ padding: '7px 12px', cursor: 'pointer', fontSize: '0.83rem', color: '#374151', borderBottom: i < filtradas.length - 1 ? '1px solid #f3f4f6' : 'none' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Inventario({ usuario }) {
@@ -230,6 +284,24 @@ export default function Inventario({ usuario }) {
     const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     return label.includes('tecnol')
   }
+
+  // ── Valores únicos de la BD para autocomplete de formularios ──────────────
+  const opsBD = useMemo(() => {
+    const uniq = (field) => [...new Set(bienes.map(b => b[field]).filter(Boolean))].sort()
+    const TIPOS_FIJOS = ['Impresora','Escáner','Multifuncional','Fotocopiadora','Impresora/Escáner','Proyector','Tablet','Smart TV','Cámara','Equipo de Audio','Router','Switch','Dron']
+    const TECNO_FIJOS = ['Inyección','Láser','Inkjet','LED','Matricial','Térmica','Láser Color']
+    return {
+      tipo:        [...new Set([...TIPOS_FIJOS, ...uniq('tipo')])],
+      tecnologia:  [...new Set([...TECNO_FIJOS, ...uniq('tecnologia')])],
+      marca:       uniq('marca'),
+      consumible:  uniq('consumible'),
+      ubicacion:   uniq('ubicacion'),
+      responsable: uniq('responsable'),
+      proveedor:   uniq('proveedor'),
+      fondo:       uniq('fondo'),
+      numero_orden: uniq('numero_orden'),
+    }
+  }, [bienes])
 
   const seleccionarCat = (id) => { setCatActual(id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
 
@@ -986,11 +1058,11 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             <div className="field">
               <label>Ubicación</label>
-              <input name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} />
+              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
             </div>
             <div className="field">
               <label>Responsable</label>
-              <input name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} />
+              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
             </div>
           </div>
 
@@ -1246,29 +1318,15 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Tipo</label>
-                  <input list="tecno-tipos" name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} />
-                  <datalist id="tecno-tipos">
-                    <option value="Impresora" />
-                    <option value="Escáner" />
-                    <option value="Multifuncional" />
-                    <option value="Fotocopiadora" />
-                    <option value="Impresora/Escáner" />
-                    <option value="Proyector" />
-                    <option value="Tablet" />
-                    <option value="Smart TV" />
-                    <option value="Cámara" />
-                    <option value="Equipo de Audio" />
-                    <option value="Router" />
-                    <option value="Switch" />
-                  </datalist>
+                  <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
                 </div>
                 <div className="field">
                   <label>Tecnología</label>
-                  <input name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet, LED" maxLength={60} />
+                  <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
                 </div>
                 <div className="field">
                   <label>Marca</label>
-                  <input name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} />
+                  <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
                 </div>
               </div>
               <div className="form-row triple">
@@ -1282,7 +1340,7 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Consumible</label>
-                  <input name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} />
+                  <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
                 </div>
               </div>
 
@@ -1290,7 +1348,7 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
                 </div>
                 <div className="field">
                   <label>Nº Factura</label>
@@ -1304,11 +1362,11 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Orden de Compra</label>
-                  <input name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
                 </div>
                 <div className="field">
                   <label>Fondo</label>
-                  <input name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
                 </div>
               </div>
             </>
@@ -1389,11 +1447,11 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             <div className="field">
               <label>Ubicación</label>
-              <input name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} />
+              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
             </div>
             <div className="field">
               <label>Responsable</label>
-              <input name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} />
+              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
             </div>
           </div>
 
@@ -1649,29 +1707,15 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Tipo</label>
-                  <input list="tecno-tipos" name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} />
-                  <datalist id="tecno-tipos">
-                    <option value="Impresora" />
-                    <option value="Escáner" />
-                    <option value="Multifuncional" />
-                    <option value="Fotocopiadora" />
-                    <option value="Impresora/Escáner" />
-                    <option value="Proyector" />
-                    <option value="Tablet" />
-                    <option value="Smart TV" />
-                    <option value="Cámara" />
-                    <option value="Equipo de Audio" />
-                    <option value="Router" />
-                    <option value="Switch" />
-                  </datalist>
+                  <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
                 </div>
                 <div className="field">
                   <label>Tecnología</label>
-                  <input name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet, LED" maxLength={60} />
+                  <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
                 </div>
                 <div className="field">
                   <label>Marca</label>
-                  <input name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} />
+                  <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
                 </div>
               </div>
               <div className="form-row triple">
@@ -1685,7 +1729,7 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Consumible</label>
-                  <input name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} />
+                  <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
                 </div>
               </div>
 
@@ -1693,7 +1737,7 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
                 </div>
                 <div className="field">
                   <label>Nº Factura</label>
@@ -1707,11 +1751,11 @@ export default function Inventario({ usuario }) {
               <div className="form-row triple">
                 <div className="field">
                   <label>Orden de Compra</label>
-                  <input name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
                 </div>
                 <div className="field">
                   <label>Fondo</label>
-                  <input name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
                 </div>
               </div>
             </>
