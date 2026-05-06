@@ -288,20 +288,21 @@ export default function Inventario({ usuario }) {
   // ── Valores únicos de la BD para autocomplete de formularios ──────────────
   const opsBD = useMemo(() => {
     const uniq = (field) => [...new Set(bienes.map(b => b[field]).filter(Boolean))].sort()
+    const uniqTecno = (field) => [...new Set(bienes.filter(b => esTecno(b.categoria)).map(b => b[field]).filter(Boolean))].sort()
     const TIPOS_FIJOS = ['Impresora','Escáner','Multifuncional','Fotocopiadora','Impresora/Escáner','Proyector','Tablet','Smart TV','Cámara','Equipo de Audio','Router','Switch','Dron']
     const TECNO_FIJOS = ['Inyección','Láser','Inkjet','LED','Matricial','Térmica','Láser Color']
     return {
-      tipo:        [...new Set([...TIPOS_FIJOS, ...uniq('tipo')])],
-      tecnologia:  [...new Set([...TECNO_FIJOS, ...uniq('tecnologia')])],
-      marca:       uniq('marca'),
-      consumible:  uniq('consumible'),
+      tipo:        [...new Set([...TIPOS_FIJOS, ...uniqTecno('tipo')])],
+      tecnologia:  [...new Set([...TECNO_FIJOS, ...uniqTecno('tecnologia')])],
+      marca:       uniqTecno('marca'),
+      consumible:  uniqTecno('consumible'),
       ubicacion:   uniq('ubicacion'),
       responsable: uniq('responsable'),
       proveedor:   uniq('proveedor'),
       fondo:       uniq('fondo'),
       numero_orden: uniq('numero_orden'),
     }
-  }, [bienes])
+  }, [bienes, categorias])
 
   const seleccionarCat = (id) => { setCatActual(id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
 
