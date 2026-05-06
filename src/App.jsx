@@ -13,9 +13,8 @@ export default function App() {
   const [pagina, setPagina] = useState('dashboard')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
 
-  // Flag en memoria: una vez que el usuario cambió su contraseña,
-  // ignoramos cualquier evento hasta que haga login manual
-  const passwordCambiada = useRef(false)
+  // Bloquea el listener de auth mientras se procesa el cambio de contraseña
+  const procesandoCambio = useRef(false)
 
   useEffect(() => {
     const hash = window.location.hash
@@ -24,25 +23,12 @@ export default function App() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[App] onAuthStateChange →', event, '| user:', session?.user?.email ?? 'null', '| passChanged:', passwordCambiada.current)
-
-      // Si ya cambió la contraseña, ignorar todo hasta SIGNED_OUT
-      if (passwordCambiada.current && event !== 'SIGNED_OUT') {
-        console.log('[App] ignorando evento post-cambio de contraseña')
-        return
-      }
+      if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
-        passwordCambiada.current = false
         setUsuario(null)
         setMostrarSetPassword(false)
         setCargando(false)
-        return
-      }
-
-      // Ignorar los SIGNED_IN automáticos que Supabase emite tras signOut
-      if (event === 'SIGNED_IN' && passwordCambiada.current) {
-        console.log('[App] ignorando SIGNED_IN automático post-cambio')
         return
       }
 
@@ -75,35 +61,30 @@ export default function App() {
       return
     }
 
-    if (data.debe_cambiar_password) {
-      setUsuario(data)
-      setMostrarSetPassword(true)
-    } else {
-      setUsuario(data)
-      setMostrarSetPassword(false)
-    }
+    setUsuario(data)
+    setMostrarSetPassword(data.debe_cambiar_password === true)
     setCargando(false)
   }
 
   async function handlePasswordSet() {
-    // Marcar en memoria ANTES de hacer cualquier cosa
-    passwordCambiada.current = true
+    procesandoCambio.current = true
 
-    if (usuario?.id) {
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ debe_cambiar_password: false })
-        .eq('id', usuario.id)
-      console.log('[App] update debe_cambiar_password:', error ? error.message : 'OK')
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ debe_cambiar_password: false })
+      .eq('id', usuario.id)
+
+    if (error) {
+      console.error('[App] Error actualizando debe_cambiar_password:', error.message)
     }
 
+    // Resetear UI antes del signOut para evitar parpadeos
     setMostrarSetPassword(false)
     setUsuario(null)
-    await supabase.auth.signOut({ scope: 'local' })
-    // Limpiar localStorage para evitar que Supabase restaure la sesión automáticamente
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('sb-')) localStorage.removeItem(key)
-    })
+    setCargando(false)
+
+    await supabase.auth.signOut()
+    procesandoCambio.current = false
   }
 
   if (cargando) return (
@@ -116,8 +97,8 @@ export default function App() {
     </div>
   )
 
-  if (!usuario) return <Login onLogin={setUsuario} />
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
+  if (!usuario) return <Login onLogin={setUsuario} />
 
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina
 
