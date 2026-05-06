@@ -18,8 +18,8 @@ const formVacioComp = {
   tipo: 'Desktop', marca: '', numero_serie: '', modelo: '', pantalla: '', ram_tipo: '', ram_slots: '',
   cpu: '', cpu_marca: '', cpu_modelo: '', cpu_generacion: '',
   ram: '', memoria: '', tipo_almacenamiento: 'SSD', sistema_operativo: 'Windows 11 Pro',
-  licencia_windows: '', win_version: '', win_proveedor: '', win_factura: '', win_fecha_factura: '', win_orden: '',
-  licencia_office: '', off_version: '', off_proveedor: '', off_factura: '', off_fecha_factura: '', off_orden: '',
+  licencia_windows: '', win_version: '', win_proveedor: '', win_factura: '', win_fecha_factura: '', win_orden: '', win_tipo_licencia: 'key',
+  licencia_office: '', off_version: '', off_proveedor: '', off_factura: '', off_fecha_factura: '', off_orden: '', off_tipo_licencia: 'key',
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
 }
 
@@ -479,6 +479,8 @@ export default function Inventario({ usuario }) {
     const base = esComp(bien.categoria) ? { ...formVacioComp, ...bien } : { ...formVacio, ...bien }
     // Normalizar nulos a string vacío
     Object.keys(base).forEach(k => { if (base[k] === null) base[k] = '' })
+    if (!base.win_tipo_licencia) base.win_tipo_licencia = 'key'
+    if (!base.off_tipo_licencia) base.off_tipo_licencia = 'key'
     // Descomponer cpu en sub-campos si existe
     if (esComp(bien.categoria) && bien.cpu) {
       const partes = bien.cpu.split(' ')
@@ -520,6 +522,30 @@ export default function Inventario({ usuario }) {
           const gen = name === 'cpu_generacion' ? value : (prev.cpu_generacion ?? '')
           updated.cpu = [marca, modelo, gen].filter(Boolean).join(' ') || ''
         }
+        if (name === 'win_tipo_licencia') {
+          if (value === 'fabricante') {
+            updated.win_proveedor = 'N/A'
+            updated.win_factura = 'N/A'
+            updated.win_fecha_factura = ''
+            updated.win_orden = 'N/A'
+          } else {
+            if (prev.win_proveedor === 'N/A') updated.win_proveedor = ''
+            if (prev.win_factura === 'N/A') updated.win_factura = ''
+            if (prev.win_orden === 'N/A') updated.win_orden = ''
+          }
+        }
+        if (name === 'off_tipo_licencia') {
+          if (value === 'alternativa') {
+            updated.off_proveedor = 'N/A'
+            updated.off_factura = 'N/A'
+            updated.off_fecha_factura = ''
+            updated.off_orden = 'N/A'
+          } else {
+            if (prev.off_proveedor === 'N/A') updated.off_proveedor = ''
+            if (prev.off_factura === 'N/A') updated.off_factura = ''
+            if (prev.off_orden === 'N/A') updated.off_orden = ''
+          }
+        }
         return updated
       })
     }
@@ -541,6 +567,8 @@ export default function Inventario({ usuario }) {
       : form.nombre
     const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1 }
     if (!payload.fecha_adquisicion) payload.fecha_adquisicion = null
+    if (!payload.win_fecha_factura) payload.win_fecha_factura = null
+    if (!payload.off_fecha_factura) payload.off_fecha_factura = null
 
     // Quitar campos que no existen en la tabla
     delete payload.id
@@ -1060,10 +1088,26 @@ export default function Inventario({ usuario }) {
 
               {/* Windows */}
               <div className="seccion-lic-sub">🪟 Windows</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Windows</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Windows</label>
-                  <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX o De fabricante" maxLength={29} className="input-mono" />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="De fabricante" readOnly className="input-readonly" />
+                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1071,30 +1115,49 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
               {/* Office */}
               <div className="seccion-lic-sub">📊 Office</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Office</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Office</label>
-                  <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="Alternativa" readOnly className="input-readonly" />
+                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1102,21 +1165,24 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} />
+                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} />
+                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
@@ -1351,10 +1417,26 @@ export default function Inventario({ usuario }) {
 
               {/* Windows */}
               <div className="seccion-lic-sub">🪟 Windows</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Windows</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Windows</label>
-                  <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX o De fabricante" maxLength={29} className="input-mono" />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="De fabricante" readOnly className="input-readonly" />
+                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1362,30 +1444,49 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
               {/* Office */}
               <div className="seccion-lic-sub">📊 Office</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Office</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Office</label>
-                  <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="Alternativa" readOnly className="input-readonly" />
+                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1393,21 +1494,24 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} />
+                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} />
+                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
