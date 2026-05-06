@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../supabase'
 import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
@@ -18,9 +18,60 @@ const formVacioComp = {
   tipo: 'Desktop', marca: '', numero_serie: '', modelo: '', pantalla: '', ram_tipo: '', ram_slots: '',
   cpu: '', cpu_marca: '', cpu_modelo: '', cpu_generacion: '',
   ram: '', memoria: '', tipo_almacenamiento: 'SSD', sistema_operativo: 'Windows 11 Pro',
-  licencia_windows: '', win_version: '', win_proveedor: '', win_factura: '', win_fecha_factura: '', win_orden: '',
-  licencia_office: '', off_version: '', off_proveedor: '', off_factura: '', off_fecha_factura: '', off_orden: '',
+  licencia_windows: '', win_version: '', win_proveedor: '', win_factura: '', win_fecha_factura: '', win_orden: '', win_tipo_licencia: 'key',
+  licencia_office: '', off_version: '', off_proveedor: '', off_factura: '', off_fecha_factura: '', off_orden: '', off_tipo_licencia: 'key',
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
+}
+
+const formVacioTecno = {
+  nombre: '', categoria: '', codigo: '', cantidad: 1,
+  estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  tipo: '', tecnologia: '', marca: '', modelo: '', numero_serie: '',
+  consumible: '', proveedor: '', numero_factura: '', numero_orden: '',
+  fecha_adquisicion: '', fondo: '',
+}
+
+// ── ComboField: input con sugerencias desde la BD ─────────────────────────
+function ComboField({ name, value, onChange, placeholder, opciones = [], maxLength, className }) {
+  const [abierto, setAbierto] = useState(false)
+  const refDiv = useRef()
+
+  const filtradas = opciones
+    .filter(o => o && o.toLowerCase().includes((value || '').toLowerCase()))
+    .slice(0, 14)
+
+  return (
+    <div ref={refDiv} className="combo-wrap">
+      <input
+        name={name}
+        value={value ?? ''}
+        onChange={onChange}
+        onFocus={() => setAbierto(true)}
+        onBlur={() => setTimeout(() => setAbierto(false), 160)}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className={className}
+        autoComplete="off"
+        style={{ paddingRight: opciones.length > 0 ? '26px' : undefined }}
+      />
+      {opciones.length > 0 && (
+        <span className="combo-chevron" onMouseDown={e => { e.preventDefault(); setAbierto(a => !a) }}>▼</span>
+      )}
+      {abierto && filtradas.length > 0 && (
+        <div className="combo-dropdown">
+          {filtradas.map((o, i) => (
+            <div
+              key={i}
+              className="combo-option"
+              onMouseDown={e => { e.preventDefault(); onChange({ target: { name, value: o } }); setAbierto(false) }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Inventario({ usuario }) {
@@ -52,7 +103,8 @@ export default function Inventario({ usuario }) {
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
   const [cargando, setCargando]       = useState(true)
-  const [catActual, setCatActual]     = useState('todos')
+  const [catActual, setCatActual]     = useState(() => localStorage.getItem('inv_catActual') || 'todos')
+  const [verTodosTodos, setVerTodosTodos] = useState(false)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm]               = useState(formVacio)
   const [errores, setErrores]         = useState({})
@@ -200,7 +252,19 @@ export default function Inventario({ usuario }) {
   }
   const bienesPermitidos = bienes.filter(b => tieneAccesoCat(b.categoria))
   const bienCount   = (id) => id === 'todos' ? bienesPermitidos.length : bienesPermitidos.filter(b => b.categoria === id).length
-  const filtradosBase = catActual === 'todos' ? bienesPermitidos : bienesPermitidos.filter(b => b.categoria === catActual)
+
+  // En "Todos" sin filtros activos: mostrar solo los 25 más recientes (por código desc)
+  const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
+  const filtradosBase = (() => {
+    if (catActual !== 'todos') return bienesPermitidos.filter(b => b.categoria === catActual)
+    const todos = [...bienesPermitidos].sort((a, b) => {
+      const numA = parseInt((a.codigo || '').replace(/\D/g, '')) || 0
+      const numB = parseInt((b.codigo || '').replace(/\D/g, '')) || 0
+      return numB - numA
+    })
+    return (hayFiltrosActivos || verTodosTodos) ? todos : todos.slice(0, 25)
+  })()
+
   const filtrados = filtradosBase.filter(b => {
     const q = busqueda.toLowerCase()
     const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
@@ -212,12 +276,36 @@ export default function Inventario({ usuario }) {
 
   // Valores únicos para dropdowns dinámicos
   const unicos = (campo) => [...new Set(filtradosBase.map(b => b[campo]).filter(Boolean))].sort()
-  const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
   const getCatLabel = (id) => categorias.find(c => c.id === id)?.label ?? id
   const catInfo     = [{ id: 'todos', label: 'Todos', icon: '◉' }, ...categorias].find(c => c.id === catActual)
-  const esComp      = (cat) => cat === 'computadores'
+  const esComp   = (cat) => cat === 'computadores'
+  const esTecno  = (cat) => {
+    if (!cat) return false
+    const obj = categorias.find(c => c.id === cat)
+    const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return label.includes('tecnol')
+  }
 
-  const seleccionarCat = (id) => { setCatActual(id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
+  // ── Valores únicos de la BD para autocomplete de formularios ──────────────
+  const opsBD = useMemo(() => {
+    const uniq = (field) => [...new Set(bienes.map(b => b[field]).filter(Boolean))].sort()
+    const uniqTecno = (field) => [...new Set(bienes.filter(b => esTecno(b.categoria)).map(b => b[field]).filter(Boolean))].sort()
+    const TIPOS_FIJOS = ['Impresora','Escáner','Multifuncional','Fotocopiadora','Impresora/Escáner','Proyector','Tablet','Smart TV','Cámara','Equipo de Audio','Router','Switch','Dron']
+    const TECNO_FIJOS = ['Inyección','Láser','Inkjet','LED','Matricial','Térmica','Láser Color']
+    return {
+      tipo:        [...new Set([...TIPOS_FIJOS, ...uniqTecno('tipo')])],
+      tecnologia:  [...new Set([...TECNO_FIJOS, ...uniqTecno('tecnologia')])],
+      marca:       uniqTecno('marca'),
+      consumible:  uniqTecno('consumible'),
+      ubicacion:   uniq('ubicacion'),
+      responsable: uniq('responsable'),
+      proveedor:   uniq('proveedor'),
+      fondo:       uniq('fondo'),
+      numero_orden: uniq('numero_orden'),
+    }
+  }, [bienes, categorias])
+
+  const seleccionarCat = (id) => { setCatActual(id); localStorage.setItem('inv_catActual', id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
@@ -422,7 +510,7 @@ export default function Inventario({ usuario }) {
     if (error) { setAviso('Error al crear categoría: ' + error.message); return }
     setCategorias(prev => [...prev, { id, label, icon: nuevaCat.icon, fija: false }])
     setModalCat(false)
-    setCatActual(id)
+    setCatActual(id); localStorage.setItem('inv_catActual', id)
   }
 
   const eliminarCategoria = async (id) => {
@@ -437,7 +525,7 @@ export default function Inventario({ usuario }) {
         const { error } = await supabase.from('categorias').delete().eq('id', id)
         if (error) { setAviso('Error al eliminar: ' + error.message); return }
         setCategorias(prev => prev.filter(c => c.id !== id))
-        if (catActual === id) setCatActual('todos')
+        if (catActual === id) { setCatActual('todos'); localStorage.setItem('inv_catActual', 'todos') }
       }
     )
   }
@@ -461,7 +549,7 @@ export default function Inventario({ usuario }) {
   const abrirFormNuevo = () => {
     setEditandoId(null)
     const cat = catActual !== 'todos' ? catActual : (categorias[0]?.id ?? 'otros')
-    const base = esComp(cat) ? { ...formVacioComp } : { ...formVacio }
+    const base = esComp(cat) ? { ...formVacioComp } : esTecno(cat) ? { ...formVacioTecno } : { ...formVacio }
     base.categoria = cat
     // Generar código único que no exista en bienes
     const codigos = new Set(bienes.map(b => b.codigo))
@@ -476,9 +564,11 @@ export default function Inventario({ usuario }) {
 
   const abrirFormEditar = (bien) => {
     setEditandoId(bien.id)
-    const base = esComp(bien.categoria) ? { ...formVacioComp, ...bien } : { ...formVacio, ...bien }
+    const base = esComp(bien.categoria) ? { ...formVacioComp, ...bien } : esTecno(bien.categoria) ? { ...formVacioTecno, ...bien } : { ...formVacio, ...bien }
     // Normalizar nulos a string vacío
     Object.keys(base).forEach(k => { if (base[k] === null) base[k] = '' })
+    if (!base.win_tipo_licencia) base.win_tipo_licencia = 'key'
+    if (!base.off_tipo_licencia) base.off_tipo_licencia = 'key'
     // Descomponer cpu en sub-campos si existe
     if (esComp(bien.categoria) && bien.cpu) {
       const partes = bien.cpu.split(' ')
@@ -507,10 +597,13 @@ export default function Inventario({ usuario }) {
     if (name === 'categoria') {
       const cambiaAComp  = esComp(value)
       const cambiaDeComp = esComp(form.categoria)
+      const cambiaATecno = esTecno(value)
+      const camiaDeTecno = esTecno(form.categoria)
       const comun = { nombre: form.nombre, codigo: form.codigo, cantidad: form.cantidad, estado: form.estado, ubicacion: form.ubicacion, responsable: form.responsable, obs: form.obs, categoria: value }
-      if (cambiaAComp && !cambiaDeComp)       setForm({ ...formVacioComp, ...comun })
-      else if (!cambiaAComp && cambiaDeComp)  setForm({ ...formVacio, ...comun })
-      else                                     setForm(prev => ({ ...prev, categoria: value }))
+      if (cambiaAComp && !cambiaDeComp)                                         setForm({ ...formVacioComp, ...comun })
+      else if (cambiaATecno && !camiaDeTecno)                                   setForm({ ...formVacioTecno, ...comun })
+      else if (!cambiaAComp && !cambiaATecno && (cambiaDeComp || camiaDeTecno)) setForm({ ...formVacio, ...comun })
+      else                                                                       setForm(prev => ({ ...prev, categoria: value }))
     } else {
       setForm(prev => {
         const updated = { ...prev, [name]: value }
@@ -519,6 +612,30 @@ export default function Inventario({ usuario }) {
           const modelo = name === 'cpu_modelo' ? value : (prev.cpu_modelo ?? '')
           const gen = name === 'cpu_generacion' ? value : (prev.cpu_generacion ?? '')
           updated.cpu = [marca, modelo, gen].filter(Boolean).join(' ') || ''
+        }
+        if (name === 'win_tipo_licencia') {
+          if (value === 'fabricante') {
+            updated.win_proveedor = 'N/A'
+            updated.win_factura = 'N/A'
+            updated.win_fecha_factura = ''
+            updated.win_orden = 'N/A'
+          } else {
+            if (prev.win_proveedor === 'N/A') updated.win_proveedor = ''
+            if (prev.win_factura === 'N/A') updated.win_factura = ''
+            if (prev.win_orden === 'N/A') updated.win_orden = ''
+          }
+        }
+        if (name === 'off_tipo_licencia') {
+          if (value === 'alternativa') {
+            updated.off_proveedor = 'N/A'
+            updated.off_factura = 'N/A'
+            updated.off_fecha_factura = ''
+            updated.off_orden = 'N/A'
+          } else {
+            if (prev.off_proveedor === 'N/A') updated.off_proveedor = ''
+            if (prev.off_factura === 'N/A') updated.off_factura = ''
+            if (prev.off_orden === 'N/A') updated.off_orden = ''
+          }
         }
         return updated
       })
@@ -530,17 +647,21 @@ export default function Inventario({ usuario }) {
 
   const guardarBien = async () => {
     const errs = {}
-    if (!esComp(form.categoria) && !form.nombre.trim()) errs.nombre = true
+    if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre?.trim()) errs.nombre = true
     if (!form.codigo.trim()) errs.codigo = true
     if (Object.keys(errs).length) { setErrores(errs); return }
 
     setGuardando(true)
     // Para computadores, el nombre se genera automáticamente desde marca + modelo
-    const nombreFinal = esComp(form.categoria)
+    const nombreFinal = (esComp(form.categoria)
       ? ([form.marca, form.modelo].filter(Boolean).join(' ') || 'Computador')
-      : form.nombre
+      : esTecno(form.categoria)
+        ? ([form.tipo, form.marca, form.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico')
+        : (form.nombre?.trim() || '')) || 'Sin nombre'
     const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1 }
     if (!payload.fecha_adquisicion) payload.fecha_adquisicion = null
+    if (!payload.win_fecha_factura) payload.win_fecha_factura = null
+    if (!payload.off_fecha_factura) payload.off_fecha_factura = null
 
     // Quitar campos que no existen en la tabla
     delete payload.id
@@ -569,7 +690,9 @@ export default function Inventario({ usuario }) {
     const bien = bienes.find(b => b.id === id)
     const nombreMostrar = esComp(bien?.categoria)
       ? [bien?.marca, bien?.modelo].filter(Boolean).join(' ') || 'Computador'
-      : bien?.nombre
+      : esTecno(bien?.categoria)
+        ? [bien?.tipo, bien?.marca, bien?.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
+        : bien?.nombre
     pedirConfirmacion(
       `¿Eliminar "${nombreMostrar}" del inventario?`,
       async () => {
@@ -703,7 +826,22 @@ export default function Inventario({ usuario }) {
 
       {/* Cabecera */}
       <div className="section-header">
-        <span className="section-title section-title-desktop">{catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})</span>
+        <span className="section-title section-title-desktop">
+          {catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})
+          {catActual === 'todos' && !hayFiltrosActivos && bienesPermitidos.length > 25 && (
+            <>
+              <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
+                {verTodosTodos ? `todos (${bienesPermitidos.length})` : `últimos 25 de ${bienesPermitidos.length}`}
+              </span>
+              <button
+                onClick={() => setVerTodosTodos(v => !v)}
+                style={{ marginLeft: 8, fontSize: '0.72rem', padding: '2px 10px', border: '1px solid #d1d5db', borderRadius: 99, background: '#fff', color: '#374151', cursor: 'pointer', fontWeight: 500 }}
+              >
+                {verTodosTodos ? 'Ver últimos 25' : 'Ver todos'}
+              </button>
+            </>
+          )}
+        </span>
         <div className="section-actions">
 
           {/* Botón exportar con dropdown */}
@@ -866,6 +1004,7 @@ export default function Inventario({ usuario }) {
       <ImportarCSV
         categorias={categorias}
         bienesExistentes={bienes}
+        catInicial={catActual !== 'todos' ? catActual : undefined}
         onImportado={() => { cargarDatos(); setModalImportar(false) }}
       />
     </div>
@@ -880,10 +1019,10 @@ export default function Inventario({ usuario }) {
               <div className="modal modal-importar" style={{ maxWidth: '780px', maxHeight: '88vh', overflowY: 'auto', padding: '1.5rem' }} onClick={e => e.stopPropagation()}>
                 <div className="form-panel" style={{ boxShadow: 'none', border: 'none', padding: 0, marginBottom: 0 }}>
 
-          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : 'Nuevo bien')}</p>
+          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : esTecno(form.categoria) ? '✏️ Editar artículo tecnológico' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : esTecno(form.categoria) ? 'Nuevo artículo tecnológico' : 'Nuevo bien')}</p>
 
           <div className="form-row">
-            {!esComp(form.categoria) && (
+            {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
                 <label>Nombre *</label>
                 <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
@@ -936,11 +1075,11 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             <div className="field">
               <label>Ubicación</label>
-              <input name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} />
+              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
             </div>
             <div className="field">
               <label>Responsable</label>
-              <input name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} />
+              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
             </div>
           </div>
 
@@ -1060,10 +1199,26 @@ export default function Inventario({ usuario }) {
 
               {/* Windows */}
               <div className="seccion-lic-sub">🪟 Windows</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Windows</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Windows</label>
-                  <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX o De fabricante" maxLength={29} className="input-mono" />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="De fabricante" readOnly className="input-readonly" />
+                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1071,30 +1226,49 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
               {/* Office */}
               <div className="seccion-lic-sub">📊 Office</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Office</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Office</label>
-                  <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="Alternativa" readOnly className="input-readonly" />
+                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1102,21 +1276,24 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} />
+                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} />
+                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
@@ -1152,6 +1329,66 @@ export default function Inventario({ usuario }) {
             </>
           )}
 
+          {esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Tipo</label>
+                  <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
+                </div>
+                <div className="field">
+                  <label>Tecnología</label>
+                  <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
+                </div>
+                <div className="field">
+                  <label>Marca</label>
+                  <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Modelo</label>
+                  <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
+                </div>
+                <div className="field">
+                  <label>N° de serie</label>
+                  <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Consumible</label>
+                  <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
+                </div>
+              </div>
+
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Proveedor</label>
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                </div>
+                <div className="field">
+                  <label>Nº Factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fecha Factura</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Orden de Compra</label>
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
@@ -1171,10 +1408,10 @@ export default function Inventario({ usuario }) {
           ) : (
             <div className="form-panel">
 
-          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : 'Nuevo bien')}</p>
+          <p className="form-title">{editandoId ? (esComp(form.categoria) ? '✏️ Editar computador' : esTecno(form.categoria) ? '✏️ Editar artículo tecnológico' : '✏️ Editar bien') : (esComp(form.categoria) ? 'Nuevo computador' : esTecno(form.categoria) ? 'Nuevo artículo tecnológico' : 'Nuevo bien')}</p>
 
           <div className="form-row">
-            {!esComp(form.categoria) && (
+            {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
                 <label>Nombre *</label>
                 <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
@@ -1227,11 +1464,11 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             <div className="field">
               <label>Ubicación</label>
-              <input name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} />
+              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
             </div>
             <div className="field">
               <label>Responsable</label>
-              <input name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} />
+              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
             </div>
           </div>
 
@@ -1351,10 +1588,26 @@ export default function Inventario({ usuario }) {
 
               {/* Windows */}
               <div className="seccion-lic-sub">🪟 Windows</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Windows</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Windows</label>
-                  <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX o De fabricante" maxLength={29} className="input-mono" />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="De fabricante" readOnly className="input-readonly" />
+                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1362,30 +1615,49 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  {form.win_tipo_licencia === 'fabricante'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
               {/* Office */}
               <div className="seccion-lic-sub">📊 Office</div>
+              <div className="form-row">
+                <div className="field">
+                  <label>Tipo de licencia Office</label>
+                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                    </label>
+                  </div>
+                </div>
+              </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>Clave Office</label>
-                  <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="Alternativa" readOnly className="input-readonly" />
+                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                  }
                 </div>
                 <div className="field">
                   <label>Versión</label>
@@ -1393,21 +1665,24 @@ export default function Inventario({ usuario }) {
                 </div>
                 <div className="field">
                   <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} />
+                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
               <div className="form-row triple">
                 <div className="field">
                   <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} />
+                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
                 <div className="field">
                   <label>Fecha factura</label>
-                  <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  {form.off_tipo_licencia === 'alternativa'
+                    ? <input value="N/A" readOnly className="input-readonly" />
+                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                  }
                 </div>
                 <div className="field">
                   <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} />
+                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
                 </div>
               </div>
 
@@ -1438,6 +1713,66 @@ export default function Inventario({ usuario }) {
                 <div className="field">
                   <label>Garantía</label>
                   <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Tipo</label>
+                  <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
+                </div>
+                <div className="field">
+                  <label>Tecnología</label>
+                  <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
+                </div>
+                <div className="field">
+                  <label>Marca</label>
+                  <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Modelo</label>
+                  <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
+                </div>
+                <div className="field">
+                  <label>N° de serie</label>
+                  <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
+                </div>
+                <div className="field">
+                  <label>Consumible</label>
+                  <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
+                </div>
+              </div>
+
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Proveedor</label>
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                </div>
+                <div className="field">
+                  <label>Nº Factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>Fecha Factura</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Orden de Compra</label>
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
                 </div>
               </div>
             </>
@@ -1600,6 +1935,47 @@ export default function Inventario({ usuario }) {
                 <div className="detalle-fila"><span>Responsable</span><strong>{verDetalle.responsable || 'N/A'}</strong></div>
               </div>
             </div>
+
+            {esTecno(verDetalle.categoria) && (
+              <>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🖨️ Equipo</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Tipo', verDetalle.tipo],
+                      ['Marca', verDetalle.marca],
+                      ['Modelo', verDetalle.modelo],
+                      ['N° Serie', verDetalle.numero_serie],
+                      ['Tecnología', verDetalle.tecnologia],
+                      ['Consumible', verDetalle.consumible],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val}</strong>
+                      </div>
+                    ) : null)}
+                  </div>
+                </div>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🛒 Adquisición</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Fecha', verDetalle.fecha_adquisicion],
+                      ['Proveedor', verDetalle.proveedor],
+                      ['N° Factura', verDetalle.numero_factura],
+                      ['N° Orden', verDetalle.numero_orden],
+                      ['Fondo', verDetalle.fondo],
+                      ['Garantía', verDetalle.garantia],
+                    ].map(([label, val]) => (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val || '—'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
 
             {esComp(verDetalle.categoria) && (<>
 

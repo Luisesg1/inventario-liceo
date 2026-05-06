@@ -11,6 +11,7 @@ const COLUMNAS_BD = new Set([
   'licencia_windows', 'win_version', 'win_proveedor', 'win_factura', 'win_fecha_factura', 'win_orden',
   'licencia_office', 'off_version', 'off_proveedor', 'off_factura', 'off_fecha_factura', 'off_orden',
   'fecha_adquisicion', 'proveedor', 'numero_factura', 'numero_orden', 'fondo', 'garantia',
+  'tecnologia', 'consumible',
 ])
 
 // Alias: columna del archivo → columna BD
@@ -20,6 +21,9 @@ const ALIAS = {
   'n_serie': 'numero_serie',
   'nro_serie': 'numero_serie',
   'serial': 'numero_serie',
+  'n°_de_serie': 'numero_serie',
+  'n°_serie': 'numero_serie',
+  'n_de_serie': 'numero_serie',
   'so': 'sistema_operativo',
   'os': 'sistema_operativo',
   'almacenamiento': 'memoria',
@@ -31,6 +35,21 @@ const ALIAS = {
   'observacion': 'obs',
   'observaciones': 'obs',
   'notas': 'obs',
+  // Artículos tecnológicos
+  'tecnología': 'tecnologia',
+  'nº_factura': 'numero_factura',
+  'n°_factura': 'numero_factura',
+  'nro_factura': 'numero_factura',
+  'factura': 'numero_factura',
+  'fecha_factura': 'fecha_adquisicion',
+  'orden_de_compra': 'numero_orden',
+  'orden_compra': 'numero_orden',
+  'nro_orden': 'numero_orden',
+  // Personas / responsable
+  'usuario': 'responsable',
+  'user': 'responsable',
+  'encargado': 'responsable',
+  'asignado_a': 'responsable',
 }
 
 const CATEGORIAS_COMP = new Set(['computadores', 'computador', 'computadoras', 'all in one', 'all-in-one', 'aio', 'laptop', 'desktop', 'notebook', 'pc'])
@@ -118,10 +137,18 @@ const mapearFila = (fila, categoriasFijas) => {
     mapped.categoria = cat
   }
 
-  // Nombre: si es computador y está vacío, generar desde marca+modelo
+  // Nombre: generar automáticamente según tipo de categoría
+  const _catLabel = (categoriasFijas.find(c => c.id === mapped.categoria)?.label ?? mapped.categoria ?? '')
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const _esTecno = _catLabel.includes('tecnol')
+
   if (esComp(mapped.categoria)) {
     if (!mapped.nombre || mapped.nombre === 'nan') {
       mapped.nombre = [mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Computador'
+    }
+  } else if (_esTecno) {
+    if (!mapped.nombre || mapped.nombre === 'nan') {
+      mapped.nombre = [mapped.tipo, mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
     }
   }
 
@@ -129,6 +156,14 @@ const mapearFila = (fila, categoriasFijas) => {
   delete mapped._catDesconocida
   return { data: mapped, catDesconocida: fila._catDesconocida }
 }
+
+// Palabras clave que indican que una fila es la cabecera real de la tabla
+const HEADER_HINTS = new Set([
+  'marca', 'modelo', 'tipo', 'serie', 'estado', 'ubicacion', 'ubicación',
+  'nombre', 'categoria', 'categoría', 'responsable', 'usuario', 'código', 'codigo',
+  'proveedor', 'factura', 'fondo', 'consumible', 'tecnología', 'tecnologia',
+  'pantalla', 'cpu', 'ram', 'memoria', 'almacenamiento', 'procesador',
+])
 
 // ── Leer XLSX con SheetJS (si está disponible) via script dinámico ───────
 const leerXLSX = (file) => new Promise((resolve, reject) => {
@@ -140,13 +175,39 @@ const leerXLSX = (file) => new Promise((resolve, reject) => {
         const data = new Uint8Array(e.target.result)
         const wb = window.XLSX.read(data, { type: 'array' })
         const ws = wb.Sheets[wb.SheetNames[0]]
-        const json = window.XLSX.utils.sheet_to_json(ws, { defval: '' })
-        // Normalizar headers a lowercase
-        const normalizado = json.map(row => {
-          const n = {}
-          for (const [k, v] of Object.entries(row)) n[k.toLowerCase().trim().replace(/\s+/g, '_')] = v
-          return n
-        })
+
+        // Leer como arrays crudos para detectar la fila de cabecera correcta.
+        // Muchos Excel tienen una fila de título arriba antes de los encabezados reales.
+        const rawArrays = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+
+        // Puntuar cada fila: las celdas que coinciden con palabras clave de columna suman más
+        let headerRowIdx = 0
+        let maxScore = -1
+        for (let i = 0; i < Math.min(6, rawArrays.length); i++) {
+          const row = rawArrays[i]
+          let score = 0, nonEmpty = 0
+          for (const cell of row) {
+            const s = String(cell).toLowerCase().trim()
+            if (!s) continue
+            nonEmpty++
+            if (HEADER_HINTS.has(s)) score += 3
+            else if (typeof cell === 'string' && !/^\d+(\.\d+)?$/.test(s)) score += 1
+          }
+          if (nonEmpty >= 3 && score > maxScore) { maxScore = score; headerRowIdx = i }
+        }
+
+        const headers = rawArrays[headerRowIdx].map(h =>
+          String(h).toLowerCase().trim().replace(/\s+/g, '_')
+        )
+
+        const normalizado = rawArrays.slice(headerRowIdx + 1)
+          .filter(row => row.some(cell => cell !== '' && cell !== null && cell !== undefined))
+          .map(row => {
+            const n = {}
+            headers.forEach((h, idx) => { if (h) n[h] = row[idx] ?? '' })
+            return n
+          })
+
         resolve(normalizado)
       } catch (err) { reject(err) }
     }
@@ -166,7 +227,7 @@ const leerXLSX = (file) => new Promise((resolve, reject) => {
 })
 
 // ════════════════════════════════════════════════════════════════════════════
-export default function ImportarCSV({ categorias, bienesExistentes, onImportado }) {
+export default function ImportarCSV({ categorias, bienesExistentes, onImportado, catInicial }) {
   const [fase, setFase]             = useState('idle') // idle | preview | importando | resultado
   const [filas, setFilas]           = useState([])
   const [errParse, setErrParse]     = useState(null)
@@ -176,11 +237,14 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
   const [catsPendientes, setCatsPendientes] = useState([]) // categorías nuevas detectadas
   const [mapCats, setMapCats]       = useState({})        // { catDesconocida: 'computadores' | 'crear' | 'otros' }
   const [duplicados, setDuplicados] = useState('omitir')  // 'omitir' | 'sobreescribir'
+  const [catGlobal, setCatGlobal]   = useState('')        // categoría por defecto cuando no hay columna categoria
+  const [tieneCatCol, setTieneCatCol] = useState(false)   // si el Excel tenía columna "categoria"
   const inputRef = useRef()
 
   const resetear = () => {
     setFase('idle'); setFilas([]); setErrParse(null)
     setFileName(''); setResultado(null); setCatsPendientes([]); setMapCats({})
+    setCatGlobal(''); setTieneCatCol(false)
   }
 
   // ── Procesar archivo ───────────────────────────────────────────────────
@@ -198,6 +262,11 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
 
       if (!rows.length) { setErrParse('El archivo está vacío o no tiene filas de datos.'); return }
 
+      // Detectar si el archivo tiene columna "categoria"
+      const primeraFila = rows[0] ? Object.keys(rows[0]).map(k => k.toLowerCase().trim()) : []
+      const hayColCat = primeraFila.some(k => k === 'categoria' || k === 'categoría' || k === 'category')
+      setTieneCatCol(hayColCat)
+
       // Mapear filas y detectar categorías desconocidas
       const catSet = new Set()
       const filasMapeadas = rows.map(row => {
@@ -205,13 +274,13 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
         const normRow = {}
         for (const [k, v] of Object.entries(row)) normRow[k.toLowerCase().trim().replace(/\s+/g, '_')] = v
 
-        let cat = normalizar(normRow.categoria || '').toLowerCase().trim()
-        if (!cat || cat === 'nan') cat = 'otros'
+        let cat = hayColCat ? normalizar(normRow.categoria || '').toLowerCase().trim() : ''
+        if (!cat || cat === 'nan') cat = ''
 
-        const catFija = categorias.find(c => c.id === cat || c.label?.toLowerCase() === cat)
-        const esCompAlias = CATEGORIAS_COMP.has(cat)
+        const catFija = cat ? categorias.find(c => c.id === cat || c.label?.toLowerCase() === cat) : null
+        const esCompAlias = cat ? CATEGORIAS_COMP.has(cat) : false
 
-        if (!catFija && !esCompAlias) catSet.add(cat)
+        if (cat && !catFija && !esCompAlias) catSet.add(cat)
         normRow._catOriginal = cat
         return normRow
       })
@@ -220,8 +289,10 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
       const pendientes = [...catSet]
       setCatsPendientes(pendientes)
       const mapInicial = {}
-      pendientes.forEach(c => { mapInicial[c] = 'computadores' })
+      pendientes.forEach(c => { mapInicial[c] = categorias[0]?.id || 'otros' })
       setMapCats(mapInicial)
+      // Categoría global: usar la activa en el inventario si existe, si no la primera disponible
+      setCatGlobal(catInicial || categorias[0]?.id || 'otros')
       setFilas(filasMapeadas)
       setFase('preview')
     } catch (err) {
@@ -241,10 +312,11 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
 
   // ── Resolver categoría de una fila ────────────────────────────────────
   const resolverCategoria = (catOriginal) => {
+    if (!catOriginal) return catGlobal || categorias[0]?.id || 'otros'
     const catFija = categorias.find(c => c.id === catOriginal || c.label?.toLowerCase() === catOriginal)
     if (catFija) return catFija.id
     if (CATEGORIAS_COMP.has(catOriginal)) return 'computadores'
-    return mapCats[catOriginal] || 'otros'
+    return mapCats[catOriginal] || catGlobal || 'otros'
   }
 
   // ── Construir payload final ────────────────────────────────────────────
@@ -256,17 +328,28 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
       if (key.startsWith('_')) continue
       const colNorm = key.toLowerCase().trim().replace(/\s+/g, '_')
       const colBD = ALIAS[colNorm] ?? (COLUMNAS_BD.has(colNorm) ? colNorm : null)
-      if (colBD) payload[colBD] = normalizar(val) || null
+      if (colBD) payload[colBD] = colBD === 'nombre' ? normalizar(val) : (normalizar(val) || null)
     }
 
     payload.categoria = cat
+
+    const _catLabel2 = (categorias.find(c => c.id === cat)?.label ?? cat ?? '')
+      .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    const _esTecno2 = _catLabel2.includes('tecnol')
 
     if (esComp(cat)) {
       if (!payload.nombre || payload.nombre === 'nan') {
         payload.nombre = [payload.marca, payload.modelo].filter(Boolean).join(' ') || 'Computador'
       }
       if (!payload.tipo) payload.tipo = 'Desktop'
+    } else if (_esTecno2) {
+      if (!payload.nombre || payload.nombre === 'nan') {
+        payload.nombre = [payload.tipo, payload.marca, payload.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
+      }
     }
+
+    // nombre nunca puede ser null — fallback para cualquier categoría
+    if (!payload.nombre) payload.nombre = 'Sin nombre'
 
     // Limpiar nulls innecesarios y convertir tipos
     if (payload.cantidad) payload.cantidad = parseInt(payload.cantidad) || 1
@@ -404,6 +487,21 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
             </div>
           )}
 
+          {/* Selector de categoría de destino */}
+          <div className="cat-global-row">
+            <span className="dup-label">📂 Categoría de destino:</span>
+            <select
+              value={catGlobal}
+              onChange={e => setCatGlobal(e.target.value)}
+              className="cat-map-select"
+              style={{ fontWeight: 600 }}
+            >
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Opciones duplicados */}
           <div className="dup-row">
             <span className="dup-label">Si el código ya existe:</span>
@@ -442,8 +540,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
                       <td className="td-num">{i + 1}</td>
                       <td className="td-code">{codigo || <em className="td-muted">auto</em>}</td>
                       <td>{catLabel}</td>
-                      <td>{[normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.nombre) || '—'}</td>
-                      <td className="td-muted">{normalizar(row.numero_serie) || '—'}</td>
+                      <td>{[normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'}</td>
+                      <td className="td-muted">{normalizar(row.numero_serie) || normalizar(row['n°_de_serie']) || normalizar(row['n_de_serie']) || '—'}</td>
                       <td>{normalizar(row.estado) || 'Bueno'}</td>
                       <td>{esDup ? <span className="badge-dup">{duplicados === 'omitir' ? 'se omitirá' : 'sobreescribirá'}</span> : <span className="badge-nuevo">nuevo</span>}</td>
                     </tr>

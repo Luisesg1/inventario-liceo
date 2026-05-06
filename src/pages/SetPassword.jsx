@@ -43,10 +43,16 @@ export default function SetPassword({ onComplete, usuario }) {
     setLoading(true)
     setError('')
 
-    const { error: updateError } = await supabase.auth.updateUser({ password })
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError(updateError.message)
+      setError('Error al guardar: ' + updateError.message)
+      setLoading(false)
+      return
+    }
+
+    if (!updateData?.user) {
+      setError('No se pudo confirmar el cambio. Intenta de nuevo.')
       setLoading(false)
       return
     }
@@ -80,7 +86,7 @@ export default function SetPassword({ onComplete, usuario }) {
           <div style={s.logoIcon}>🏫</div>
           <h1 style={s.heading}>Establece tu contraseña</h1>
           <p style={s.subtext}>
-            Crea una contraseña segura para acceder al sistema de inventario escolar.
+            {usuario?.nombre ? `Hola ${usuario.nombre}, crea` : 'Crea'} una contraseña segura para acceder al sistema de inventario escolar.
           </p>
         </div>
 

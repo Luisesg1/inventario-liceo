@@ -408,6 +408,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         }
       )
       const json = await res.json()
+      console.log('Respuesta Edge Function:', json)
       if (!res.ok) {
         setMensaje({ tipo: 'error', texto: json.error ?? 'Error desconocido.' })
       } else {
@@ -435,7 +436,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error al guardar permisos: ' + error.message })
     } else {
-      setMensaje({ tipo: 'exito', texto: `✓ Usuario creado e invitación enviada a ${email}` })
+      setMensaje({ tipo: 'exito', texto: `✓ Usuario creado. Se envió el acceso por email a ${email}` })
       setTimeout(() => { onCreado(); onCerrar() }, 1600)
     }
   }
@@ -481,10 +482,10 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         {paso === 1 && (
           <>
             <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 16, color: '#111827' }}>
-              Invitar nuevo usuario
+              Crear nuevo usuario
             </p>
             <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>
-              Se enviará un email de invitación para que establezca su contraseña.
+              El usuario recibirá una contraseña temporal que deberá cambiar al primer ingreso.
             </p>
             <div className="form-grid">
               <label className="form-label">

@@ -34,6 +34,13 @@
 }
 .sidebar-title { font-size: 14px; color: #f0ede6; margin: 0; }
 .sidebar-sub   { font-size: 11px; color: rgba(255,255,255,.35); margin: 0; }
+.sidebar-logo-img {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid rgba(255,255,255,.2);
+}
 
 .sidebar-close {
   margin-left: auto;
