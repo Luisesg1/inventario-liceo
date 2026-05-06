@@ -453,22 +453,20 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
             </div>
           )}
 
-          {/* Selector de categoría global (cuando el archivo no tiene columna categoria) */}
-          {!tieneCatCol && (
-            <div className="cat-global-row">
-              <span className="dup-label">📂 Categoría de destino:</span>
-              <select
-                value={catGlobal}
-                onChange={e => setCatGlobal(e.target.value)}
-                className="cat-map-select"
-                style={{ fontWeight: 600 }}
-              >
-                {categorias.map(c => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Selector de categoría de destino */}
+          <div className="cat-global-row">
+            <span className="dup-label">📂 Categoría de destino:</span>
+            <select
+              value={catGlobal}
+              onChange={e => setCatGlobal(e.target.value)}
+              className="cat-map-select"
+              style={{ fontWeight: 600 }}
+            >
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Opciones duplicados */}
           <div className="dup-row">
