@@ -53,7 +53,7 @@ export default function Dashboard({ usuario }) {
   useEffect(() => {
     async function cargar() {
       const [{ data: b }, { data: c }] = await Promise.all([
-        supabase.from('bienes').select('id, nombre, categoria, estado, ubicacion, responsable, marca, modelo'),
+        supabase.from('bienes').select('*'),
         supabase.from('categorias').select('id, label, icon'),
       ])
       setBienes(b || [])

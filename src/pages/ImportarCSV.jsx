@@ -11,6 +11,7 @@ const COLUMNAS_BD = new Set([
   'licencia_windows', 'win_version', 'win_proveedor', 'win_factura', 'win_fecha_factura', 'win_orden',
   'licencia_office', 'off_version', 'off_proveedor', 'off_factura', 'off_fecha_factura', 'off_orden',
   'fecha_adquisicion', 'proveedor', 'numero_factura', 'numero_orden', 'fondo', 'garantia',
+  'tecnologia', 'consumible',
 ])
 
 // Alias: columna del archivo → columna BD
@@ -20,6 +21,9 @@ const ALIAS = {
   'n_serie': 'numero_serie',
   'nro_serie': 'numero_serie',
   'serial': 'numero_serie',
+  'n°_de_serie': 'numero_serie',
+  'n°_serie': 'numero_serie',
+  'n_de_serie': 'numero_serie',
   'so': 'sistema_operativo',
   'os': 'sistema_operativo',
   'almacenamiento': 'memoria',
@@ -31,6 +35,16 @@ const ALIAS = {
   'observacion': 'obs',
   'observaciones': 'obs',
   'notas': 'obs',
+  // Artículos tecnológicos
+  'tecnología': 'tecnologia',
+  'nº_factura': 'numero_factura',
+  'n°_factura': 'numero_factura',
+  'nro_factura': 'numero_factura',
+  'factura': 'numero_factura',
+  'fecha_factura': 'fecha_adquisicion',
+  'orden_de_compra': 'numero_orden',
+  'orden_compra': 'numero_orden',
+  'nro_orden': 'numero_orden',
 }
 
 const CATEGORIAS_COMP = new Set(['computadores', 'computador', 'computadoras', 'all in one', 'all-in-one', 'aio', 'laptop', 'desktop', 'notebook', 'pc'])
@@ -118,10 +132,18 @@ const mapearFila = (fila, categoriasFijas) => {
     mapped.categoria = cat
   }
 
-  // Nombre: si es computador y está vacío, generar desde marca+modelo
+  // Nombre: generar automáticamente según tipo de categoría
+  const _catLabel = (categoriasFijas.find(c => c.id === mapped.categoria)?.label ?? mapped.categoria ?? '')
+    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const _esTecno = _catLabel.includes('tecnol')
+
   if (esComp(mapped.categoria)) {
     if (!mapped.nombre || mapped.nombre === 'nan') {
       mapped.nombre = [mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Computador'
+    }
+  } else if (_esTecno) {
+    if (!mapped.nombre || mapped.nombre === 'nan') {
+      mapped.nombre = [mapped.tipo, mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
     }
   }
 
@@ -256,17 +278,28 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado 
       if (key.startsWith('_')) continue
       const colNorm = key.toLowerCase().trim().replace(/\s+/g, '_')
       const colBD = ALIAS[colNorm] ?? (COLUMNAS_BD.has(colNorm) ? colNorm : null)
-      if (colBD) payload[colBD] = normalizar(val) || null
+      if (colBD) payload[colBD] = colBD === 'nombre' ? normalizar(val) : (normalizar(val) || null)
     }
 
     payload.categoria = cat
+
+    const _catLabel2 = (categorias.find(c => c.id === cat)?.label ?? cat ?? '')
+      .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    const _esTecno2 = _catLabel2.includes('tecnol')
 
     if (esComp(cat)) {
       if (!payload.nombre || payload.nombre === 'nan') {
         payload.nombre = [payload.marca, payload.modelo].filter(Boolean).join(' ') || 'Computador'
       }
       if (!payload.tipo) payload.tipo = 'Desktop'
+    } else if (_esTecno2) {
+      if (!payload.nombre || payload.nombre === 'nan') {
+        payload.nombre = [payload.tipo, payload.marca, payload.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
+      }
     }
+
+    // nombre nunca puede ser null — fallback para cualquier categoría
+    if (!payload.nombre) payload.nombre = 'Sin nombre'
 
     // Limpiar nulls innecesarios y convertir tipos
     if (payload.cantidad) payload.cantidad = parseInt(payload.cantidad) || 1

@@ -573,17 +573,17 @@ export default function Inventario({ usuario }) {
 
   const guardarBien = async () => {
     const errs = {}
-    if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre.trim()) errs.nombre = true
+    if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre?.trim()) errs.nombre = true
     if (!form.codigo.trim()) errs.codigo = true
     if (Object.keys(errs).length) { setErrores(errs); return }
 
     setGuardando(true)
     // Para computadores, el nombre se genera automáticamente desde marca + modelo
-    const nombreFinal = esComp(form.categoria)
+    const nombreFinal = (esComp(form.categoria)
       ? ([form.marca, form.modelo].filter(Boolean).join(' ') || 'Computador')
       : esTecno(form.categoria)
         ? ([form.tipo, form.marca, form.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico')
-        : form.nombre
+        : (form.nombre?.trim() || '')) || 'Sin nombre'
     const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1 }
     if (!payload.fecha_adquisicion) payload.fecha_adquisicion = null
     if (!payload.win_fecha_factura) payload.win_fecha_factura = null
