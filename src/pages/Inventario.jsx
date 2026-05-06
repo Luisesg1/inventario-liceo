@@ -1250,11 +1250,12 @@ export default function Inventario({ usuario }) {
                   <datalist id="tecno-tipos">
                     <option value="Impresora" />
                     <option value="Escáner" />
+                    <option value="Multifuncional" />
+                    <option value="Fotocopiadora" />
+                    <option value="Impresora/Escáner" />
                     <option value="Proyector" />
                     <option value="Tablet" />
                     <option value="Smart TV" />
-                    <option value="Fotocopiadora" />
-                    <option value="Impresora/Escáner" />
                     <option value="Cámara" />
                     <option value="Equipo de Audio" />
                     <option value="Router" />
@@ -1652,11 +1653,12 @@ export default function Inventario({ usuario }) {
                   <datalist id="tecno-tipos">
                     <option value="Impresora" />
                     <option value="Escáner" />
+                    <option value="Multifuncional" />
+                    <option value="Fotocopiadora" />
+                    <option value="Impresora/Escáner" />
                     <option value="Proyector" />
                     <option value="Tablet" />
                     <option value="Smart TV" />
-                    <option value="Fotocopiadora" />
-                    <option value="Impresora/Escáner" />
                     <option value="Cámara" />
                     <option value="Equipo de Audio" />
                     <option value="Router" />
@@ -1872,6 +1874,47 @@ export default function Inventario({ usuario }) {
                 <div className="detalle-fila"><span>Responsable</span><strong>{verDetalle.responsable || 'N/A'}</strong></div>
               </div>
             </div>
+
+            {esTecno(verDetalle.categoria) && (
+              <>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🖨️ Equipo</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Tipo', verDetalle.tipo],
+                      ['Marca', verDetalle.marca],
+                      ['Modelo', verDetalle.modelo],
+                      ['N° Serie', verDetalle.numero_serie],
+                      ['Tecnología', verDetalle.tecnologia],
+                      ['Consumible', verDetalle.consumible],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val}</strong>
+                      </div>
+                    ) : null)}
+                  </div>
+                </div>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🛒 Adquisición</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Fecha', verDetalle.fecha_adquisicion],
+                      ['Proveedor', verDetalle.proveedor],
+                      ['N° Factura', verDetalle.numero_factura],
+                      ['N° Orden', verDetalle.numero_orden],
+                      ['Fondo', verDetalle.fondo],
+                      ['Garantía', verDetalle.garantia],
+                    ].map(([label, val]) => val ? (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val}</strong>
+                      </div>
+                    ) : null)}
+                  </div>
+                </div>
+              </>
+            )}
 
             {esComp(verDetalle.categoria) && (<>
 
