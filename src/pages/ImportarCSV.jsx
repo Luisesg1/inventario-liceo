@@ -5,7 +5,7 @@ import { supabase } from '../supabase'
 const COLUMNAS_BD = new Set([
   'nombre', 'categoria', 'codigo', 'cantidad', 'estado',
   'ubicacion', 'responsable', 'obs',
-  'isbn', 'autor',
+  'isbn', 'autor', 'genero',
   'tipo', 'marca', 'numero_serie', 'modelo', 'pantalla',
   'cpu', 'ram', 'ram_tipo', 'ram_slots',
   'memoria', 'tipo_almacenamiento', 'sistema_operativo',
@@ -54,6 +54,9 @@ const ALIAS = {
   'autores': 'autor',
   'author': 'autor',
   'authors': 'autor',
+  'género': 'genero',
+  'genero_literario': 'genero',
+  'genre': 'genero',
   // Personas / responsable
   'usuario': 'responsable',
   'user': 'responsable',
