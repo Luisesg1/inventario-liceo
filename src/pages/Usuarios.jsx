@@ -61,7 +61,7 @@ const PERMISOS_POR_ROL = {
 }
 
 const ROL_COLORES = {
-  admin:     { bg: '#dbeafe', color: '#1d4ed8' },
+  admin:     { bg: '#e8eaf6', color: '#1a237e' },
   editor:    { bg: '#dcfce7', color: '#15803d' },
   encargado: { bg: '#f3f4f6', color: '#374151' },
 }
@@ -140,19 +140,19 @@ function TablaPermisos({ draft, onChange }) {
           <tbody>
 
             {/* ── Fila especial "Todos" — check/cross por columna ── */}
-            <tr style={{ background: '#1e293b' }}>
-              <td style={{ ...tb.tdCheck, background: '#1e293b' }}>
-                <span style={{ color: '#22c55e', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>✓</span>
+            <tr style={{ background: '#1a237e' }}>
+              <td style={{ ...tb.tdCheck, background: '#1a237e' }}>
+                <span style={{ color: '#f0d060', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>✓</span>
               </td>
               {/* Check de acceso global */}
-              <td style={{ ...tb.tdCheck, background: '#1e293b' }}>
+              <td style={{ ...tb.tdCheck, background: '#1a237e' }}>
                 <CheckBtn activo={todasActivas} onClick={toggleTodas} />
               </td>
               {/* Check de acción global */}
               {accCat.map((a) => {
                 const activo = draft.permisos?.[a.key] ?? false
                 return (
-                  <td key={a.key} style={{ ...tb.tdCheck, background: '#1e293b' }}>
+                  <td key={a.key} style={{ ...tb.tdCheck, background: '#1a237e' }}>
                     <CheckBtn activo={activo} onClick={() => toggleAccion(a.key)} />
                   </td>
                 )
@@ -314,9 +314,9 @@ function PanelPermisos({ usuario: u, onCerrar }) {
   }
 
   return (
-    <div style={{ ...ps.panel, borderTopColor: '#bfdbfe', background: '#f8fbff' }}>
+    <div style={{ ...ps.panel, borderTopColor: 'rgba(212,160,23,0.4)', background: '#f9fafb' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#1d4ed8' }}>
+        <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#1a237e' }}>
           🔐 Permisos de {u.nombre}
         </p>
         <span style={ps.rolTag}>base: {u.rol}</span>
@@ -464,7 +464,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                 width: 28, height: 28, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 13, fontWeight: 700,
-                background: paso >= p.n ? '#2563eb' : '#e5e7eb',
+                background: paso >= p.n ? '#1a237e' : '#e5e7eb',
                 color: paso >= p.n ? '#fff' : '#9ca3af',
                 transition: 'all 0.2s',
               }}>
@@ -674,7 +674,7 @@ export default function Usuarios({ usuario }) {
             fontSize: 14, color: '#111827', background: '#fff',
             outline: 'none',
           }}
-          onFocus={(e) => { e.target.style.borderColor = '#2563eb'; e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)' }}
+          onFocus={(e) => { e.target.style.borderColor = '#1a237e'; e.target.style.boxShadow = '0 0 0 3px rgba(26,35,126,0.12)' }}
           onBlur={(e)  => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none' }}
         />
         {busqueda && (
@@ -705,9 +705,9 @@ export default function Usuarios({ usuario }) {
           return (
             <div key={u.id} style={{
               borderRadius: 10, overflow: 'hidden',
-              border: `1px solid ${permisosOpen ? '#93c5fd' : editando ? '#93c5fd' : '#e5e7eb'}`,
+              border: `1px solid ${(permisosOpen || editando) ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
               background: '#fff',
-              boxShadow: (editando || permisosOpen) ? '0 2px 12px rgba(0,0,0,0.07)' : undefined,
+              boxShadow: (editando || permisosOpen) ? '0 4px 16px rgba(212,160,23,0.1)' : undefined,
               transition: 'border-color 0.2s',
             }}>
 
@@ -746,16 +746,16 @@ export default function Usuarios({ usuario }) {
                 {esAdmin && !esYo && !confirmando && (
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                     <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
-                      background: editando ? '#dbeafe' : 'none',
-                      border: `1px solid ${editando ? '#93c5fd' : '#e5e7eb'}`,
-                      color: editando ? '#1d4ed8' : '#9ca3af',
+                      background: editando ? '#e8eaf6' : 'none',
+                      border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
+                      color: editando ? '#1a237e' : '#9ca3af',
                       borderRadius: 6, padding: '5px 9px',
                       fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
                     }}>✏️</button>
                     <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
-                      background: permisosOpen ? '#dbeafe' : 'none',
-                      border: `1px solid ${permisosOpen ? '#93c5fd' : '#e5e7eb'}`,
-                      color: permisosOpen ? '#1d4ed8' : '#9ca3af',
+                      background: permisosOpen ? '#fffbeb' : 'none',
+                      border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                      color: permisosOpen ? '#92700a' : '#9ca3af',
                       borderRadius: 6, padding: '5px 9px',
                       fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
                     }}>🔐</button>
@@ -847,16 +847,16 @@ const tb = {
   },
   thCat: {
     padding: '9px 14px', textAlign: 'left',
-    background: '#1e293b', color: '#f1f5f9',
+    background: '#1a237e', color: 'rgba(255,255,255,0.9)',
     fontWeight: 700, fontSize: 11,
-    borderBottom: '2px solid #334155',
+    borderBottom: '2px solid rgba(212,160,23,0.3)',
     minWidth: 130, whiteSpace: 'nowrap',
   },
   thAccion: {
     padding: '9px 8px', textAlign: 'center',
-    background: '#1e293b', color: '#94a3b8',
+    background: '#1a237e', color: 'rgba(255,255,255,0.65)',
     fontWeight: 600, fontSize: 10,
-    borderBottom: '2px solid #334155',
+    borderBottom: '2px solid rgba(212,160,23,0.3)',
     minWidth: 60, whiteSpace: 'nowrap',
     letterSpacing: '0.02em',
   },
@@ -897,7 +897,7 @@ const ps = {
     animation: 'slideDown 0.18s ease',
   },
   panelTitulo: {
-    margin: '0 0 14px', fontWeight: 600, fontSize: 14, color: '#374151',
+    margin: '0 0 14px', fontWeight: 700, fontSize: 14, color: '#1a237e',
   },
   rolTag: {
     fontSize: 11, color: '#6b7280',
@@ -905,7 +905,9 @@ const ps = {
   },
   modalOverlay: {
     position: 'fixed', inset: 0,
-    background: 'rgba(0,0,0,0.45)',
+    background: 'rgba(5,12,55,0.65)',
+    backdropFilter: 'blur(4px)',
+    WebkitBackdropFilter: 'blur(4px)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     zIndex: 1000, animation: 'fadeIn 0.15s ease',
   },
