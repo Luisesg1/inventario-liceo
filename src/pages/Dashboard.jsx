@@ -5,6 +5,172 @@ import './Dashboard.css'
 const ESTADO_COLOR = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
 const ESTADO_BG    = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
 
+const ACCION_META = {
+  crear:      { color: '#16a34a', bg: '#dcfce7', icono: '➕', label: 'Creación' },
+  actualizar: { color: '#2563eb', bg: '#dbeafe', icono: '✏️', label: 'Actualización' },
+  baja:       { color: '#dc2626', bg: '#fee2e2', icono: '🗑️', label: 'Baja' },
+  eliminar:   { color: '#dc2626', bg: '#fee2e2', icono: '🗑️', label: 'Eliminación' },
+  mantenimiento: { color: '#d97706', bg: '#fef3c7', icono: '🔧', label: 'Mantenimiento' },
+}
+
+function tiempoRelativo(fecha) {
+  const diff = Date.now() - new Date(fecha).getTime()
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'ahora mismo'
+  if (min < 60) return `hace ${min} min`
+  const hrs = Math.floor(min / 60)
+  if (hrs < 24) return `hace ${hrs} h`
+  const dias = Math.floor(hrs / 24)
+  return `hace ${dias} día${dias > 1 ? 's' : ''}`
+}
+
+// ── Componente: Actividad Reciente ─────────────────────────────────────────
+function ActividadReciente({ actividades, cargandoAct }) {
+  const [entrada, setEntrada] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setEntrada(true), 80); return () => clearTimeout(t) }, [])
+
+  return (
+    <div className="dash-card dash-actividad">
+      <p style={s.secTitle}>🧾 Actividad reciente</p>
+
+      {cargandoAct ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#9ca3af', fontSize: 13 }}>
+          <div className="dash-mini-spin" />
+          Cargando actividad...
+        </div>
+      ) : actividades.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '2rem 0', color: '#9ca3af' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+          <p style={{ fontSize: 13, margin: 0 }}>Sin actividad registrada aún</p>
+        </div>
+      ) : (
+        <div className="dash-act-list">
+          {actividades.map((a, i) => {
+            const meta = ACCION_META[a.accion] || ACCION_META.actualizar
+            return (
+              <div
+                key={a.id}
+                className="dash-act-item"
+                style={{
+                  opacity: entrada ? 1 : 0,
+                  transform: entrada ? 'translateY(0)' : 'translateY(8px)',
+                  transition: `opacity 0.35s ease ${i * 0.04}s, transform 0.35s ease ${i * 0.04}s`,
+                  borderLeft: `3px solid ${meta.color}`,
+                }}
+              >
+                <div
+                  className="dash-act-badge"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  {meta.icono}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="dash-act-desc">
+                    <strong>{a.usuario_nombre}</strong>
+                    {' '}
+                    <span style={{ color: '#6b7280' }}>
+                      {a.accion === 'crear' && 'agregó'}
+                      {a.accion === 'actualizar' && 'actualizó'}
+                      {a.accion === 'baja' && 'dio de baja'}
+                      {a.accion === 'eliminar' && 'eliminó'}
+                      {a.accion === 'mantenimiento' && 'registró mantenimiento en'}
+                    </span>
+                    {' '}
+                    <span style={{ color: '#111827', fontWeight: 600 }}>{a.bien_nombre}</span>
+                  </p>
+                  <p className="dash-act-time">{tiempoRelativo(a.created_at)}</p>
+                </div>
+                <span
+                  className="dash-act-pill"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  {meta.label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Componente: Inventario por Ubicación ───────────────────────────────────
+function InventarioPorUbicacion({ bienes }) {
+  const [animado, setAnimado] = useState(false)
+  const [tooltip, setTooltip] = useState(null)
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimado(true), 150)
+    return () => clearTimeout(t)
+  }, [bienes.length])
+
+  const datos = Object.entries(
+    bienes
+      .filter(b => b.ubicacion?.trim())
+      .reduce((acc, b) => {
+        const ub = b.ubicacion.trim()
+        acc[ub] = (acc[ub] || 0) + 1
+        return acc
+      }, {})
+  )
+    .map(([nombre, count]) => ({ nombre, count }))
+    .sort((a, b) => b.count - a.count)
+
+  const total = datos.reduce((s, d) => s + d.count, 0)
+  const maxCount = datos[0]?.count || 1
+
+  if (datos.length === 0) return null
+
+  return (
+    <div className="dash-card dash-ubicacion">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+        <p style={{ ...s.secTitle, margin: 0 }}>📍 Inventario por ubicación</p>
+        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+          {total} bienes · {datos.length} ubicaciones
+        </span>
+      </div>
+
+      <div className="dash-ubic-list">
+        {datos.map((d, i) => {
+          const pct = Math.round((d.count / total) * 100)
+          const barW = (d.count / maxCount) * 100
+          return (
+            <div
+              key={d.nombre}
+              className="dash-ubic-row"
+              onMouseEnter={e => setTooltip({ nombre: d.nombre, count: d.count, pct, idx: i, y: e.currentTarget.getBoundingClientRect().top })}
+              onMouseLeave={() => setTooltip(null)}
+            >
+              <span className="dash-ubic-label" title={d.nombre}>{d.nombre}</span>
+              <div className="dash-ubic-bar-wrap">
+                <div
+                  className="dash-ubic-bar"
+                  style={{
+                    width: animado ? `${barW}%` : '0%',
+                    transitionDelay: `${i * 0.06}s`,
+                  }}
+                />
+              </div>
+              <span className="dash-ubic-count">{d.count}</span>
+              <span className="dash-ubic-pct">{pct}%</span>
+            </div>
+          )
+        })}
+      </div>
+
+      {tooltip && (
+        <div className="dash-tooltip">
+          <strong>{tooltip.nombre}</strong>
+          <br />
+          {tooltip.count} bienes · {tooltip.pct}% del total
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Componente: DonutChart ─────────────────────────────────────────────────
 function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   const r = 54, cx = 72, cy = 72
   const circ = 2 * Math.PI * r
@@ -58,10 +224,13 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   )
 }
 
+// ── Dashboard principal ────────────────────────────────────────────────────
 export default function Dashboard({ usuario }) {
   const [bienes,         setBienes]         = useState([])
   const [categorias,     setCategorias]     = useState([])
+  const [actividades,    setActividades]    = useState([])
   const [cargando,       setCargando]       = useState(true)
+  const [cargandoAct,    setCargandoAct]    = useState(true)
   const [categoriaFiltro, setCategoriaFiltro] = useState(null)
   const [estadoFiltro,    setEstadoFiltro]    = useState(null)
 
@@ -78,6 +247,28 @@ export default function Dashboard({ usuario }) {
     cargar()
   }, [])
 
+  useEffect(() => {
+    async function cargarActividades() {
+      const { data } = await supabase
+        .from('actividades')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(25)
+      setActividades(data || [])
+      setCargandoAct(false)
+    }
+    cargarActividades()
+
+    const channel = supabase
+      .channel('actividades-feed')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actividades' }, payload => {
+        setActividades(prev => [payload.new, ...prev].slice(0, 25))
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [])
+
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
       <div style={{ textAlign: 'center' }}>
@@ -88,12 +279,10 @@ export default function Dashboard({ usuario }) {
     </div>
   )
 
-  // Bienes filtrados por categoría (para el donut — siempre muestra distribución completa)
   const bienesPorCategoria = categoriaFiltro
     ? bienes.filter(b => b.categoria === categoriaFiltro)
     : bienes
 
-  // Bienes filtrados por categoría + estado (para KPIs)
   const bienesFiltrados = estadoFiltro
     ? bienesPorCategoria.filter(b => b.estado === estadoFiltro)
     : bienesPorCategoria
@@ -104,13 +293,12 @@ export default function Dashboard({ usuario }) {
   const enBueno   = bienesFiltrados.filter(b => b.estado === 'Bueno').length
   const pctBueno  = total > 0 ? Math.round((enBueno / total) * 100) : 0
 
-  // El donut muestra distribución de la categoría (sin filtro de estado, para que sea útil)
   const estadoDatos = ['Bueno', 'Regular', 'Malo', 'Baja'].map(e => ({
     estado: e,
     count: bienesPorCategoria.filter(b => b.estado === e).length,
   }))
 
-  const catGrid  = categorias
+  const catGrid = categorias
     .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
 
@@ -137,7 +325,6 @@ export default function Dashboard({ usuario }) {
         </p>
       </div>
 
-
       {/* KPIs */}
       <div className="dash-kpis">
         {[
@@ -158,10 +345,10 @@ export default function Dashboard({ usuario }) {
         ))}
       </div>
 
-      {/* Dona + Barras */}
+      {/* Donut + Actividad Reciente */}
       <div className="dash-charts">
 
-        {/* Dona de estados */}
+        {/* Donut */}
         <div className="dash-card">
           <p style={s.secTitle}>Distribución por estado</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -199,7 +386,13 @@ export default function Dashboard({ usuario }) {
           </div>
         </div>
 
+        {/* Actividad Reciente */}
+        <ActividadReciente actividades={actividades} cargandoAct={cargandoAct} />
+
       </div>
+
+      {/* Inventario por Ubicación */}
+      <InventarioPorUbicacion bienes={bienes} />
 
       {/* Grilla de categorías */}
       <div className="dash-card">

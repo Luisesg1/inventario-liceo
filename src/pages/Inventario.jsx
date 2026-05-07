@@ -4,6 +4,15 @@ import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
 import './ImportarCSV.css'
 
+function logActividad(usuario, accion, bienNombre, bienId = null) {
+  supabase.from('actividades').insert({
+    usuario_nombre: usuario?.nombre || 'Sistema',
+    accion,
+    bien_nombre: bienNombre,
+    bien_id: bienId || null,
+  }).then()
+}
+
 const ESTADO_BADGE = { Bueno: 'badge-bueno', Regular: 'badge-regular', Malo: 'badge-malo', Baja: 'badge-baja' }
 const ICONOS = ['📦','🪑','📚','📖','🖨️','💻','🖥️','🖱️','📷','📱','🔧','🗂️','🗃️','🖼️','🏫','⚗️','🎨','🎒','🔬','🪞','⚽','🏀','🏐','🏈','🎾','🏓','🏸','🥊','🏋️','🎽','🏊','🤸','🎭','🎵','🔭','🧪','🖊️','📐','📏','🗑️']
 
@@ -676,11 +685,13 @@ export default function Inventario({ usuario }) {
       const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
       if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
       setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload } : b))
+      logActividad(usuario, payload.estado === 'Baja' ? 'baja' : 'actualizar', nombreFinal, editandoId)
     } else {
       const { data, error } = await supabase.from('bienes').insert(payload).select().single()
       if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
       setBienes(prev => [data, ...prev])
       setCatActual(payload.categoria)
+      logActividad(usuario, 'crear', nombreFinal, data.id)
     }
     setGuardando(false)
     cancelarForm()
@@ -700,6 +711,7 @@ export default function Inventario({ usuario }) {
         if (error) { setAviso('Error al eliminar: ' + error.message); return }
         setBienes(prev => prev.filter(b => b.id !== id))
         if (verDetalle?.id === id) setVerDetalle(null)
+        logActividad(usuario, 'eliminar', nombreMostrar, id)
       }
     )
   }
@@ -724,11 +736,13 @@ export default function Inventario({ usuario }) {
       `¿Eliminar ${seleccion.size} bien${seleccion.size !== 1 ? 'es' : ''} seleccionado${seleccion.size !== 1 ? 's' : ''}?`,
       async () => {
         const ids = [...seleccion]
+        const n = ids.length
         for (const id of ids) {
           await supabase.from('bienes').delete().eq('id', id)
         }
         setBienes(prev => prev.filter(b => !seleccion.has(b.id)))
         setSeleccion(new Set())
+        logActividad(usuario, 'eliminar', `${n} bien${n !== 1 ? 'es' : ''} (lote)`, null)
       }
     )
   }

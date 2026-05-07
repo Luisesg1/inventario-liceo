@@ -2,7 +2,7 @@
 
 .dash-wrap {
   padding: 1.5rem;
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
@@ -15,7 +15,7 @@
   margin-bottom: 1.5rem;
 }
 
-/* KPI card individual */
+/* KPI card */
 .dash-kpi-card {
   background: #fff;
   border-radius: 14px;
@@ -33,12 +33,13 @@
   box-shadow: 0 8px 28px rgba(0,0,0,0.16);
 }
 
-/* Donut */
+/* Donut + Actividad: 2 columnas */
 .dash-charts {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: auto 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  align-items: start;
 }
 
 /* Paneles blancos genéricos */
@@ -50,6 +51,160 @@
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
+/* ── Actividad Reciente ────────────────────────────────── */
+.dash-actividad {
+  min-height: 200px;
+}
+
+.dash-act-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #e5e7eb transparent;
+  margin: 0 -0.4rem;
+  padding: 0 0.4rem;
+}
+.dash-act-list::-webkit-scrollbar { width: 4px }
+.dash-act-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px }
+
+.dash-act-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: 8px;
+  margin-left: -12px;
+  margin-right: -4px;
+  transition: background 0.15s;
+}
+.dash-act-item:hover { background: #f9fafb }
+
+.dash-act-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.dash-act-desc {
+  font-size: 13px;
+  color: #374151;
+  margin: 0 0 3px;
+  line-height: 1.4;
+}
+
+.dash-act-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.dash-act-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.dash-mini-spin {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #d4a017;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+
+/* ── Inventario por Ubicación ─────────────────────────── */
+.dash-ubicacion {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.dash-ubic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-ubic-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: default;
+}
+
+.dash-ubic-label {
+  font-size: 12.5px;
+  color: #374151;
+  font-weight: 500;
+  width: 160px;
+  min-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-ubic-bar-wrap {
+  flex: 1;
+  background: #f0f2ff;
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.dash-ubic-bar {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #1a237e 0%, #3949ab 60%, #5c6bc0 100%);
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dash-ubic-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a237e;
+  min-width: 28px;
+  text-align: right;
+}
+
+.dash-ubic-pct {
+  font-size: 11px;
+  color: #9ca3af;
+  min-width: 36px;
+  text-align: right;
+}
+
+.dash-tooltip {
+  position: fixed;
+  background: #1a237e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  box-shadow: 0 6px 20px rgba(26,35,126,0.35);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+  transform: translate(-50%, -120%);
+  left: 50%;
+  top: 0;
+}
+
 /* Grilla final de categorías */
 .dash-cat-grid {
   display: grid;
@@ -57,8 +212,18 @@
   gap: 0.75rem;
 }
 
+/* ── Tablet 768px ── */
+@media (max-width: 768px) {
+  .dash-charts {
+    grid-template-columns: 1fr;
+  }
+  .dash-ubic-label {
+    width: 110px;
+    min-width: 110px;
+  }
+}
 
-/* ── Mobile ── */
+/* ── Mobile 480px ── */
 @media (max-width: 480px) {
   .dash-wrap {
     padding: 1rem 0.85rem;
@@ -79,5 +244,13 @@
   .dash-kpi-card {
     padding: 0.9rem 1rem;
     gap: 10px;
+  }
+  .dash-ubic-label {
+    width: 90px;
+    min-width: 90px;
+    font-size: 11px;
+  }
+  .dash-act-pill {
+    display: none;
   }
 }
