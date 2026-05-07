@@ -3,6 +3,22 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import './Usuarios.css'
 
+// ── Requisitos de contraseña ───────────────────────────────────────────────
+const REQUISITOS_PASS = [
+  { id: 'length', label: 'Mínimo 8 caracteres',   test: (p) => p.length >= 8 },
+  { id: 'upper',  label: 'Al menos 1 mayúscula',   test: (p) => /[A-Z]/.test(p) },
+  { id: 'lower',  label: 'Al menos 1 minúscula',   test: (p) => /[a-z]/.test(p) },
+  { id: 'number', label: 'Al menos 1 número',      test: (p) => /[0-9]/.test(p) },
+  { id: 'symbol', label: 'Al menos 1 símbolo',     test: (p) => /[^A-Za-z0-9]/.test(p) },
+]
+const STRENGTH_INFO = [null,
+  { label: 'Muy débil',  color: '#dc2626' },
+  { label: 'Débil',      color: '#f97316' },
+  { label: 'Regular',    color: '#eab308' },
+  { label: 'Fuerte',     color: '#16a34a' },
+  { label: 'Muy fuerte', color: '#15803d' },
+]
+
 // ── Constantes ─────────────────────────────────────────────────────────────
 const ACCIONES = [
   { key: 'ver_inventario',       label: 'Ver inventario',      labelCorto: 'Ver inv.' },
@@ -680,8 +696,12 @@ export default function Usuarios({ usuario }) {
   }
 
   function iniciarGuardarEdicion(userId) {
-    // Si hay contraseña nueva, pedir confirmación antes de guardar
-    if (editPassword.trim().length > 0) {
+    if (editPassword.length > 0) {
+      const allOk = REQUISITOS_PASS.every(r => r.test(editPassword))
+      if (!allOk) {
+        setMensajeEdit({ tipo: 'error', texto: 'La contraseña no cumple todos los requisitos de seguridad.' })
+        return
+      }
       if (editPassword !== editConfirmPass) {
         setMensajeEdit({ tipo: 'error', texto: 'Las contraseñas no coinciden.' })
         return
@@ -910,63 +930,97 @@ export default function Usuarios({ usuario }) {
                         </select>
                       </label>
                     </div>
-                    <div className="form-row-2">
-                      <label className="form-label">
-                        Nueva contraseña
-                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>
-                          (vacío = no cambiar)
+                    {/* ── Sección cambio de contraseña ── */}
+                    <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 14 }}>
+                      <p style={{ fontSize: 10, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
+                        Cambiar contraseña
+                        <span style={{ fontWeight: 400, textTransform: 'none', fontSize: 11, marginLeft: 6 }}>
+                          — dejar en blanco para mantener la actual
                         </span>
+                      </p>
+
+                      {/* Campo nueva contraseña */}
+                      <label className="form-label" style={{ marginBottom: 8 }}>
+                        Nueva contraseña
                         <div style={{ position: 'relative' }}>
                           <input
                             className="form-input"
                             type={editShowPass ? 'text' : 'password'}
                             value={editPassword}
-                            onChange={(e) => { setEditPassword(e.target.value); setMensajeEdit({ tipo: '', texto: '' }) }}
+                            onChange={(e) => { setEditPassword(e.target.value); setEditConfirmPass(''); setMensajeEdit({ tipo: '', texto: '' }) }}
                             placeholder="Nueva contraseña"
                             autoComplete="new-password"
                             style={{ paddingRight: 38 }}
                           />
                           <button type="button" onClick={() => setEditShowPass(!editShowPass)} style={{
                             position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
+                            background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
                           }}>
                             {editShowPass ? '🙈' : '👁️'}
                           </button>
                         </div>
                       </label>
-                      <label className="form-label">
-                        Confirmar contraseña
-                        <div style={{ position: 'relative' }}>
-                          <input
-                            className="form-input"
-                            type={editShowConfirm ? 'text' : 'password'}
-                            value={editConfirmPass}
-                            onChange={(e) => { setEditConfirmPass(e.target.value); setMensajeEdit({ tipo: '', texto: '' }) }}
-                            placeholder="Repetir contraseña"
-                            autoComplete="new-password"
-                            style={{
-                              paddingRight: 38,
-                              borderColor: editConfirmPass.length > 0
-                                ? (editPassword === editConfirmPass ? '#16a34a' : '#dc2626')
-                                : undefined,
-                            }}
-                          />
-                          <button type="button" onClick={() => setEditShowConfirm(!editShowConfirm)} style={{
-                            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
-                          }}>
-                            {editShowConfirm ? '🙈' : '👁️'}
-                          </button>
-                        </div>
-                        {editConfirmPass.length > 0 && (
-                          <span style={{ fontSize: 11, marginTop: 3, display: 'block', fontWeight: 500,
-                            color: editPassword === editConfirmPass ? '#16a34a' : '#dc2626' }}>
-                            {editPassword === editConfirmPass ? 'Coinciden ✓' : 'No coinciden'}
-                          </span>
-                        )}
-                      </label>
+
+                      {/* Fortaleza + requisitos — solo si hay input */}
+                      {editPassword.length > 0 && (() => {
+                        const checks   = REQUISITOS_PASS.map(r => ({ ...r, ok: r.test(editPassword) }))
+                        const strength = checks.filter(c => c.ok).length
+                        const si       = STRENGTH_INFO[strength]
+                        return (
+                          <div style={{ marginBottom: 10 }}>
+                            {/* Barra */}
+                            <div style={{ display: 'flex', gap: 3, height: 4, borderRadius: 3, marginBottom: 4 }}>
+                              {[1,2,3,4,5].map(i => (
+                                <div key={i} style={{ flex: 1, borderRadius: 3, transition: 'background 0.2s',
+                                  backgroundColor: i <= strength ? si?.color : '#e5e7eb' }} />
+                              ))}
+                            </div>
+                            {si && <p style={{ fontSize: 11, color: si.color, margin: '0 0 6px', fontWeight: 600 }}>{si.label}</p>}
+                            {/* Requisitos */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
+                              {checks.map(c => (
+                                <span key={c.id} style={{ fontSize: 11, color: c.ok ? '#16a34a' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span style={{ fontWeight: 700 }}>{c.ok ? '✓' : '○'}</span> {c.label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {/* Confirmar — solo aparece si hay nueva contraseña */}
+                      {editPassword.length > 0 && (
+                        <label className="form-label">
+                          Confirmar contraseña
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              className="form-input"
+                              type={editShowConfirm ? 'text' : 'password'}
+                              value={editConfirmPass}
+                              onChange={(e) => { setEditConfirmPass(e.target.value); setMensajeEdit({ tipo: '', texto: '' }) }}
+                              placeholder="Repetir contraseña"
+                              autoComplete="new-password"
+                              style={{
+                                paddingRight: 38,
+                                borderColor: editConfirmPass.length > 0
+                                  ? (editPassword === editConfirmPass ? '#16a34a' : '#dc2626') : undefined,
+                              }}
+                            />
+                            <button type="button" onClick={() => setEditShowConfirm(!editShowConfirm)} style={{
+                              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                              background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
+                            }}>
+                              {editShowConfirm ? '🙈' : '👁️'}
+                            </button>
+                          </div>
+                          {editConfirmPass.length > 0 && (
+                            <span style={{ fontSize: 11, marginTop: 3, display: 'block', fontWeight: 500,
+                              color: editPassword === editConfirmPass ? '#16a34a' : '#dc2626' }}>
+                              {editPassword === editConfirmPass ? 'Coinciden ✓' : 'No coinciden'}
+                            </span>
+                          )}
+                        </label>
+                      )}
                     </div>
                   </div>
                   {mensajeEdit.texto && (
