@@ -24,7 +24,12 @@ export default function App() {
       window.history.replaceState(null, '', window.location.pathname)
     }
 
+    console.log('[DEBUG] URL al cargar:', window.location.href)
+    console.log('[DEBUG] Hash:', window.location.hash)
+    console.log('[DEBUG] Search:', window.location.search)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth]', event, session?.user?.email ?? 'sin sesión')
       if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
@@ -44,6 +49,7 @@ export default function App() {
     })
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('[getSession]', session?.user?.email ?? 'null')
       if (!session) setCargando(false)
     })
 
