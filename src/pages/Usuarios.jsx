@@ -562,24 +562,6 @@ export default function Usuarios({ usuario }) {
   const [busqueda, setBusqueda] = useState('')
   const [modalCrear, setModalCrear] = useState(false)
 
-  // Reset de contraseña
-  const [resetandoId,   setResetandoId]   = useState(null)
-  const [toastReset,    setToastReset]    = useState(null) // { id, ok, texto }
-
-  async function resetearPassword(u) {
-    setResetandoId(u.id)
-    const { error } = await supabase
-      .from('usuarios')
-      .update({ debe_cambiar_password: true })
-      .eq('id', u.id)
-    setResetandoId(null)
-    const toast = error
-      ? { id: u.id, ok: false, texto: 'Error: ' + error.message }
-      : { id: u.id, ok: true, texto: `Pídele a ${u.nombre} que use "¿Olvidaste tu contraseña?" al iniciar sesión` }
-    setToastReset(toast)
-    setTimeout(() => setToastReset(null), 5000)
-  }
-
   // Eliminación
   const [confirmandoId, setConfirmandoId] = useState(null)
   const [eliminandoId, setEliminandoId]   = useState(null)
@@ -591,6 +573,8 @@ export default function Usuarios({ usuario }) {
   const [editNombre, setEditNombre]       = useState('')
   const [editEmail, setEditEmail]         = useState('')
   const [editRol, setEditRol]             = useState('encargado')
+  const [editPassword, setEditPassword]   = useState('')
+  const [editShowPass, setEditShowPass]   = useState(false)
   const [guardandoEdit, setGuardandoEdit] = useState(false)
   const [mensajeEdit, setMensajeEdit]     = useState({ tipo: '', texto: '' })
 
@@ -619,6 +603,7 @@ export default function Usuarios({ usuario }) {
     setPanelActivo({ id: userId, modo })
     if (modo === 'editar') {
       setEditNombre(u.nombre); setEditEmail(u.email); setEditRol(u.rol)
+      setEditPassword(''); setEditShowPass(false)
       setMensajeEdit({ tipo: '', texto: '' })
     }
   }
@@ -643,17 +628,56 @@ export default function Usuarios({ usuario }) {
   async function guardarEdicion(userId) {
     setGuardandoEdit(true)
     setMensajeEdit({ tipo: '', texto: '' })
+
+    const uOriginal = usuarios.find((u) => u.id === userId)
+
+    // 1. Actualizar tabla usuarios
     const { error } = await supabase
       .from('usuarios')
-      .update({ nombre: editNombre.trim(), email: editEmail.trim(), rol: editRol })
+      .update({ nombre: editNombre.trim(), email: editEmail.trim().toLowerCase(), rol: editRol })
       .eq('id', userId)
+
     if (error) {
       setMensajeEdit({ tipo: 'error', texto: error.message })
-    } else {
-      setMensajeEdit({ tipo: 'exito', texto: 'Cambios guardados.' })
-      await cargarUsuarios()
-      setTimeout(() => { setPanelActivo(null); setMensajeEdit({ tipo: '', texto: '' }) }, 1200)
+      setGuardandoEdit(false)
+      return
     }
+
+    // 2. Si cambió email o hay nueva contraseña, actualizar en Supabase Auth
+    const emailCambio    = editEmail.trim().toLowerCase() !== uOriginal?.email?.toLowerCase()
+    const passwordCambio = editPassword.trim().length > 0
+
+    if (emailCambio || passwordCambio) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      const body = { userId, ...(emailCambio && { email: editEmail.trim() }), ...(passwordCambio && { password: editPassword.trim() }) }
+
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editar-usuario`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify(body),
+          }
+        )
+        const json = await res.json()
+        if (!res.ok) {
+          setMensajeEdit({ tipo: 'error', texto: json.error ?? 'Error al actualizar credenciales.' })
+          setGuardandoEdit(false)
+          return
+        }
+      } catch {
+        setMensajeEdit({ tipo: 'error', texto: 'No se pudo conectar con el servidor.' })
+        setGuardandoEdit(false)
+        return
+      }
+    }
+
+    setMensajeEdit({ tipo: 'exito', texto: 'Cambios guardados.' })
+    setEditPassword('')
+    await cargarUsuarios()
+    setTimeout(() => { setPanelActivo(null); setMensajeEdit({ tipo: '', texto: '' }) }, 1200)
     setGuardandoEdit(false)
   }
 
@@ -662,22 +686,6 @@ export default function Usuarios({ usuario }) {
 
   return (
     <div className="usuarios-page">
-
-      {/* Toast de reset de contraseña */}
-      {toastReset && (
-        <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 999,
-          background: toastReset.ok ? '#1a237e' : '#dc2626',
-          color: '#fff', borderRadius: 12, padding: '12px 20px',
-          fontSize: 13, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-          display: 'flex', alignItems: 'center', gap: 10,
-          animation: 'slideUpToast 0.25s ease',
-        }}>
-          <style>{`@keyframes slideUpToast { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }`}</style>
-          <span>{toastReset.ok ? '✉️' : '⚠️'}</span>
-          {toastReset.texto}
-        </div>
-      )}
 
       {/* Header */}
       <div className="usuarios-header">
@@ -792,16 +800,6 @@ export default function Usuarios({ usuario }) {
                       borderRadius: 6, padding: '5px 9px',
                       fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
                     }}>🔐</button>
-                    <button title="Resetear contraseña" onClick={() => resetearPassword(u)}
-                      disabled={resetandoId === u.id} style={{
-                        background: 'none',
-                        border: '1px solid #e5e7eb',
-                        color: '#9ca3af',
-                        borderRadius: 6, padding: '5px 9px',
-                        fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                      }}>
-                      {resetandoId === u.id ? '⏳' : '🔑'}
-                    </button>
                     <button className="btn-eliminar-icono" title="Eliminar"
                       onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
                   </div>
@@ -844,6 +842,35 @@ export default function Usuarios({ usuario }) {
                         </select>
                       </label>
                     </div>
+                    <label className="form-label">
+                      Nueva contraseña
+                      <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>
+                        (dejar vacío para no cambiar)
+                      </span>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          className="form-input"
+                          type={editShowPass ? 'text' : 'password'}
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          placeholder="Nueva contraseña"
+                          autoComplete="new-password"
+                          style={{ paddingRight: 38 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditShowPass(!editShowPass)}
+                          style={{
+                            position: 'absolute', right: 10, top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
+                          }}
+                        >
+                          {editShowPass ? '🙈' : '👁️'}
+                        </button>
+                      </div>
+                    </label>
                   </div>
                   {mensajeEdit.texto && (
                     <div className={`form-mensaje ${mensajeEdit.tipo}`}>{mensajeEdit.texto}</div>
