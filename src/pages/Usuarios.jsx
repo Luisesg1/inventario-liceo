@@ -615,13 +615,35 @@ export default function Usuarios({ usuario }) {
 
   async function eliminarUsuario(userId) {
     setEliminandoId(userId)
-    const { error } = await supabase.from('usuarios').delete().eq('id', userId)
-    if (error) { alert('Error al eliminar: ' + error.message) }
-    else {
-      setUsuarios((prev) => prev.filter((u) => u.id !== userId))
-      setConfirmandoId(null)
-      if (panelActivo?.id === userId) setPanelActivo(null)
+
+    // 1. Eliminar de Supabase Auth via Edge Function (también borra en cascada de la tabla)
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData?.session?.access_token
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ userId }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok) {
+        alert('Error al eliminar: ' + (json.error ?? 'Error desconocido'))
+        setEliminandoId(null)
+        return
+      }
+    } catch {
+      alert('No se pudo conectar con el servidor.')
+      setEliminandoId(null)
+      return
     }
+
+    // 2. Actualizar lista local
+    setUsuarios((prev) => prev.filter((u) => u.id !== userId))
+    setConfirmandoId(null)
+    if (panelActivo?.id === userId) setPanelActivo(null)
     setEliminandoId(null)
   }
 
