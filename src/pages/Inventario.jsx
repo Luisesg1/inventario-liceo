@@ -192,7 +192,18 @@ export default function Inventario({ usuario }) {
       : pd?.permisos
         ? { ...(defaultsPorRol[rol] ?? defaultsPorRol.encargado), ...pd.permisos }
         : (defaultsPorRol[rol] ?? defaultsPorRol.encargado)
-    const catsFinales = pd?.categorias ?? ['todos']
+    // Traducir claves de permisos (ej: 'art_tecnologicos') a IDs reales de la tabla categorias
+    // Los permisos guardan claves hardcoded; la tabla usa IDs propios (UUIDs u otro)
+    const traducirClaves = (claves, allCats) => {
+      if (!claves || claves.includes('todos')) return ['todos']
+      const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+      return claves.map(clave => {
+        if (allCats.some(c => c.id === clave)) return clave          // ya es un ID real
+        const claveNorm = norm(clave.replace(/_/g, ' '))
+        return allCats.find(c => norm(c.label) === claveNorm)?.id ?? null
+      }).filter(Boolean)
+    }
+    const catsFinales = pd?.categorias ? traducirClaves(pd.categorias, cats) : ['todos']
 
     // Inicializar orden desde localStorage o por defecto
     const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
@@ -794,7 +805,7 @@ export default function Inventario({ usuario }) {
           >
             <span className="cat-icon">◉</span>
             <span className="cat-name">Todos</span>
-            <span className="cat-count">{bienes.length} bien{bienes.length !== 1 ? 'es' : ''}</span>
+            <span className="cat-count">{bienesPermitidos.length} bien{bienesPermitidos.length !== 1 ? 'es' : ''}</span>
           </div>
 
           {categoriasOrdenadas().filter(cat => tieneAccesoCat(cat.id)).map(cat => {
