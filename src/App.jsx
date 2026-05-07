@@ -37,10 +37,10 @@ export default function App() {
         return
       }
 
-      // Supabase dispara SIGNED_IN justo antes que PASSWORD_RECOVERY.
-      // Si sabemos que es un flujo de recovery, ignoramos SIGNED_IN para
-      // evitar que gane la carrera y muestre el dashboard en vez de SetPassword.
-      if (event === 'SIGNED_IN' && esRecovery) return
+      // En flujo de recovery ignoramos TODO excepto PASSWORD_RECOVERY.
+      // Esto evita que INITIAL_SESSION o SIGNED_IN (de una sesión existente)
+      // ganen la carrera y muestren el dashboard antes de que llegue el evento correcto.
+      if (esRecovery && event !== 'PASSWORD_RECOVERY') return
 
       if (event === 'PASSWORD_RECOVERY') {
         cargarPerfil(session.user.id, true)
