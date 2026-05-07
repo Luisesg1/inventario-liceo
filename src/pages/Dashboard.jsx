@@ -215,6 +215,9 @@ export default function Dashboard({ usuario }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {estadoDatos.map(d => {
                 const activo = !estadoFiltro || estadoFiltro === d.estado
+                const pct = bienesPorCategoria.length > 0
+                  ? Math.round((d.count / bienesPorCategoria.length) * 100)
+                  : 0
                 return (
                   <div key={d.estado}
                     onClick={() => toggleEstado(d.estado)}
@@ -229,9 +232,7 @@ export default function Dashboard({ usuario }) {
                     <div style={{ width: 11, height: 11, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: '#374151', minWidth: 56 }}>{d.estado}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{d.count}</span>
-                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
-                      {total > 0 ? `${Math.round((d.count / total) * 100)}%` : ''}
-                    </span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{pct}%</span>
                   </div>
                 )
               })}
