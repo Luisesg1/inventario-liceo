@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 import './Dashboard.css'
 
-const ESTADO_COLOR  = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
-const ESTADO_BG     = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
-const ESTADO_ICONO  = { Bueno: '✅', Regular: '⚠️', Malo: '❌', Baja: '🗑️' }
+const ESTADO_COLOR = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
+const ESTADO_BG    = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
+const ESTADO_ICONO = { Bueno: '✅', Regular: '⚠️', Malo: '❌', Baja: '🗑️' }
 
 function DonutChart({ datos, total }) {
-  const r = 54
-  const cx = 72
-  const cy = 72
+  const r = 54, cx = 72, cy = 72
   const circ = 2 * Math.PI * r
   const filtrados = datos.filter(d => d.count > 0)
 
@@ -40,7 +38,7 @@ function DonutChart({ datos, total }) {
           style={{ transition: 'stroke-dasharray 0.4s ease' }}
         />
       ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#111827">{total}</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1a237e">{total}</text>
       <text x={cx} y={cy + 13} textAnchor="middle" fontSize="11" fill="#6b7280">bienes</text>
     </svg>
   )
@@ -67,18 +65,18 @@ export default function Dashboard({ usuario }) {
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#60a5fa', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+        <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#d4a017', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         Cargando estadísticas...
       </div>
     </div>
   )
 
-  const total      = bienes.length
-  const totalCats  = categorias.length
-  const enBaja     = bienes.filter(b => b.estado === 'Baja').length
-  const enBueno    = bienes.filter(b => b.estado === 'Bueno').length
-  const pctBueno   = total > 0 ? Math.round((enBueno / total) * 100) : 0
+  const total     = bienes.length
+  const totalCats = categorias.length
+  const enBaja    = bienes.filter(b => b.estado === 'Baja').length
+  const enBueno   = bienes.filter(b => b.estado === 'Bueno').length
+  const pctBueno  = total > 0 ? Math.round((enBueno / total) * 100) : 0
 
   const estadoDatos = ['Bueno', 'Regular', 'Malo', 'Baja'].map(e => ({
     estado: e,
@@ -90,12 +88,13 @@ export default function Dashboard({ usuario }) {
     count: bienes.filter(b => b.categoria === c.id).length,
   })).filter(c => c.count > 0).sort((a, b) => b.count - a.count)
 
-  const maxCount   = Math.max(...catDatos.map(c => c.count), 1)
-  const atencion   = bienes.filter(b => b.estado === 'Malo' || b.estado === 'Baja')
-  const catGrid    = categorias.map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
+  const maxCount = Math.max(...catDatos.map(c => c.count), 1)
+  const atencion = bienes.filter(b => b.estado === 'Malo' || b.estado === 'Baja')
+  const catGrid  = categorias
+    .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
 
-  const esComp = (cat) => cat === 'computadores'
+  const esComp     = (cat) => cat === 'computadores'
   const nombreBien = (b) => esComp(b.categoria)
     ? ([b.marca, b.modelo].filter(Boolean).join(' ') || 'Computador')
     : b.nombre
@@ -105,10 +104,10 @@ export default function Dashboard({ usuario }) {
 
       {/* Saludo */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#ffffff', margin: 0 }}>
-          Bienvenido, {usuario?.nombre} 👋
+        <h2 style={{ fontSize: 21, fontWeight: 700, color: '#ffffff', margin: 0, letterSpacing: '-0.01em' }}>
+          Bienvenido, <span style={{ color: '#f0d060' }}>{usuario?.nombre}</span> 👋
         </h2>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '4px 0 0' }}>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '5px 0 0' }}>
           Resumen general del inventario del liceo
         </p>
       </div>
@@ -116,18 +115,18 @@ export default function Dashboard({ usuario }) {
       {/* KPIs */}
       <div className="dash-kpis">
         {[
-          { label: 'Total de bienes',    valor: total,     icono: '📦', color: '#2563eb', bg: '#eff6ff' },
-          { label: 'Categorías',         valor: totalCats, icono: '📂', color: '#7c3aed', bg: '#f5f3ff' },
-          { label: 'En buen estado',     valor: `${pctBueno}%`, icono: '✅', color: '#16a34a', bg: '#f0fdf4' },
-          { label: 'Dados de baja',      valor: enBaja,    icono: '🗑️', color: '#6b7280', bg: '#f9fafb' },
+          { label: 'Total de bienes',   valor: total,          icono: '📦', color: '#1a237e', bg: '#e8eaf6' },
+          { label: 'Categorías',        valor: totalCats,      icono: '📂', color: '#92700a', bg: '#fef9e7' },
+          { label: 'En buen estado',    valor: `${pctBueno}%`, icono: '✅', color: '#16a34a', bg: '#f0fdf4' },
+          { label: 'Dados de baja',     valor: enBaja,         icono: '🗑️', color: '#dc2626', bg: '#fef2f2' },
         ].map((kpi, i) => (
-          <div key={i} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.2rem 1.4rem', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: kpi.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+          <div key={i} className="dash-kpi-card">
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: kpi.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
               {kpi.icono}
             </div>
             <div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.valor}</div>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>{kpi.label}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.valor}</div>
+              <div style={{ fontSize: 11.5, color: '#6b7280', marginTop: 3, fontWeight: 500 }}>{kpi.label}</div>
             </div>
           </div>
         ))}
@@ -137,14 +136,14 @@ export default function Dashboard({ usuario }) {
       <div className="dash-charts">
 
         {/* Dona de estados */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.4rem' }}>
+        <div className="dash-card">
           <p style={s.secTitle}>Distribución por estado</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
             <DonutChart datos={estadoDatos} total={total} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {estadoDatos.map(d => (
                 <div key={d.estado} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
+                  <div style={{ width: 11, height: 11, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
                   <span style={{ fontSize: 13, color: '#374151', minWidth: 60 }}>{d.estado}</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{d.count}</span>
                   <span style={{ fontSize: 11, color: '#9ca3af' }}>
@@ -157,18 +156,18 @@ export default function Dashboard({ usuario }) {
         </div>
 
         {/* Barras por categoría */}
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.4rem', overflowY: 'auto', maxHeight: 280 }}>
+        <div className="dash-card" style={{ overflowY: 'auto', maxHeight: 280 }}>
           <p style={s.secTitle}>Bienes por categoría</p>
           {catDatos.length === 0
             ? <p style={{ fontSize: 13, color: '#9ca3af' }}>Sin bienes registrados</p>
             : catDatos.map(c => (
               <div key={c.id} style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontSize: 13, color: '#374151' }}>{c.icon} {c.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{c.count}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1a237e' }}>{c.count}</span>
                 </div>
-                <div style={{ background: '#f3f4f6', borderRadius: 4, height: 8 }}>
-                  <div style={{ background: '#3b82f6', width: `${(c.count / maxCount) * 100}%`, height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                <div style={{ background: '#f0f2ff', borderRadius: 4, height: 8 }}>
+                  <div style={{ background: 'linear-gradient(90deg, #d4a017, #f0c830)', width: `${(c.count / maxCount) * 100}%`, height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
                 </div>
               </div>
             ))
@@ -178,14 +177,14 @@ export default function Dashboard({ usuario }) {
 
       {/* Requieren atención */}
       {atencion.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid #fca5a5', borderRadius: 12, padding: '1.4rem', marginBottom: '1.5rem' }}>
+        <div style={{ background: '#fff', border: '1.5px solid #fca5a5', borderLeft: '4px solid #dc2626', borderRadius: 12, padding: '1.4rem', marginBottom: '1.5rem', boxShadow: '0 4px 20px rgba(220,38,38,0.08)' }}>
           <p style={{ ...s.secTitle, color: '#dc2626' }}>⚠️ Requieren atención ({atencion.length})</p>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                <tr style={{ borderBottom: '1px solid #fee2e2' }}>
                   {['Bien', 'Categoría', 'Estado', 'Ubicación', 'Responsable'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: '#6b7280', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
+                    <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: '#9ca3af', fontWeight: 600, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'transparent' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -193,16 +192,16 @@ export default function Dashboard({ usuario }) {
                 {atencion.map(b => {
                   const cat = categorias.find(c => c.id === b.categoria)
                   return (
-                    <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '8px 10px', color: '#111827', fontWeight: 500 }}>{nombreBien(b)}</td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280' }}>{cat?.icon} {cat?.label ?? b.categoria}</td>
-                      <td style={{ padding: '8px 10px' }}>
+                    <tr key={b.id} style={{ borderBottom: '1px solid #fef2f2' }}>
+                      <td style={{ padding: '8px 10px', color: '#111827', fontWeight: 500, background: 'transparent' }}>{nombreBien(b)}</td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{cat?.icon} {cat?.label ?? b.categoria}</td>
+                      <td style={{ padding: '8px 10px', background: 'transparent' }}>
                         <span style={{ background: ESTADO_BG[b.estado], color: ESTADO_COLOR[b.estado], borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600 }}>
                           {ESTADO_ICONO[b.estado]} {b.estado}
                         </span>
                       </td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280' }}>{b.ubicacion || '—'}</td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280' }}>{b.responsable || '—'}</td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{b.ubicacion || '—'}</td>
+                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{b.responsable || '—'}</td>
                     </tr>
                   )
                 })}
@@ -213,14 +212,19 @@ export default function Dashboard({ usuario }) {
       )}
 
       {/* Grilla de categorías */}
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.4rem' }}>
+      <div className="dash-card">
         <p style={s.secTitle}>Todas las categorías</p>
         <div className="dash-cat-grid">
           {catGrid.map(c => (
-            <div key={c.id} style={{ background: c.count > 0 ? '#f8faff' : '#f9fafb', border: `1px solid ${c.count > 0 ? '#bfdbfe' : '#e5e7eb'}`, borderRadius: 10, padding: '0.9rem', textAlign: 'center' }}>
+            <div key={c.id} style={{
+              background: c.count > 0 ? '#f0f2ff' : '#f9fafb',
+              border: `1.5px solid ${c.count > 0 ? 'rgba(212,160,23,0.35)' : '#e5e7eb'}`,
+              borderRadius: 12, padding: '0.9rem', textAlign: 'center',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+            }}>
               <div style={{ fontSize: 26, marginBottom: 6 }}>{c.icon}</div>
               <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>{c.label}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: c.count > 0 ? '#2563eb' : '#d1d5db' }}>{c.count}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: c.count > 0 ? '#1a237e' : '#d1d5db' }}>{c.count}</div>
             </div>
           ))}
           {catGrid.length === 0 && (
@@ -234,5 +238,12 @@ export default function Dashboard({ usuario }) {
 }
 
 const s = {
-  secTitle: { fontSize: 13, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 14px' },
+  secTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: '#d4a017',
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    margin: '0 0 14px',
+  },
 }

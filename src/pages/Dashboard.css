@@ -1,4 +1,4 @@
-/* ── Dashboard responsive ─────────────────────────────── */
+/* ── Dashboard — Liceo Bicentenario JHJ ───────────────── */
 
 .dash-wrap {
   padding: 1.5rem;
@@ -15,12 +15,39 @@
   margin-bottom: 1.5rem;
 }
 
+/* KPI card individual */
+.dash-kpi-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  border: 1px solid rgba(255,255,255,0.6);
+  border-left: 4px solid #d4a017;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.dash-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.16);
+}
+
 /* Donut + Barras */
 .dash-charts {
   display: grid;
   grid-template-columns: 1fr 1.6fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+/* Paneles blancos genéricos */
+.dash-card {
+  background: #fff;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 14px;
+  padding: 1.4rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 /* Grilla final de categorías */
@@ -42,20 +69,21 @@
   .dash-wrap {
     padding: 1rem 0.85rem;
   }
-
   .dash-kpis {
     grid-template-columns: 1fr 1fr;
     gap: 0.65rem;
     margin-bottom: 1rem;
   }
-
   .dash-charts {
     gap: 0.65rem;
     margin-bottom: 1rem;
   }
-
   .dash-cat-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 0.5rem;
+  }
+  .dash-kpi-card {
+    padding: 0.9rem 1rem;
+    gap: 10px;
   }
 }
