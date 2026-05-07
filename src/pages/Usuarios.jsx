@@ -375,6 +375,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
   const [usuarioCreado, setUsuarioCreado] = useState(null) // { id, nombre, rol }
+  const [passwordTemporal, setPasswordTemporal] = useState(null) // null = email OK, string = email falló
 
   // Draft de permisos: se inicializa según el rol seleccionado
   const [draft, setDraft] = useState(() => {
@@ -412,6 +413,10 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         setMensaje({ tipo: 'error', texto: json.error ?? 'Error desconocido.' })
       } else {
         setUsuarioCreado(json.usuario)
+        // Si el email falló, guardamos la contraseña temporal para mostrarla al admin
+        if (!json.emailEnviado && json.passwordTemporal) {
+          setPasswordTemporal(json.passwordTemporal)
+        }
         setPaso(2)
         setMensaje({ tipo: '', texto: '' })
       }
@@ -529,6 +534,29 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
             <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
               Ajusta los permisos según necesites. Los valores iniciales corresponden al rol <strong>{rol}</strong>.
             </p>
+
+            {/* Aviso de contraseña temporal cuando el email no llegó */}
+            {passwordTemporal && (
+              <div style={{
+                background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 10,
+                padding: '14px 16px', marginBottom: 16,
+              }}>
+                <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 13, color: '#92400e' }}>
+                  ⚠️ El email no pudo enviarse — comparte esta contraseña temporal manualmente:
+                </p>
+                <div style={{
+                  fontFamily: 'monospace', fontSize: 20, fontWeight: 800,
+                  background: '#fff', border: '1.5px dashed #f59e0b',
+                  borderRadius: 6, padding: '8px 14px', display: 'inline-block',
+                  letterSpacing: '0.05em', color: '#111827', userSelect: 'all',
+                }}>
+                  {passwordTemporal}
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#92400e' }}>
+                  Email: <strong>{email}</strong> — el usuario deberá cambiarla al primer ingreso.
+                </p>
+              </div>
+            )}
 
             <TablaPermisos draft={draft} onChange={setDraft} />
 
