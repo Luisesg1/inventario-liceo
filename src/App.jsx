@@ -20,7 +20,7 @@ export default function App() {
 
   useEffect(() => {
     const hash = window.location.hash
-    if (hash.includes('error=access_denied') || hash.includes('type=invite')) {
+    if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
       window.history.replaceState(null, '', window.location.pathname)
     }
 
@@ -34,6 +34,11 @@ export default function App() {
         return
       }
 
+      if (event === 'PASSWORD_RECOVERY') {
+        cargarPerfil(session.user.id, true)
+        return
+      }
+
       cargarPerfil(session.user.id)
     })
 
@@ -44,7 +49,7 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  async function cargarPerfil(userId) {
+  async function cargarPerfil(userId, forceSetPassword = false) {
     const { data, error } = await supabase
       .from('usuarios')
       .select('*')
@@ -64,7 +69,7 @@ export default function App() {
     }
 
     setUsuario(data)
-    setMostrarSetPassword(data.debe_cambiar_password === true)
+    setMostrarSetPassword(forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
 

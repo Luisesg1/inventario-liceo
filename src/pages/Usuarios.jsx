@@ -563,6 +563,23 @@ export default function Usuarios({ usuario }) {
   const [busqueda, setBusqueda] = useState('')
   const [modalCrear, setModalCrear] = useState(false)
 
+  // Reset de contraseña
+  const [resetandoId,   setResetandoId]   = useState(null)
+  const [toastReset,    setToastReset]    = useState(null) // { id, ok, texto }
+
+  async function resetearPassword(u) {
+    setResetandoId(u.id)
+    const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
+      redirectTo: window.location.origin,
+    })
+    setResetandoId(null)
+    const toast = error
+      ? { id: u.id, ok: false, texto: 'Error al enviar el link' }
+      : { id: u.id, ok: true,  texto: `Link enviado a ${u.email}` }
+    setToastReset(toast)
+    setTimeout(() => setToastReset(null), 3500)
+  }
+
   // Eliminación
   const [confirmandoId, setConfirmandoId] = useState(null)
   const [eliminandoId, setEliminandoId]   = useState(null)
@@ -645,6 +662,22 @@ export default function Usuarios({ usuario }) {
 
   return (
     <div className="usuarios-page">
+
+      {/* Toast de reset de contraseña */}
+      {toastReset && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 999,
+          background: toastReset.ok ? '#1a237e' : '#dc2626',
+          color: '#fff', borderRadius: 12, padding: '12px 20px',
+          fontSize: 13, fontWeight: 600, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          animation: 'slideUpToast 0.25s ease',
+        }}>
+          <style>{`@keyframes slideUpToast { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }`}</style>
+          <span>{toastReset.ok ? '✉️' : '⚠️'}</span>
+          {toastReset.texto}
+        </div>
+      )}
 
       {/* Header */}
       <div className="usuarios-header">
@@ -744,7 +777,7 @@ export default function Usuarios({ usuario }) {
                 )}
 
                 {esAdmin && !esYo && !confirmando && (
-                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                     <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
                       background: editando ? '#e8eaf6' : 'none',
                       border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
@@ -759,6 +792,16 @@ export default function Usuarios({ usuario }) {
                       borderRadius: 6, padding: '5px 9px',
                       fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
                     }}>🔐</button>
+                    <button title="Resetear contraseña" onClick={() => resetearPassword(u)}
+                      disabled={resetandoId === u.id} style={{
+                        background: 'none',
+                        border: '1px solid #e5e7eb',
+                        color: '#9ca3af',
+                        borderRadius: 6, padding: '5px 9px',
+                        fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                      }}>
+                      {resetandoId === u.id ? '⏳' : '🔑'}
+                    </button>
                     <button className="btn-eliminar-icono" title="Eliminar"
                       onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
                   </div>
