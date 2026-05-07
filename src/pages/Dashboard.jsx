@@ -3,8 +3,9 @@ import { supabase } from '../supabase'
 import './Dashboard.css'
 
 const ESTADO_COLOR = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
+const ESTADO_BG    = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
 
-function DonutChart({ datos, total }) {
+function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   const r = 54, cx = 72, cy = 72
   const circ = 2 * Math.PI * r
   const filtrados = datos.filter(d => d.count > 0)
@@ -31,19 +32,30 @@ function DonutChart({ datos, total }) {
   })
 
   return (
-    <svg width="144" height="144" viewBox="0 0 144 144">
-      {segmentos.map((seg, i) => (
-        <circle key={i} cx={cx} cy={cy} r={r}
-          fill="none"
-          stroke={ESTADO_COLOR[seg.estado]}
-          strokeWidth="20"
-          strokeDasharray={animado ? `${seg.dash} ${circ - seg.dash}` : `0 ${circ}`}
-          strokeDashoffset={seg.offset}
-          style={{ transition: `stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s` }}
-        />
-      ))}
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1a237e">{total}</text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fontSize="11" fill="#6b7280">bienes</text>
+    <svg width="160" height="160" viewBox="0 0 160 160" style={{ cursor: 'pointer', flexShrink: 0 }}>
+      {segmentos.map((seg, i) => {
+        const activo = !estadoActivo || seg.estado === estadoActivo
+        const r2 = estadoActivo === seg.estado ? 56 : 54
+        return (
+          <circle key={i}
+            cx={80} cy={80} r={r2}
+            fill="none"
+            stroke={ESTADO_COLOR[seg.estado]}
+            strokeWidth={estadoActivo === seg.estado ? 24 : 20}
+            strokeDasharray={animado ? `${seg.dash * (r2 / r)} ${circ * (r2 / r) - seg.dash * (r2 / r)}` : `0 ${circ}`}
+            strokeDashoffset={(circ * (r2 / r)) / 4 - (segmentos.slice(0, i).reduce((a, s) => a + s.dash * (r2 / r), 0))}
+            style={{
+              opacity: activo ? 1 : 0.18,
+              transition: `stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s, opacity 0.25s, stroke-width 0.25s`,
+            }}
+            onClick={() => onEstadoClick(seg.estado)}
+          />
+        )
+      })}
+      <text x={80} y={74} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1a237e">{total}</text>
+      <text x={80} y={90} textAnchor="middle" fontSize="11" fill="#6b7280">
+        {estadoActivo ?? 'bienes'}
+      </text>
     </svg>
   )
 }
@@ -53,6 +65,8 @@ export default function Dashboard({ usuario }) {
   const [categorias,     setCategorias]     = useState([])
   const [cargando,       setCargando]       = useState(true)
   const [barrasAnimadas, setBarrasAnimadas] = useState(false)
+  const [categoriaFiltro, setCategoriaFiltro] = useState(null)
+  const [estadoFiltro,    setEstadoFiltro]    = useState(null)
 
   useEffect(() => {
     async function cargar() {
@@ -84,15 +98,20 @@ export default function Dashboard({ usuario }) {
     </div>
   )
 
-  const total     = bienes.length
+  // Bienes filtrados por categoría seleccionada
+  const bienesFiltrados = categoriaFiltro
+    ? bienes.filter(b => b.categoria === categoriaFiltro)
+    : bienes
+
+  const total     = bienesFiltrados.length
   const totalCats = categorias.length
-  const enBaja    = bienes.filter(b => b.estado === 'Baja').length
-  const enBueno   = bienes.filter(b => b.estado === 'Bueno').length
+  const enBaja    = bienesFiltrados.filter(b => b.estado === 'Baja').length
+  const enBueno   = bienesFiltrados.filter(b => b.estado === 'Bueno').length
   const pctBueno  = total > 0 ? Math.round((enBueno / total) * 100) : 0
 
   const estadoDatos = ['Bueno', 'Regular', 'Malo', 'Baja'].map(e => ({
     estado: e,
-    count: bienes.filter(b => b.estado === e).length,
+    count: bienesFiltrados.filter(b => b.estado === e).length,
   }))
 
   const catDatos = categorias.map(c => ({
@@ -105,6 +124,15 @@ export default function Dashboard({ usuario }) {
     .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
 
+  const catActiva = categorias.find(c => c.id === categoriaFiltro)
+
+  function toggleEstado(estado) {
+    setEstadoFiltro(prev => prev === estado ? null : estado)
+  }
+  function toggleCategoria(id) {
+    setCategoriaFiltro(prev => prev === id ? null : id)
+    setEstadoFiltro(null)
+  }
 
   return (
     <div className="dash-wrap">
@@ -119,13 +147,39 @@ export default function Dashboard({ usuario }) {
         </p>
       </div>
 
+      {/* Chip de filtro activo */}
+      {(categoriaFiltro || estadoFiltro) && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
+          {catActiva && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: 'rgba(212,160,23,0.18)', border: '1px solid rgba(212,160,23,0.5)',
+              color: '#f0d060', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600,
+            }}>
+              {catActiva.icon} {catActiva.label}
+              <button onClick={() => toggleCategoria(categoriaFiltro)} style={{ background: 'none', border: 'none', color: '#f0d060', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 0 0 2px' }}>✕</button>
+            </span>
+          )}
+          {estadoFiltro && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: ESTADO_BG[estadoFiltro], border: `1px solid ${ESTADO_COLOR[estadoFiltro]}40`,
+              color: ESTADO_COLOR[estadoFiltro], borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600,
+            }}>
+              {estadoFiltro}
+              <button onClick={() => setEstadoFiltro(null)} style={{ background: 'none', border: 'none', color: ESTADO_COLOR[estadoFiltro], cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 0 0 2px' }}>✕</button>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="dash-kpis">
         {[
-          { label: 'Total de bienes',   valor: total,          icono: '📦', color: '#1a237e', bg: '#e8eaf6' },
-          { label: 'Categorías',        valor: totalCats,      icono: '📂', color: '#92700a', bg: '#fef9e7' },
-          { label: 'En buen estado',    valor: `${pctBueno}%`, icono: '✅', color: '#16a34a', bg: '#f0fdf4' },
-          { label: 'Dados de baja',     valor: enBaja,         icono: '🗑️', color: '#dc2626', bg: '#fef2f2' },
+          { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          icono: '📦', color: '#1a237e', bg: '#e8eaf6' },
+          { label: 'Categorías',                                                          valor: totalCats,      icono: '📂', color: '#92700a', bg: '#fef9e7' },
+          { label: 'En buen estado',                                                      valor: `${pctBueno}%`, icono: '✅', color: '#16a34a', bg: '#f0fdf4' },
+          { label: 'Dados de baja',                                                       valor: enBaja,         icono: '🗑️', color: '#dc2626', bg: '#fef2f2' },
         ].map((kpi, i) => (
           <div key={i} className="dash-kpi-card">
             <div style={{ width: 44, height: 44, borderRadius: 12, background: kpi.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -144,20 +198,40 @@ export default function Dashboard({ usuario }) {
 
         {/* Dona de estados */}
         <div className="dash-card">
-          <p style={s.secTitle}>Distribución por estado</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-            <DonutChart datos={estadoDatos} total={total} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {estadoDatos.map(d => (
-                <div key={d.estado} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 11, height: 11, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: '#374151', minWidth: 60 }}>{d.estado}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{d.count}</span>
-                  <span style={{ fontSize: 11, color: '#9ca3af' }}>
-                    {total > 0 ? `${Math.round((d.count / total) * 100)}%` : ''}
-                  </span>
-                </div>
-              ))}
+          <p style={s.secTitle}>
+            Distribución por estado
+            {estadoFiltro && <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6, textTransform: 'none', letterSpacing: 0 }}>— haz clic para limpiar</span>}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <DonutChart
+              datos={estadoDatos}
+              total={total}
+              estadoActivo={estadoFiltro}
+              onEstadoClick={toggleEstado}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {estadoDatos.map(d => {
+                const activo = !estadoFiltro || estadoFiltro === d.estado
+                return (
+                  <div key={d.estado}
+                    onClick={() => toggleEstado(d.estado)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      cursor: 'pointer', borderRadius: 8, padding: '5px 10px',
+                      background: estadoFiltro === d.estado ? ESTADO_BG[d.estado] : 'transparent',
+                      border: estadoFiltro === d.estado ? `1px solid ${ESTADO_COLOR[d.estado]}40` : '1px solid transparent',
+                      opacity: activo ? 1 : 0.35,
+                      transition: 'all 0.2s',
+                    }}>
+                    <div style={{ width: 11, height: 11, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: '#374151', minWidth: 56 }}>{d.estado}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{d.count}</span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                      {total > 0 ? `${Math.round((d.count / total) * 100)}%` : ''}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -184,20 +258,35 @@ export default function Dashboard({ usuario }) {
 
       {/* Grilla de categorías */}
       <div className="dash-card">
-        <p style={s.secTitle}>Todas las categorías</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <p style={{ ...s.secTitle, margin: 0 }}>Todas las categorías</p>
+          {categoriaFiltro && (
+            <button onClick={() => toggleCategoria(categoriaFiltro)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+              Limpiar filtro ✕
+            </button>
+          )}
+        </div>
         <div className="dash-cat-grid">
-          {catGrid.map(c => (
-            <div key={c.id} style={{
-              background: c.count > 0 ? '#f0f2ff' : '#f9fafb',
-              border: `1.5px solid ${c.count > 0 ? 'rgba(212,160,23,0.35)' : '#e5e7eb'}`,
-              borderRadius: 12, padding: '0.9rem', textAlign: 'center',
-              transition: 'transform 0.15s, box-shadow 0.15s',
-            }}>
-              <div style={{ fontSize: 26, marginBottom: 6 }}>{c.icon}</div>
-              <div style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>{c.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: c.count > 0 ? '#1a237e' : '#d1d5db' }}>{c.count}</div>
-            </div>
-          ))}
+          {catGrid.map(c => {
+            const esActiva = categoriaFiltro === c.id
+            return (
+              <div key={c.id}
+                onClick={() => toggleCategoria(c.id)}
+                style={{
+                  background: esActiva ? '#1a237e' : (c.count > 0 ? '#f0f2ff' : '#f9fafb'),
+                  border: `2px solid ${esActiva ? '#d4a017' : (c.count > 0 ? 'rgba(212,160,23,0.25)' : '#e5e7eb')}`,
+                  borderRadius: 12, padding: '0.9rem', textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  transform: esActiva ? 'translateY(-2px)' : 'none',
+                  boxShadow: esActiva ? '0 6px 20px rgba(26,35,126,0.3)' : 'none',
+                }}>
+                <div style={{ fontSize: 26, marginBottom: 6 }}>{c.icon}</div>
+                <div style={{ fontSize: 12, color: esActiva ? '#f0d060' : '#374151', fontWeight: 600, marginBottom: 4, lineHeight: 1.3 }}>{c.label}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: esActiva ? '#ffffff' : (c.count > 0 ? '#1a237e' : '#d1d5db') }}>{c.count}</div>
+              </div>
+            )
+          })}
           {catGrid.length === 0 && (
             <p style={{ fontSize: 13, color: '#9ca3af', gridColumn: '1/-1' }}>No hay categorías creadas.</p>
           )}
