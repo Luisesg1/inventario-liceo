@@ -531,7 +531,7 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
             const globalEsBiblio = catGlobalNorm.includes('biblio')
             const globalEsComp   = catGlobal === 'computadores'
             const globalEsTecno  = catGlobalNorm.includes('tecnol')
-            const th1 = globalEsBiblio ? 'Nombre / Autor' : globalEsComp || globalEsTecno ? 'Marca / Modelo' : 'Nombre / Detalle'
+            const th1 = globalEsBiblio ? 'Nombre / Autor' : globalEsComp ? 'Marca / Modelo' : globalEsTecno ? 'Tipo / Marca' : 'Nombre / Detalle'
             const th2 = globalEsBiblio ? 'ISBN' : 'N° Serie'
             return (
           <div className="preview-table-wrap">
@@ -555,9 +555,12 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
                   const esBiblio = catNorm.includes('biblio')
                   const codigo = normalizar(row.codigo) || `INV-auto`
                   const esDup = codigosExistentes.has(codigo)
+                  const esTecnoRow = catNorm.includes('tecnol')
                   const detalle = esBiblio
                     ? [normalizar(row.nombre), normalizar(row.autor)].filter(Boolean).join(' — ') || '—'
-                    : [normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'
+                    : esTecnoRow
+                      ? [normalizar(row.tipo), normalizar(row.marca)].filter(Boolean).join(' ') || normalizar(row.modelo) || normalizar(row.nombre) || '—'
+                      : [normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'
                   const secundario = esBiblio
                     ? (normalizar(row.isbn) || normalizar(row.isdn) || '—')
                     : (normalizar(row.numero_serie) || normalizar(row['n°_de_serie']) || normalizar(row['n_de_serie']) || '—')
