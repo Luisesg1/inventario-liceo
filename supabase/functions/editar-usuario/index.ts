@@ -75,29 +75,42 @@ Deno.serve(async (req: Request) => {
         );
 
         // Verificar que la nueva contraseña no sea igual a la actual
+        console.log("[editar-usuario] verificando si la contraseña es igual...");
         const { data: samePassData, error: samePassError } = await supabasePublic.auth.signInWithPassword({
           email: targetEmail,
           password: updates.password,
         });
+        console.log("[editar-usuario] signIn para mismo-pass:", { ok: !samePassError, error: samePassError?.message });
         if (!samePassError && samePassData?.session) {
-          // Limpiar sesión temporal y rechazar
           await supabaseAdmin.auth.admin.signOut(samePassData.session.access_token, "local");
           return json({ error: "La nueva contraseña es igual a la actual." }, 400);
         }
 
         // Actualizar contraseña
+        console.log("[editar-usuario] actualizando contraseña en Auth...");
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, updates);
-        if (updateError) return json({ error: updateError.message }, 400);
+        if (updateError) {
+          console.log("[editar-usuario] error al actualizar:", updateError.message);
+          return json({ error: updateError.message }, 400);
+        }
+        console.log("[editar-usuario] contraseña actualizada OK");
 
         // Iniciar sesión con la nueva contraseña para obtener un JWT válido
-        const { data: loginData } = await supabasePublic.auth.signInWithPassword({
+        console.log("[editar-usuario] haciendo signIn con nueva contraseña para obtener JWT...");
+        const { data: loginData, error: loginError } = await supabasePublic.auth.signInWithPassword({
           email: targetEmail,
           password: updates.password,
         });
+        console.log("[editar-usuario] signIn post-cambio:", {
+          ok: !loginError,
+          tieneSession: !!loginData?.session,
+          error: loginError?.message,
+        });
 
         if (loginData?.session) {
-          // POST /logout?scope=global cierra TODAS las sesiones del usuario (el endpoint estándar y confiable)
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/logout?scope=global`, {
+          const logoutUrl = `${Deno.env.get("SUPABASE_URL")}/auth/v1/logout?scope=global`;
+          console.log("[editar-usuario] llamando POST logout:", logoutUrl);
+          const logoutRes = await fetch(logoutUrl, {
             method: "POST",
             headers: {
               "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -105,6 +118,9 @@ Deno.serve(async (req: Request) => {
               "Content-Type": "application/json",
             },
           });
+          console.log("[editar-usuario] logout status:", logoutRes.status, await logoutRes.text());
+        } else {
+          console.log("[editar-usuario] no se obtuvo sesión — no se pudo cerrar sesiones");
         }
 
         return json({ ok: true }, 200);
