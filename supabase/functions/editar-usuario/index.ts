@@ -71,18 +71,7 @@ Deno.serve(async (req: Request) => {
 
     // Si se cambió la contraseña, cerrar todas las sesiones activas del usuario
     if (updates.password) {
-      await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users/${userId}/logout`,
-        {
-          method: "POST",
-          headers: {
-            "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ scope: "global" }),
-        }
-      );
+      await supabaseAdmin.auth.admin.signOut(userId, "global");
     }
 
     return json({ ok: true }, 200);
