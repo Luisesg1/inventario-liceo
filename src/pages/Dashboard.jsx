@@ -116,8 +116,9 @@ function InventarioPorUbicacion({ bienes }) {
   )
     .map(([nombre, count]) => ({ nombre, count }))
     .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
 
-  const total = datos.reduce((s, d) => s + d.count, 0)
+  const total = bienes.filter(b => b.ubicacion?.trim()).length
   const maxCount = datos[0]?.count || 1
 
   if (datos.length === 0) return null
@@ -127,7 +128,7 @@ function InventarioPorUbicacion({ bienes }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
         <p style={{ ...s.secTitle, margin: 0 }}>📍 Inventario por ubicación</p>
         <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
-          {total} bienes · {datos.length} ubicaciones
+          Top 5 · {total} bienes
         </span>
       </div>
 
@@ -253,7 +254,7 @@ export default function Dashboard({ usuario }) {
         .from('actividades')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(25)
+        .limit(3)
       setActividades(data || [])
       setCargandoAct(false)
     }
@@ -262,7 +263,7 @@ export default function Dashboard({ usuario }) {
     const channel = supabase
       .channel('actividades-feed')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actividades' }, payload => {
-        setActividades(prev => [payload.new, ...prev].slice(0, 25))
+        setActividades(prev => [payload.new, ...prev].slice(0, 3))
       })
       .subscribe()
 

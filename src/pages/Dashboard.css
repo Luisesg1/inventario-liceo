@@ -33,13 +33,13 @@
   box-shadow: 0 8px 28px rgba(0,0,0,0.16);
 }
 
-/* Donut + Actividad: 2 columnas */
+/* Donut + Actividad: 2 columnas, misma altura */
 .dash-charts {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* Paneles blancos genéricos */
@@ -53,22 +53,18 @@
 
 /* ── Actividad Reciente ────────────────────────────────── */
 .dash-actividad {
-  min-height: 200px;
+  display: flex;
+  flex-direction: column;
 }
 
 .dash-act-list {
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 340px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #e5e7eb transparent;
+  flex: 1;
   margin: 0 -0.4rem;
   padding: 0 0.4rem;
 }
-.dash-act-list::-webkit-scrollbar { width: 4px }
-.dash-act-list::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px }
 
 .dash-act-item {
   display: flex;
