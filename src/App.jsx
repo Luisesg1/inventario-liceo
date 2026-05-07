@@ -25,6 +25,7 @@ export default function App() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth]', event, session?.user?.email)
       if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
