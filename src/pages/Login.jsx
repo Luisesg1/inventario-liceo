@@ -27,7 +27,7 @@ export default function Login({ onLogin }) {
         {/* Banda izquierda decorativa */}
         <div className="login-side">
           <img src="/logo-liceo.png" alt="Logo Liceo" className="login-side-logo" />
-          <h1 className="login-side-title">Liceo Bicentenario<br/>Juvenal Hernández Jaque</h1>
+          <h1 className="login-side-title">Liceo Bicentenario<br/>Polivalente Juvenal Hernández Jaque</h1>
           <p className="login-side-sub">El Carmen · Sistema de Inventario</p>
         </div>
 

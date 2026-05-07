@@ -98,10 +98,15 @@ export default function Dashboard({ usuario }) {
     </div>
   )
 
-  // Bienes filtrados por categoría seleccionada
-  const bienesFiltrados = categoriaFiltro
+  // Bienes filtrados por categoría (para el donut — siempre muestra distribución completa)
+  const bienesPorCategoria = categoriaFiltro
     ? bienes.filter(b => b.categoria === categoriaFiltro)
     : bienes
+
+  // Bienes filtrados por categoría + estado (para KPIs)
+  const bienesFiltrados = estadoFiltro
+    ? bienesPorCategoria.filter(b => b.estado === estadoFiltro)
+    : bienesPorCategoria
 
   const total     = bienesFiltrados.length
   const totalCats = categorias.length
@@ -109,9 +114,10 @@ export default function Dashboard({ usuario }) {
   const enBueno   = bienesFiltrados.filter(b => b.estado === 'Bueno').length
   const pctBueno  = total > 0 ? Math.round((enBueno / total) * 100) : 0
 
+  // El donut muestra distribución de la categoría (sin filtro de estado, para que sea útil)
   const estadoDatos = ['Bueno', 'Regular', 'Malo', 'Baja'].map(e => ({
     estado: e,
-    count: bienesFiltrados.filter(b => b.estado === e).length,
+    count: bienesPorCategoria.filter(b => b.estado === e).length,
   }))
 
   const catDatos = categorias.map(c => ({
@@ -198,14 +204,11 @@ export default function Dashboard({ usuario }) {
 
         {/* Dona de estados */}
         <div className="dash-card">
-          <p style={s.secTitle}>
-            Distribución por estado
-            {estadoFiltro && <span style={{ fontWeight: 400, color: '#9ca3af', marginLeft: 6, textTransform: 'none', letterSpacing: 0 }}>— haz clic para limpiar</span>}
-          </p>
+          <p style={s.secTitle}>Distribución por estado</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <DonutChart
               datos={estadoDatos}
-              total={total}
+              total={bienesPorCategoria.length}
               estadoActivo={estadoFiltro}
               onEstadoClick={toggleEstado}
             />
@@ -258,14 +261,7 @@ export default function Dashboard({ usuario }) {
 
       {/* Grilla de categorías */}
       <div className="dash-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <p style={{ ...s.secTitle, margin: 0 }}>Todas las categorías</p>
-          {categoriaFiltro && (
-            <button onClick={() => toggleCategoria(categoriaFiltro)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-              Limpiar filtro ✕
-            </button>
-          )}
-        </div>
+        <p style={s.secTitle}>Todas las categorías</p>
         <div className="dash-cat-grid">
           {catGrid.map(c => {
             const esActiva = categoriaFiltro === c.id
