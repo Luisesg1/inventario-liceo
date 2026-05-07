@@ -19,6 +19,8 @@ const ICONOS = ['📦','🪑','📚','📖','🖨️','💻','🖥️','🖱️'
 const formVacio = {
   nombre: '', categoria: '', codigo: '', cantidad: 1,
   estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  isbn: '', autor: '',
+  fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
 }
 
 const formVacioComp = {
@@ -37,7 +39,7 @@ const formVacioTecno = {
   estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
   tipo: '', tecnologia: '', marca: '', modelo: '', numero_serie: '',
   consumible: '', proveedor: '', numero_factura: '', numero_orden: '',
-  fecha_adquisicion: '', fondo: '',
+  fecha_adquisicion: '', fondo: '', garantia: '',
 }
 
 // ── ComboField: input con sugerencias desde la BD ─────────────────────────
@@ -305,6 +307,12 @@ export default function Inventario({ usuario }) {
     const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     return label.includes('tecnol')
   }
+  const esBiblioteca = (cat) => {
+    if (!cat) return false
+    const obj = categorias.find(c => c.id === cat)
+    const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return label.includes('biblio')
+  }
 
   // ── Valores únicos de la BD para autocomplete de formularios ──────────────
   const opsBD = useMemo(() => {
@@ -334,6 +342,7 @@ export default function Inventario({ usuario }) {
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
   const COLUMNAS_EXPORT = [
     'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
+    'isbn','autor',
     'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
     'memoria','tipo_almacenamiento','sistema_operativo',
     'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
@@ -1108,6 +1117,19 @@ export default function Inventario({ usuario }) {
             </div>
           </div>
 
+          {esBiblioteca(form.categoria) && (
+            <div className="form-row">
+              <div className="field">
+                <label>ISBN</label>
+                <input name="isbn" value={form.isbn ?? ''} onChange={handleChange} placeholder="ej: 978-956-12-3456-7" maxLength={20} />
+              </div>
+              <div className="field">
+                <label>Autor</label>
+                <input name="autor" value={form.autor ?? ''} onChange={handleChange} placeholder="ej: García Márquez" maxLength={100} />
+              </div>
+            </div>
+          )}
+
           {esComp(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
@@ -1410,6 +1432,10 @@ export default function Inventario({ usuario }) {
                   <label>Fondo</label>
                   <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
                 </div>
+                <div className="field">
+                  <label>Garantía</label>
+                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
               </div>
             </>
           )}
@@ -1421,6 +1447,41 @@ export default function Inventario({ usuario }) {
                   <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
             </div>
           </div>
+
+          {!esComp(form.categoria) && !esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Fecha de adquisición</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+                <div className="field">
+                  <label>Proveedor</label>
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>N° de factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>N° de orden de compra</label>
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                </div>
+                <div className="field">
+                  <label>Garantía</label>
+                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="form-actions">
             <button className="btn-cancel" onClick={cancelarForm} disabled={guardando}>Cancelar</button>
             <button className="btn-primary" onClick={guardarBien} disabled={guardando}>
@@ -1497,6 +1558,19 @@ export default function Inventario({ usuario }) {
             </div>
           </div>
 
+          {esBiblioteca(form.categoria) && (
+            <div className="form-row">
+              <div className="field">
+                <label>ISBN</label>
+                <input name="isbn" value={form.isbn ?? ''} onChange={handleChange} placeholder="ej: 978-956-12-3456-7" maxLength={20} />
+              </div>
+              <div className="field">
+                <label>Autor</label>
+                <input name="autor" value={form.autor ?? ''} onChange={handleChange} placeholder="ej: García Márquez" maxLength={100} />
+              </div>
+            </div>
+          )}
+
           {esComp(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
@@ -1799,6 +1873,10 @@ export default function Inventario({ usuario }) {
                   <label>Fondo</label>
                   <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
                 </div>
+                <div className="field">
+                  <label>Garantía</label>
+                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
               </div>
             </>
           )}
@@ -1810,6 +1888,41 @@ export default function Inventario({ usuario }) {
                   <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
             </div>
           </div>
+
+          {!esComp(form.categoria) && !esTecno(form.categoria) && (
+            <>
+              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>Fecha de adquisición</label>
+                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                </div>
+                <div className="field">
+                  <label>Proveedor</label>
+                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                </div>
+                <div className="field">
+                  <label>Fondo</label>
+                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
+                </div>
+              </div>
+              <div className="form-row triple">
+                <div className="field">
+                  <label>N° de factura</label>
+                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                </div>
+                <div className="field">
+                  <label>N° de orden de compra</label>
+                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                </div>
+                <div className="field">
+                  <label>Garantía</label>
+                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="form-actions">
             <button className="btn-cancel" onClick={cancelarForm} disabled={guardando}>Cancelar</button>
             <button className="btn-primary" onClick={guardarBien} disabled={guardando}>
