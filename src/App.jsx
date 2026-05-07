@@ -29,6 +29,8 @@ export default function App() {
       if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
+        // Ignorar INITIAL_SESSION vacío mientras esperamos que setSession resuelva
+        if (event === 'INITIAL_SESSION' && modoRecovery.current) return
         setUsuario(null)
         setMostrarSetPassword(false)
         setCargando(false)
