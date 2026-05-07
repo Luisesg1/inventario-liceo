@@ -238,6 +238,35 @@ body {
 
 @keyframes spin { to { transform: rotate(360deg) } }
 
+/* ── Olvidé contraseña ───────────────────────────────────────────── */
+.login-link {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  color: #1a237e;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px 0;
+  text-decoration: underline;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.login-link:hover { opacity: 1; }
+
+.login-ok {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+  font-size: 13px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .login-panel { flex-direction: column; max-width: 400px; min-height: auto; }

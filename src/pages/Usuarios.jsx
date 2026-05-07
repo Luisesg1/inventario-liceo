@@ -569,17 +569,16 @@ export default function Usuarios({ usuario }) {
 
   async function resetearPassword(u) {
     setResetandoId(u.id)
-    const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
-      redirectTo: window.location.origin,
-    })
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ debe_cambiar_password: true })
+      .eq('id', u.id)
     setResetandoId(null)
     const toast = error
-      ? { id: u.id, ok: false, texto: error.status === 429
-          ? 'Límite de correos alcanzado — espera unos minutos'
-          : 'Error al enviar el link: ' + error.message }
-      : { id: u.id, ok: true, texto: `Link enviado a ${u.email}` }
+      ? { id: u.id, ok: false, texto: 'Error: ' + error.message }
+      : { id: u.id, ok: true, texto: `Pídele a ${u.nombre} que use "¿Olvidaste tu contraseña?" al iniciar sesión` }
     setToastReset(toast)
-    setTimeout(() => setToastReset(null), 3500)
+    setTimeout(() => setToastReset(null), 5000)
   }
 
   // Eliminación

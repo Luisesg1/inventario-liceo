@@ -7,6 +7,4 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const esRecuperacion =
   new URLSearchParams(window.location.hash.slice(1)).get('type') === 'recovery'
 
-export const supabase = createClient(url, key, {
-  auth: { flowType: 'implicit' },
-})
+export const supabase = createClient(url, key)
