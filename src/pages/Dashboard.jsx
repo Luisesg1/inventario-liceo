@@ -3,13 +3,17 @@ import { supabase } from '../supabase'
 import './Dashboard.css'
 
 const ESTADO_COLOR = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
-const ESTADO_BG    = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
-const ESTADO_ICONO = { Bueno: '✅', Regular: '⚠️', Malo: '❌', Baja: '🗑️' }
 
 function DonutChart({ datos, total }) {
   const r = 54, cx = 72, cy = 72
   const circ = 2 * Math.PI * r
   const filtrados = datos.filter(d => d.count > 0)
+  const [animado, setAnimado] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setAnimado(true), 60)
+    return () => clearTimeout(t)
+  }, [])
 
   if (total === 0) return (
     <svg width="144" height="144">
@@ -33,9 +37,9 @@ function DonutChart({ datos, total }) {
           fill="none"
           stroke={ESTADO_COLOR[seg.estado]}
           strokeWidth="20"
-          strokeDasharray={`${seg.dash} ${circ - seg.dash}`}
+          strokeDasharray={animado ? `${seg.dash} ${circ - seg.dash}` : `0 ${circ}`}
           strokeDashoffset={seg.offset}
-          style={{ transition: 'stroke-dasharray 0.4s ease' }}
+          style={{ transition: `stroke-dasharray 0.6s cubic-bezier(0.4,0,0.2,1) ${i * 0.08}s` }}
         />
       ))}
       <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1a237e">{total}</text>
@@ -72,6 +76,14 @@ export default function Dashboard({ usuario }) {
     </div>
   )
 
+  const [barrasAnimadas, setBarrasAnimadas] = useState(false)
+  useEffect(() => {
+    if (!cargando) {
+      const t = setTimeout(() => setBarrasAnimadas(true), 120)
+      return () => clearTimeout(t)
+    }
+  }, [cargando])
+
   const total     = bienes.length
   const totalCats = categorias.length
   const enBaja    = bienes.filter(b => b.estado === 'Baja').length
@@ -89,15 +101,10 @@ export default function Dashboard({ usuario }) {
   })).filter(c => c.count > 0).sort((a, b) => b.count - a.count)
 
   const maxCount = Math.max(...catDatos.map(c => c.count), 1)
-  const atencion = bienes.filter(b => b.estado === 'Malo' || b.estado === 'Baja')
   const catGrid  = categorias
     .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
 
-  const esComp     = (cat) => cat === 'computadores'
-  const nombreBien = (b) => esComp(b.categoria)
-    ? ([b.marca, b.modelo].filter(Boolean).join(' ') || 'Computador')
-    : b.nombre
 
   return (
     <div className="dash-wrap">
@@ -167,49 +174,13 @@ export default function Dashboard({ usuario }) {
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#1a237e' }}>{c.count}</span>
                 </div>
                 <div style={{ background: '#f0f2ff', borderRadius: 4, height: 8 }}>
-                  <div style={{ background: 'linear-gradient(90deg, #d4a017, #f0c830)', width: `${(c.count / maxCount) * 100}%`, height: '100%', borderRadius: 4, transition: 'width 0.4s ease' }} />
+                  <div style={{ background: 'linear-gradient(90deg, #d4a017, #f0c830)', width: barrasAnimadas ? `${(c.count / maxCount) * 100}%` : '0%', height: '100%', borderRadius: 4, transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)' }} />
                 </div>
               </div>
             ))
           }
         </div>
       </div>
-
-      {/* Requieren atención */}
-      {atencion.length > 0 && (
-        <div style={{ background: '#fff', border: '1.5px solid #fca5a5', borderLeft: '4px solid #dc2626', borderRadius: 12, padding: '1.4rem', marginBottom: '1.5rem', boxShadow: '0 4px 20px rgba(220,38,38,0.08)' }}>
-          <p style={{ ...s.secTitle, color: '#dc2626' }}>⚠️ Requieren atención ({atencion.length})</p>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #fee2e2' }}>
-                  {['Bien', 'Categoría', 'Estado', 'Ubicación', 'Responsable'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '6px 10px', color: '#9ca3af', fontWeight: 600, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', background: 'transparent' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {atencion.map(b => {
-                  const cat = categorias.find(c => c.id === b.categoria)
-                  return (
-                    <tr key={b.id} style={{ borderBottom: '1px solid #fef2f2' }}>
-                      <td style={{ padding: '8px 10px', color: '#111827', fontWeight: 500, background: 'transparent' }}>{nombreBien(b)}</td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{cat?.icon} {cat?.label ?? b.categoria}</td>
-                      <td style={{ padding: '8px 10px', background: 'transparent' }}>
-                        <span style={{ background: ESTADO_BG[b.estado], color: ESTADO_COLOR[b.estado], borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600 }}>
-                          {ESTADO_ICONO[b.estado]} {b.estado}
-                        </span>
-                      </td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{b.ubicacion || '—'}</td>
-                      <td style={{ padding: '8px 10px', color: '#6b7280', background: 'transparent' }}>{b.responsable || '—'}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Grilla de categorías */}
       <div className="dash-card">
