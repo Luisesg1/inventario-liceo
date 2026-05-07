@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from './supabase'
+import { supabase, esRecuperacion } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Inventario from './pages/Inventario'
@@ -16,7 +16,7 @@ export default function App() {
   const cambiarPagina   = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
   // Se activa en cuanto llega PASSWORD_RECOVERY; cargarPerfil lo consulta al escribir estado.
-  const modoRecovery     = useRef(false)
+  const modoRecovery     = useRef(esRecuperacion)
 
   useEffect(() => {
     const hash = window.location.hash
