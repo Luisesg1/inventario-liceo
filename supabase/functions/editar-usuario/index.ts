@@ -12,7 +12,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // 1. Verificar token
+    // 1. Verificar token del admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return json({ error: "No autorizado: falta token." }, 401);
@@ -60,54 +60,60 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 5. Si hay nueva contraseña, verificar que no sea igual a la actual
+    // 5. Manejo especial cuando se cambia la contraseña
     if (updates.password) {
+      // Obtener email del usuario objetivo
       const { data: targetUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
       const targetEmail = targetUserData?.user?.email;
 
       if (targetEmail) {
+        // Cliente sin sesión activa para operaciones de auth del usuario objetivo
         const supabasePublic = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_ANON_KEY")!,
           { auth: { autoRefreshToken: false, persistSession: false } }
         );
-        const { data: signInData, error: signInError } = await supabasePublic.auth.signInWithPassword({
+
+        // Verificar que la nueva contraseña no sea igual a la actual
+        const { data: samePassData, error: samePassError } = await supabasePublic.auth.signInWithPassword({
           email: targetEmail,
           password: updates.password,
         });
-        if (!signInError && signInData?.session) {
-          // Limpiar la sesión temporal y rechazar
-          await supabaseAdmin.auth.admin.signOut(signInData.session.access_token, "local");
+        if (!samePassError && samePassData?.session) {
+          // Limpiar sesión temporal y rechazar
+          await supabaseAdmin.auth.admin.signOut(samePassData.session.access_token, "local");
           return json({ error: "La nueva contraseña es igual a la actual." }, 400);
         }
+
+        // Actualizar contraseña
+        const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, updates);
+        if (updateError) return json({ error: updateError.message }, 400);
+
+        // Iniciar sesión con la nueva contraseña para obtener un JWT válido
+        const { data: loginData } = await supabasePublic.auth.signInWithPassword({
+          email: targetEmail,
+          password: updates.password,
+        });
+
+        if (loginData?.session) {
+          // POST /logout?scope=global cierra TODAS las sesiones del usuario (el endpoint estándar y confiable)
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/logout?scope=global`, {
+            method: "POST",
+            headers: {
+              "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
+              "Authorization": `Bearer ${loginData.session.access_token}`,
+              "Content-Type": "application/json",
+            },
+          });
+        }
+
+        return json({ ok: true }, 200);
       }
     }
 
-    // 6. Actualizar en Supabase Auth
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      updates
-    );
-
-    if (updateError) {
-      return json({ error: updateError.message }, 400);
-    }
-
-    // 7. Si se cambió la contraseña, cerrar todas las sesiones activas del usuario
-    if (updates.password) {
-      await fetch(
-        `${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users/${userId}/logout`,
-        {
-          method: "POST",
-          headers: {
-            "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ scope: "global" }),
-        }
-      );
-    }
+    // 6. Actualizar email u otros cambios (sin contraseña)
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, updates);
+    if (updateError) return json({ error: updateError.message }, 400);
 
     return json({ ok: true }, 200);
 
