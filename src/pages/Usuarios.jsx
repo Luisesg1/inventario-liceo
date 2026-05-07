@@ -408,7 +408,6 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         }
       )
       const json = await res.json()
-      console.log('Respuesta Edge Function:', json)
       if (!res.ok) {
         setMensaje({ tipo: 'error', texto: json.error ?? 'Error desconocido.' })
       } else {
