@@ -53,13 +53,37 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, mensaje: "Nada que actualizar en Auth." }, 200);
     }
 
-    // 4. Cliente admin para actualizar en Supabase Auth
+    // 4. Cliente admin
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    // 5. Si hay nueva contraseña, verificar que no sea igual a la actual
+    if (updates.password) {
+      const { data: targetUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
+      const targetEmail = targetUserData?.user?.email;
+
+      if (targetEmail) {
+        const supabasePublic = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        );
+        const { data: signInData, error: signInError } = await supabasePublic.auth.signInWithPassword({
+          email: targetEmail,
+          password: updates.password,
+        });
+        if (!signInError && signInData?.session) {
+          // Limpiar la sesión temporal y rechazar
+          await supabaseAdmin.auth.admin.signOut(signInData.session.access_token, "local");
+          return json({ error: "La nueva contraseña es igual a la actual." }, 400);
+        }
+      }
+    }
+
+    // 6. Actualizar en Supabase Auth
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       updates
@@ -69,9 +93,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: updateError.message }, 400);
     }
 
-    // Si se cambió la contraseña, cerrar todas las sesiones activas del usuario
+    // 7. Si se cambió la contraseña, cerrar todas las sesiones activas del usuario
     if (updates.password) {
-      await supabaseAdmin.auth.admin.signOut(userId, "global");
+      await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/auth/v1/admin/users/${userId}/logout`,
+        {
+          method: "POST",
+          headers: {
+            "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ scope: "global" }),
+        }
+      );
     }
 
     return json({ ok: true }, 200);
