@@ -51,7 +51,10 @@ export default function App() {
     })
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setCargando(false)
+      if (!session && !esRecovery) setCargando(false)
+      // En recovery el token se intercambia de forma asíncrona después de getSession.
+      // Esperamos a PASSWORD_RECOVERY. Si no llega en 8s (token expirado/inválido), vamos al login.
+      if (!session && esRecovery) setTimeout(() => setCargando(false), 8000)
     })
 
     return () => subscription.unsubscribe()
