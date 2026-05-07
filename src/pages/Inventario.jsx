@@ -1440,14 +1440,6 @@ export default function Inventario({ usuario }) {
             </>
           )}
 
-          <div className="form-row single">
-            <div className="field">
-              <label>Observaciones</label>
-              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
-                  <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
-            </div>
-          </div>
-
           {!esComp(form.categoria) && !esTecno(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
@@ -1481,6 +1473,14 @@ export default function Inventario({ usuario }) {
               </div>
             </>
           )}
+
+          <div className="form-row single">
+            <div className="field">
+              <label>Observaciones</label>
+              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
+                  <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
+            </div>
+          </div>
 
           <div className="form-actions">
             <button className="btn-cancel" onClick={cancelarForm} disabled={guardando}>Cancelar</button>
@@ -1881,14 +1881,6 @@ export default function Inventario({ usuario }) {
             </>
           )}
 
-          <div className="form-row single">
-            <div className="field">
-              <label>Observaciones</label>
-              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
-                  <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
-            </div>
-          </div>
-
           {!esComp(form.categoria) && !esTecno(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
@@ -1922,6 +1914,14 @@ export default function Inventario({ usuario }) {
               </div>
             </>
           )}
+
+          <div className="form-row single">
+            <div className="field">
+              <label>Observaciones</label>
+              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
+                  <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
+            </div>
+          </div>
 
           <div className="form-actions">
             <button className="btn-cancel" onClick={cancelarForm} disabled={guardando}>Cancelar</button>
