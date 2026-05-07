@@ -538,6 +538,7 @@ export default function Inventario({ usuario }) {
     const { error } = await supabase.from('categorias').insert({ id, label, icon: nuevaCat.icon, fija: false })
     if (error) { setAviso('Error al crear categoría: ' + error.message); return }
     setCategorias(prev => [...prev, { id, label, icon: nuevaCat.icon, fija: false }])
+    setCatOrder(prev => [...prev, id])
     setModalCat(false)
     setCatActual(id); localStorage.setItem('inv_catActual', id)
   }

@@ -616,7 +616,13 @@ tr.fila-editando td { background: #fffbeb; }
   transition: opacity 0.15s; box-shadow: 0 2px 8px rgba(220,38,38,0.3);
 }
 .btn-danger:hover { opacity: 0.9; }
-.btn-confirm-cancel { padding: 9px 22px; }
+.btn-confirm-cancel {
+  padding: 9px 22px;
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+  color: #374151 !important;
+}
+.btn-confirm-cancel:hover { background: #e5e7eb !important; }
 
 /* ── Validación ───────────────────────────────────────── */
 .field-hint { font-size: 12px; margin-top: 3px; font-weight: 500; }
