@@ -112,14 +112,24 @@
   align-self: center;
 }
 
+.dash-mini-spin,
+.dash-main-spin {
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
 .dash-mini-spin {
   width: 16px;
   height: 16px;
   border: 2px solid #e5e7eb;
   border-top-color: #d4a017;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
+}
+.dash-main-spin {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,0.15);
+  border-top-color: #d4a017;
+  margin: 0 auto 12px;
 }
 @keyframes spin { to { transform: rotate(360deg) } }
 
@@ -183,23 +193,6 @@
   text-align: right;
 }
 
-.dash-tooltip {
-  position: fixed;
-  background: #1a237e;
-  color: #fff;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.5;
-  box-shadow: 0 6px 20px rgba(26,35,126,0.35);
-  pointer-events: none;
-  z-index: 100;
-  white-space: nowrap;
-  transform: translate(-50%, -120%);
-  left: 50%;
-  top: 0;
-}
 
 /* Grilla final de categorías */
 .dash-cat-grid {
