@@ -8,22 +8,19 @@ import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
 
 export default function App() {
-  const [usuario, setUsuario] = useState(null)
-  const [cargando, setCargando] = useState(true)
-  const [pagina, setPagina] = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
-
-  const cambiarPagina = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
+  const [usuario,          setUsuario]          = useState(null)
+  const [cargando,         setCargando]         = useState(true)
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
+  const [pagina,           setPagina]           = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
 
-  // Bloquea el listener de auth mientras se procesa el cambio de contraseña
+  const cambiarPagina   = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
+  // Se activa en cuanto llega PASSWORD_RECOVERY; cargarPerfil lo consulta al escribir estado.
+  const modoRecovery     = useRef(false)
 
   useEffect(() => {
     const hash = window.location.hash
-    // Capturar si es recovery ANTES de limpiar el hash
-    const esRecovery = hash.includes('type=recovery')
-
-    if (hash.includes('error=access_denied') || hash.includes('type=invite') || esRecovery) {
+    if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
       window.history.replaceState(null, '', window.location.pathname)
     }
 
@@ -37,12 +34,8 @@ export default function App() {
         return
       }
 
-      // En flujo de recovery ignoramos TODO excepto PASSWORD_RECOVERY.
-      // Esto evita que INITIAL_SESSION o SIGNED_IN (de una sesión existente)
-      // ganen la carrera y muestren el dashboard antes de que llegue el evento correcto.
-      if (esRecovery && event !== 'PASSWORD_RECOVERY') return
-
       if (event === 'PASSWORD_RECOVERY') {
+        modoRecovery.current = true
         cargarPerfil(session.user.id, true)
         return
       }
@@ -51,10 +44,7 @@ export default function App() {
     })
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session && !esRecovery) setCargando(false)
-      // En recovery el token se intercambia de forma asíncrona después de getSession.
-      // Esperamos a PASSWORD_RECOVERY. Si no llega en 8s (token expirado/inválido), vamos al login.
-      if (!session && esRecovery) setTimeout(() => setCargando(false), 8000)
+      if (!session) setCargando(false)
     })
 
     return () => subscription.unsubscribe()
@@ -67,36 +57,24 @@ export default function App() {
       .eq('id', userId)
       .maybeSingle()
 
-    if (error) {
-      console.error('[App] Error cargando perfil:', error.message)
-      setCargando(false)
-      return
-    }
-
-    if (!data) {
-      console.warn('[App] Usuario sin perfil en tabla usuarios:', userId)
+    if (error || !data) {
       setCargando(false)
       return
     }
 
     setUsuario(data)
-    setMostrarSetPassword(forceSetPassword || data.debe_cambiar_password === true)
+    // Consultar modoRecovery.current aquí (no antes) garantiza que si PASSWORD_RECOVERY
+    // llegó mientras esta query estaba en vuelo, igual mostramos SetPassword.
+    setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
 
   async function handlePasswordSet() {
     procesandoCambio.current = true
+    modoRecovery.current     = false
 
-    const { error } = await supabase
-      .from('usuarios')
-      .update({ debe_cambiar_password: false })
-      .eq('id', usuario.id)
+    await supabase.from('usuarios').update({ debe_cambiar_password: false }).eq('id', usuario.id)
 
-    if (error) {
-      console.error('[App] Error actualizando debe_cambiar_password:', error.message)
-    }
-
-    // Resetear UI antes del signOut para evitar parpadeos
     setMostrarSetPassword(false)
     setUsuario(null)
     setCargando(false)
@@ -120,23 +98,11 @@ export default function App() {
 
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina
 
-  const renderPagina = () => {
-    switch (paginaSegura) {
-      case 'inventario': return <Inventario usuario={usuario} />
-      case 'usuarios':   return <Usuarios usuario={usuario} />
-      case 'dashboard':  return <Dashboard usuario={usuario} />
-      default:           return <Dashboard usuario={usuario} />
-    }
-  }
-
   return (
-    <Layout
-      usuario={usuario}
-      onLogout={() => supabase.auth.signOut()}
-      paginaActual={paginaSegura}
-      setPagina={cambiarPagina}
-    >
-      {renderPagina()}
+    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina}>
+      {paginaSegura === 'inventario' && <Inventario usuario={usuario} />}
+      {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
     </Layout>
   )
 }
