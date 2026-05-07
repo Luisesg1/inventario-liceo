@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase, esRecuperacion } from './supabase'
+import { supabase, esRecuperacion, recoveryTokens } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Inventario from './pages/Inventario'
@@ -19,6 +19,7 @@ export default function App() {
   const modoRecovery     = useRef(esRecuperacion)
 
   useEffect(() => {
+    // Limpiar hash de la URL (ya capturamos los tokens en supabase.js antes de esto)
     const hash = window.location.hash
     if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
       window.history.replaceState(null, '', window.location.pathname)
@@ -34,7 +35,9 @@ export default function App() {
         return
       }
 
-      if (event === 'PASSWORD_RECOVERY') {
+      // PASSWORD_RECOVERY: cuando Supabase procesa el hash correctamente
+      // SIGNED_IN con modoRecovery: cuando usamos setSession manual con token de recovery
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && modoRecovery.current)) {
         modoRecovery.current = true
         cargarPerfil(session.user.id, true)
         return
@@ -43,9 +46,20 @@ export default function App() {
       cargarPerfil(session.user.id)
     })
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setCargando(false)
-    })
+    if (recoveryTokens) {
+      // Bypassear el procesamiento automático del hash — establecer sesión manualmente
+      supabase.auth.setSession(recoveryTokens).then(({ error }) => {
+        if (error) {
+          console.error('Error al establecer sesión de recuperación:', error)
+          setCargando(false)
+        }
+        // Si no hay error, onAuthStateChange dispara SIGNED_IN y cargarPerfil se encarga
+      })
+    } else {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) setCargando(false)
+      })
+    }
 
     return () => subscription.unsubscribe()
   }, [])
