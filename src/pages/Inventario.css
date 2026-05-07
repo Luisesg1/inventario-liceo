@@ -688,6 +688,24 @@ tr.fila-editando td { background: #fffbeb; }
 
 /* ── ComboField ───────────────────────────────────────── */
 .combo-wrap { position: relative; display: block; width: 100%; }
+.combo-wrap input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #f8faff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 9px 28px 9px 10px;
+  font-size: 13px;
+  color: #111827;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.combo-wrap input:focus {
+  outline: none;
+  border-color: #1a3a8f;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(26,58,143,0.1);
+}
 .combo-chevron {
   position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
   font-size: 9px; color: #9ca3af; cursor: pointer; user-select: none; pointer-events: all;

@@ -52,7 +52,7 @@ function ComboField({ name, value, onChange, placeholder, opciones = [], maxLeng
     .slice(0, 14)
 
   return (
-    <div ref={refDiv} className="combo-wrap">
+    <div ref={refDiv} className="combo-wrap" style={{ position: 'relative' }}>
       <input
         name={name}
         value={value ?? ''}
@@ -1059,23 +1059,17 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
-                <label>Nombre *</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
+                <label>{esBiblioteca(form.categoria) ? 'Título *' : 'Nombre *'}</label>
+                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder={esBiblioteca(form.categoria) ? 'ej: Cien años de soledad' : 'ej: Escritorio madera'} maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
               </div>
             )}
-            {esBiblioteca(form.categoria) ? (
+            {esBiblioteca(form.categoria) && (
               <div className="field">
                 <label>ISBN</label>
                 <input name="isbn" value={form.isbn ?? ''} onChange={handleChange} placeholder="ej: 978-956-12-3456-7" maxLength={20} />
               </div>
-            ) : (
-              <div className="field">
-                <label>Categoría</label>
-                <select name="categoria" value={form.categoria} onChange={handleChange}>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
-              </div>
             )}
+
             {esComp(form.categoria) && (
               <div className="field">
                 <label>Número de serie</label>
@@ -1085,16 +1079,10 @@ export default function Inventario({ usuario }) {
           </div>
 
           {esBiblioteca(form.categoria) && (
-            <div className="form-row triple">
+            <div className="form-row">
               <div className="field">
                 <label>Autor</label>
                 <input name="autor" value={form.autor ?? ''} onChange={handleChange} placeholder="ej: García Márquez" maxLength={100} />
-              </div>
-              <div className="field">
-                <label>Categoría</label>
-                <select name="categoria" value={form.categoria} onChange={handleChange}>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
               </div>
               <div className="field">
                 <label>Género</label>
@@ -1513,23 +1501,17 @@ export default function Inventario({ usuario }) {
           <div className="form-row">
             {!esComp(form.categoria) && !esTecno(form.categoria) && (
               <div className="field">
-                <label>Nombre *</label>
-                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder="ej: Escritorio madera" maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
+                <label>{esBiblioteca(form.categoria) ? 'Título *' : 'Nombre *'}</label>
+                <input name="nombre" value={form.nombre} onChange={handleChange} placeholder={esBiblioteca(form.categoria) ? 'ej: Cien años de soledad' : 'ej: Escritorio madera'} maxLength={100} className={errores.nombre ? 'input-error' : ''} autoFocus />
               </div>
             )}
-            {esBiblioteca(form.categoria) ? (
+            {esBiblioteca(form.categoria) && (
               <div className="field">
                 <label>ISBN</label>
                 <input name="isbn" value={form.isbn ?? ''} onChange={handleChange} placeholder="ej: 978-956-12-3456-7" maxLength={20} />
               </div>
-            ) : (
-              <div className="field">
-                <label>Categoría</label>
-                <select name="categoria" value={form.categoria} onChange={handleChange}>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
-              </div>
             )}
+
             {esComp(form.categoria) && (
               <div className="field">
                 <label>Número de serie</label>
@@ -1539,16 +1521,10 @@ export default function Inventario({ usuario }) {
           </div>
 
           {esBiblioteca(form.categoria) && (
-            <div className="form-row triple">
+            <div className="form-row">
               <div className="field">
                 <label>Autor</label>
                 <input name="autor" value={form.autor ?? ''} onChange={handleChange} placeholder="ej: García Márquez" maxLength={100} />
-              </div>
-              <div className="field">
-                <label>Categoría</label>
-                <select name="categoria" value={form.categoria} onChange={handleChange}>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-                </select>
               </div>
               <div className="field">
                 <label>Género</label>
