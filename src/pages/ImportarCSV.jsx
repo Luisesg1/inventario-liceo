@@ -5,6 +5,7 @@ import { supabase } from '../supabase'
 const COLUMNAS_BD = new Set([
   'nombre', 'categoria', 'codigo', 'cantidad', 'estado',
   'ubicacion', 'responsable', 'obs',
+  'isbn', 'autor',
   'tipo', 'marca', 'numero_serie', 'modelo', 'pantalla',
   'cpu', 'ram', 'ram_tipo', 'ram_slots',
   'memoria', 'tipo_almacenamiento', 'sistema_operativo',
@@ -45,6 +46,14 @@ const ALIAS = {
   'orden_de_compra': 'numero_orden',
   'orden_compra': 'numero_orden',
   'nro_orden': 'numero_orden',
+  // Biblioteca
+  'isdn': 'isbn',
+  'isbn_13': 'isbn',
+  'código_isbn': 'isbn',
+  'codigo_isbn': 'isbn',
+  'autores': 'autor',
+  'author': 'autor',
+  'authors': 'autor',
   // Personas / responsable
   'usuario': 'responsable',
   'user': 'responsable',
@@ -163,6 +172,7 @@ const HEADER_HINTS = new Set([
   'nombre', 'categoria', 'categoría', 'responsable', 'usuario', 'código', 'codigo',
   'proveedor', 'factura', 'fondo', 'consumible', 'tecnología', 'tecnologia',
   'pantalla', 'cpu', 'ram', 'memoria', 'almacenamiento', 'procesador',
+  'isbn', 'isdn', 'autor', 'autores',
 ])
 
 // ── Leer XLSX con SheetJS (si está disponible) via script dinámico ───────
@@ -523,8 +533,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
                   <th>#</th>
                   <th>Código</th>
                   <th>Categoría (resultado)</th>
-                  <th>Marca / Modelo</th>
-                  <th>N° Serie</th>
+                  <th>Nombre / Detalle</th>
+                  <th>ISBN / N° Serie</th>
                   <th>Estado</th>
                   <th>Duplicado</th>
                 </tr>
@@ -533,15 +543,23 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
                 {filasPreview.map((row, i) => {
                   const cat = resolverCategoria(row._catOriginal)
                   const catLabel = categorias.find(c => c.id === cat)?.label ?? cat
+                  const catNorm = catLabel.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+                  const esBiblio = catNorm.includes('biblio')
                   const codigo = normalizar(row.codigo) || `INV-auto`
                   const esDup = codigosExistentes.has(codigo)
+                  const detalle = esBiblio
+                    ? [normalizar(row.nombre), normalizar(row.autor)].filter(Boolean).join(' — ') || '—'
+                    : [normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'
+                  const secundario = esBiblio
+                    ? (normalizar(row.isbn) || normalizar(row.isdn) || '—')
+                    : (normalizar(row.numero_serie) || normalizar(row['n°_de_serie']) || normalizar(row['n_de_serie']) || '—')
                   return (
                     <tr key={i} className={esDup ? 'fila-dup' : ''}>
                       <td className="td-num">{i + 1}</td>
                       <td className="td-code">{codigo || <em className="td-muted">auto</em>}</td>
                       <td>{catLabel}</td>
-                      <td>{[normalizar(row.marca), normalizar(row.modelo)].filter(Boolean).join(' ') || normalizar(row.tipo) || normalizar(row.nombre) || '—'}</td>
-                      <td className="td-muted">{normalizar(row.numero_serie) || normalizar(row['n°_de_serie']) || normalizar(row['n_de_serie']) || '—'}</td>
+                      <td>{detalle}</td>
+                      <td className="td-muted">{secundario}</td>
                       <td>{normalizar(row.estado) || 'Bueno'}</td>
                       <td>{esDup ? <span className="badge-dup">{duplicados === 'omitir' ? 'se omitirá' : 'sobreescribirá'}</span> : <span className="badge-nuevo">nuevo</span>}</td>
                     </tr>
