@@ -20,7 +20,10 @@ export default function App() {
 
   useEffect(() => {
     const hash = window.location.hash
-    if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
+    // Capturar si es recovery ANTES de limpiar el hash
+    const esRecovery = hash.includes('type=recovery')
+
+    if (hash.includes('error=access_denied') || hash.includes('type=invite') || esRecovery) {
       window.history.replaceState(null, '', window.location.pathname)
     }
 
@@ -33,6 +36,11 @@ export default function App() {
         setCargando(false)
         return
       }
+
+      // Supabase dispara SIGNED_IN justo antes que PASSWORD_RECOVERY.
+      // Si sabemos que es un flujo de recovery, ignoramos SIGNED_IN para
+      // evitar que gane la carrera y muestre el dashboard en vez de SetPassword.
+      if (event === 'SIGNED_IN' && esRecovery) return
 
       if (event === 'PASSWORD_RECOVERY') {
         cargarPerfil(session.user.id, true)
