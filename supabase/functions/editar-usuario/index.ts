@@ -62,12 +62,10 @@ Deno.serve(async (req: Request) => {
 
     // 5. Manejo especial cuando se cambia la contraseña
     if (updates.password) {
-      // Obtener email del usuario objetivo
       const { data: targetUserData } = await supabaseAdmin.auth.admin.getUserById(userId);
       const targetEmail = targetUserData?.user?.email;
 
       if (targetEmail) {
-        // Cliente sin sesión activa para operaciones de auth del usuario objetivo
         const supabasePublic = createClient(
           Deno.env.get("SUPABASE_URL")!,
           Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -75,42 +73,28 @@ Deno.serve(async (req: Request) => {
         );
 
         // Verificar que la nueva contraseña no sea igual a la actual
-        console.log("[editar-usuario] verificando si la contraseña es igual...");
         const { data: samePassData, error: samePassError } = await supabasePublic.auth.signInWithPassword({
           email: targetEmail,
           password: updates.password,
         });
-        console.log("[editar-usuario] signIn para mismo-pass:", { ok: !samePassError, error: samePassError?.message });
         if (!samePassError && samePassData?.session) {
           await supabaseAdmin.auth.admin.signOut(samePassData.session.access_token, "local");
           return json({ error: "La nueva contraseña es igual a la actual." }, 400);
         }
 
         // Actualizar contraseña
-        console.log("[editar-usuario] actualizando contraseña en Auth...");
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, updates);
-        if (updateError) {
-          console.log("[editar-usuario] error al actualizar:", updateError.message);
-          return json({ error: updateError.message }, 400);
-        }
-        console.log("[editar-usuario] contraseña actualizada OK");
+        if (updateError) return json({ error: updateError.message }, 400);
 
         // Iniciar sesión con la nueva contraseña para obtener un JWT válido
-        console.log("[editar-usuario] haciendo signIn con nueva contraseña para obtener JWT...");
-        const { data: loginData, error: loginError } = await supabasePublic.auth.signInWithPassword({
+        const { data: loginData } = await supabasePublic.auth.signInWithPassword({
           email: targetEmail,
           password: updates.password,
         });
-        console.log("[editar-usuario] signIn post-cambio:", {
-          ok: !loginError,
-          tieneSession: !!loginData?.session,
-          error: loginError?.message,
-        });
 
         if (loginData?.session) {
-          const logoutUrl = `${Deno.env.get("SUPABASE_URL")}/auth/v1/logout?scope=global`;
-          console.log("[editar-usuario] llamando POST logout:", logoutUrl);
-          const logoutRes = await fetch(logoutUrl, {
+          // POST /logout?scope=global cierra TODAS las sesiones del usuario
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/auth/v1/logout?scope=global`, {
             method: "POST",
             headers: {
               "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -118,9 +102,6 @@ Deno.serve(async (req: Request) => {
               "Content-Type": "application/json",
             },
           });
-          console.log("[editar-usuario] logout status:", logoutRes.status, await logoutRes.text());
-        } else {
-          console.log("[editar-usuario] no se obtuvo sesión — no se pudo cerrar sesiones");
         }
 
         return json({ ok: true }, 200);

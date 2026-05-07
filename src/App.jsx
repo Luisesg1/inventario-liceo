@@ -66,6 +66,22 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Verificar validez de sesión contra el servidor cada 30s y al recuperar foco.
+  // Necesario porque el JWT local sigue vigente aunque el admin haya revocado las sesiones.
+  useEffect(() => {
+    if (!usuario) return
+    const check = async () => {
+      const { error } = await supabase.auth.getUser()
+      if (error) await supabase.auth.signOut()
+    }
+    const interval = setInterval(check, 30000)
+    window.addEventListener('focus', check)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', check)
+    }
+  }, [usuario?.id])
+
   async function cargarPerfil(userId, forceSetPassword = false) {
     const { data, error } = await supabase
       .from('usuarios')
