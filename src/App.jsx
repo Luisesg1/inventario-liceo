@@ -88,14 +88,8 @@ export default function App() {
   async function handlePasswordSet() {
     procesandoCambio.current = true
     modoRecovery.current     = false
-
     await supabase.from('usuarios').update({ debe_cambiar_password: false }).eq('id', usuario.id)
-
     setMostrarSetPassword(false)
-    setUsuario(null)
-    setCargando(false)
-
-    await supabase.auth.signOut()
     procesandoCambio.current = false
   }
 
