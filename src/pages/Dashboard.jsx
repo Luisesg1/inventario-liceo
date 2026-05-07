@@ -49,9 +49,10 @@ function DonutChart({ datos, total }) {
 }
 
 export default function Dashboard({ usuario }) {
-  const [bienes,     setBienes]     = useState([])
-  const [categorias, setCategorias] = useState([])
-  const [cargando,   setCargando]   = useState(true)
+  const [bienes,         setBienes]         = useState([])
+  const [categorias,     setCategorias]     = useState([])
+  const [cargando,       setCargando]       = useState(true)
+  const [barrasAnimadas, setBarrasAnimadas] = useState(false)
 
   useEffect(() => {
     async function cargar() {
@@ -66,6 +67,13 @@ export default function Dashboard({ usuario }) {
     cargar()
   }, [])
 
+  useEffect(() => {
+    if (!cargando) {
+      const t = setTimeout(() => setBarrasAnimadas(true), 120)
+      return () => clearTimeout(t)
+    }
+  }, [cargando])
+
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
       <div style={{ textAlign: 'center' }}>
@@ -75,14 +83,6 @@ export default function Dashboard({ usuario }) {
       </div>
     </div>
   )
-
-  const [barrasAnimadas, setBarrasAnimadas] = useState(false)
-  useEffect(() => {
-    if (!cargando) {
-      const t = setTimeout(() => setBarrasAnimadas(true), 120)
-      return () => clearTimeout(t)
-    }
-  }, [cargando])
 
   const total     = bienes.length
   const totalCats = categorias.length
