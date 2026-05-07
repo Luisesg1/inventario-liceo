@@ -574,8 +574,10 @@ export default function Usuarios({ usuario }) {
     })
     setResetandoId(null)
     const toast = error
-      ? { id: u.id, ok: false, texto: 'Error al enviar el link' }
-      : { id: u.id, ok: true,  texto: `Link enviado a ${u.email}` }
+      ? { id: u.id, ok: false, texto: error.status === 429
+          ? 'Límite de correos alcanzado — espera unos minutos'
+          : 'Error al enviar el link: ' + error.message }
+      : { id: u.id, ok: true, texto: `Link enviado a ${u.email}` }
     setToastReset(toast)
     setTimeout(() => setToastReset(null), 3500)
   }
