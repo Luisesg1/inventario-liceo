@@ -172,23 +172,53 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   )
 }
 
+// Traduce claves de permisos a IDs reales de la tabla categorias (misma lógica que Inventario)
+function traducirClaves(claves, allCats) {
+  if (!claves || claves.includes('todos')) return ['todos']
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+  return claves.map(clave => {
+    if (allCats.some(c => c.id === clave)) return clave
+    const claveNorm = norm(clave.replace(/_/g, ' '))
+    return allCats.find(c => norm(c.label) === claveNorm)?.id ?? null
+  }).filter(Boolean)
+}
+
 export default function Dashboard({ usuario }) {
-  const [bienes,          setBienes]          = useState([])
-  const [categorias,      setCategorias]      = useState([])
-  const [actividades,     setActividades]     = useState(null) // null = cargando
-  const [cargando,        setCargando]        = useState(true)
-  const [categoriaFiltro, setCategoriaFiltro] = useState(null)
-  const [estadoFiltro,    setEstadoFiltro]    = useState(null)
+  const esAdmin = usuario?.rol === 'admin'
+
+  const [bienes,               setBienes]               = useState([])
+  const [categorias,           setCategorias]           = useState([])
+  const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
+  const [actividades,          setActividades]          = useState(null)
+  const [cargando,             setCargando]             = useState(true)
+  const [categoriaFiltro,      setCategoriaFiltro]      = useState(null)
+  const [estadoFiltro,         setEstadoFiltro]         = useState(null)
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('bienes').select('categoria, estado, ubicacion'),
-      supabase.from('categorias').select('id, label, icon'),
-    ]).then(([{ data: b }, { data: c }]) => {
-      setBienes(b || [])
-      setCategorias(c || [])
+    const cargar = async () => {
+      const queries = [
+        supabase.from('bienes').select('categoria, estado, ubicacion'),
+        supabase.from('categorias').select('id, label, icon'),
+      ]
+      if (!esAdmin && usuario?.id) {
+        queries.push(
+          supabase.from('permisos_usuario').select('categorias')
+            .eq('usuario_id', usuario.id).maybeSingle()
+        )
+      }
+      const results = await Promise.all(queries)
+      const bData = results[0].data ?? []
+      const cData = results[1].data ?? []
+      const pd    = results[2]?.data ?? null
+
+      setBienes(bData)
+      setCategorias(cData)
+      if (!esAdmin && pd?.categorias) {
+        setCategoriasPermitidas(traducirClaves(pd.categorias, cData))
+      }
       setCargando(false)
-    })
+    }
+    cargar()
   }, [])
 
   useEffect(() => {
@@ -214,8 +244,17 @@ export default function Dashboard({ usuario }) {
     </div>
   )
 
-  const bienesPorCategoria = categoriaFiltro ? bienes.filter(b => b.categoria === categoriaFiltro) : bienes
-  const bienesFiltrados    = estadoFiltro    ? bienesPorCategoria.filter(b => b.estado === estadoFiltro) : bienesPorCategoria
+  // Filtrar bienes a categorías que el usuario puede ver
+  const tieneAccesoCat = (catId) =>
+    esAdmin || categoriasPermitidas.includes('todos') || categoriasPermitidas.includes(catId)
+
+  const bienesPermitidos   = bienes.filter(b => tieneAccesoCat(b.categoria))
+  const bienesPorCategoria = categoriaFiltro
+    ? bienesPermitidos.filter(b => b.categoria === categoriaFiltro)
+    : bienesPermitidos
+  const bienesFiltrados    = estadoFiltro
+    ? bienesPorCategoria.filter(b => b.estado === estadoFiltro)
+    : bienesPorCategoria
 
   const total    = bienesFiltrados.length
   const enBueno  = bienesFiltrados.filter(b => b.estado === 'Bueno').length
@@ -227,8 +266,10 @@ export default function Dashboard({ usuario }) {
     count: bienesPorCategoria.filter(b => b.estado === e).length,
   }))
 
+  // Solo mostrar categorías a las que el usuario tiene acceso
   const catGrid   = categorias
-    .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
+    .filter(c => tieneAccesoCat(c.id))
+    .map(c => ({ ...c, count: bienesPermitidos.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
   const catActiva = categorias.find(c => c.id === categoriaFiltro)
 
@@ -237,7 +278,7 @@ export default function Dashboard({ usuario }) {
 
   const KPI_CONFIG = [
     { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          icono: '📦', color: '#1a237e', bg: '#e8eaf6' },
-    { label: 'Categorías',                                                          valor: categorias.length, icono: '📂', color: '#92700a', bg: '#fef9e7' },
+    { label: 'Categorías',                                                          valor: catGrid.length,    icono: '📂', color: '#92700a', bg: '#fef9e7' },
     { label: 'En buen estado',                                                      valor: `${pctBueno}%`, icono: '✅', color: '#16a34a', bg: '#f0fdf4' },
     { label: 'Dados de baja',                                                       valor: enBaja,         icono: '🗑️', color: '#dc2626', bg: '#fef2f2' },
   ]
@@ -299,7 +340,7 @@ export default function Dashboard({ usuario }) {
         <ActividadReciente actividades={actividades} />
       </div>
 
-      <InventarioPorUbicacion bienes={bienes} />
+      <InventarioPorUbicacion bienes={bienesPermitidos} />
 
       <div className="dash-card">
         <p style={secTitle}>Todas las categorías</p>
