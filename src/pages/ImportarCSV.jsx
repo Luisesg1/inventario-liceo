@@ -526,6 +526,14 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
           </div>
 
           {/* Tabla preview */}
+          {(() => {
+            const catGlobalNorm = (categorias.find(c => c.id === catGlobal)?.label ?? catGlobal ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+            const globalEsBiblio = catGlobalNorm.includes('biblio')
+            const globalEsComp   = catGlobal === 'computadores'
+            const globalEsTecno  = catGlobalNorm.includes('tecnol')
+            const th1 = globalEsBiblio ? 'Nombre / Autor' : globalEsComp || globalEsTecno ? 'Marca / Modelo' : 'Nombre / Detalle'
+            const th2 = globalEsBiblio ? 'ISBN' : 'N° Serie'
+            return (
           <div className="preview-table-wrap">
             <table className="preview-table">
               <thead>
@@ -533,8 +541,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
                   <th>#</th>
                   <th>Código</th>
                   <th>Categoría (resultado)</th>
-                  <th>Nombre / Detalle</th>
-                  <th>ISBN / N° Serie</th>
+                  <th>{th1}</th>
+                  <th>{th2}</th>
                   <th>Estado</th>
                   <th>Duplicado</th>
                 </tr>
@@ -571,6 +579,8 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
               <p className="preview-mas">… y {filas.length - 8} fila{filas.length - 8 !== 1 ? 's' : ''} más</p>
             )}
           </div>
+            )
+          })()}
 
           <div className="preview-actions">
             <button className="btn-cancel" onClick={resetear}>← Cancelar</button>
