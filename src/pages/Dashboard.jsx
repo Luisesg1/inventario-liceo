@@ -53,9 +53,7 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
         )
       })}
       <text x={80} y={74} textAnchor="middle" fontSize="22" fontWeight="700" fill="#1a237e">{total}</text>
-      <text x={80} y={90} textAnchor="middle" fontSize="11" fill="#6b7280">
-        {estadoActivo ?? 'bienes'}
-      </text>
+      <text x={80} y={90} textAnchor="middle" fontSize="11" fill="#6b7280">bienes</text>
     </svg>
   )
 }
@@ -64,7 +62,6 @@ export default function Dashboard({ usuario }) {
   const [bienes,         setBienes]         = useState([])
   const [categorias,     setCategorias]     = useState([])
   const [cargando,       setCargando]       = useState(true)
-  const [barrasAnimadas, setBarrasAnimadas] = useState(false)
   const [categoriaFiltro, setCategoriaFiltro] = useState(null)
   const [estadoFiltro,    setEstadoFiltro]    = useState(null)
 
@@ -80,13 +77,6 @@ export default function Dashboard({ usuario }) {
     }
     cargar()
   }, [])
-
-  useEffect(() => {
-    if (!cargando) {
-      const t = setTimeout(() => setBarrasAnimadas(true), 120)
-      return () => clearTimeout(t)
-    }
-  }, [cargando])
 
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>
@@ -120,12 +110,6 @@ export default function Dashboard({ usuario }) {
     count: bienesPorCategoria.filter(b => b.estado === e).length,
   }))
 
-  const catDatos = categorias.map(c => ({
-    ...c,
-    count: bienes.filter(b => b.categoria === c.id).length,
-  })).filter(c => c.count > 0).sort((a, b) => b.count - a.count)
-
-  const maxCount = Math.max(...catDatos.map(c => c.count), 1)
   const catGrid  = categorias
     .map(c => ({ ...c, count: bienes.filter(b => b.categoria === c.id).length }))
     .sort((a, b) => b.count - a.count)
@@ -153,31 +137,6 @@ export default function Dashboard({ usuario }) {
         </p>
       </div>
 
-      {/* Chip de filtro activo */}
-      {(categoriaFiltro || estadoFiltro) && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: '1rem', flexWrap: 'wrap' }}>
-          {catActiva && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: 'rgba(212,160,23,0.18)', border: '1px solid rgba(212,160,23,0.5)',
-              color: '#f0d060', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600,
-            }}>
-              {catActiva.icon} {catActiva.label}
-              <button onClick={() => toggleCategoria(categoriaFiltro)} style={{ background: 'none', border: 'none', color: '#f0d060', cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 0 0 2px' }}>✕</button>
-            </span>
-          )}
-          {estadoFiltro && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              background: ESTADO_BG[estadoFiltro], border: `1px solid ${ESTADO_COLOR[estadoFiltro]}40`,
-              color: ESTADO_COLOR[estadoFiltro], borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 600,
-            }}>
-              {estadoFiltro}
-              <button onClick={() => setEstadoFiltro(null)} style={{ background: 'none', border: 'none', color: ESTADO_COLOR[estadoFiltro], cursor: 'pointer', fontSize: 14, lineHeight: 1, padding: '0 0 0 2px' }}>✕</button>
-            </span>
-          )}
-        </div>
-      )}
 
       {/* KPIs */}
       <div className="dash-kpis">
@@ -208,7 +167,7 @@ export default function Dashboard({ usuario }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
             <DonutChart
               datos={estadoDatos}
-              total={bienesPorCategoria.length}
+              total={bienesFiltrados.length}
               estadoActivo={estadoFiltro}
               onEstadoClick={toggleEstado}
             />
@@ -240,24 +199,6 @@ export default function Dashboard({ usuario }) {
           </div>
         </div>
 
-        {/* Barras por categoría */}
-        <div className="dash-card" style={{ overflowY: 'auto', maxHeight: 280 }}>
-          <p style={s.secTitle}>Bienes por categoría</p>
-          {catDatos.length === 0
-            ? <p style={{ fontSize: 13, color: '#9ca3af' }}>Sin bienes registrados</p>
-            : catDatos.map(c => (
-              <div key={c.id} style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                  <span style={{ fontSize: 13, color: '#374151' }}>{c.icon} {c.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1a237e' }}>{c.count}</span>
-                </div>
-                <div style={{ background: '#f0f2ff', borderRadius: 4, height: 8 }}>
-                  <div style={{ background: 'linear-gradient(90deg, #d4a017, #f0c830)', width: barrasAnimadas ? `${(c.count / maxCount) * 100}%` : '0%', height: '100%', borderRadius: 4, transition: 'width 0.7s cubic-bezier(0.4,0,0.2,1)' }} />
-                </div>
-              </div>
-            ))
-          }
-        </div>
       </div>
 
       {/* Grilla de categorías */}
