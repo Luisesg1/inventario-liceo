@@ -601,10 +601,13 @@ export default function Usuarios({ usuario }) {
   const [editNombre, setEditNombre]       = useState('')
   const [editEmail, setEditEmail]         = useState('')
   const [editRol, setEditRol]             = useState('encargado')
-  const [editPassword, setEditPassword]   = useState('')
-  const [editShowPass, setEditShowPass]   = useState(false)
-  const [guardandoEdit, setGuardandoEdit] = useState(false)
-  const [mensajeEdit, setMensajeEdit]     = useState({ tipo: '', texto: '' })
+  const [editPassword, setEditPassword]       = useState('')
+  const [editConfirmPass, setEditConfirmPass] = useState('')
+  const [editShowPass, setEditShowPass]       = useState(false)
+  const [editShowConfirm, setEditShowConfirm] = useState(false)
+  const [confirmarPassId, setConfirmarPassId] = useState(null) // id del usuario a confirmar
+  const [guardandoEdit, setGuardandoEdit]     = useState(false)
+  const [mensajeEdit, setMensajeEdit]         = useState({ tipo: '', texto: '' })
 
   const esAdmin = usuario?.rol === 'admin'
 
@@ -631,7 +634,8 @@ export default function Usuarios({ usuario }) {
     setPanelActivo({ id: userId, modo })
     if (modo === 'editar') {
       setEditNombre(u.nombre); setEditEmail(u.email); setEditRol(u.rol)
-      setEditPassword(''); setEditShowPass(false)
+      setEditPassword(''); setEditConfirmPass('')
+      setEditShowPass(false); setEditShowConfirm(false)
       setMensajeEdit({ tipo: '', texto: '' })
     }
   }
@@ -675,7 +679,21 @@ export default function Usuarios({ usuario }) {
     setEliminandoId(null)
   }
 
+  function iniciarGuardarEdicion(userId) {
+    // Si hay contraseña nueva, pedir confirmación antes de guardar
+    if (editPassword.trim().length > 0) {
+      if (editPassword !== editConfirmPass) {
+        setMensajeEdit({ tipo: 'error', texto: 'Las contraseñas no coinciden.' })
+        return
+      }
+      setConfirmarPassId(userId)
+      return
+    }
+    guardarEdicion(userId)
+  }
+
   async function guardarEdicion(userId) {
+    setConfirmarPassId(null)
     setGuardandoEdit(true)
     setMensajeEdit({ tipo: '', texto: '' })
 
@@ -725,7 +743,7 @@ export default function Usuarios({ usuario }) {
     }
 
     setMensajeEdit({ tipo: 'exito', texto: 'Cambios guardados.' })
-    setEditPassword('')
+    setEditPassword(''); setEditConfirmPass('')
     await cargarUsuarios()
     setTimeout(() => { setPanelActivo(null); setMensajeEdit({ tipo: '', texto: '' }) }, 1200)
     setGuardandoEdit(false)
@@ -892,45 +910,95 @@ export default function Usuarios({ usuario }) {
                         </select>
                       </label>
                     </div>
-                    <label className="form-label">
-                      Nueva contraseña
-                      <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>
-                        (dejar vacío para no cambiar)
-                      </span>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          className="form-input"
-                          type={editShowPass ? 'text' : 'password'}
-                          value={editPassword}
-                          onChange={(e) => setEditPassword(e.target.value)}
-                          placeholder="Nueva contraseña"
-                          autoComplete="new-password"
-                          style={{ paddingRight: 38 }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setEditShowPass(!editShowPass)}
-                          style={{
-                            position: 'absolute', right: 10, top: '50%',
-                            transform: 'translateY(-50%)',
+                    <div className="form-row-2">
+                      <label className="form-label">
+                        Nueva contraseña
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, marginLeft: 6 }}>
+                          (vacío = no cambiar)
+                        </span>
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            className="form-input"
+                            type={editShowPass ? 'text' : 'password'}
+                            value={editPassword}
+                            onChange={(e) => { setEditPassword(e.target.value); setMensajeEdit({ tipo: '', texto: '' }) }}
+                            placeholder="Nueva contraseña"
+                            autoComplete="new-password"
+                            style={{ paddingRight: 38 }}
+                          />
+                          <button type="button" onClick={() => setEditShowPass(!editShowPass)} style={{
+                            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
                             background: 'none', border: 'none', cursor: 'pointer',
                             fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
-                          }}
-                        >
-                          {editShowPass ? '🙈' : '👁️'}
-                        </button>
-                      </div>
-                    </label>
+                          }}>
+                            {editShowPass ? '🙈' : '👁️'}
+                          </button>
+                        </div>
+                      </label>
+                      <label className="form-label">
+                        Confirmar contraseña
+                        <div style={{ position: 'relative' }}>
+                          <input
+                            className="form-input"
+                            type={editShowConfirm ? 'text' : 'password'}
+                            value={editConfirmPass}
+                            onChange={(e) => { setEditConfirmPass(e.target.value); setMensajeEdit({ tipo: '', texto: '' }) }}
+                            placeholder="Repetir contraseña"
+                            autoComplete="new-password"
+                            style={{
+                              paddingRight: 38,
+                              borderColor: editConfirmPass.length > 0
+                                ? (editPassword === editConfirmPass ? '#16a34a' : '#dc2626')
+                                : undefined,
+                            }}
+                          />
+                          <button type="button" onClick={() => setEditShowConfirm(!editShowConfirm)} style={{
+                            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 15, padding: 0, lineHeight: 1, color: '#9ca3af',
+                          }}>
+                            {editShowConfirm ? '🙈' : '👁️'}
+                          </button>
+                        </div>
+                        {editConfirmPass.length > 0 && (
+                          <span style={{ fontSize: 11, marginTop: 3, display: 'block', fontWeight: 500,
+                            color: editPassword === editConfirmPass ? '#16a34a' : '#dc2626' }}>
+                            {editPassword === editConfirmPass ? 'Coinciden ✓' : 'No coinciden'}
+                          </span>
+                        )}
+                      </label>
+                    </div>
                   </div>
                   {mensajeEdit.texto && (
                     <div className={`form-mensaje ${mensajeEdit.tipo}`}>{mensajeEdit.texto}</div>
                   )}
                   <div className="form-acciones">
                     <button className="btn-secundario" onClick={() => setPanelActivo(null)}>Cancelar</button>
-                    <button className="btn-primario" onClick={() => guardarEdicion(u.id)} disabled={guardandoEdit}>
+                    <button className="btn-primario" onClick={() => iniciarGuardarEdicion(u.id)} disabled={guardandoEdit}>
                       {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
                     </button>
                   </div>
+
+                  {/* Modal confirmación cambio de contraseña */}
+                  {confirmarPassId === u.id && (
+                    <div style={ps.modalOverlay} onClick={() => setConfirmarPassId(null)}>
+                      <div style={ps.modal} onClick={(e) => e.stopPropagation()}>
+                        <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: '#111827' }}>
+                          ¿Cambiar contraseña?
+                        </p>
+                        <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>
+                          Se cambiará la contraseña de <strong>{u.nombre}</strong> y se cerrarán todas sus sesiones activas.
+                        </p>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button className="btn-secundario" onClick={() => setConfirmarPassId(null)}>Cancelar</button>
+                          <button className="btn-primario" onClick={() => guardarEdicion(u.id)} disabled={guardandoEdit}
+                            style={{ minWidth: 120 }}>
+                            {guardandoEdit ? 'Guardando…' : 'Sí, cambiar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
