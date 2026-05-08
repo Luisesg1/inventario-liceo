@@ -604,6 +604,7 @@ export default function Usuarios({ usuario }) {
   const [estado, setEstado]     = useState('cargando')
   const [errorMsg, setErrorMsg] = useState('')
   const [busqueda, setBusqueda] = useState('')
+  const [filtroRol, setFiltroRol] = useState('todos')
   const [modalCrear, setModalCrear] = useState(false)
 
   // Eliminación
@@ -637,10 +638,19 @@ export default function Usuarios({ usuario }) {
 
   useEffect(() => { cargarUsuarios() }, [cargarUsuarios])
 
-  const usuariosFiltrados = usuarios.filter((u) =>
-    u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-    u.email?.toLowerCase().includes(busqueda.toLowerCase())
-  )
+  const usuariosFiltrados = usuarios
+    .filter((u) =>
+      u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      u.email?.toLowerCase().includes(busqueda.toLowerCase())
+    )
+    .filter((u) => (filtroRol === 'todos' ? true : u.rol === filtroRol))
+    .sort((a, b) => {
+      const aEsYo = a.id === usuario?.id
+      const bEsYo = b.id === usuario?.id
+      if (aEsYo && !bEsYo) return -1
+      if (!aEsYo && bEsYo) return 1
+      return (a.nombre ?? '').localeCompare((b.nombre ?? ''), 'es', { sensitivity: 'base' })
+    })
 
   function togglePanel(userId, modo) {
     if (panelActivo?.id === userId && panelActivo?.modo === modo) {
@@ -785,34 +795,57 @@ export default function Usuarios({ usuario }) {
         )}
       </div>
 
-      {/* Buscador */}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <span style={{
-          position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-          fontSize: 15, color: '#9ca3af', pointerEvents: 'none',
-        }}>🔍</span>
-        <input
-          type="text"
-          placeholder="Buscar por nombre o email…"
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+      {/* Buscador + filtro por rol */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 10, marginBottom: 16 }}>
+        <div style={{ position: 'relative' }}>
+          <span style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            fontSize: 15, color: '#9ca3af', pointerEvents: 'none',
+          }}>🔍</span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o email…"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              padding: '9px 36px 9px 36px',
+              border: '1px solid #d1d5db', borderRadius: 8,
+              fontSize: 14, color: '#111827', background: '#fff',
+              outline: 'none',
+            }}
+            onFocus={(e) => { e.target.style.borderColor = '#1a237e'; e.target.style.boxShadow = '0 0 0 3px rgba(26,35,126,0.12)' }}
+            onBlur={(e)  => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none' }}
+          />
+          {busqueda && (
+            <button onClick={() => setBusqueda('')} style={{
+              position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+              background: 'none', border: 'none', color: '#9ca3af',
+              cursor: 'pointer', fontSize: 16, lineHeight: 1,
+            }}>✕</button>
+          )}
+        </div>
+        <select
+          value={filtroRol}
+          onChange={(e) => setFiltroRol(e.target.value)}
           style={{
-            width: '100%', boxSizing: 'border-box',
-            padding: '9px 36px 9px 36px',
-            border: '1px solid #d1d5db', borderRadius: 8,
-            fontSize: 14, color: '#111827', background: '#fff',
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '9px 10px',
+            border: '1px solid #d1d5db',
+            borderRadius: 8,
+            fontSize: 13,
+            color: '#111827',
+            background: '#fff',
             outline: 'none',
           }}
-          onFocus={(e) => { e.target.style.borderColor = '#1a237e'; e.target.style.boxShadow = '0 0 0 3px rgba(26,35,126,0.12)' }}
-          onBlur={(e)  => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none' }}
-        />
-        {busqueda && (
-          <button onClick={() => setBusqueda('')} style={{
-            position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-            background: 'none', border: 'none', color: '#9ca3af',
-            cursor: 'pointer', fontSize: 16, lineHeight: 1,
-          }}>✕</button>
-        )}
+          title="Filtrar por rol"
+        >
+          <option value="todos">Todos los roles</option>
+          <option value="admin">Admin</option>
+          <option value="editor">Editor</option>
+          <option value="encargado">Encargado</option>
+        </select>
       </div>
       {busqueda && (
         <p style={{ fontSize: 12, color: '#6b7280', margin: '-8px 0 12px' }}>
