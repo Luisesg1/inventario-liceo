@@ -2175,6 +2175,85 @@ export default function Inventario({ usuario }) {
               </>
             )}
 
+            {esBiblioteca(verDetalle.categoria) && (
+              <>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">📚 Datos bibliográficos</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['ISBN', verDetalle.isbn],
+                      ['Autor', verDetalle.autor],
+                      ['Género', verDetalle.genero],
+                    ].map(([label, val]) => (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val || 'N/A'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🛒 Adquisición</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Fecha', verDetalle.fecha_adquisicion],
+                      ['Proveedor', verDetalle.proveedor],
+                      ['N° Factura', verDetalle.numero_factura],
+                      ['N° Orden', verDetalle.numero_orden],
+                      ['Fondo', verDetalle.fondo],
+                      ['Garantía', verDetalle.garantia],
+                    ].map(([label, val]) => (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val || 'N/A'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {!esComp(verDetalle.categoria) && !esTecno(verDetalle.categoria) && !esBiblioteca(verDetalle.categoria) && (
+              <>
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🧾 Detalle del bien</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Nombre', verDetalle.nombre],
+                      ['Código', verDetalle.codigo],
+                      ['Cantidad', verDetalle.cantidad],
+                      ['Estado', verDetalle.estado],
+                    ].map(([label, val]) => (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val || 'N/A'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">🛒 Adquisición</p>
+                  <div className="detalle-grid-3">
+                    {[
+                      ['Fecha', verDetalle.fecha_adquisicion],
+                      ['Proveedor', verDetalle.proveedor],
+                      ['N° Factura', verDetalle.numero_factura],
+                      ['N° Orden', verDetalle.numero_orden],
+                      ['Fondo', verDetalle.fondo],
+                      ['Garantía', verDetalle.garantia],
+                    ].map(([label, val]) => (
+                      <div key={label} className="detalle-campo">
+                        <span>{label}</span>
+                        <strong>{val || 'N/A'}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             {esComp(verDetalle.categoria) && (<>
 
               {/* Hardware */}
