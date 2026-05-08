@@ -872,7 +872,7 @@ export default function Usuarios({ usuario }) {
                   </span>
                 )}
 
-                {esAdmin && !esYo && !confirmando && (
+                {esAdmin && !confirmando && (
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                     <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
                       background: editando ? '#e8eaf6' : 'none',
@@ -881,15 +881,19 @@ export default function Usuarios({ usuario }) {
                       borderRadius: 6, padding: '5px 9px',
                       fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
                     }}>✏️</button>
-                    <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
-                      background: permisosOpen ? '#fffbeb' : 'none',
-                      border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
-                      color: permisosOpen ? '#92700a' : '#9ca3af',
-                      borderRadius: 6, padding: '5px 9px',
-                      fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                    }}>🔐</button>
-                    <button className="btn-eliminar-icono" title="Eliminar"
-                      onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                    {!esYo && (
+                      <>
+                        <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
+                          background: permisosOpen ? '#fffbeb' : 'none',
+                          border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                          color: permisosOpen ? '#92700a' : '#9ca3af',
+                          borderRadius: 6, padding: '5px 9px',
+                          fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                        }}>🔐</button>
+                        <button className="btn-eliminar-icono" title="Eliminar"
+                          onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                      </>
+                    )}
                   </div>
                 )}
 
