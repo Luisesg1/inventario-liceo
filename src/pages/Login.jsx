@@ -62,9 +62,9 @@ export default function Login({ onLogin }) {
       <div className="login-bg">
         <div className="login-panel">
           {ladoIzq}
-          <div className="login-form-wrap">
+          <div className="login-form-wrap login-form-wrap--recovery">
             <div className="login-form-inner">
-              <div className="login-form-header">
+              <div className="login-form-header login-form-header--recovery">
                 <div className="login-form-icon">🔑</div>
                 <h2>Recuperar contraseña</h2>
                 <p>{enviado ? 'Revisa tu correo electrónico' : 'Ingresa tu correo para recibir un link de acceso'}</p>
@@ -72,16 +72,16 @@ export default function Login({ onLogin }) {
 
               {enviado ? (
                 <>
-                  <p className="login-ok">
+                  <p className="login-ok login-ok--recovery">
                     Se envió un link a <strong>{emailReset}</strong>. Ábrelo desde este mismo dispositivo para cambiar tu contraseña.
                   </p>
-                  <button className="login-btn" onClick={volverAlLogin} style={{ marginTop: 24 }}>
+                  <button className="login-btn login-btn--recovery" onClick={volverAlLogin} style={{ marginTop: 24 }}>
                     Volver al inicio de sesión
                   </button>
                 </>
               ) : (
                 <form onSubmit={handleOlvide}>
-                  <div className="login-field">
+                  <div className="login-field login-field--recovery">
                     <label>Correo electrónico</label>
                     <input
                       type="email"
@@ -93,14 +93,14 @@ export default function Login({ onLogin }) {
                     />
                   </div>
 
-                  {error && <p className="login-error">⚠️ {error}</p>}
+                  {error && <p className="login-error login-error--recovery">⚠️ {error}</p>}
 
-                  <button type="submit" className="login-btn" disabled={cargando}>
+                  <button type="submit" className="login-btn login-btn--recovery" disabled={cargando}>
                     {cargando ? <span className="login-spinner" /> : null}
                     {cargando ? 'Enviando...' : 'Enviar link'}
                   </button>
 
-                  <button type="button" className="login-link" onClick={volverAlLogin}>
+                  <button type="button" className="login-link login-link--recovery" onClick={volverAlLogin}>
                     Volver al inicio de sesión
                   </button>
                 </form>

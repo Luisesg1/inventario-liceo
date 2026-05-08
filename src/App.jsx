@@ -8,28 +8,26 @@ import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
 
 export default function App() {
-  const [usuario,          setUsuario]          = useState(null)
-  const [cargando,         setCargando]         = useState(true)
+  const [usuario,            setUsuario]            = useState(null)
+  const [cargando,           setCargando]           = useState(true)
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
-  const [pagina,           setPagina]           = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
+  const [pagina,             setPagina]             = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
 
-  const cambiarPagina   = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
+  const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
-  // Se activa en cuanto llega PASSWORD_RECOVERY; cargarPerfil lo consulta al escribir estado.
   const modoRecovery     = useRef(esRecuperacion)
 
   useEffect(() => {
-    // Limpiar hash de la URL (ya capturamos los tokens en supabase.js antes de esto)
     const hash = window.location.hash
     if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
       window.history.replaceState(null, '', window.location.pathname)
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth]', event, session?.user?.id)   // ← LOG AQUÍ
       if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
-        // Ignorar INITIAL_SESSION vacío mientras esperamos que setSession resuelva
         if (event === 'INITIAL_SESSION' && modoRecovery.current) return
         setUsuario(null)
         setMostrarSetPassword(false)
@@ -37,8 +35,6 @@ export default function App() {
         return
       }
 
-      // PASSWORD_RECOVERY: cuando Supabase procesa el hash correctamente
-      // SIGNED_IN con modoRecovery: cuando usamos setSession manual con token de recovery
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && modoRecovery.current)) {
         modoRecovery.current = true
         cargarPerfil(session.user.id, true)
@@ -49,13 +45,11 @@ export default function App() {
     })
 
     if (recoveryTokens) {
-      // Bypassear el procesamiento automático del hash — establecer sesión manualmente
       supabase.auth.setSession(recoveryTokens).then(({ error }) => {
         if (error) {
           console.error('Error al establecer sesión de recuperación:', error)
           setCargando(false)
         }
-        // Si no hay error, onAuthStateChange dispara SIGNED_IN y cargarPerfil se encarga
       })
     } else {
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -66,8 +60,6 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Verificar validez de sesión contra el servidor cada 30s y al recuperar foco.
-  // Necesario porque el JWT local sigue vigente aunque el admin haya revocado las sesiones.
   useEffect(() => {
     if (!usuario) return
     const check = async () => {
@@ -95,8 +87,6 @@ export default function App() {
     }
 
     setUsuario(data)
-    // Consultar modoRecovery.current aquí (no antes) garantiza que si PASSWORD_RECOVERY
-    // llegó mientras esta query estaba en vuelo, igual mostramos SetPassword.
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
@@ -119,7 +109,12 @@ export default function App() {
     </div>
   )
 
-  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
+  if (mostrarSetPassword) {
+    console.log('[App] ✅ mostrarSetPassword=true')
+    return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
+  }
+
+  console.log('[App] mostrarSetPassword:', mostrarSetPassword, '| usuario:', usuario?.nombre)
   if (!usuario) return <Login onLogin={setUsuario} />
 
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina

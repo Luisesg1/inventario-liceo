@@ -2,7 +2,6 @@
 
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #f0efe9;
 }
 
 /* ── Fondo ──────────────────────────────────────────────────────── */
@@ -101,9 +100,16 @@ body {
   padding: 48px 40px;
 }
 
+/* ── Variante recovery: mismo fondo blanco que el login normal ───── */
+.login-form-wrap--recovery {
+  background: #ffffff;
+}
+
 .login-form-inner {
   width: 100%;
   max-width: 340px;
+  position: relative;
+  z-index: 1;
 }
 
 .login-form-header {
@@ -125,6 +131,15 @@ body {
 
 .login-form-header p {
   font-size: 13px;
+  color: #6b7280;
+}
+
+/* Recovery header text — mismo estilo que el login normal */
+.login-form-header--recovery h2 {
+  color: #111827;
+}
+
+.login-form-header--recovery p {
   color: #6b7280;
 }
 
@@ -156,6 +171,27 @@ body {
 }
 
 .login-field input:focus {
+  border-color: #1a237e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(26,35,126,0.12);
+}
+
+/* Recovery field overrides — fondo blanco */
+.login-field--recovery label {
+  color: #374151;
+}
+
+.login-field--recovery input {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+
+.login-field--recovery input::placeholder {
+  color: #9ca3af;
+}
+
+.login-field--recovery input:focus {
   border-color: #1a237e;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(26,35,126,0.12);
@@ -194,6 +230,12 @@ body {
   margin-bottom: 16px;
 }
 
+.login-error--recovery {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
 /* ── Botón ───────────────────────────────────────────────────────── */
 .login-btn {
   width: 100%;
@@ -224,6 +266,17 @@ body {
 .login-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Recovery button: mismo azul que el login normal */
+.login-btn--recovery {
+  background: linear-gradient(135deg, #1a237e, #2563eb);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(26,35,126,0.35);
+}
+
+.login-btn--recovery:hover:not(:disabled) {
+  box-shadow: 0 6px 22px rgba(26,35,126,0.45);
 }
 
 .login-spinner {
@@ -257,6 +310,14 @@ body {
 }
 .login-link:hover { opacity: 1; }
 
+.login-link--recovery {
+  color: #1a237e;
+}
+
+.login-link--recovery:hover {
+  color: #0d1b5e;
+}
+
 .login-ok {
   background: #f0fdf4;
   border: 1px solid #86efac;
@@ -265,6 +326,16 @@ body {
   padding: 14px 16px;
   border-radius: 10px;
   line-height: 1.5;
+}
+
+.login-ok--recovery {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.login-ok--recovery strong {
+  color: #15803d;
 }
 
 /* ── Responsive ──────────────────────────────────────────────────── */

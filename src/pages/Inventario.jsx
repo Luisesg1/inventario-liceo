@@ -20,6 +20,7 @@ const formVacio = {
   nombre: '', categoria: '', codigo: '', cantidad: 1,
   estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
   isbn: '', autor: '', genero: '',
+  descripcion: '',
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
 }
 
@@ -314,6 +315,21 @@ export default function Inventario({ usuario }) {
     return label.includes('biblio')
   }
 
+  // Categorías que muestran el campo "Descripción" en el formulario
+  const tieneDescripcion = (cat) => {
+    if (!cat) return false
+    if (esComp(cat) || esTecno(cat)) return false
+    const obj = categorias.find(c => c.id === cat)
+    const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return (
+      label.includes('mueble') ||
+      label.includes('libreria') ||
+      label.includes('libro') ||
+      label.includes('otro') ||
+      label.includes('deport') ||
+      label.includes('musical')
+    )
+  }
   // ── Valores únicos de la BD para autocomplete de formularios ──────────────
   const opsBD = useMemo(() => {
     const uniq = (field) => [...new Set(bienes.map(b => b[field]).filter(Boolean))].sort()
@@ -342,7 +358,7 @@ export default function Inventario({ usuario }) {
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
   const COLUMNAS_EXPORT = [
     'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
-    'isbn','autor',
+    'isbn','autor','descripcion',
     'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
     'memoria','tipo_almacenamiento','sistema_operativo',
     'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
@@ -1132,6 +1148,27 @@ export default function Inventario({ usuario }) {
             </div>
           </div>
 
+{tieneDescripcion(form.categoria) && (
+            <div className="form-row single">
+              <div className="field">
+                <label>Descripción</label>
+                <textarea
+                  name="descripcion"
+                  value={form.descripcion ?? ''}
+                  onChange={handleChange}
+                  placeholder="Descripción del bien..."
+                  maxLength={500}
+                  rows={3}
+                />
+                <span style={{ fontSize: '11px', color: (form.descripcion?.length ?? 0) > 450 ? '#ef4444' : '#9ca3af', textAlign: 'right', display: 'block', marginTop: '3px' }}>
+                  {form.descripcion?.length ?? 0}/500
+                </span>
+              </div>
+            </div>
+          )}
+
+
+
           {esComp(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
@@ -1479,7 +1516,7 @@ export default function Inventario({ usuario }) {
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
-              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
+              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Observación adicional..." maxLength={500} />
                   <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
             </div>
           </div>
@@ -1574,6 +1611,26 @@ export default function Inventario({ usuario }) {
             </div>
           </div>
 
+          {tieneDescripcion(form.categoria) && (
+            <div className="form-row single">
+              <div className="field">
+                <label>Descripción</label>
+                <textarea
+                  name="descripcion"
+                  value={form.descripcion ?? ''}
+                  onChange={handleChange}
+                  placeholder="Descripción del bien..."
+                  maxLength={500}
+                  rows={3}
+                />
+                <span style={{ fontSize: '11px', color: (form.descripcion?.length ?? 0) > 450 ? '#ef4444' : '#9ca3af', textAlign: 'right', display: 'block', marginTop: '3px' }}>
+                  {form.descripcion?.length ?? 0}/500
+                </span>
+              </div>
+            </div>
+          )}
+
+
           {esComp(form.categoria) && (
             <>
               <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
@@ -1921,7 +1978,7 @@ export default function Inventario({ usuario }) {
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
-              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Descripción adicional..." maxLength={500} />
+              <textarea name="obs" value={form.obs} onChange={handleChange} placeholder="Observación adicional..." maxLength={500} />
                   <span style={{ fontSize: "11px", color: form.obs.length > 450 ? "#ef4444" : "#9ca3af", textAlign: "right", display: "block", marginTop: "3px" }}>{form.obs.length}/500</span>
             </div>
           </div>
@@ -2185,6 +2242,13 @@ export default function Inventario({ usuario }) {
                 </div>
               </div>
             </>)}
+
+            {verDetalle.descripcion && (
+              <div className="detalle-obs">
+                <p className="detalle-titulo">Descripción</p>
+                <p className="detalle-obs-texto">{verDetalle.descripcion}</p>
+              </div>
+            )}
 
             {verDetalle.obs && (
               <div className="detalle-obs">

@@ -1,8 +1,5 @@
 // src/pages/SetPassword.jsx
-// Se muestra cuando el usuario llega desde el enlace de invitación de Supabase.
-// Permite establecer una contraseña con validación en tiempo real de requisitos de seguridad.
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
 
 const REQUISITOS = [
@@ -14,6 +11,7 @@ const REQUISITOS = [
 ]
 
 export default function SetPassword({ onComplete, usuario }) {
+  console.log('[SetPassword] ✅ COMPONENTE RENDERIZADO')
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [loading, setLoading]     = useState(false)
@@ -29,11 +27,11 @@ export default function SetPassword({ onComplete, usuario }) {
 
   const strengthInfo = [
     null,
-    { label: 'Muy débil',  color: '#dc2626' },
+    { label: 'Muy débil',  color: '#ef4444' },
     { label: 'Débil',      color: '#f97316' },
     { label: 'Regular',    color: '#eab308' },
-    { label: 'Fuerte',     color: '#16a34a' },
-    { label: 'Muy fuerte', color: '#15803d' },
+    { label: 'Fuerte',     color: '#d4a017' },
+    { label: 'Muy fuerte', color: '#f0c830' },
   ]
   const si = strengthInfo[strength]
 
@@ -79,6 +77,11 @@ export default function SetPassword({ onComplete, usuario }) {
   // ── Formulario ───────────────────────────────────────────────────────────
   return (
     <div style={s.page}>
+
+      {/* Decoración fondo */}
+      <div style={s.bgCircle1} />
+      <div style={s.bgCircle2} />
+
       <div style={s.card}>
 
         {/* Logo / título */}
@@ -118,14 +121,14 @@ export default function SetPassword({ onComplete, usuario }) {
                       key={i}
                       style={{
                         ...s.strengthSegment,
-                        backgroundColor: i <= strength ? si?.color : '#e5e7eb',
+                        backgroundColor: i <= strength ? si?.color : 'rgba(255,255,255,0.15)',
                         transition: 'background-color 0.25s',
                       }}
                     />
                   ))}
                 </div>
                 {si && (
-                  <p style={{ fontSize: 12, color: si.color, margin: '4px 0 0', fontWeight: 600 }}>
+                  <p style={{ fontSize: 12, color: si.color, margin: '4px 0 0', fontWeight: 700 }}>
                     {si.label}
                   </p>
                 )}
@@ -140,12 +143,12 @@ export default function SetPassword({ onComplete, usuario }) {
               <div key={c.id} style={s.requisitoRow}>
                 <span style={{
                   ...s.checkIcon,
-                  backgroundColor: c.ok ? '#dcfce7' : '#f3f4f6',
-                  color: c.ok ? '#15803d' : '#9ca3af',
+                  backgroundColor: c.ok ? 'rgba(212,160,23,0.25)' : 'rgba(255,255,255,0.08)',
+                  color: c.ok ? '#f0c830' : 'rgba(255,255,255,0.35)',
                 }}>
                   {c.ok ? '✓' : '○'}
                 </span>
-                <span style={{ fontSize: 13, color: c.ok ? '#111827' : '#6b7280' }}>
+                <span style={{ fontSize: 13, color: c.ok ? '#f0f9ff' : 'rgba(255,255,255,0.5)' }}>
                   {c.label}
                 </span>
               </div>
@@ -163,8 +166,12 @@ export default function SetPassword({ onComplete, usuario }) {
                 placeholder="Repite tu contraseña"
                 style={{
                   ...s.input,
-                  borderColor: confirm.length > 0 ? (match ? '#16a34a' : '#dc2626') : '#d1d5db',
-                  boxShadow: confirm.length > 0 ? (match ? '0 0 0 3px rgba(22,163,74,0.12)' : '0 0 0 3px rgba(220,38,38,0.12)') : undefined,
+                  borderColor: confirm.length > 0
+                    ? (match ? '#d4a017' : '#ef4444')
+                    : 'rgba(255,255,255,0.2)',
+                  boxShadow: confirm.length > 0
+                    ? (match ? '0 0 0 3px rgba(212,160,23,0.2)' : '0 0 0 3px rgba(239,68,68,0.2)')
+                    : undefined,
                 }}
                 autoComplete="new-password"
               />
@@ -173,7 +180,7 @@ export default function SetPassword({ onComplete, usuario }) {
               </button>
             </div>
             {confirm.length > 0 && (
-              <p style={{ fontSize: 12, margin: '4px 0 0', color: match ? '#16a34a' : '#dc2626', fontWeight: 500 }}>
+              <p style={{ fontSize: 12, margin: '4px 0 0', color: match ? '#d4a017' : '#ef4444', fontWeight: 600 }}>
                 {match ? 'Las contraseñas coinciden ✓' : 'Las contraseñas no coinciden'}
               </p>
             )}
@@ -196,54 +203,81 @@ export default function SetPassword({ onComplete, usuario }) {
           >
             {loading ? 'Guardando…' : 'Establecer contraseña'}
           </button>
+
         </form>
       </div>
     </div>
   )
 }
 
-// ── Estilos (modo claro, coherente con Usuarios.css) ──────────────────────
+// ── Estilos ───────────────────────────────────────────────────────────────
 const s = {
   page: {
     minHeight: '100vh',
-    backgroundColor: '#f9fafb',
+    background: 'linear-gradient(135deg, #0d1b5e 0%, #1a3a8f 50%, #2563eb 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px 16px',
     fontFamily: '"Segoe UI", system-ui, sans-serif',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  bgCircle1: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: '50%',
+    background: 'rgba(212,160,23,0.07)',
+    top: -100,
+    right: -100,
+    pointerEvents: 'none',
+  },
+  bgCircle2: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: '50%',
+    background: 'rgba(255,255,255,0.04)',
+    bottom: -80,
+    left: -80,
+    pointerEvents: 'none',
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: 'rgba(13, 27, 94, 0.55)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    borderRadius: 20,
     padding: '36px 32px',
     width: '100%',
     maxWidth: 420,
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+    border: '1.5px solid rgba(255,255,255,0.18)',
+    boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+    position: 'relative',
+    zIndex: 1,
   },
   logoIcon: {
-    fontSize: 40,
+    fontSize: 44,
     marginBottom: 12,
     lineHeight: 1,
   },
   heading: {
     fontSize: 20,
     fontWeight: 700,
-    color: '#111827',
+    color: '#ffffff',
     margin: '0 0 6px',
   },
   subtext: {
     fontSize: 13,
-    color: '#6b7280',
+    color: 'rgba(255,255,255,0.65)',
     margin: 0,
     lineHeight: 1.5,
   },
   label: {
     display: 'block',
     fontSize: 13,
-    fontWeight: 500,
-    color: '#374151',
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: 6,
   },
   inputWrap: {
@@ -252,14 +286,15 @@ const s = {
   input: {
     width: '100%',
     padding: '9px 38px 9px 11px',
-    border: '1px solid #d1d5db',
-    borderRadius: 8,
-    fontSize: 14,
-    color: '#111827',
+    border: '1.5px solid rgba(255,255,255,0.2)',
+    borderRadius: 9,
+    fontSize: 13,
+    color: '#ffffff',
     outline: 'none',
     boxSizing: 'border-box',
     transition: 'border-color 0.15s, box-shadow 0.15s',
-    background: '#fff',
+    background: 'rgba(255,255,255,0.1)',
+    fontFamily: 'inherit',
   },
   eyeBtn: {
     position: 'absolute',
@@ -272,7 +307,7 @@ const s = {
     fontSize: 15,
     padding: 0,
     lineHeight: 1,
-    color: '#9ca3af',
+    color: 'rgba(255,255,255,0.5)',
   },
   strengthBar: {
     display: 'flex',
@@ -286,8 +321,8 @@ const s = {
     borderRadius: 3,
   },
   requisitosBox: {
-    backgroundColor: '#f9fafb',
-    border: '1px solid #e5e7eb',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: 10,
     padding: '12px 14px',
     display: 'flex',
@@ -297,7 +332,7 @@ const s = {
   requisitosTitle: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#9ca3af',
+    color: 'rgba(255,255,255,0.4)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     margin: '0 0 2px',
@@ -320,35 +355,37 @@ const s = {
     transition: 'all 0.2s',
   },
   errorBox: {
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    border: '1px solid rgba(239,68,68,0.4)',
     borderRadius: 8,
     padding: '10px 14px',
     fontSize: 13,
-    color: '#dc2626',
+    color: '#fca5a5',
   },
   submitBtn: {
     width: '100%',
     padding: '10px',
-    backgroundColor: '#2563eb',
-    color: '#fff',
+    background: 'linear-gradient(135deg, #c49012, #e6b820)',
+    color: '#0d1b5e',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 9,
     fontSize: 14,
-    fontWeight: 600,
-    transition: 'opacity 0.15s, background 0.15s',
+    fontWeight: 700,
+    transition: 'opacity 0.15s, box-shadow 0.15s',
+    boxShadow: '0 3px 12px rgba(212,160,23,0.35)',
+    fontFamily: 'inherit',
   },
   successCircle: {
     width: 60,
     height: 60,
-    backgroundColor: '#dcfce7',
-    border: '2px solid #16a34a',
+    backgroundColor: 'rgba(212,160,23,0.2)',
+    border: '2px solid #d4a017',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: 26,
-    color: '#16a34a',
+    color: '#f0c830',
     margin: '0 auto 20px',
   },
 }
