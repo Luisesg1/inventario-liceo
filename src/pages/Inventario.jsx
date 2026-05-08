@@ -2134,6 +2134,20 @@ export default function Inventario({ usuario }) {
               </div>
             </div>
 
+            {/* Igual que en el formulario: mostrar texto libre antes de adquisición */}
+            {verDetalle.descripcion && (
+              <div className="detalle-obs">
+                <p className="detalle-titulo">Descripción</p>
+                <p className="detalle-obs-texto">{verDetalle.descripcion}</p>
+              </div>
+            )}
+            {verDetalle.obs && (
+              <div className="detalle-obs">
+                <p className="detalle-titulo">Observaciones</p>
+                <p className="detalle-obs-texto">{verDetalle.obs}</p>
+              </div>
+            )}
+
             {esTecno(verDetalle.categoria) && (
               <>
                 <div className="detalle-seccion">
@@ -2322,19 +2336,6 @@ export default function Inventario({ usuario }) {
               </div>
             </>)}
 
-            {verDetalle.descripcion && (
-              <div className="detalle-obs">
-                <p className="detalle-titulo">Descripción</p>
-                <p className="detalle-obs-texto">{verDetalle.descripcion}</p>
-              </div>
-            )}
-
-            {verDetalle.obs && (
-              <div className="detalle-obs">
-                <p className="detalle-titulo">Observaciones</p>
-                <p className="detalle-obs-texto">{verDetalle.obs}</p>
-              </div>
-            )}
             </div>{/* fin detalle-pdf-content */}
           </div>
         </div>
