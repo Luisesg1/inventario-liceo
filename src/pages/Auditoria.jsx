@@ -35,7 +35,35 @@ function tiempoRelativo(fecha) {
   return `hace ${dias} día${dias > 1 ? 's' : ''}`
 }
 
-export default function Auditoria({ usuario }) {
+function formatFecha(ts) {
+  const d = new Date(ts)
+  return d.toLocaleDateString('es-CL') + ' · ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+}
+
+function labelDia(ts) {
+  const d    = new Date(ts)
+  const hoy  = new Date()
+  const ayer = new Date(); ayer.setDate(hoy.getDate() - 1)
+  if (d.toDateString() === hoy.toDateString())  return 'Hoy'
+  if (d.toDateString() === ayer.toDateString()) return 'Ayer'
+  return d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function agruparPorDia(logs) {
+  const items = []
+  let diaActual = null
+  logs.forEach(log => {
+    const dia = new Date(log.creado_en).toDateString()
+    if (dia !== diaActual) {
+      diaActual = dia
+      items.push({ esHeader: true, fecha: log.creado_en })
+    }
+    items.push({ esHeader: false, log })
+  })
+  return items
+}
+
+export default function Auditoria({ usuario, onVerBien }) {
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
   const [cargando, setCargando]       = useState(true)
@@ -54,7 +82,6 @@ export default function Auditoria({ usuario }) {
   const [filtroDesde,  setFiltroDesde]  = useState('')
   const [filtroHasta,  setFiltroHasta]  = useState('')
 
-  // Cargar categorías una sola vez
   useEffect(() => {
     supabase.from('categorias').select('id,label,icon').order('label')
       .then(({ data }) => { if (data) setCategorias(data) })
@@ -103,11 +130,6 @@ export default function Auditoria({ usuario }) {
     setRestaurando(null)
   }
 
-  const formatFecha = (ts) => {
-    const d = new Date(ts)
-    return d.toLocaleDateString('es-CL') + ' · ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-  }
-
   const detectarDispositivo = (ua) => {
     if (!ua) return null
     if (/Mobile|Android|iPhone/.test(ua)) return '📱'
@@ -121,7 +143,8 @@ export default function Auditoria({ usuario }) {
   }
 
   const totalPaginas = Math.ceil(total / POR_PAGINA)
-  const hayFiltros = buscar || filtroAccion || filtroRol || filtroCat || filtroDesde || filtroHasta
+  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroCat || filtroDesde || filtroHasta
+  const agrupados    = agruparPorDia(logs)
 
   return (
     <div className="audit-wrap">
@@ -142,8 +165,6 @@ export default function Auditoria({ usuario }) {
       <div className="audit-card audit-filtros-card">
         <p style={secTitle}>🔎 Filtros</p>
         <div className="audit-filtros">
-
-          {/* Búsqueda de texto */}
           <div className="audit-search-row">
             <input
               className="audit-input"
@@ -155,7 +176,6 @@ export default function Auditoria({ usuario }) {
             <button className="audit-btn-primary" onClick={aplicarBusqueda}>Buscar</button>
           </div>
 
-          {/* Selects de filtro */}
           <div className="audit-filtros-row">
             <select className="audit-select" value={filtroAccion}
               onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}>
@@ -181,7 +201,6 @@ export default function Auditoria({ usuario }) {
             </select>
           </div>
 
-          {/* Rango de fechas */}
           <div className="audit-filtros-row">
             <div className="audit-fecha-row">
               <input type="date" className="audit-input audit-date"
@@ -219,91 +238,116 @@ export default function Auditoria({ usuario }) {
           </p>
         </div>
       ) : (
-        <div className="audit-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div className="audit-list">
-            {logs.map((log, idx) => {
-              const meta    = ACCION_META[log.accion] ?? { color: '#6b7280', bg: '#f3f4f6', label: log.accion, icono: '•' }
-              const abierto = expandido === log.id
-              const cambios = Array.isArray(log.cambios) ? log.cambios : []
-              const disp    = detectarDispositivo(log.dispositivo)
-
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {agrupados.map((item, idx) => {
+            if (item.esHeader) {
               return (
-                <div key={log.id} className={`audit-item ${idx !== 0 ? 'audit-item-border' : ''}`}
-                  style={{ borderLeft: `3px solid ${meta.color}` }}>
-
-                  <div
-                    className="audit-item-header"
-                    style={{ cursor: cambios.length ? 'pointer' : 'default' }}
-                    onClick={() => cambios.length && setExpandido(abierto ? null : log.id)}
-                  >
-                    <div className="audit-badge-icon" style={{ background: meta.bg, color: meta.color }}>
-                      {meta.icono}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p className="audit-item-nombre">{log.bien_nombre}</p>
-                      <p className="audit-item-meta">
-                        <strong>{log.usuario_nombre}</strong>
-                        {log.usuario_rol && (
-                          <span className={`audit-rol-badge ${log.usuario_rol === 'admin' ? 'audit-rol-admin' : 'audit-rol-enc'}`}>
-                            {log.usuario_rol === 'admin' ? 'Admin' : 'Encargado'}
-                          </span>
-                        )}
-                        {log.categoria && (
-                          <span className="audit-cat-tag">{catLabel(log.categoria)}</span>
-                        )}
-                        <span>· {formatFecha(log.creado_en)}</span>
-                        {disp && <span>{disp}</span>}
-                      </p>
-                      {cambios.length > 0 && !abierto && (
-                        <p className="audit-item-campos">
-                          {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(' · ')}
-                        </p>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                      <span className="audit-pill" style={{ background: meta.bg, color: meta.color }}>
-                        {meta.label}
-                      </span>
-                      {cambios.length > 0 && (
-                        <span className="audit-chevron">{abierto ? '▲' : '▼'}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {abierto && cambios.length > 0 && (
-                    <div className="audit-cambios">
-                      <p style={{ ...secTitle, margin: '0 0 10px' }}>Campos modificados</p>
-                      {cambios.map((c, i) => (
-                        <div key={i} className="audit-cambio-row">
-                          <span className="audit-campo-label">
-                            {CAMPO_LABEL[c.campo] ?? c.campo}
-                          </span>
-                          <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
-                            {c.anterior ?? '—'}
-                          </span>
-                          <span className="audit-arrow">→</span>
-                          <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
-                            {c.nuevo ?? '—'}
-                          </span>
-                          {usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
-                            <button
-                              className="audit-btn-restore"
-                              onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}
-                              disabled={!!restaurando}
-                            >
-                              {restaurando === log.id + c.campo ? '…' : '↩ Restaurar'}
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div key={'h-' + item.fecha} className="audit-dia-header">
+                  {labelDia(item.fecha)}
                 </div>
               )
-            })}
-          </div>
+            }
+
+            const { log } = item
+            const meta    = ACCION_META[log.accion] ?? { color: '#6b7280', bg: '#f3f4f6', label: log.accion, icono: '•' }
+            const abierto = expandido === log.id
+            const cambios = Array.isArray(log.cambios) ? log.cambios : []
+            const disp    = detectarDispositivo(log.dispositivo)
+            const esHoy   = new Date(log.creado_en).toDateString() === new Date().toDateString()
+
+            // Primer item después de un header no lleva borde superior
+            const prevItem = agrupados[idx - 1]
+            const esPrimeroDelGrupo = !prevItem || prevItem.esHeader
+
+            return (
+              <div key={log.id}
+                className={`audit-item ${!esPrimeroDelGrupo ? 'audit-item-border' : ''}`}
+                style={{ borderLeft: `3px solid ${meta.color}`, background: '#fff' }}>
+
+                <div
+                  className="audit-item-header"
+                  style={{ cursor: cambios.length ? 'pointer' : 'default' }}
+                  onClick={() => cambios.length && setExpandido(abierto ? null : log.id)}
+                >
+                  <div className="audit-badge-icon" style={{ background: meta.bg, color: meta.color }}>
+                    {meta.icono}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="audit-item-nombre">{log.bien_nombre}</p>
+                    <p className="audit-item-meta">
+                      <strong>{log.usuario_nombre}</strong>
+                      {log.usuario_rol && (
+                        <span className={`audit-rol-badge ${log.usuario_rol === 'admin' ? 'audit-rol-admin' : 'audit-rol-enc'}`}>
+                          {log.usuario_rol === 'admin' ? 'Admin' : 'Encargado'}
+                        </span>
+                      )}
+                      {log.categoria && (
+                        <span className="audit-cat-tag">{catLabel(log.categoria)}</span>
+                      )}
+                      <span title={formatFecha(log.creado_en)}>
+                        · {esHoy ? tiempoRelativo(log.creado_en) : formatFecha(log.creado_en)}
+                      </span>
+                      {disp && <span>{disp}</span>}
+                    </p>
+                    {cambios.length > 0 && !abierto && (
+                      <p className="audit-item-campos">
+                        {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {/* Botón Ver bien — solo si el bien aún existe */}
+                    {log.bien_id && log.accion !== 'eliminar' && onVerBien && (
+                      <button
+                        className="audit-btn-ver"
+                        onClick={e => { e.stopPropagation(); onVerBien(log.bien_id) }}
+                        title="Ir al bien en el inventario"
+                      >
+                        Ver bien →
+                      </button>
+                    )}
+                    <span className="audit-pill" style={{ background: meta.bg, color: meta.color }}>
+                      {meta.label}
+                    </span>
+                    {cambios.length > 0 && (
+                      <span className="audit-chevron">{abierto ? '▲' : '▼'}</span>
+                    )}
+                  </div>
+                </div>
+
+                {abierto && cambios.length > 0 && (
+                  <div className="audit-cambios">
+                    <p style={{ ...secTitle, margin: '0 0 10px' }}>Campos modificados</p>
+                    {cambios.map((c, i) => (
+                      <div key={i} className="audit-cambio-row">
+                        <span className="audit-campo-label">
+                          {CAMPO_LABEL[c.campo] ?? c.campo}
+                        </span>
+                        <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
+                          {c.anterior ?? '—'}
+                        </span>
+                        <span className="audit-arrow">→</span>
+                        <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
+                          {c.nuevo ?? '—'}
+                        </span>
+                        {usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
+                          <button
+                            className="audit-btn-restore"
+                            onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}
+                            disabled={!!restaurando}
+                          >
+                            {restaurando === log.id + c.campo ? '…' : '↩ Restaurar'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 

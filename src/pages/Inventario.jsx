@@ -91,7 +91,7 @@ function ComboField({ name, value, onChange, placeholder, opciones = [], maxLeng
   )
 }
 
-export default function Inventario({ usuario }) {
+export default function Inventario({ usuario, abrirBienId, onAbrirBienDone }) {
   const esAdmin  = usuario?.rol === 'admin'
 
   // ── Estado de conexión ────────────────────────────────────────────────────
@@ -432,6 +432,19 @@ export default function Inventario({ usuario }) {
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
+
+  // ── Abrir bien desde Auditoría ───────────────────────────────────────────
+  useEffect(() => {
+    if (!abrirBienId) return
+    supabase.from('bienes').select('*').eq('id', abrirBienId).maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setCatActual(data.categoria || 'todos')
+          setVerDetalle(data)
+        }
+        onAbrirBienDone?.()
+      })
+  }, [abrirBienId])
 
   // ── Historial del bien seleccionado ──────────────────────────────────────
   useEffect(() => {

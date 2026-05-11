@@ -13,6 +13,7 @@ export default function App() {
   const [cargando,           setCargando]           = useState(true)
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [pagina,             setPagina]             = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
+  const [abrirBienId,        setAbrirBienId]        = useState(null)
 
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
@@ -129,9 +130,9 @@ export default function App() {
 
   return (
     <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina}>
-      {paginaSegura === 'inventario' && <Inventario usuario={usuario} />}
+      {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
-      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} />}
+      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
     </Layout>
   )
