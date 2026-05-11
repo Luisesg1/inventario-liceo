@@ -124,7 +124,7 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} />
 
-  const soloAdmin = pagina === 'usuarios'
+  const soloAdmin = pagina === 'usuarios' || pagina === 'auditoria'
   const paginaSegura = usuario.rol !== 'admin' && soloAdmin ? 'dashboard' : pagina
 
   return (
