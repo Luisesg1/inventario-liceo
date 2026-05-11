@@ -3,6 +3,11 @@ import { supabase } from '../supabase'
 import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
 import './ImportarCSV.css'
+import {
+  cachearBienes, cachearCategorias, cachearPermisos,
+  obtenerCacheBienes, obtenerCacheCategorias, obtenerCachePermisos,
+  obtenerPendientes, agregarPendiente, eliminarPendiente,
+} from '../offline'
 
 function logActividad(usuario, accion, bienNombre, bienId = null) {
   supabase.from('actividades').insert({
@@ -89,6 +94,10 @@ function ComboField({ name, value, onChange, placeholder, opciones = [], maxLeng
 export default function Inventario({ usuario }) {
   const esAdmin  = usuario?.rol === 'admin'
 
+  // ── Estado de conexión ────────────────────────────────────────────────────
+  const [online,        setOnline]        = useState(navigator.onLine)
+  const [sincronizando, setSincronizando] = useState(false)
+
   // ── Permisos granulares ───────────────────────────────────────────────────
   // Admin: permisos completos siempre. Otros: se cargan desde permisos_usuario.
   const [permisos, setPermisos] = useState(() =>
@@ -146,6 +155,38 @@ export default function Inventario({ usuario }) {
   const [dragOver, setDragOver]     = useState(null) // id sobre el que se arrastra
   const [dragging, setDragging]     = useState(null) // id que se arrastra
 
+  // ── Sincronizar pendientes con Supabase ───────────────────────────────────
+  async function sincronizarPendientes() {
+    const pendientes = obtenerPendientes()
+    if (pendientes.length === 0) return
+    setSincronizando(true)
+    let ok = 0
+    for (const item of pendientes) {
+      // eslint-disable-next-line no-unused-vars
+      const { id, _pendiente, creado_en, actualizado_en, ...payload } = item
+      const { data, error } = await supabase.from('bienes').insert(payload).select().single()
+      if (!error && data) {
+        eliminarPendiente(id)
+        setBienes(prev => prev.map(b => b.id === id ? data : b))
+        ok++
+      }
+    }
+    setSincronizando(false)
+    if (ok > 0) setAviso(`✓ ${ok} bien${ok !== 1 ? 'es' : ''} sincronizado${ok !== 1 ? 's' : ''} correctamente`)
+  }
+
+  // ── Detectar cambios de conexión ──────────────────────────────────────────
+  useEffect(() => {
+    const goOnline = async () => { setOnline(true); await sincronizarPendientes() }
+    const goOffline = () => setOnline(false)
+    window.addEventListener('online',  goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online',  goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, []) // eslint-disable-line
+
   useEffect(() => { cargarDatos() }, [])
 
   const cargarDatos = async () => {
@@ -170,7 +211,34 @@ export default function Inventario({ usuario }) {
       },
     }
 
-    // Cargar todo en paralelo
+    // ── Modo offline: usar caché ──────────────────────────────────────────
+    if (!navigator.onLine) {
+      const cats       = obtenerCacheCategorias()
+      const bs         = obtenerCacheBienes()
+      const cached     = obtenerCachePermisos()
+      const pendientes = obtenerPendientes()
+      if (!cats) {
+        setAviso('Sin conexión y sin datos guardados. Conéctate al menos una vez para cargar el inventario.')
+        setCargando(false)
+        return
+      }
+      const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
+      const ids = cats.map(c => c.id)
+      const rol = usuario?.rol ?? 'encargado'
+      const permisosOffline = esAdmin
+        ? defaultsPorRol.admin
+        : (cached?.permisos ?? defaultsPorRol[rol] ?? defaultsPorRol.encargado)
+      const catsOffline = esAdmin ? ['todos'] : (cached?.categorias ?? ['todos'])
+      setCategorias(cats)
+      setBienes([...(bs ?? []), ...pendientes])
+      setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
+      setPermisos(permisosOffline)
+      setCategoriasPermitidas(catsOffline)
+      setCargando(false)
+      return
+    }
+
+    // ── Modo online: cargar desde Supabase ────────────────────────────────
     const queries = [
       supabase.from('categorias').select('*').order('creado_en'),
       supabase.from('bienes').select('*').order('creado_en', { ascending: false }),
@@ -199,30 +267,35 @@ export default function Inventario({ usuario }) {
       : pd?.permisos
         ? { ...(defaultsPorRol[rol] ?? defaultsPorRol.encargado), ...pd.permisos }
         : (defaultsPorRol[rol] ?? defaultsPorRol.encargado)
-    // Traducir claves de permisos (ej: 'art_tecnologicos') a IDs reales de la tabla categorias
-    // Los permisos guardan claves hardcoded; la tabla usa IDs propios (UUIDs u otro)
     const traducirClaves = (claves, allCats) => {
       if (!claves || claves.includes('todos')) return ['todos']
       const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
       return claves.map(clave => {
-        if (allCats.some(c => c.id === clave)) return clave          // ya es un ID real
+        if (allCats.some(c => c.id === clave)) return clave
         const claveNorm = norm(clave.replace(/_/g, ' '))
         return allCats.find(c => norm(c.label) === claveNorm)?.id ?? null
       }).filter(Boolean)
     }
     const catsFinales = pd?.categorias ? traducirClaves(pd.categorias, cats) : ['todos']
 
+    // Guardar en caché para uso offline
+    cachearCategorias(cats)
+    cachearBienes(bs)
+    cachearPermisos({ permisos: permisosFinales, categorias: catsFinales })
+
     // Inicializar orden desde localStorage o por defecto
     const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
     const ids = cats.map(c => c.id)
 
-    // Setear todo junto para que el render ocurra con datos completos
     setCategorias(cats)
     setBienes(bs)
     setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
     setPermisos(permisosFinales)
     setCategoriasPermitidas(catsFinales)
-    setCargando(false)  // render final con todo listo
+    setCargando(false)
+
+    // Sincronizar pendientes que quedaron de sesiones anteriores
+    setTimeout(() => sincronizarPendientes(), 800)
   }
 
   // Orden final: pinned primero, luego el resto según catOrder
@@ -723,11 +796,25 @@ export default function Inventario({ usuario }) {
 
 
     if (editandoId !== null) {
+      if (!navigator.onLine) {
+        setAviso('Sin conexión — no se pueden editar bienes existentes offline.')
+        setGuardando(false)
+        return
+      }
       const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
       if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
       setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload } : b))
       logActividad(usuario, payload.estado === 'Baja' ? 'baja' : 'actualizar', nombreFinal, editandoId)
     } else {
+      // Sin internet: guardar en cola local
+      if (!navigator.onLine) {
+        const id = agregarPendiente({ ...payload, nombre: nombreFinal })
+        setBienes(prev => [{ ...payload, id, nombre: nombreFinal, _pendiente: true, creado_en: new Date().toISOString() }, ...prev])
+        setCatActual(payload.categoria)
+        setGuardando(false)
+        cancelarForm()
+        return
+      }
       const { data, error } = await supabase.from('bienes').insert(payload).select().single()
       if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
       setBienes(prev => [data, ...prev])
@@ -823,6 +910,40 @@ export default function Inventario({ usuario }) {
 
   return (
     <div className="inv">
+
+      {/* Banner sin conexión */}
+      {!online && (
+        <div style={{
+          background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8,
+          padding: '10px 16px', marginBottom: 12,
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: 18 }}>📡</span>
+          <span style={{ fontSize: 13, color: '#92400e', fontWeight: 500 }}>
+            Sin conexión — los bienes nuevos se guardarán localmente y se sincronizarán al volver a conectarse.
+          </span>
+          {obtenerPendientes().length > 0 && (
+            <span style={{
+              marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+              background: '#f59e0b', color: '#fff', borderRadius: 20, padding: '2px 10px',
+            }}>
+              {obtenerPendientes().length} pendiente{obtenerPendientes().length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Banner sincronizando */}
+      {sincronizando && (
+        <div style={{
+          background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8,
+          padding: '10px 16px', marginBottom: 12,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ display: 'inline-block', animation: 'spin 0.7s linear infinite', fontSize: 16 }}>⟳</span>
+          <span style={{ fontSize: 13, color: '#1d4ed8', fontWeight: 500 }}>Sincronizando bienes pendientes…</span>
+        </div>
+      )}
 
       {/* Grilla categorías con toggle */}
       <div className="cats-section">
@@ -2070,6 +2191,13 @@ export default function Inventario({ usuario }) {
                   <td className="td-code">{b.codigo}</td>
                   <td className="td-name">
                     {b.nombre}
+                    {b._pendiente && (
+                      <span style={{
+                        fontSize: 10, background: '#fef3c7', color: '#92400e',
+                        borderRadius: 4, padding: '1px 6px', marginLeft: 6,
+                        fontWeight: 700, verticalAlign: 'middle',
+                      }}>⏳ Pendiente</span>
+                    )}
                     {b.numero_serie && <div className="td-sub">S/N: {b.numero_serie}</div>}
                     {/* Info extra visible solo en móvil */}
                     <div className="td-mobile-extra">
@@ -2096,9 +2224,15 @@ export default function Inventario({ usuario }) {
                   <td className="td-muted td-hide-mobile">{b.ubicacion}</td>
                   <td>
                     <div className="acciones">
-                      <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
-                      {(permisos.editar_bien) && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
-                      {puedeEliminar && <button className="btn-del"  onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
+                      {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
+                      {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
+                      {puedeEliminar && !b._pendiente && <button className="btn-del" onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
+                      {b._pendiente && (
+                        <button className="btn-del" title="Cancelar (quitar pendiente)"
+                          onClick={() => { eliminarPendiente(b.id); setBienes(prev => prev.filter(x => x.id !== b.id)) }}>
+                          ✕
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
