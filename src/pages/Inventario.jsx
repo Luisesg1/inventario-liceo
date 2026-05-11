@@ -10,7 +10,7 @@ function logActividad(usuario, accion, bienNombre, bienId = null) {
     accion,
     bien_nombre: bienNombre,
     bien_id: bienId || null,
-  }).then()
+  }).then().catch(() => {})
 }
 
 const ESTADO_BADGE = { Bueno: 'badge-bueno', Regular: 'badge-regular', Malo: 'badge-malo', Baja: 'badge-baja' }
@@ -184,6 +184,11 @@ export default function Inventario({ usuario }) {
     }
 
     const results = await Promise.all(queries)
+    if (results[0].error || results[1].error) {
+      setAviso('Error al cargar el inventario. Recarga la página.')
+      setCargando(false)
+      return
+    }
     const cats = results[0].data ?? []
     const bs   = results[1].data ?? []
     const pd   = results[2]?.data ?? null
@@ -774,12 +779,20 @@ export default function Inventario({ usuario }) {
       async () => {
         const ids = [...seleccion]
         const n = ids.length
+        const fallidos = []
         for (const id of ids) {
-          await supabase.from('bienes').delete().eq('id', id)
+          const { error } = await supabase.from('bienes').delete().eq('id', id)
+          if (error) fallidos.push(id)
         }
-        setBienes(prev => prev.filter(b => !seleccion.has(b.id)))
-        setSeleccion(new Set())
-        logActividad(usuario, 'eliminar', `${n} bien${n !== 1 ? 'es' : ''} (lote)`, null)
+        const eliminados = ids.filter(id => !fallidos.includes(id))
+        if (eliminados.length > 0) {
+          setBienes(prev => prev.filter(b => !eliminados.includes(b.id)))
+          setSeleccion(new Set(fallidos))
+          logActividad(usuario, 'eliminar', `${eliminados.length} bien${eliminados.length !== 1 ? 'es' : ''} (lote)`, null)
+        }
+        if (fallidos.length > 0) {
+          setAviso(`No se pudieron eliminar ${fallidos.length} bien${fallidos.length !== 1 ? 'es' : ''}. Intenta de nuevo.`)
+        }
       }
     )
   }
