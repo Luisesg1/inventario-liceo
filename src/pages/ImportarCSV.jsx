@@ -170,7 +170,7 @@ const CAMPOS = {
   },
 }
 
-const EJEMPLOS = {
+const EJEMPLOS_BASE = {
   comp: {
     codigo: 'PC-001', tipo: 'Desktop', marca: 'HP', modelo: 'ProDesk 400 G7', estado: 'Bueno',
     numero_serie: 'MXL1234567', cpu: 'Intel Core i5-10500', ram: '8 GB', ram_tipo: 'DDR4',
@@ -193,12 +193,37 @@ const EJEMPLOS = {
     fecha_adquisicion: '2022-08-01', proveedor: 'Distribuidora Libros Ltda.',
     numero_factura: 'F-003456', numero_orden: 'OC-003456', fondo: 'Donación', garantia: '',
   },
-  general: {
-    codigo: 'ART-001', nombre: 'Balón de fútbol', estado: 'Bueno', cantidad: '10',
-    ubicacion: 'Bodega Deportiva', responsable: 'Juan Pérez', obs: 'Color azul y blanco',
-    fecha_adquisicion: '2023-03-15', proveedor: 'Comercial Deportes S.A.',
-    numero_factura: 'F-004567', numero_orden: 'OC-004567', fondo: 'SEP', garantia: '1 año',
-  },
+}
+
+// Ejemplos específicos para categorías generales según palabras clave del nombre
+const EJEMPLOS_GENERAL = [
+  { keys: ['mueble','mobiliario','silla','escritori','sillon','mesa'],
+    ej: { codigo:'MUE-001', nombre:'Escritorio de madera', cantidad:'1', ubicacion:'Sala de Profesores', obs:'4 cajones, color café', garantia:'1 año' } },
+  { keys: ['deport','atletis','gimnasi','futbol','basket','tenis','pelota','balon','balo'],
+    ej: { codigo:'DEP-001', nombre:'Balón de fútbol', cantidad:'10', ubicacion:'Bodega Deportiva', obs:'Color azul y blanco', garantia:'1 año' } },
+  { keys: ['musical','instrumen','musica','guitarra','piano','teclado','bateria'],
+    ej: { codigo:'MUS-001', nombre:'Guitarra acústica', cantidad:'1', ubicacion:'Sala de Música', obs:'Incluye estuche', garantia:'6 meses' } },
+  { keys: ['aseo','limpiez','bodega','escoba','aspiradora'],
+    ej: { codigo:'ASE-001', nombre:'Aspiradora industrial', cantidad:'1', ubicacion:'Bodega Central', obs:'1600W', garantia:'1 año' } },
+  { keys: ['cocina','aliment','refrig','microond','horno'],
+    ej: { codigo:'COC-001', nombre:'Microondas', cantidad:'1', ubicacion:'Cocina', obs:'700W, color blanco', garantia:'1 año' } },
+  { keys: ['herramienta','taller','taladro','martillo'],
+    ej: { codigo:'HER-001', nombre:'Taladro inalámbrico', cantidad:'1', ubicacion:'Taller', obs:'Incluye brocas', garantia:'1 año' } },
+  { keys: ['electro','audio','video','televi','pantalla','amplif'],
+    ej: { codigo:'ELT-001', nombre:'Televisor 55"', cantidad:'1', ubicacion:'Sala de reuniones', obs:'Smart TV 4K', garantia:'2 años' } },
+  { keys: ['textil','ropa','uniformes','genero','tela'],
+    ej: { codigo:'TEX-001', nombre:'Uniforme deportivo', cantidad:'20', ubicacion:'Bodega', obs:'Talla M', garantia:'' } },
+]
+
+const getEjemplo = (tipo, catLabel) => {
+  if (tipo !== 'general') return EJEMPLOS_BASE[tipo]
+  const lbl = catLabel.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const match = EJEMPLOS_GENERAL.find(e => e.keys.some(k => lbl.includes(k)))
+  const base = { estado:'Bueno', responsable:'Juan Pérez', fecha_adquisicion:'2024-01-15',
+    proveedor:'Proveedor Ltda.', numero_factura:'F-001', numero_orden:'OC-001', fondo:'SEP' }
+  if (match) return { ...base, ...match.ej }
+  // Fallback genérico
+  return { ...base, codigo:'BIE-001', nombre:'Nombre del bien', cantidad:'1', ubicacion:'Bodega Central', obs:'' }
 }
 
 const descargarPlantilla = async (catId, catLabel, categorias) => {
@@ -206,7 +231,7 @@ const descargarPlantilla = async (catId, catLabel, categorias) => {
   const { obligatorios, opcionales } = CAMPOS[tipo]
   const cols = [...obligatorios, ...opcionales]
   const headers = cols.map(c => c.col)
-  const ejemplo = EJEMPLOS[tipo]
+  const ejemplo = getEjemplo(tipo, catLabel)
   const exampleRow = headers.map(h => ejemplo[h] ?? '')
 
   // Cargar SheetJS si no está disponible

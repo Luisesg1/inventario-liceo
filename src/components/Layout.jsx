@@ -44,12 +44,28 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         grupos[key].items.push(b)
       })
 
-      const resumenRows = [['Categoría', 'Ícono', 'Total bienes']]
-      Object.values(grupos).forEach(g => resumenRows.push([g.label, g.icon, g.items.length]))
-      resumenRows.push(['', '', ''])
-      resumenRows.push(['TOTAL', '', bienes.length])
+      // Columnas visibles en el listado completo del resumen
+      const COLS_LISTA = ['categoria_nombre', 'codigo', 'nombre', 'estado', 'cantidad', 'ubicacion', 'responsable', 'tipo', 'marca', 'modelo', 'numero_serie', 'obs']
+      const HDRS_LISTA = ['Categoría',        'Código', 'Nombre', 'Estado', 'Cantidad', 'Ubicación', 'Responsable', 'Tipo', 'Marca', 'Modelo', 'N° Serie',    'Observaciones']
+
+      // Bloque de resumen por categoría
+      const resumenRows = [
+        ['Categoría', 'Ícono', 'Total bienes'],
+        ...Object.values(grupos).map(g => [g.label, g.icon, g.items.length]),
+        [],
+        ['TOTAL', '', bienes.length],
+        [],
+        ['Datos completos (' + bienes.length + ' bienes)'],
+        HDRS_LISTA,
+        ...bienes.map(b => {
+          const cat = cats.find(c => c.id === b.categoria)
+          return COLS_LISTA.map(c => c === 'categoria_nombre' ? (cat?.label ?? b.categoria ?? '') : (b[c] ?? ''))
+        }),
+      ]
       const wsRes = XLSX.utils.aoa_to_sheet(resumenRows)
-      wsRes['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 14 }]
+      wsRes['!cols'] = HDRS_LISTA.map((h, i) => ({
+        wch: Math.max(h.length + 2, i === 0 ? 20 : i === 2 ? 28 : 14),
+      }))
       XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen')
 
       Object.values(grupos).forEach(({ label, items }) => {
