@@ -160,7 +160,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
           ))}
         </nav>
 
-        <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>
+        {esAdmin && <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>
           <p className="nav-section">Herramientas</p>
           {[
             { icon: '🗂️', label: 'Backup Excel', fn: exportarBackupExcel },
@@ -183,7 +183,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
               {exportando ? 'Generando…' : label}
             </button>
           ))}
-        </div>
+        </div>}
 
         <div className="sidebar-user">
           <div className="avatar">{usuario.nombre[0]}</div>
