@@ -36,20 +36,29 @@ function tiempoRelativo(fecha) {
 }
 
 export default function Auditoria({ usuario }) {
-  const [logs, setLogs]           = useState([])
-  const [total, setTotal]         = useState(0)
-  const [cargando, setCargando]   = useState(true)
-  const [expandido, setExpandido] = useState(null)
+  const [logs, setLogs]               = useState([])
+  const [total, setTotal]             = useState(0)
+  const [cargando, setCargando]       = useState(true)
+  const [expandido, setExpandido]     = useState(null)
   const [restaurando, setRestaurando] = useState(null)
-  const [aviso, setAviso]         = useState('')
-  const [pagina, setPagina]       = useState(0)
-  const [errorTabla, setErrorTabla] = useState(false)
+  const [aviso, setAviso]             = useState('')
+  const [pagina, setPagina]           = useState(0)
+  const [errorTabla, setErrorTabla]   = useState(false)
+  const [categorias, setCategorias]   = useState([])
 
   const [buscar,       setBuscar]       = useState('')
   const [buscadorVal,  setBuscadorVal]  = useState('')
   const [filtroAccion, setFiltroAccion] = useState('')
+  const [filtroRol,    setFiltroRol]    = useState('')
+  const [filtroCat,    setFiltroCat]    = useState('')
   const [filtroDesde,  setFiltroDesde]  = useState('')
   const [filtroHasta,  setFiltroHasta]  = useState('')
+
+  // Cargar categorías una sola vez
+  useEffect(() => {
+    supabase.from('categorias').select('id,label,icon').order('label')
+      .then(({ data }) => { if (data) setCategorias(data) })
+  }, [])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -60,6 +69,8 @@ export default function Auditoria({ usuario }) {
       .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
 
     if (filtroAccion) q = q.eq('accion', filtroAccion)
+    if (filtroRol)    q = q.eq('usuario_rol', filtroRol)
+    if (filtroCat)    q = q.eq('categoria', filtroCat)
     if (filtroDesde)  q = q.gte('creado_en', filtroDesde + 'T00:00:00')
     if (filtroHasta)  q = q.lte('creado_en', filtroHasta + 'T23:59:59')
     if (buscar)       q = q.or(`bien_nombre.ilike.%${buscar}%,usuario_nombre.ilike.%${buscar}%`)
@@ -70,14 +81,17 @@ export default function Auditoria({ usuario }) {
     setLogs(data ?? [])
     setTotal(count ?? 0)
     setCargando(false)
-  }, [pagina, filtroAccion, filtroDesde, filtroHasta, buscar])
+  }, [pagina, filtroAccion, filtroRol, filtroCat, filtroDesde, filtroHasta, buscar])
 
   useEffect(() => { cargar() }, [cargar])
 
   const aplicarBusqueda = () => { setBuscar(buscadorVal); setPagina(0) }
-  const limpiarFiltros  = () => {
-    setBuscadorVal(''); setBuscar(''); setFiltroAccion('')
-    setFiltroDesde(''); setFiltroHasta(''); setPagina(0)
+
+  const limpiarFiltros = () => {
+    setBuscadorVal(''); setBuscar('')
+    setFiltroAccion(''); setFiltroRol(''); setFiltroCat('')
+    setFiltroDesde(''); setFiltroHasta('')
+    setPagina(0)
   }
 
   const restaurarCampo = async (logId, campo) => {
@@ -101,8 +115,13 @@ export default function Auditoria({ usuario }) {
     return '💻'
   }
 
+  const catLabel = (id) => {
+    const c = categorias.find(c => c.id === id)
+    return c ? `${c.icon ?? ''} ${c.label}`.trim() : id
+  }
+
   const totalPaginas = Math.ceil(total / POR_PAGINA)
-  const hayFiltros = buscar || filtroAccion || filtroDesde || filtroHasta
+  const hayFiltros = buscar || filtroAccion || filtroRol || filtroCat || filtroDesde || filtroHasta
 
   return (
     <div className="audit-wrap">
@@ -123,6 +142,8 @@ export default function Auditoria({ usuario }) {
       <div className="audit-card audit-filtros-card">
         <p style={secTitle}>🔎 Filtros</p>
         <div className="audit-filtros">
+
+          {/* Búsqueda de texto */}
           <div className="audit-search-row">
             <input
               className="audit-input"
@@ -134,18 +155,34 @@ export default function Auditoria({ usuario }) {
             <button className="audit-btn-primary" onClick={aplicarBusqueda}>Buscar</button>
           </div>
 
+          {/* Selects de filtro */}
           <div className="audit-filtros-row">
-            <select
-              className="audit-select"
-              value={filtroAccion}
-              onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}
-            >
+            <select className="audit-select" value={filtroAccion}
+              onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}>
               <option value="">Todas las acciones</option>
               <option value="crear">Creados</option>
               <option value="editar">Editados</option>
               <option value="eliminar">Eliminados</option>
             </select>
 
+            <select className="audit-select" value={filtroRol}
+              onChange={e => { setFiltroRol(e.target.value); setPagina(0) }}>
+              <option value="">Todos los roles</option>
+              <option value="admin">Administrador</option>
+              <option value="encargado">Encargado</option>
+            </select>
+
+            <select className="audit-select" value={filtroCat}
+              onChange={e => { setFiltroCat(e.target.value); setPagina(0) }}>
+              <option value="">Todas las categorías</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Rango de fechas */}
+          <div className="audit-filtros-row">
             <div className="audit-fecha-row">
               <input type="date" className="audit-input audit-date"
                 value={filtroDesde}
@@ -155,9 +192,8 @@ export default function Auditoria({ usuario }) {
                 value={filtroHasta}
                 onChange={e => { setFiltroHasta(e.target.value); setPagina(0) }} />
             </div>
-
             {hayFiltros && (
-              <button className="audit-btn-ghost" onClick={limpiarFiltros}>✕ Limpiar</button>
+              <button className="audit-btn-ghost" onClick={limpiarFiltros}>✕ Limpiar filtros</button>
             )}
           </div>
         </div>
@@ -195,7 +231,6 @@ export default function Auditoria({ usuario }) {
                 <div key={log.id} className={`audit-item ${idx !== 0 ? 'audit-item-border' : ''}`}
                   style={{ borderLeft: `3px solid ${meta.color}` }}>
 
-                  {/* Fila principal */}
                   <div
                     className="audit-item-header"
                     style={{ cursor: cambios.length ? 'pointer' : 'default' }}
@@ -214,13 +249,15 @@ export default function Auditoria({ usuario }) {
                             {log.usuario_rol === 'admin' ? 'Admin' : 'Encargado'}
                           </span>
                         )}
-                        {log.categoria && <span className="audit-cat-tag">{log.categoria}</span>}
-                        {' · '}{formatFecha(log.creado_en)}
-                        {disp && <span style={{ marginLeft: 5 }}>{disp}</span>}
+                        {log.categoria && (
+                          <span className="audit-cat-tag">{catLabel(log.categoria)}</span>
+                        )}
+                        <span>· {formatFecha(log.creado_en)}</span>
+                        {disp && <span>{disp}</span>}
                       </p>
                       {cambios.length > 0 && !abierto && (
                         <p className="audit-item-campos">
-                          {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(', ')}
+                          {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(' · ')}
                         </p>
                       )}
                     </div>
@@ -235,7 +272,6 @@ export default function Auditoria({ usuario }) {
                     </div>
                   </div>
 
-                  {/* Cambios expandidos */}
                   {abierto && cambios.length > 0 && (
                     <div className="audit-cambios">
                       <p style={{ ...secTitle, margin: '0 0 10px' }}>Campos modificados</p>
@@ -282,7 +318,6 @@ export default function Auditoria({ usuario }) {
         </div>
       )}
 
-      {/* ── Aviso ── */}
       {aviso && (
         <div className="audit-aviso">
           {aviso}
