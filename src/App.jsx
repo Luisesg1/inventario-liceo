@@ -65,14 +65,16 @@ export default function App() {
   useEffect(() => {
     if (!usuario) return
     const check = async () => {
+      if (!navigator.onLine) return
       try {
         const { error } = await supabase.auth.getUser()
-        // Solo cerrar sesión si el token es inválido/expirado, no por errores de red
-        if (error && !error.message?.toLowerCase().includes('fetch') && error.status !== 0) {
+        // Solo cerrar sesión ante un 401 real del servidor (token revocado/expirado)
+        // Cualquier otro error (red, timeout, reconexión) se ignora
+        if (error?.status === 401) {
           await supabase.auth.signOut()
         }
       } catch {
-        // Error de red — ignorar, no cerrar sesión
+        // Error de red — ignorar
       }
     }
     const interval = setInterval(check, 30000)
