@@ -24,7 +24,6 @@ export default function App() {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth]', event, session?.user?.id)   // ← LOG AQUÍ
       if (procesandoCambio.current) return
 
       if (event === 'SIGNED_OUT' || !session) {
@@ -34,6 +33,9 @@ export default function App() {
         setCargando(false)
         return
       }
+
+      // No recargar el perfil en cada refresh de token
+      if (event === 'TOKEN_REFRESHED') return
 
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && modoRecovery.current)) {
         modoRecovery.current = true
@@ -109,12 +111,7 @@ export default function App() {
     </div>
   )
 
-  if (mostrarSetPassword) {
-    console.log('[App] ✅ mostrarSetPassword=true')
-    return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
-  }
-
-  console.log('[App] mostrarSetPassword:', mostrarSetPassword, '| usuario:', usuario?.nombre)
+  if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} />
 
   const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina

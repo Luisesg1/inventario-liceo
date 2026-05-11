@@ -11,7 +11,6 @@ const REQUISITOS = [
 ]
 
 export default function SetPassword({ onComplete, usuario }) {
-  console.log('[SetPassword] ✅ COMPONENTE RENDERIZADO')
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
   const [loading, setLoading]     = useState(false)
