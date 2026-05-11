@@ -38,6 +38,12 @@
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  width: 100%;
+}
+
+.audit-filtros-row .audit-select {
+  flex: 1;
+  min-width: 150px;
 }
 
 .audit-input {
@@ -76,6 +82,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex: 1;
+}
+
+.audit-fecha-row .audit-date {
+  flex: 1;
 }
 
 .audit-dash { font-size: 12px; color: #9ca3af; }
@@ -379,7 +390,7 @@
   .audit-select,
   .audit-btn-ghost { width: 100%; }
 
-  .audit-fecha-row { width: 100%; }
+  .audit-fecha-row { width: 100%; flex: unset; }
   .audit-fecha-row .audit-date { flex: 1; min-width: 0; }
 
   .audit-item-header { padding: 12px 14px; gap: 10px; }
