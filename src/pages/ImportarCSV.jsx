@@ -68,6 +68,122 @@ const CATEGORIAS_COMP = new Set(['computadores', 'computador', 'computadoras', '
 
 const esComp = (cat) => cat === 'computadores'
 
+// ── Campos por tipo de categoría ─────────────────────────────────────────
+const tipoCat = (catId, categorias) => {
+  if (catId === 'computadores') return 'comp'
+  const label = (categorias.find(c => c.id === catId)?.label ?? catId).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (label.includes('tecnol')) return 'tecno'
+  if (label.includes('biblio')) return 'biblio'
+  return 'general'
+}
+
+const CAMPOS = {
+  comp: {
+    obligatorios: [
+      { col: 'codigo',           desc: 'Código inventario' },
+      { col: 'tipo',             desc: 'Desktop / Laptop / AIO / Notebook' },
+      { col: 'marca',            desc: 'Marca del equipo' },
+      { col: 'modelo',           desc: 'Modelo del equipo' },
+      { col: 'estado',           desc: 'Bueno / Regular / Malo / Baja' },
+    ],
+    opcionales: [
+      { col: 'numero_serie',     desc: 'Número de serie' },
+      { col: 'cpu',              desc: 'Procesador' },
+      { col: 'ram',              desc: 'RAM (ej: 8 GB)' },
+      { col: 'ram_tipo',         desc: 'DDR4 / DDR5 / etc.' },
+      { col: 'memoria',          desc: 'Almacenamiento (ej: 256 GB)' },
+      { col: 'sistema_operativo',desc: 'SO (ej: Windows 11)' },
+      { col: 'pantalla',         desc: 'Pantalla (ej: 15.6")' },
+      { col: 'ubicacion',        desc: 'Ubicación' },
+      { col: 'responsable',      desc: 'Responsable' },
+      { col: 'obs',              desc: 'Observaciones' },
+      { col: 'fecha_adquisicion',desc: 'Fecha adquisición' },
+      { col: 'proveedor',        desc: 'Proveedor' },
+      { col: 'numero_factura',   desc: 'N° Factura' },
+      { col: 'numero_orden',     desc: 'N° Orden de compra' },
+      { col: 'fondo',            desc: 'Fondo (ej: SEP)' },
+      { col: 'garantia',         desc: 'Garantía' },
+    ],
+  },
+  tecno: {
+    obligatorios: [
+      { col: 'codigo',           desc: 'Código inventario' },
+      { col: 'tipo',             desc: 'Proyector / Impresora / etc.' },
+      { col: 'marca',            desc: 'Marca' },
+      { col: 'estado',           desc: 'Bueno / Regular / Malo / Baja' },
+    ],
+    opcionales: [
+      { col: 'modelo',           desc: 'Modelo' },
+      { col: 'numero_serie',     desc: 'Número de serie' },
+      { col: 'cantidad',         desc: 'Cantidad' },
+      { col: 'ubicacion',        desc: 'Ubicación' },
+      { col: 'responsable',      desc: 'Responsable' },
+      { col: 'obs',              desc: 'Observaciones' },
+      { col: 'fecha_adquisicion',desc: 'Fecha adquisición' },
+      { col: 'proveedor',        desc: 'Proveedor' },
+      { col: 'numero_factura',   desc: 'N° Factura' },
+      { col: 'numero_orden',     desc: 'N° Orden de compra' },
+      { col: 'fondo',            desc: 'Fondo' },
+      { col: 'garantia',         desc: 'Garantía' },
+    ],
+  },
+  biblio: {
+    obligatorios: [
+      { col: 'codigo',           desc: 'Código inventario' },
+      { col: 'nombre',           desc: 'Título del libro' },
+      { col: 'estado',           desc: 'Bueno / Regular / Malo / Baja' },
+    ],
+    opcionales: [
+      { col: 'isbn',             desc: 'ISBN' },
+      { col: 'autor',            desc: 'Autor' },
+      { col: 'genero',           desc: 'Género literario' },
+      { col: 'cantidad',         desc: 'Cantidad' },
+      { col: 'ubicacion',        desc: 'Ubicación' },
+      { col: 'responsable',      desc: 'Responsable' },
+      { col: 'obs',              desc: 'Observaciones' },
+      { col: 'fecha_adquisicion',desc: 'Fecha adquisición' },
+      { col: 'proveedor',        desc: 'Proveedor' },
+      { col: 'numero_factura',   desc: 'N° Factura' },
+      { col: 'numero_orden',     desc: 'N° Orden de compra' },
+      { col: 'fondo',            desc: 'Fondo' },
+      { col: 'garantia',         desc: 'Garantía' },
+    ],
+  },
+  general: {
+    obligatorios: [
+      { col: 'codigo',           desc: 'Código inventario' },
+      { col: 'nombre',           desc: 'Nombre del bien' },
+      { col: 'estado',           desc: 'Bueno / Regular / Malo / Baja' },
+    ],
+    opcionales: [
+      { col: 'cantidad',         desc: 'Cantidad' },
+      { col: 'ubicacion',        desc: 'Ubicación' },
+      { col: 'responsable',      desc: 'Responsable' },
+      { col: 'obs',              desc: 'Observaciones' },
+      { col: 'fecha_adquisicion',desc: 'Fecha adquisición' },
+      { col: 'proveedor',        desc: 'Proveedor' },
+      { col: 'numero_factura',   desc: 'N° Factura' },
+      { col: 'numero_orden',     desc: 'N° Orden de compra' },
+      { col: 'fondo',            desc: 'Fondo' },
+      { col: 'garantia',         desc: 'Garantía' },
+    ],
+  },
+}
+
+const descargarPlantilla = (catId, catLabel, categorias) => {
+  const tipo = tipoCat(catId, categorias)
+  const { obligatorios, opcionales } = CAMPOS[tipo]
+  const cols = [...obligatorios, ...opcionales].map(c => c.col)
+  const csv = cols.join(',') + '\n'
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `plantilla_${catLabel.toLowerCase().replace(/\s+/g, '_')}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Normalizar un valor de celda ──────────────────────────────────────────
 const normalizar = (val) => {
   if (val === null || val === undefined) return ''
@@ -207,12 +323,13 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
   const [duplicados, setDuplicados] = useState('omitir')  // 'omitir' | 'sobreescribir'
   const [catGlobal, setCatGlobal]   = useState('')        // categoría por defecto cuando no hay columna categoria
   const [tieneCatCol, setTieneCatCol] = useState(false)   // si el Excel tenía columna "categoria"
+  const [catGuiaAbierta, setCatGuiaAbierta] = useState(null) // id de categoría con guía expandida
   const inputRef = useRef()
 
   const resetear = () => {
     setFase('idle'); setFilas([]); setErrParse(null)
     setFileName(''); setResultado(null); setCatsPendientes([]); setMapCats({})
-    setCatGlobal(''); setTieneCatCol(false)
+    setCatGlobal(''); setTieneCatCol(false); setCatGuiaAbierta(null)
   }
 
   // ── Procesar archivo ───────────────────────────────────────────────────
@@ -403,26 +520,99 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
 
       {/* ── IDLE: zona de carga ── */}
       {fase === 'idle' && (
-        <div
-          className={`drop-zone ${dragging ? 'dragging' : ''}`}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onClick={() => inputRef.current?.click()}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            style={{ display: 'none' }}
-            onChange={e => { if (e.target.files[0]) procesarArchivo(e.target.files[0]) }}
-          />
-          <div className="drop-icon">📂</div>
-          <p className="drop-title">Arrastra tu archivo aquí</p>
-          <p className="drop-sub">o haz clic para seleccionar</p>
-          <p className="drop-formats">Formatos aceptados: .csv · .xlsx · .xls</p>
-          {errParse && <p className="drop-error">⚠️ {errParse}</p>}
-        </div>
+        <>
+          <div
+            className={`drop-zone ${dragging ? 'dragging' : ''}`}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              style={{ display: 'none' }}
+              onChange={e => { if (e.target.files[0]) procesarArchivo(e.target.files[0]) }}
+            />
+            <div className="drop-icon">📂</div>
+            <p className="drop-title">Arrastra tu archivo aquí</p>
+            <p className="drop-sub">o haz clic para seleccionar</p>
+            <p className="drop-formats">Formatos aceptados: .csv · .xlsx · .xls</p>
+            {errParse && <p className="drop-error">⚠️ {errParse}</p>}
+          </div>
+
+          {/* Guía de campos por categoría */}
+          <div style={{ marginTop: 20 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 12 }}>
+              📋 Columnas por categoría — selecciona para ver los campos y descargar plantilla:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {categorias.map(cat => {
+                const tipo = tipoCat(cat.id, categorias)
+                const { obligatorios, opcionales } = CAMPOS[tipo]
+                const abierto = catGuiaAbierta === cat.id
+                return (
+                  <div key={cat.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setCatGuiaAbierta(abierto ? null : cat.id)}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', background: abierto ? '#f0f4ff' : '#fff',
+                        border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a237e',
+                      }}
+                    >
+                      <span>{cat.icon} {cat.label}</span>
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>{abierto ? '▲' : '▼'}</span>
+                    </button>
+                    {abierto && (
+                      <div style={{ padding: '12px 14px 14px', background: '#fafafa', borderTop: '1px solid #e5e7eb' }}>
+                        <div style={{ marginBottom: 10 }}>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px' }}>
+                            Obligatorios
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {obligatorios.map(f => (
+                              <span key={f.col} title={f.desc} style={{
+                                fontSize: 12, fontFamily: 'monospace', fontWeight: 600,
+                                background: '#fee2e2', color: '#991b1b',
+                                borderRadius: 5, padding: '3px 8px', cursor: 'default',
+                              }}>{f.col}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ marginBottom: 12 }}>
+                          <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px' }}>
+                            Opcionales
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {opcionales.map(f => (
+                              <span key={f.col} title={f.desc} style={{
+                                fontSize: 12, fontFamily: 'monospace',
+                                background: '#f3f4f6', color: '#374151',
+                                borderRadius: 5, padding: '3px 8px', cursor: 'default',
+                              }}>{f.col}</span>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); descargarPlantilla(cat.id, cat.label, categorias) }}
+                          style={{
+                            fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                            background: '#1a237e', color: '#fff', border: 'none',
+                            borderRadius: 7, cursor: 'pointer',
+                          }}
+                        >
+                          ⬇ Descargar plantilla {cat.label}.csv
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
       )}
 
       {/* ── PREVIEW ── */}
