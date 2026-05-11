@@ -122,13 +122,15 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const navItems = [
     { id: 'dashboard',  icon: '◉', label: 'Inicio' },
     { id: 'inventario', icon: '▤', label: 'Inventario' },
-    ...(esAdmin ? [{ id: 'usuarios', icon: '◎', label: 'Usuarios' }] : [])
+    ...(esAdmin ? [{ id: 'usuarios',  icon: '◎', label: 'Usuarios'  }] : []),
+    ...(esAdmin ? [{ id: 'auditoria', icon: '🔍', label: 'Auditoría' }] : []),
   ]
 
   const titulos = {
     dashboard:  'Inicio',
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
+    auditoria:  'Auditoría de Cambios',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }

@@ -6,6 +6,7 @@ import Inventario from './pages/Inventario'
 import Dashboard from './pages/Dashboard'
 import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
+import Auditoria from './pages/Auditoria'
 
 export default function App() {
   const [usuario,            setUsuario]            = useState(null)
@@ -123,12 +124,14 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} />
 
-  const paginaSegura = usuario.rol !== 'admin' && pagina === 'usuarios' ? 'dashboard' : pagina
+  const soloAdmin = pagina === 'usuarios' || pagina === 'auditoria'
+  const paginaSegura = usuario.rol !== 'admin' && soloAdmin ? 'dashboard' : pagina
 
   return (
     <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina}>
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
+      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
     </Layout>
   )

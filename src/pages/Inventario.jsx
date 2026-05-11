@@ -154,6 +154,8 @@ export default function Inventario({ usuario }) {
   })
   const [dragOver, setDragOver]     = useState(null) // id sobre el que se arrastra
   const [dragging, setDragging]     = useState(null) // id que se arrastra
+  const [historialBien, setHistorialBien] = useState([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   // ── Sincronizar pendientes con Supabase ───────────────────────────────────
   async function sincronizarPendientes() {
@@ -430,6 +432,19 @@ export default function Inventario({ usuario }) {
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
+
+  // ── Historial del bien seleccionado ──────────────────────────────────────
+  useEffect(() => {
+    if (!verDetalle?.id) { setHistorialBien([]); return }
+    setCargandoHistorial(true)
+    supabase
+      .from('audit_logs')
+      .select('id,accion,cambios,usuario_nombre,dispositivo,creado_en')
+      .eq('bien_id', verDetalle.id)
+      .order('creado_en', { ascending: false })
+      .limit(20)
+      .then(({ data }) => { setHistorialBien(data ?? []); setCargandoHistorial(false) })
+  }, [verDetalle?.id])
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
@@ -887,6 +902,7 @@ export default function Inventario({ usuario }) {
       try {
         const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
         if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
+        supabase.rpc('set_audit_dispositivo', { p_bien_id: editandoId, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
       } catch (e) {
         setAviso(esErrorRed(e) ? 'Sin conexión — no se pueden editar bienes sin internet.' : 'Error al guardar: ' + e.message)
         if (esErrorRed(e)) setOnline(false)
@@ -909,6 +925,7 @@ export default function Inventario({ usuario }) {
       try {
         const { data, error } = await supabase.from('bienes').insert(payload).select().single()
         if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
+        supabase.rpc('set_audit_dispositivo', { p_bien_id: data.id, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
         setBienes(prev => [data, ...prev])
         setCatActual(payload.categoria)
         logActividad(usuario, 'crear', nombreFinal, data.id)
@@ -2602,6 +2619,52 @@ export default function Inventario({ usuario }) {
                 </div>
               </div>
             </>)}
+
+            {/* ── Historial de cambios ── */}
+            <div className="detalle-seccion" style={{ marginTop: 8 }}>
+              <p className="detalle-titulo">🕓 Historial de cambios</p>
+              {cargandoHistorial ? (
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '8px 0' }}>Cargando…</p>
+              ) : !historialBien.length ? (
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '8px 0' }}>Sin registros de auditoría aún.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
+                  {historialBien.map(log => {
+                    const cambios = Array.isArray(log.cambios) ? log.cambios : []
+                    const colorAccion = log.accion === 'crear' ? '#16a34a' : log.accion === 'eliminar' ? '#dc2626' : '#2563eb'
+                    const bgAccion   = log.accion === 'crear' ? '#dcfce7' : log.accion === 'eliminar' ? '#fee2e2' : '#dbeafe'
+                    const labelAccion = log.accion === 'crear' ? 'Creado' : log.accion === 'eliminar' ? 'Eliminado' : 'Editado'
+                    const fecha = new Date(log.creado_en)
+                    const fechaStr = fecha.toLocaleDateString('es-CL') + ' ' + fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+                    return (
+                      <div key={log.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ background: bgAccion, color: colorAccion, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{labelAccion}</span>
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#111827' }}>{log.usuario_nombre}</span>
+                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{fechaStr}</span>
+                        </div>
+                        {cambios.map((c, i) => {
+                          const CAMPO_LABEL = {
+                            nombre:'Nombre', estado:'Estado', ubicacion:'Ubicación', responsable:'Responsable',
+                            codigo:'Código', cantidad:'Cantidad', obs:'Observaciones', tipo:'Tipo',
+                            marca:'Marca', modelo:'Modelo', numero_serie:'N° Serie', cpu:'CPU',
+                            ram:'RAM', memoria:'Almacenamiento', sistema_operativo:'S.O.',
+                          }
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', minWidth: 90 }}>{CAMPO_LABEL[c.campo] ?? c.campo}</span>
+                              <span style={{ fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: 5 }}>{c.anterior ?? '—'}</span>
+                              <span style={{ fontSize: 11, color: '#9ca3af' }}>→</span>
+                              <span style={{ fontSize: 11, color: '#16a34a', background: '#f0fdf4', padding: '1px 6px', borderRadius: 5 }}>{c.nuevo ?? '—'}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             </div>{/* fin detalle-pdf-content */}
           </div>
