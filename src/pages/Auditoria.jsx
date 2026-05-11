@@ -28,6 +28,7 @@ export default function Auditoria({ usuario }) {
   const [restaurando, setRestaurando] = useState(null)
   const [aviso, setAviso]         = useState('')
   const [pagina, setPagina]       = useState(0)
+  const [errorTabla, setErrorTabla] = useState(false)
 
   const [buscar,       setBuscar]       = useState('')
   const [buscadorVal,  setBuscadorVal]  = useState('')
@@ -48,7 +49,13 @@ export default function Auditoria({ usuario }) {
     if (filtroHasta)  q = q.lte('creado_en', filtroHasta + 'T23:59:59')
     if (buscar)       q = q.or(`bien_nombre.ilike.%${buscar}%,usuario_nombre.ilike.%${buscar}%`)
 
-    const { data, count } = await q
+    const { data, count, error } = await q
+    if (error) {
+      setErrorTabla(true)
+      setCargando(false)
+      return
+    }
+    setErrorTabla(false)
     setLogs(data ?? [])
     setTotal(count ?? 0)
     setCargando(false)
@@ -91,6 +98,16 @@ export default function Auditoria({ usuario }) {
 
   return (
     <div style={{ padding: '0 0 40px' }}>
+
+      {/* ── Error: tabla no configurada ── */}
+      {errorTabla && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
+          <p style={{ margin: '0 0 6px', fontWeight: 700, color: '#92400e', fontSize: 14 }}>⚠️ La tabla de auditoría no está configurada</p>
+          <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>
+            Ejecuta el archivo <strong>supabase_auditoria.sql</strong> en el SQL Editor de Supabase para activar el sistema de auditoría.
+          </p>
+        </div>
+      )}
 
       {/* ── Filtros ── */}
       <div className="audit-filtros">
