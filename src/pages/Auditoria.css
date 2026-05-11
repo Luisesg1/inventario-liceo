@@ -188,6 +188,40 @@
   margin: 0;
   font-size: 12px;
   color: #6b7280;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.audit-rol-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.audit-rol-admin { background: #ede9fe; color: #6d28d9; }
+.audit-rol-enc   { background: #e0f2fe; color: #0369a1; }
+
+.audit-cat-tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.audit-item-campos {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .audit-pill {

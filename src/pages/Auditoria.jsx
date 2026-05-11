@@ -209,9 +209,20 @@ export default function Auditoria({ usuario }) {
                       <p className="audit-item-nombre">{log.bien_nombre}</p>
                       <p className="audit-item-meta">
                         <strong>{log.usuario_nombre}</strong>
+                        {log.usuario_rol && (
+                          <span className={`audit-rol-badge ${log.usuario_rol === 'admin' ? 'audit-rol-admin' : 'audit-rol-enc'}`}>
+                            {log.usuario_rol === 'admin' ? 'Admin' : 'Encargado'}
+                          </span>
+                        )}
+                        {log.categoria && <span className="audit-cat-tag">{log.categoria}</span>}
                         {' · '}{formatFecha(log.creado_en)}
-                        {disp && <span style={{ marginLeft: 6 }}>{disp}</span>}
+                        {disp && <span style={{ marginLeft: 5 }}>{disp}</span>}
                       </p>
+                      {cambios.length > 0 && !abierto && (
+                        <p className="audit-item-campos">
+                          {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(', ')}
+                        </p>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>

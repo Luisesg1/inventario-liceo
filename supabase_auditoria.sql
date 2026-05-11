@@ -22,6 +22,7 @@ CREATE TABLE audit_logs (
   cambios        jsonb       NOT NULL DEFAULT '[]'::jsonb,
   usuario_id     uuid,
   usuario_nombre text        NOT NULL DEFAULT 'Sistema',
+  usuario_rol    text,                            -- 'admin' o 'encargado'
   dispositivo    text,                            -- user-agent del navegador
   creado_en      timestamptz NOT NULL DEFAULT now()
 );
@@ -67,6 +68,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_usuario_nombre text;
+  v_usuario_rol    text;
   v_cambios        jsonb := '[]'::jsonb;
   v_campos         text[] := ARRAY[
     'nombre','categoria','estado','ubicacion','responsable','obs','cantidad',
@@ -81,13 +83,13 @@ DECLARE
   v_old_val text;
   v_new_val text;
 BEGIN
-  SELECT nombre INTO v_usuario_nombre
+  SELECT nombre, rol INTO v_usuario_nombre, v_usuario_rol
   FROM usuarios WHERE id = auth.uid();
   v_usuario_nombre := COALESCE(v_usuario_nombre, 'Sistema');
 
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre)
-    VALUES (NEW.id, COALESCE(NEW.nombre,''), NEW.categoria, 'crear', '[]'::jsonb, auth.uid(), v_usuario_nombre);
+    INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre, usuario_rol)
+    VALUES (NEW.id, COALESCE(NEW.nombre,''), NEW.categoria, 'crear', '[]'::jsonb, auth.uid(), v_usuario_nombre, v_usuario_rol);
 
   ELSIF TG_OP = 'UPDATE' THEN
     FOREACH v_col IN ARRAY v_campos LOOP
@@ -100,7 +102,7 @@ BEGIN
       END IF;
     END LOOP;
     IF jsonb_array_length(v_cambios) > 0 THEN
-      INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre)
+      INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre, usuario_rol)
       VALUES (
         NEW.id,
         COALESCE(NEW.nombre, OLD.nombre, ''),
@@ -108,13 +110,14 @@ BEGIN
         'editar',
         v_cambios,
         auth.uid(),
-        v_usuario_nombre
+        v_usuario_nombre,
+        v_usuario_rol
       );
     END IF;
 
   ELSIF TG_OP = 'DELETE' THEN
-    INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre)
-    VALUES (OLD.id, COALESCE(OLD.nombre,''), OLD.categoria, 'eliminar', '[]'::jsonb, auth.uid(), v_usuario_nombre);
+    INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre, usuario_rol)
+    VALUES (OLD.id, COALESCE(OLD.nombre,''), OLD.categoria, 'eliminar', '[]'::jsonb, auth.uid(), v_usuario_nombre, v_usuario_rol);
   END IF;
 
   RETURN COALESCE(NEW, OLD);
