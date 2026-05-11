@@ -543,74 +543,83 @@ export default function ImportarCSV({ categorias, bienesExistentes, onImportado,
           </div>
 
           {/* Guía de campos por categoría */}
-          <div style={{ marginTop: 20 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 12 }}>
-              📋 Columnas por categoría — selecciona para ver los campos y descargar plantilla:
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {categorias.map(cat => {
-                const tipo = tipoCat(cat.id, categorias)
-                const { obligatorios, opcionales } = CAMPOS[tipo]
-                const abierto = catGuiaAbierta === cat.id
-                return (
-                  <div key={cat.id} style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
-                    <button
-                      onClick={() => setCatGuiaAbierta(abierto ? null : cat.id)}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 14px', background: abierto ? '#f0f4ff' : '#fff',
-                        border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#1a237e',
-                      }}
-                    >
-                      <span>{cat.icon} {cat.label}</span>
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>{abierto ? '▲' : '▼'}</span>
-                    </button>
-                    {abierto && (
-                      <div style={{ padding: '12px 14px 14px', background: '#fafafa', borderTop: '1px solid #e5e7eb' }}>
-                        <div style={{ marginBottom: 10 }}>
-                          <p style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px' }}>
-                            Obligatorios
-                          </p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {obligatorios.map(f => (
-                              <span key={f.col} title={f.desc} style={{
-                                fontSize: 12, fontFamily: 'monospace', fontWeight: 600,
-                                background: '#fee2e2', color: '#991b1b',
-                                borderRadius: 5, padding: '3px 8px', cursor: 'default',
-                              }}>{f.col}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                          <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 6px' }}>
-                            Opcionales
-                          </p>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {opcionales.map(f => (
-                              <span key={f.col} title={f.desc} style={{
-                                fontSize: 12, fontFamily: 'monospace',
-                                background: '#f3f4f6', color: '#374151',
-                                borderRadius: 5, padding: '3px 8px', cursor: 'default',
-                              }}>{f.col}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); descargarPlantilla(cat.id, cat.label, categorias) }}
-                          style={{
-                            fontSize: 12, fontWeight: 600, padding: '6px 14px',
-                            background: '#1a237e', color: '#fff', border: 'none',
-                            borderRadius: 7, cursor: 'pointer',
-                          }}
-                        >
-                          ⬇ Descargar plantilla {cat.label}.csv
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
+          <div style={{ marginTop: 18, border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px', background: '#f8faff', borderBottom: '1px solid #e5e7eb' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#374151', margin: 0 }}>
+                📋 Campos por categoría — haz clic para ver qué columnas incluir:
+              </p>
             </div>
+            {/* Botones de categoría */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 14px', borderBottom: catGuiaAbierta ? '1px solid #e5e7eb' : 'none' }}>
+              {categorias.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setCatGuiaAbierta(catGuiaAbierta === cat.id ? null : cat.id)}
+                  style={{
+                    fontSize: 12, fontWeight: 600, padding: '5px 11px',
+                    borderRadius: 20, border: '1.5px solid',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                    background: catGuiaAbierta === cat.id ? '#1a237e' : '#fff',
+                    borderColor: catGuiaAbierta === cat.id ? '#1a237e' : '#d1d5db',
+                    color: catGuiaAbierta === cat.id ? '#fff' : '#374151',
+                  }}
+                >
+                  {cat.icon} {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Panel de campos de la categoría seleccionada */}
+            {catGuiaAbierta && (() => {
+              const cat = categorias.find(c => c.id === catGuiaAbierta)
+              if (!cat) return null
+              const tipo = tipoCat(cat.id, categorias)
+              const { obligatorios, opcionales } = CAMPOS[tipo]
+              return (
+                <div style={{ padding: '12px 14px 14px', background: '#fafafe' }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <p style={{ fontSize: 10, fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>
+                        Obligatorios
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {obligatorios.map(f => (
+                          <span key={f.col} title={f.desc} style={{
+                            fontSize: 11, fontFamily: 'monospace', fontWeight: 700,
+                            background: '#fee2e2', color: '#991b1b',
+                            borderRadius: 5, padding: '3px 8px', cursor: 'default',
+                          }}>{f.col}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ flex: 2, minWidth: 200 }}>
+                      <p style={{ fontSize: 10, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>
+                        Opcionales
+                      </p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {opcionales.map(f => (
+                          <span key={f.col} title={f.desc} style={{
+                            fontSize: 11, fontFamily: 'monospace',
+                            background: '#f3f4f6', color: '#374151',
+                            borderRadius: 5, padding: '3px 8px', cursor: 'default',
+                          }}>{f.col}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => descargarPlantilla(cat.id, cat.label, categorias)}
+                    style={{
+                      fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                      background: '#1a237e', color: '#fff', border: 'none',
+                      borderRadius: 7, cursor: 'pointer',
+                    }}
+                  >
+                    ⬇ Descargar plantilla {cat.label}.csv
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         </>
       )}
