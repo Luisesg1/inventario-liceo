@@ -1,10 +1,107 @@
 import { useState } from 'react'
 import './Layout.css'
+import { supabase } from '../supabase'
+
+const COLS_BACKUP = [
+  'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
+  'isbn','autor','genero',
+  'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
+  'memoria','tipo_almacenamiento','sistema_operativo',
+  'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
+  'licencia_office','off_version','off_proveedor','off_factura','off_fecha_factura','off_orden',
+  'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
+]
 
 export default function Layout({ usuario, onLogout, children, paginaActual, setPagina }) {
   const esAdmin = usuario.rol === 'admin'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [exportando, setExportando] = useState(false)
+
+  const fetchBackupData = async () => {
+    const [{ data: bienes }, { data: cats }] = await Promise.all([
+      supabase.from('bienes').select('*').order('categoria').order('nombre'),
+      supabase.from('categorias').select('*'),
+    ])
+    return { bienes: bienes ?? [], cats: cats ?? [] }
+  }
+
+  const exportarBackupExcel = async () => {
+    setExportando(true)
+    const { bienes, cats } = await fetchBackupData()
+    if (!bienes.length) { setExportando(false); return }
+    const fecha = new Date().toISOString().slice(0, 10)
+
+    const cargar = () => {
+      const XLSX = window.XLSX
+      const wb = XLSX.utils.book_new()
+
+      const grupos = {}
+      bienes.forEach(b => {
+        const cat = cats.find(c => c.id === b.categoria)
+        const key = b.categoria || 'sin_categoria'
+        if (!grupos[key]) grupos[key] = { label: cat?.label ?? b.categoria ?? 'Sin categoría', icon: cat?.icon ?? '📦', items: [] }
+        grupos[key].items.push(b)
+      })
+
+      const resumenRows = [['Categoría', 'Ícono', 'Total bienes']]
+      Object.values(grupos).forEach(g => resumenRows.push([g.label, g.icon, g.items.length]))
+      resumenRows.push(['', '', ''])
+      resumenRows.push(['TOTAL', '', bienes.length])
+      const wsRes = XLSX.utils.aoa_to_sheet(resumenRows)
+      wsRes['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 14 }]
+      XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen')
+
+      Object.values(grupos).forEach(({ label, items }) => {
+        if (!items.length) return
+        const cols = COLS_BACKUP.filter(c => items.some(b => b[c] != null && b[c] !== ''))
+        const rows = [cols, ...items.map(b => cols.map(c => b[c] ?? ''))]
+        const ws = XLSX.utils.aoa_to_sheet(rows)
+        ws['!cols'] = cols.map(h => ({ wch: Math.max(h.length + 4, 14) }))
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }) }
+        ws['!tables'] = [{
+          name: label.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '').slice(0, 255) || 'Tabla',
+          ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: cols.length - 1 } }),
+          headerRow: true, totalsRow: false,
+          style: { theme: 'TableStyleMedium2', showRowStripes: true },
+          columns: cols.map(h => ({ name: h })),
+        }]
+        XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
+      })
+
+      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`)
+      setExportando(false)
+    }
+
+    if (window.XLSX) { cargar(); return }
+    const s = document.getElementById('sheetjs-script') || document.createElement('script')
+    s.id = 'sheetjs-script'
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    s.onload = cargar
+    s.onerror = () => setExportando(false)
+    document.head.appendChild(s)
+  }
+
+  const exportarBackupJSON = async () => {
+    setExportando(true)
+    const { bienes, cats } = await fetchBackupData()
+    if (!bienes.length) { setExportando(false); return }
+    const backup = {
+      version: 1,
+      fecha_exportacion: new Date().toISOString(),
+      total: bienes.length,
+      categorias: cats.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
+      bienes,
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup_inventario_${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setExportando(false)
+  }
 
   const navItems = [
     { id: 'dashboard',  icon: '◉', label: 'Inicio' },
@@ -44,6 +141,31 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
             </div>
           ))}
         </nav>
+
+        <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>
+          <p className="nav-section">Herramientas</p>
+          {[
+            { icon: '🗂️', label: 'Backup Excel', fn: exportarBackupExcel },
+            { icon: '💾', label: 'Backup JSON',  fn: exportarBackupJSON  },
+          ].map(({ icon, label, fn }) => (
+            <button key={label} onClick={fn} disabled={exportando} style={{
+              display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+              padding: '11px 18px', background: 'none', border: 'none',
+              cursor: exportando ? 'wait' : 'pointer',
+              color: exportando ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)',
+              fontSize: 13.5, fontWeight: 500, textAlign: 'left',
+              borderLeft: '3px solid transparent', transition: 'all .18s',
+            }}
+            onMouseEnter={e => { if (!exportando) { e.currentTarget.style.color = 'rgba(255,255,255,.88)'; e.currentTarget.style.background = 'rgba(255,255,255,.05)' } }}
+            onMouseLeave={e => { e.currentTarget.style.color = exportando ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)'; e.currentTarget.style.background = 'none' }}
+            >
+              <span style={{ width: 20, textAlign: 'center', fontSize: 16, flexShrink: 0 }}>
+                {exportando ? '⏳' : icon}
+              </span>
+              {exportando ? 'Generando…' : label}
+            </button>
+          ))}
+        </div>
 
         <div className="sidebar-user">
           <div className="avatar">{usuario.nombre[0]}</div>

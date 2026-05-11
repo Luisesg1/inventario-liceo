@@ -170,11 +170,44 @@ const CAMPOS = {
   },
 }
 
+const EJEMPLOS = {
+  comp: {
+    codigo: 'PC-001', tipo: 'Desktop', marca: 'HP', modelo: 'ProDesk 400 G7', estado: 'Bueno',
+    numero_serie: 'MXL1234567', cpu: 'Intel Core i5-10500', ram: '8 GB', ram_tipo: 'DDR4',
+    memoria: '256 GB', tipo_almacenamiento: 'SSD', sistema_operativo: 'Windows 11 Pro',
+    pantalla: '21.5"', ubicacion: 'Sala 101', responsable: 'Pedro García', obs: '',
+    fecha_adquisicion: '2024-01-15', proveedor: 'Tecnologías Sur Ltda.',
+    numero_factura: 'F-001234', numero_orden: 'OC-001234', fondo: 'SEP', garantia: '3 años',
+  },
+  tecno: {
+    codigo: 'TEC-001', tipo: 'Proyector', marca: 'Epson', modelo: 'PowerLite X49', estado: 'Bueno',
+    numero_serie: 'SER-987654', cantidad: '1', ubicacion: 'Sala Reuniones',
+    responsable: 'Ana Martínez', obs: 'Incluye control remoto',
+    fecha_adquisicion: '2023-06-20', proveedor: 'AudioVisual Ltda.',
+    numero_factura: 'F-002345', numero_orden: 'OC-002345', fondo: 'PIE', garantia: '2 años',
+  },
+  biblio: {
+    codigo: 'LIB-001', nombre: 'El Principito', estado: 'Bueno',
+    isbn: '978-84-261-3455-3', autor: 'Antoine de Saint-Exupéry', genero: 'Fábula',
+    cantidad: '5', ubicacion: 'Estante A-3', responsable: 'Biblioteca', obs: 'Edición 2020',
+    fecha_adquisicion: '2022-08-01', proveedor: 'Distribuidora Libros Ltda.',
+    numero_factura: 'F-003456', numero_orden: 'OC-003456', fondo: 'Donación', garantia: '',
+  },
+  general: {
+    codigo: 'ART-001', nombre: 'Balón de fútbol', estado: 'Bueno', cantidad: '10',
+    ubicacion: 'Bodega Deportiva', responsable: 'Juan Pérez', obs: 'Color azul y blanco',
+    fecha_adquisicion: '2023-03-15', proveedor: 'Comercial Deportes S.A.',
+    numero_factura: 'F-004567', numero_orden: 'OC-004567', fondo: 'SEP', garantia: '1 año',
+  },
+}
+
 const descargarPlantilla = async (catId, catLabel, categorias) => {
   const tipo = tipoCat(catId, categorias)
   const { obligatorios, opcionales } = CAMPOS[tipo]
   const cols = [...obligatorios, ...opcionales]
   const headers = cols.map(c => c.col)
+  const ejemplo = EJEMPLOS[tipo]
+  const exampleRow = headers.map(h => ejemplo[h] ?? '')
 
   // Cargar SheetJS si no está disponible
   if (!window.XLSX) {
@@ -189,10 +222,10 @@ const descargarPlantilla = async (catId, catLabel, categorias) => {
   }
 
   const XLSX = window.XLSX
-  const ws = XLSX.utils.aoa_to_sheet([headers])
+  const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow])
 
-  // Ancho de columnas según longitud del nombre
-  ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 14) }))
+  // Ancho de columnas según longitud del contenido del ejemplo
+  ws['!cols'] = headers.map((h, i) => ({ wch: Math.max(h.length + 4, String(exampleRow[i] ?? '').length + 4, 14) }))
 
   // Auto-filtro en la fila de encabezados
   ws['!autofilter'] = {
