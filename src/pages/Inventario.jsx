@@ -104,7 +104,6 @@ export default function Inventario({ usuario }) {
   const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
 
   // Variables derivadas (reemplazan las de rol)
-  const puedeEditar        = permisos.editar_bien   || permisos.agregar_bien
   const puedeAgregar       = permisos.agregar_bien
   const puedeEliminar      = permisos.eliminar_bien
   const puedeEliminarLote  = permisos.eliminar_lote

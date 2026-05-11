@@ -124,51 +124,6 @@ const parseCSV = (text) => {
   })
 }
 
-// ── Mapear fila cruda al schema de bienes ────────────────────────────────
-const mapearFila = (fila, categoriasFijas) => {
-  const mapped = {}
-  for (const [key, val] of Object.entries(fila)) {
-    const colNorm = key.toLowerCase().trim().replace(/\s+/g, '_')
-    const colBD = ALIAS[colNorm] ?? (COLUMNAS_BD.has(colNorm) ? colNorm : null)
-    if (colBD) mapped[colBD] = normalizar(val)
-  }
-
-  // Categoría: normalizar a id válido
-  let cat = normalizar(mapped.categoria || fila.categoria || '').toLowerCase().trim()
-  if (!cat || cat === 'nan') cat = 'otros'
-
-  // Verificar si la categoría existe en las fijas o es alias de computadores
-  const catFija = categoriasFijas.find(c => c.id === cat || c.label?.toLowerCase() === cat)
-  if (catFija) {
-    mapped.categoria = catFija.id
-  } else if (CATEGORIAS_COMP.has(cat)) {
-    mapped.categoria = 'computadores'
-    if (!mapped.tipo) mapped.tipo = cat !== 'computadores' ? cat : 'Desktop'
-  } else {
-    mapped._catDesconocida = cat // para mostrar aviso
-    mapped.categoria = cat
-  }
-
-  // Nombre: generar automáticamente según tipo de categoría
-  const _catLabel = (categoriasFijas.find(c => c.id === mapped.categoria)?.label ?? mapped.categoria ?? '')
-    .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  const _esTecno = _catLabel.includes('tecnol')
-
-  if (esComp(mapped.categoria)) {
-    if (!mapped.nombre || mapped.nombre === 'nan') {
-      mapped.nombre = [mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Computador'
-    }
-  } else if (_esTecno) {
-    if (!mapped.nombre || mapped.nombre === 'nan') {
-      mapped.nombre = [mapped.tipo, mapped.marca, mapped.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico'
-    }
-  }
-
-  // Limpiar campos no válidos para BD
-  delete mapped._catDesconocida
-  return { data: mapped, catDesconocida: fila._catDesconocida }
-}
-
 // Palabras clave que indican que una fila es la cabecera real de la tabla
 const HEADER_HINTS = new Set([
   'marca', 'modelo', 'tipo', 'serie', 'estado', 'ubicacion', 'ubicación',
