@@ -123,7 +123,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     { id: 'dashboard',  icon: '◉', label: 'Inicio' },
     { id: 'inventario', icon: '▤', label: 'Inventario' },
     ...(esAdmin ? [{ id: 'usuarios',  icon: '◎', label: 'Usuarios'  }] : []),
-    ...(esAdmin ? [{ id: 'auditoria', icon: '🔍', label: 'Auditoría' }] : []),
+    { id: 'auditoria', icon: '🔍', label: 'Auditoría' },
   ]
 
   const titulos = {
