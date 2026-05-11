@@ -1,26 +1,35 @@
 -- ═══════════════════════════════════════════════════════════════════════
 --  AUDITORÍA DE CAMBIOS — Inventario Liceo JHJ
 --  Ejecutar completo en Supabase Dashboard → SQL Editor
+--  Si ya ejecutaste una versión anterior, este script la reemplaza limpiamente.
 -- ═══════════════════════════════════════════════════════════════════════
 
+-- ── 0. Limpiar versión anterior (si existe) ──────────────────────────────
+DROP TRIGGER  IF EXISTS trg_audit_bienes ON bienes;
+DROP FUNCTION IF EXISTS fn_audit_bienes();
+DROP FUNCTION IF EXISTS set_audit_dispositivo(bigint, text);
+DROP FUNCTION IF EXISTS set_audit_dispositivo(uuid, text);
+DROP FUNCTION IF EXISTS restaurar_campo_auditoria(uuid, text);
+DROP TABLE    IF EXISTS audit_logs;
+
 -- ── 1. Tabla audit_logs ──────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS audit_logs (
-  id            uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
-  bien_id       uuid,                          -- puede ser NULL si el bien fue eliminado
-  bien_nombre   text        NOT NULL,
-  categoria     text,
-  accion        text        NOT NULL CHECK (accion IN ('crear','editar','eliminar')),
-  cambios       jsonb       NOT NULL DEFAULT '[]'::jsonb,
-  usuario_id    uuid,
-  usuario_nombre text       NOT NULL DEFAULT 'Sistema',
-  dispositivo   text,                          -- user-agent del navegador
-  creado_en     timestamptz NOT NULL DEFAULT now()
+CREATE TABLE audit_logs (
+  id             uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  bien_id        bigint,                          -- bigint, igual que bienes.id
+  bien_nombre    text        NOT NULL,
+  categoria      text,
+  accion         text        NOT NULL CHECK (accion IN ('crear','editar','eliminar')),
+  cambios        jsonb       NOT NULL DEFAULT '[]'::jsonb,
+  usuario_id     uuid,
+  usuario_nombre text        NOT NULL DEFAULT 'Sistema',
+  dispositivo    text,                            -- user-agent del navegador
+  creado_en      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_bien_id   ON audit_logs (bien_id);
-CREATE INDEX IF NOT EXISTS idx_audit_usuario   ON audit_logs (usuario_id);
-CREATE INDEX IF NOT EXISTS idx_audit_creado_en ON audit_logs (creado_en DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_accion    ON audit_logs (accion);
+CREATE INDEX idx_audit_bien_id   ON audit_logs (bien_id);
+CREATE INDEX idx_audit_usuario   ON audit_logs (usuario_id);
+CREATE INDEX idx_audit_creado_en ON audit_logs (creado_en DESC);
+CREATE INDEX idx_audit_accion    ON audit_logs (accion);
 
 -- ── 2. Row Level Security ────────────────────────────────────────────────
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
@@ -39,7 +48,7 @@ CREATE POLICY "audit_own_select" ON audit_logs
 CREATE POLICY "audit_insert" ON audit_logs
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- Solo admins pueden actualizar (para añadir dispositivo vía RPC)
+-- Admins o el propio usuario pueden actualizar (para añadir dispositivo vía RPC)
 CREATE POLICY "audit_update" ON audit_logs
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'admin')
@@ -72,7 +81,6 @@ DECLARE
   v_old_val text;
   v_new_val text;
 BEGIN
-  -- Nombre del usuario que realizó la acción
   SELECT nombre INTO v_usuario_nombre
   FROM usuarios WHERE id = auth.uid();
   v_usuario_nombre := COALESCE(v_usuario_nombre, 'Sistema');
@@ -91,7 +99,6 @@ BEGIN
         );
       END IF;
     END LOOP;
-    -- Solo registrar si hubo cambios reales
     IF jsonb_array_length(v_cambios) > 0 THEN
       INSERT INTO audit_logs (bien_id, bien_nombre, categoria, accion, cambios, usuario_id, usuario_nombre)
       VALUES (
@@ -115,13 +122,12 @@ END;
 $$;
 
 -- ── 4. Trigger sobre tabla bienes ────────────────────────────────────────
-DROP TRIGGER IF EXISTS trg_audit_bienes ON bienes;
 CREATE TRIGGER trg_audit_bienes
   AFTER INSERT OR UPDATE OR DELETE ON bienes
   FOR EACH ROW EXECUTE FUNCTION fn_audit_bienes();
 
 -- ── 5. RPC: añadir dispositivo (user-agent) desde el frontend ────────────
-CREATE OR REPLACE FUNCTION set_audit_dispositivo(p_bien_id uuid, p_dispositivo text)
+CREATE OR REPLACE FUNCTION set_audit_dispositivo(p_bien_id bigint, p_dispositivo text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -133,8 +139,7 @@ BEGIN
   WHERE bien_id   = p_bien_id
     AND usuario_id = auth.uid()
     AND creado_en  > now() - interval '15 seconds'
-    AND dispositivo IS NULL
-  ;
+    AND dispositivo IS NULL;
 END;
 $$;
 
@@ -146,15 +151,13 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_bien_id  uuid;
+  v_bien_id  bigint;
   v_anterior text;
 BEGIN
-  -- Solo admins pueden restaurar
   IF NOT EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'admin') THEN
     RAISE EXCEPTION 'No autorizado: solo administradores pueden restaurar cambios';
   END IF;
 
-  -- Obtener bien_id y valor anterior del campo indicado
   SELECT
     bien_id,
     (SELECT c->>'anterior'
@@ -169,7 +172,6 @@ BEGIN
     RAISE EXCEPTION 'Registro de auditoría no encontrado';
   END IF;
 
-  -- Aplicar el valor restaurado con columna dinámica segura
   EXECUTE format('UPDATE bienes SET %I = $1 WHERE id = $2', p_campo)
   USING v_anterior, v_bien_id;
 END;
