@@ -174,8 +174,9 @@ const descargarPlantilla = (catId, catLabel, categorias) => {
   const tipo = tipoCat(catId, categorias)
   const { obligatorios, opcionales } = CAMPOS[tipo]
   const cols = [...obligatorios, ...opcionales].map(c => c.col)
-  const csv = cols.join(',') + '\n'
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  // 'sep=,' le indica a Excel (en español) que use coma como separador
+  const csv = 'sep=,\n' + cols.join(',') + '\n'
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
