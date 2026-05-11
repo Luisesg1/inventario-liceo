@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
+import './Auditoria.css'
 
 const ACCION_BADGE = {
   crear:    { color: '#16a34a', bg: '#dcfce7', label: 'Creado'    },
@@ -92,13 +93,13 @@ export default function Auditoria({ usuario }) {
     <div style={{ padding: '0 0 40px' }}>
 
       {/* ── Filtros ── */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+      <div className="audit-filtros">
         <input
           placeholder="Buscar por bien o usuario…"
           value={buscadorVal}
           onChange={e => setBuscadorVal(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && aplicarBusqueda()}
-          style={{ flex: 1, minWidth: 200, padding: '8px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }}
+          style={{ padding: '8px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }}
         />
         <button onClick={aplicarBusqueda} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#1e3a8a', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           Buscar
@@ -110,17 +111,19 @@ export default function Auditoria({ usuario }) {
           <option value="editar">Editados</option>
           <option value="eliminar">Eliminados</option>
         </select>
-        <input type="date" value={filtroDesde} onChange={e => { setFiltroDesde(e.target.value); setPagina(0) }}
-          style={{ padding: '8px 10px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }} />
-        <span style={{ fontSize: 12, color: '#9ca3af' }}>hasta</span>
-        <input type="date" value={filtroHasta} onChange={e => { setFiltroHasta(e.target.value); setPagina(0) }}
-          style={{ padding: '8px 10px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        <div className="audit-fecha-row">
+          <input type="date" value={filtroDesde} onChange={e => { setFiltroDesde(e.target.value); setPagina(0) }}
+            style={{ padding: '8px 10px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+          <span style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0 }}>—</span>
+          <input type="date" value={filtroHasta} onChange={e => { setFiltroHasta(e.target.value); setPagina(0) }}
+            style={{ padding: '8px 10px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+        </div>
         <button onClick={limpiarFiltros}
           style={{ padding: '8px 12px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#f9fafb', color: '#6b7280' }}>
           Limpiar
         </button>
         {!cargando && (
-          <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 4 }}>
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>
             {total.toLocaleString('es-CL')} registro{total !== 1 ? 's' : ''}
           </span>
         )}

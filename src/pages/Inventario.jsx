@@ -1154,7 +1154,7 @@ export default function Inventario({ usuario }) {
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
                   background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', overflow: 'hidden',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', maxWidth: 'calc(100vw - 16px)', overflow: 'hidden',
                 }}>
                   <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
                     Exportar vista actual
