@@ -795,31 +795,49 @@ export default function Inventario({ usuario }) {
     delete payload.cpu_generacion
 
 
+    // Helper: detectar error de red (sin conexión real aunque navigator.onLine diga true)
+    const esErrorRed = (e) => e instanceof TypeError && e.message.toLowerCase().includes('fetch')
+
     if (editandoId !== null) {
-      if (!navigator.onLine) {
+      if (!online) {
         setAviso('Sin conexión — no se pueden editar bienes existentes offline.')
         setGuardando(false)
         return
       }
-      const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
-      if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
+      try {
+        const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
+        if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
+      } catch (e) {
+        setAviso(esErrorRed(e) ? 'Sin conexión — no se pueden editar bienes sin internet.' : 'Error al guardar: ' + e.message)
+        if (esErrorRed(e)) setOnline(false)
+        setGuardando(false)
+        return
+      }
       setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload } : b))
       logActividad(usuario, payload.estado === 'Baja' ? 'baja' : 'actualizar', nombreFinal, editandoId)
     } else {
       // Sin internet: guardar en cola local
-      if (!navigator.onLine) {
+      const guardarOffline = () => {
         const id = agregarPendiente({ ...payload, nombre: nombreFinal })
         setBienes(prev => [{ ...payload, id, nombre: nombreFinal, _pendiente: true, creado_en: new Date().toISOString() }, ...prev])
         setCatActual(payload.categoria)
+        setOnline(false)
         setGuardando(false)
         cancelarForm()
+      }
+      if (!online || !navigator.onLine) { guardarOffline(); return }
+      try {
+        const { data, error } = await supabase.from('bienes').insert(payload).select().single()
+        if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
+        setBienes(prev => [data, ...prev])
+        setCatActual(payload.categoria)
+        logActividad(usuario, 'crear', nombreFinal, data.id)
+      } catch (e) {
+        if (esErrorRed(e)) { guardarOffline(); return }
+        setAviso('Error al guardar: ' + e.message)
+        setGuardando(false)
         return
       }
-      const { data, error } = await supabase.from('bienes').insert(payload).select().single()
-      if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
-      setBienes(prev => [data, ...prev])
-      setCatActual(payload.categoria)
-      logActividad(usuario, 'crear', nombreFinal, data.id)
     }
     setGuardando(false)
     cancelarForm()
