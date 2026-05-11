@@ -621,6 +621,86 @@ export default function Inventario({ usuario }) {
     setMenuExportar(false)
   }
 
+  const exportarExcelPorCategorias = () => {
+    if (!bienes.length) { setAviso('No hay bienes para exportar.'); return }
+    const fecha = new Date().toISOString().slice(0, 10)
+    const cargarYExportar = () => {
+      const XLSX = window.XLSX
+      const wb = XLSX.utils.book_new()
+
+      // Hoja resumen
+      const resumenRows = [['Categoría', 'Ícono', 'Total bienes']]
+      const grupos = {}
+      bienes.forEach(b => {
+        if (b._pendiente) return
+        const cat = categorias.find(c => c.id === b.categoria)
+        const key = b.categoria || 'sin_categoria'
+        const label = cat?.label ?? b.categoria ?? 'Sin categoría'
+        const icon = cat?.icon ?? '📦'
+        if (!grupos[key]) grupos[key] = { label, icon, items: [] }
+        grupos[key].items.push(b)
+      })
+      Object.values(grupos).forEach(g => resumenRows.push([g.label, g.icon, g.items.length]))
+      resumenRows.push(['', '', ''])
+      resumenRows.push(['TOTAL', '', bienes.filter(b => !b._pendiente).length])
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows)
+      wsResumen['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 14 }]
+      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen')
+
+      // Una hoja por categoría
+      Object.values(grupos).forEach(({ label, items }) => {
+        if (!items.length) return
+        // Columnas relevantes para esta categoría (omitir columnas completamente vacías)
+        const cols = COLUMNAS_EXPORT.filter(col => items.some(b => b[col] != null && b[col] !== ''))
+        const rows = [cols, ...items.map(b => cols.map(c => b[c] ?? ''))]
+        const ws = XLSX.utils.aoa_to_sheet(rows)
+        ws['!cols'] = cols.map(h => ({ wch: Math.max(h.length + 4, 14) }))
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }) }
+        ws['!tables'] = [{
+          name: label.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '').slice(0, 255) || 'Tabla',
+          ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: cols.length - 1 } }),
+          headerRow: true, totalsRow: false,
+          style: { theme: 'TableStyleMedium2', showRowStripes: true },
+          columns: cols.map(h => ({ name: h })),
+        }]
+        XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
+      })
+
+      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`)
+      setMenuExportar(false)
+    }
+    if (window.XLSX) { cargarYExportar(); return }
+    const script = document.getElementById('sheetjs-script') || document.createElement('script')
+    script.id = 'sheetjs-script'
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    script.onload = cargarYExportar
+    script.onerror = () => setAviso('No se pudo cargar la librería de Excel.')
+    document.head.appendChild(script)
+  }
+
+  const exportarJSON = () => {
+    if (!bienes.length) { setAviso('No hay bienes para exportar.'); return }
+    const fecha = new Date().toISOString()
+    const datos = bienes
+      .filter(b => !b._pendiente)
+      .map(({ _pendiente, ...b }) => b)
+    const backup = {
+      version: 1,
+      fecha_exportacion: fecha,
+      total: datos.length,
+      categorias: categorias.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
+      bienes: datos,
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup_inventario_${fecha.slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    setMenuExportar(false)
+  }
+
   // ── Categorías ────────────────────────────────────────
   const abrirModalCat = () => { setNuevaCat({ label: '', icon: '📦' }); setErrorCat(false); setModalCat(true) }
 
@@ -1060,7 +1140,7 @@ export default function Inventario({ usuario }) {
                   boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', overflow: 'hidden',
                 }}>
                   <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                    Formato de exportación
+                    Exportar vista actual
                   </p>
                   {[
                     { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas', fn: exportarCSV },
@@ -1068,6 +1148,29 @@ export default function Inventario({ usuario }) {
                     { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',          fn: exportarPDF },
                     { icon: '📝', label: 'Word',   desc: 'Documento .doc',           fn: exportarWord },
                     { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',             fn: exportarImagen },
+                  ].map(({ icon, label, desc, fn }) => (
+                    <button key={label} onClick={fn} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                      padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                      textAlign: 'left', transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                  <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0' }} />
+                  <p style={{ margin: 0, padding: '6px 14px 4px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                    Backup completo
+                  </p>
+                  {[
+                    { icon: '🗂️', label: 'Excel por categorías', desc: 'Una hoja por categoría + resumen', fn: exportarExcelPorCategorias },
+                    { icon: '💾', label: 'JSON',                  desc: 'Backup reimportable a BD',         fn: exportarJSON },
                   ].map(({ icon, label, desc, fn }) => (
                     <button key={label} onClick={fn} style={{
                       display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
