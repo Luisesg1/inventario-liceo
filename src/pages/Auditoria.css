@@ -3,6 +3,7 @@
 .audit-wrap {
   padding: 0 0 40px;
   max-width: 1100px;
+  margin: 0 auto;
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
