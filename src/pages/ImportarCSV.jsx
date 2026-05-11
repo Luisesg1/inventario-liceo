@@ -170,19 +170,48 @@ const CAMPOS = {
   },
 }
 
-const descargarPlantilla = (catId, catLabel, categorias) => {
+const descargarPlantilla = async (catId, catLabel, categorias) => {
   const tipo = tipoCat(catId, categorias)
   const { obligatorios, opcionales } = CAMPOS[tipo]
-  const cols = [...obligatorios, ...opcionales].map(c => c.col)
-  // 'sep=,' le indica a Excel (en español) que use coma como separador
-  const csv = 'sep=,\n' + cols.join(',') + '\n'
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `plantilla_${catLabel.toLowerCase().replace(/\s+/g, '_')}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  const cols = [...obligatorios, ...opcionales]
+  const headers = cols.map(c => c.col)
+
+  // Cargar SheetJS si no está disponible
+  if (!window.XLSX) {
+    await new Promise((resolve, reject) => {
+      const s = document.getElementById('sheetjs-script') || document.createElement('script')
+      s.id = 'sheetjs-script'
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      s.onload = resolve
+      s.onerror = reject
+      document.head.appendChild(s)
+    })
+  }
+
+  const XLSX = window.XLSX
+  const ws = XLSX.utils.aoa_to_sheet([headers])
+
+  // Ancho de columnas según longitud del nombre
+  ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 14) }))
+
+  // Auto-filtro en la fila de encabezados
+  ws['!autofilter'] = {
+    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }),
+  }
+
+  // Definir como tabla de Excel con estilo
+  ws['!tables'] = [{
+    name: 'Plantilla',
+    ref:  XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 1, c: headers.length - 1 } }),
+    headerRow:  true,
+    totalsRow:  false,
+    style: { theme: 'TableStyleMedium2', showRowStripes: true },
+    columns: headers.map(h => ({ name: h })),
+  }]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, catLabel.slice(0, 31))
+  XLSX.writeFile(wb, `plantilla_${catLabel.toLowerCase().replace(/\s+/g, '_')}.xlsx`)
 }
 
 // ── Normalizar un valor de celda ──────────────────────────────────────────
