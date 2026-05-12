@@ -195,6 +195,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
               onChange={e => { setFiltroRol(e.target.value); setPagina(0) }}>
               <option value="">Todos los roles</option>
               <option value="admin">Administrador</option>
+              <option value="editor">Editor</option>
               <option value="encargado">Encargado</option>
             </select>
 
@@ -286,8 +287,13 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
                     <p className="audit-item-meta">
                       <strong>{log.usuario_nombre}</strong>
                       {log.usuario_rol && (
-                        <span className={`audit-rol-badge ${log.usuario_rol === 'admin' ? 'audit-rol-admin' : 'audit-rol-enc'}`}>
-                          {log.usuario_rol === 'admin' ? 'Admin' : 'Encargado'}
+                        <span className={`audit-rol-badge ${
+                          log.usuario_rol === 'admin'    ? 'audit-rol-admin'  :
+                          log.usuario_rol === 'editor'   ? 'audit-rol-editor' :
+                          'audit-rol-enc'
+                        }`}>
+                          {log.usuario_rol === 'admin'  ? 'Admin'    :
+                           log.usuario_rol === 'editor' ? 'Editor'   : 'Encargado'}
                         </span>
                       )}
                       {log.categoria && (
