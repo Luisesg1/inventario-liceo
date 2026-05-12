@@ -2640,6 +2640,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
               <div className="detalle-header-actions">
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
+<button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR">▦ QR</button>
 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
               </div>
