@@ -30,6 +30,8 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState('')
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
+  const [filtroArea,      setFiltroArea]      = useState('')
+  const [filtroRol,       setFiltroRol]       = useState('')
   const [modalNuevo,      setModalNuevo]      = useState(false)
   const [form,            setForm]            = useState(FORM_VACIO)
   const [guardando,       setGuardando]       = useState(false)
@@ -55,8 +57,10 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   }
 
   const filtrados = tickets.filter(t => {
-    if (filtroEstado    && t.estado    !== filtroEstado)    return false
-    if (filtroPrioridad && t.prioridad !== filtroPrioridad) return false
+    if (filtroEstado    && t.estado          !== filtroEstado)    return false
+    if (filtroPrioridad && t.prioridad       !== filtroPrioridad) return false
+    if (filtroArea      && t.area_reporte    !== filtroArea)      return false
+    if (filtroRol       && t.rol_solicitante !== filtroRol)       return false
     if (busqueda.trim()) {
       const q = busqueda.toLowerCase()
       const hay = (s) => (s ?? '').toLowerCase().includes(q)
@@ -226,8 +230,19 @@ export default function Tickets({ usuario, onTicketActualizado }) {
               <option value="media">🟡 Media</option>
               <option value="baja">🟢 Baja</option>
             </select>
-            {(filtroEstado || filtroPrioridad) && (
-              <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad('') }}>✕ Limpiar</button>
+            <select className={filtroArea ? 'activo' : ''} value={filtroArea} onChange={e => setFiltroArea(e.target.value)}>
+              <option value="">Todas las áreas</option>
+              {AREAS.filter(a => a !== 'Otro').map(a => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+              <option value="Otro">Otro</option>
+            </select>
+            <select className={filtroRol ? 'activo' : ''} value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
+              <option value="">Todos los roles</option>
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            {(filtroEstado || filtroPrioridad || filtroArea || filtroRol) && (
+              <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad(''); setFiltroArea(''); setFiltroRol('') }}>✕ Limpiar</button>
             )}
           </div>
         )}
