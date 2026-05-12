@@ -38,6 +38,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [editPrioridad,   setEditPrioridad]   = useState('media')
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -92,7 +93,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   }
 
   const abrirDetalle = (t) => { setTicketDetalle(t); setEditEstado(t.estado); setEditPrioridad(t.prioridad ?? 'media'); setEditNotas(t.notas ?? '') }
-  const cerrarDetalle = () => setTicketDetalle(null)
+  const cerrarDetalle = () => { setTicketDetalle(null); setConfirmarEliminar(false) }
 
   const guardarCambios = async () => {
     if (!ticketDetalle) return
@@ -126,10 +127,10 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   }
 
   const eliminarTicket = async (id) => {
-    if (!confirm('¿Eliminar este ticket?')) return
     await supabase.from('tickets').delete().eq('id', id)
     setTickets(prev => prev.filter(t => t.id !== id))
-    if (ticketDetalle?.id === id) cerrarDetalle()
+    setConfirmarEliminar(false)
+    cerrarDetalle()
   }
 
   const fmt = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -364,15 +365,25 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                     <textarea className="modal-textarea" value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Agrega observaciones o cómo se resolvió…" />
                   </div>
                 </div>
-                <div className="modal-actions-split">
-                  <button className="btn-modal-del" onClick={() => eliminarTicket(ticketDetalle.id)}>Eliminar</button>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
-                    <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>
-                      {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
-                    </button>
+                {confirmarEliminar ? (
+                  <div style={{ marginTop: '1.5rem', background: '#fff1f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '14px 16px' }}>
+                    <p style={{ margin: '0 0 12px', fontSize: '0.88rem', fontWeight: 600, color: '#b91c1c' }}>¿Eliminar este ticket? Esta acción no se puede deshacer.</p>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button className="btn-modal-cancel" onClick={() => setConfirmarEliminar(false)}>Cancelar</button>
+                      <button className="btn-modal-del" onClick={() => eliminarTicket(ticketDetalle.id)}>Sí, eliminar</button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="modal-actions-split">
+                    <button className="btn-modal-del" onClick={() => setConfirmarEliminar(true)}>Eliminar</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
+                      <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>
+                        {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <div style={{ marginTop: 16 }}>
