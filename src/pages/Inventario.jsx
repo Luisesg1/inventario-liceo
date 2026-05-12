@@ -441,6 +441,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone }) {
         if (data) {
           setCatActual(data.categoria || 'todos')
           setVerDetalle(data)
+        } else {
+          setAviso({ mensaje: '⚠️ Este bien ya no existe en el inventario.' })
         }
         onAbrirBienDone?.()
       })

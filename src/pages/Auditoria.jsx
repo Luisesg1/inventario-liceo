@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabase'
 import './Auditoria.css'
 
@@ -145,6 +145,12 @@ export default function Auditoria({ usuario, onVerBien }) {
   const totalPaginas = Math.ceil(total / POR_PAGINA)
   const hayFiltros   = buscar || filtroAccion || filtroRol || filtroCat || filtroDesde || filtroHasta
   const agrupados    = agruparPorDia(logs)
+
+  // bien_ids que tienen al menos un registro 'eliminar' en los logs cargados
+  const bienesEliminados = useMemo(
+    () => new Set(logs.filter(l => l.accion === 'eliminar' && l.bien_id).map(l => l.bien_id)),
+    [logs]
+  )
 
   return (
     <div className="audit-wrap">
@@ -298,15 +304,17 @@ export default function Auditoria({ usuario, onVerBien }) {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {/* Botón Ver bien — solo si el bien aún existe */}
+                    {/* Botón Ver bien — solo si el bien no está eliminado */}
                     {log.bien_id && log.accion !== 'eliminar' && onVerBien && (
-                      <button
-                        className="audit-btn-ver"
-                        onClick={e => { e.stopPropagation(); onVerBien(log.bien_id) }}
-                        title="Ir al bien en el inventario"
-                      >
-                        Ver bien →
-                      </button>
+                      bienesEliminados.has(log.bien_id)
+                        ? <span className="audit-bien-noexiste" title="Este bien fue eliminado del inventario">Ya no existe</span>
+                        : <button
+                            className="audit-btn-ver"
+                            onClick={e => { e.stopPropagation(); onVerBien(log.bien_id) }}
+                            title="Ir al bien en el inventario"
+                          >
+                            Ver bien →
+                          </button>
                     )}
                     <span className="audit-pill" style={{ background: meta.bg, color: meta.color }}>
                       {meta.label}
