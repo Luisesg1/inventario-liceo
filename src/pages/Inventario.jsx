@@ -142,6 +142,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [modalEditar, setModalEditar] = useState(false)
   const [busqueda, setBusqueda]       = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroPrestado, setFiltroPrestado] = useState('')  // '' | 'prestado' | 'disponible'
   const [seleccion, setSeleccion]     = useState(new Set()) // ids seleccionados
   const [filtros, setFiltros]         = useState({}) // filtros dinámicos { campo: valor }
   const [menuExportar, setMenuExportar] = useState(false)
@@ -362,7 +363,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const bienCount   = (id) => id === 'todos' ? bienesPermitidos.length : bienesPermitidos.filter(b => b.categoria === id).length
 
   // En "Todos" sin filtros activos: mostrar solo los 25 más recientes (por código desc)
-  const hayFiltrosActivos = busqueda || filtroEstado || Object.values(filtros).some(Boolean)
+  const hayFiltrosActivos = busqueda || filtroEstado || filtroPrestado || Object.values(filtros).some(Boolean)
   const filtradosBase = (() => {
     if (catActual !== 'todos') return bienesPermitidos.filter(b => b.categoria === catActual)
     const todos = [...bienesPermitidos].sort((a, b) => {
@@ -378,8 +379,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
       .some(v => v && String(v).toLowerCase().includes(q))
     const matchEstado = !filtroEstado || b.estado === filtroEstado
+    const matchPrestado = !filtroPrestado || (filtroPrestado === 'prestado' ? bienesConPrestamo.has(b.id) : !bienesConPrestamo.has(b.id))
     const matchFiltros = Object.entries(filtros).every(([campo, val]) => !val || String(b[campo] ?? '').toLowerCase() === val.toLowerCase())
-    return matchBusqueda && matchEstado && matchFiltros
+    return matchBusqueda && matchEstado && matchPrestado && matchFiltros
   })
 
   // Valores únicos para dropdowns dinámicos
@@ -1169,7 +1171,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     })
     if (!error) {
       setPrestamoBien(null)
-      setBienesConPrestamo(prev => { const s = new Set(prev); s.delete(verDetalle.id); return s })
+      const bienId = modalPrestamo?.id ?? verDetalle?.id
+      setBienesConPrestamo(prev => { const s = new Set(prev); s.delete(bienId); return s })
     }
   }
 
@@ -1428,7 +1431,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
         const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
         const campos = esComp(catActual) ? camposComp : catActual === 'todos' ? camposTodos : camposOtros
-        const filtrosActivos = Object.values(filtros).filter(Boolean).length + (filtroEstado ? 1 : 0)
+        const filtrosActivos = Object.values(filtros).filter(Boolean).length + (filtroEstado ? 1 : 0) + (filtroPrestado ? 1 : 0)
 
         const selectStyle = (activo) => ({
           height: '34px', borderRadius: '8px',
@@ -1482,6 +1485,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <option value="Baja">🗑 Baja</option>
                     </select>
                   </div>
+                  <div className="filtros-field">
+                    <label>Préstamo</label>
+                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
+                      <option value="">Todos</option>
+                      <option value="prestado">📤 Prestado</option>
+                      <option value="disponible">✅ Disponible</option>
+                    </select>
+                  </div>
                   {campos.map(({ campo, label }) => {
                     const opciones = unicos(campo)
                     if (opciones.length < 2) return null
@@ -1497,7 +1508,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   })}
                 </div>
                 {hayFiltrosActivos && (
-                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltros({}) }}
+                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}) }}
                     style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>
                     ✕ Limpiar filtros
                   </button>
@@ -2544,7 +2555,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </thead>
             <tbody>
               {filtrados.map(b => (
-                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`}>
+                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={bienesConPrestamo.has(b.id) ? { background: '#fff7ed', borderLeft: '3px solid #f97316' } : {}}>
                   {modoQR && (
                     <td style={{ textAlign: 'center' }}>
                       <input
