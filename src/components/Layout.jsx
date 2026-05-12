@@ -349,6 +349,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     { id: 'inventario', icon: '▤', label: 'Inventario' },
     ...(esAdmin ? [{ id: 'usuarios',  icon: '◎', label: 'Usuarios'  }] : []),
     ...(esAdmin ? [{ id: 'auditoria', icon: '🔍', label: 'Auditoría' }] : []),
+    { id: 'tickets', icon: '🎫', label: 'Tickets' },
   ]
 
   const titulos = {
@@ -356,6 +357,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
+    tickets:    'Tickets',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }

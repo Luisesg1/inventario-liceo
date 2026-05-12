@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
 import Auditoria from './pages/Auditoria'
+import Tickets   from './pages/Tickets'
 
 export default function App() {
   const [usuario,            setUsuario]            = useState(null)
@@ -144,6 +145,7 @@ export default function App() {
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
+      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} />}
     </Layout>
   )
 }
