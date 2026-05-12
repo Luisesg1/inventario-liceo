@@ -252,6 +252,23 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         </div>
       )}
 
+      {/* Encabezado seleccionar todos */}
+      {esAdmin && filtrados.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 4px', marginBottom: '0.25rem' }}>
+          <input
+            type="checkbox"
+            checked={seleccionados.size === filtrados.length && filtrados.length > 0}
+            ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
+            onChange={toggleTodos}
+            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1a237e' }}
+          />
+          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', fontWeight: 600, userSelect: 'none', cursor: 'pointer' }}
+            onClick={toggleTodos}>
+            Seleccionar todos ({filtrados.length})
+          </span>
+        </div>
+      )}
+
       {/* Lista */}
       {filtrados.length === 0 ? (
         <div className="tickets-empty">
