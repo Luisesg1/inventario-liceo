@@ -266,8 +266,24 @@
 }
 
 .audit-chevron {
-  font-size: 11px;
-  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 10px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background 0.15s, color 0.15s;
+}
+.audit-chevron-open {
+  transform: rotate(180deg);
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
 }
 
 /* ── Cambios expandidos ── */

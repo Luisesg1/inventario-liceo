@@ -257,7 +257,9 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
             const { log } = item
             const meta    = ACCION_META[log.accion] ?? { color: '#6b7280', bg: '#f3f4f6', label: log.accion, icono: '•' }
             const abierto = expandido === log.id
-            const cambios = Array.isArray(log.cambios) ? log.cambios : []
+            // Filtrar cambios vacíos (null→"" o ""→null que genera el trigger en campos no aplicables)
+            const cambios = (Array.isArray(log.cambios) ? log.cambios : [])
+              .filter(c => (c.anterior ?? '') !== '' || (c.nuevo ?? '') !== '')
             const disp    = detectarDispositivo(log.dispositivo)
             const esHoy   = new Date(log.creado_en).toDateString() === new Date().toDateString()
 
@@ -326,7 +328,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
                       {meta.label}
                     </span>
                     {cambios.length > 0 && (
-                      <span className="audit-chevron">{abierto ? '▲' : '▼'}</span>
+                      <span className={`audit-chevron ${abierto ? 'audit-chevron-open' : ''}`}>▼</span>
                     )}
                   </div>
                 </div>
