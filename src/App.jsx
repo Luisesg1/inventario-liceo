@@ -25,6 +25,7 @@ export default function App() {
     return id ? Number(id) : null
   })
   const [abrirCatId,         setAbrirCatId]         = useState(null)
+  const refreshTicketBadge = useRef(null)
 
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
@@ -140,12 +141,12 @@ export default function App() {
   const paginaSegura = usuario.rol !== 'admin' && soloAdmin ? 'dashboard' : pagina
 
   return (
-    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina}>
+    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }}>
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
-      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} />}
+      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
     </Layout>
   )
 }

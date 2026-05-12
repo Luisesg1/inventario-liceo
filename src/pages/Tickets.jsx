@@ -24,7 +24,7 @@ const FORM_VACIO = {
   lugar_falla: '', descripcion: '', prioridad: 'media',
 }
 
-export default function Tickets({ usuario }) {
+export default function Tickets({ usuario, onTicketActualizado }) {
   const esAdmin = usuario.rol === 'admin'
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
@@ -102,6 +102,7 @@ export default function Tickets({ usuario }) {
     if (!error) {
       setTickets(prev => prev.map(t => t.id === ticketDetalle.id
         ? { ...t, estado: editEstado, notas: editNotas.trim() || null } : t))
+      onTicketActualizado?.()
       cerrarDetalle()
     }
     setGuardandoEdit(false)

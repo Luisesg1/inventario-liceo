@@ -12,7 +12,7 @@ const COLS_BACKUP = [
   'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
 ]
 
-export default function Layout({ usuario, onLogout, children, paginaActual, setPagina }) {
+export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge }) {
   const esAdmin = usuario.rol === 'admin'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -26,6 +26,8 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
       setTicketsAbiertos(count ?? 0)
     }
     cargar()
+    // Exponer cargar para que Tickets lo llame directamente al guardar
+    if (onRefreshTicketBadge) onRefreshTicketBadge(cargar)
     const sub = supabase.channel('tickets-badge')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargar)
       .subscribe()
