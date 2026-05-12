@@ -115,9 +115,9 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             estado: editEstado,
             notas:  notasVal,
           },
-        }).then(({ error }) => {
-          if (error) console.error('[notify-ticket-status] error:', error)
-          else console.log('[notify-ticket-status] OK')
+        }).then(({ data, error }) => {
+          if (error) console.error('[notify-ticket-status] error:', JSON.stringify(error))
+          else console.log('[notify-ticket-status] OK', data)
         })
       }
       cerrarDetalle()
