@@ -71,6 +71,7 @@ serve(async (req) => {
     console.log('Email enviado a', correo)
     return new Response('OK', { status: 200, headers: cors })
   } catch (e) {
+    console.error('catch error:', String(e))
     return new Response(String(e), { status: 500, headers: cors })
   }
 })
