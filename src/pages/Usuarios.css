@@ -283,14 +283,17 @@
 .rol-select {
   border: 1.5px solid #e5e7eb;
   border-radius: 7px;
-  padding: 5px 10px;
+  padding: 5px 28px 5px 10px;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
   transition: border-color 0.15s, box-shadow 0.15s;
-  background: #f8faff;
+  background-color: #f8faff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
   color: #1a237e;
   appearance: none;
   -webkit-appearance: none;
