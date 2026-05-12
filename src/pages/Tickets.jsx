@@ -193,7 +193,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       ) : (
         <div className="tickets-lista">
           {filtrados.map(t => {
-            const p = PRIORIDAD[t.prioridad]
             const e = ESTADO[t.estado]
             return (
               <div key={t.id} className="ticket-card" onClick={() => abrirDetalle(t)}>
@@ -206,7 +205,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                   </div>
                   <div className="ticket-badges">
                     <span className="badge-estado" style={{ background: e.bg, color: e.color }}>{t.estado}</span>
-                    {esAdmin && <span className="badge-prio" style={{ background: p.bg, color: p.color }}>{p.label}</span>}
                   </div>
                 </div>
               </div>
