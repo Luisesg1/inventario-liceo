@@ -34,7 +34,8 @@ serve(async (req) => {
       .single()
 
     if (configError || !configData) {
-      return json({ error: 'Error de configuración del servidor' }, 500)
+      console.error('configuracion query error:', JSON.stringify(configError))
+      return json({ error: 'Error de configuración: ' + (configError?.message ?? 'sin datos') }, 500)
     }
 
     if (codigo.trim() !== configData.valor.trim()) {
