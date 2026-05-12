@@ -890,7 +890,7 @@ export default function Usuarios({ usuario }) {
 
                 {esAdmin && !esYo ? (
                   <select className="rol-select"
-                    style={{ background: colores.bg, color: colores.color }}
+                    style={{ backgroundColor: colores.bg, color: colores.color }}
                     value={u.rol}
                     onChange={(e) => cambiarRol(u.id, e.target.value)}
                     disabled={eliminando}>
