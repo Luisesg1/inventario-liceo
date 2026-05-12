@@ -1046,7 +1046,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         .card { border: 2px solid #1a237e; border-radius: 16px; padding: 28px 20px; width: 100%; max-width: 420px; text-align: center; background: #fff; }
         .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
         .logo-row span { font-size: 13px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: 0.05em; }
-        img.qr { width: 85vw; max-width: 300px; height: 85vw; max-height: 300px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        img.qr { width: 260px; height: 260px; border: 1px solid #e5e7eb; border-radius: 8px; }
         .nombre { font-size: 18px; font-weight: 700; color: #111827; margin: 16px 0 4px; }
         .codigo { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
         .cat    { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
@@ -1066,7 +1066,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         <p class="hint">Escanea para ver el detalle en el sistema</p>
         <button class="btn no-print" onclick="window.print()">🖨 Imprimir</button>
       </div>
-      <script>setTimeout(() => {}, 200)<\/script>
+      <script>
+        window.addEventListener('load', function() {
+          var s = Math.min(300, Math.round(window.innerWidth * 0.82));
+          var img = document.querySelector('img.qr');
+          if (img) { img.style.width = s + 'px'; img.style.height = s + 'px'; }
+        });
+      <\/script>
     </body></html>`)
     win.document.close()
   }
@@ -1176,9 +1182,18 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
-    // Ocultar botones durante la captura
+    // Ocultar botones y forzar layout de escritorio para captura correcta
     const btns = el.querySelectorAll('button')
     btns.forEach(b => { b.style.visibility = 'hidden' })
+    const header = el.querySelector('.detalle-header-modal')
+    const headerOrig = header ? header.style.cssText : ''
+    if (header) {
+      header.style.flexDirection = 'row'
+      header.style.alignItems = 'center'
+    }
+    const titleDiv = header ? header.querySelector('div') : null
+    const titleOrig = titleDiv ? titleDiv.style.cssText : ''
+    if (titleDiv) titleDiv.style.width = 'auto'
     const opt = {
       margin:      [10, 10, 10, 10],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
@@ -1188,6 +1203,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     }
     window.html2pdf().set(opt).from(el).save().then(() => {
       btns.forEach(b => { b.style.visibility = '' })
+      if (header) header.style.cssText = headerOrig
+      if (titleDiv) titleDiv.style.cssText = titleOrig
     })
   }
 

@@ -789,6 +789,10 @@ tr.fila-editando td { background: #fffbeb; }
     align-items: flex-start;
     gap: 10px;
   }
+  .detalle-header-modal > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
   .detalle-header-actions {
     width: 100%;
     justify-content: flex-end;
