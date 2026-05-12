@@ -1,7 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
-const ADMIN_EMAIL    = Deno.env.get('ADMIN_EMAIL')!
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
+const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
+const ADMIN_EMAIL_2 = Deno.env.get('ADMIN_EMAIL_2')
 
 serve(async (req) => {
   try {
@@ -52,27 +53,30 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const destinatarios = [{ email: ADMIN_EMAIL, name: 'Admin JHJ' }]
+    if (ADMIN_EMAIL_2) destinatarios.push({ email: ADMIN_EMAIL_2, name: 'Admin JHJ' })
+
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Inventario JHJ <onboarding@resend.dev>',
-        to:   [ADMIN_EMAIL],
-        subject: `🎫 Nuevo ticket: ${area}`,
-        html,
+        sender:      { name: 'Inventario JHJ', email: ADMIN_EMAIL },
+        to:          destinatarios,
+        subject:     `🎫 Nuevo ticket: ${area}`,
+        htmlContent: html,
       }),
     })
 
     if (!res.ok) {
       const body = await res.text()
-      console.error('Resend error:', res.status, body)
-      return new Response(`Resend error: ${body}`, { status: 500 })
+      console.error('Brevo error:', res.status, body)
+      return new Response(`Brevo error: ${body}`, { status: 500 })
     }
 
-    console.log('Email enviado a', ADMIN_EMAIL)
+    console.log('Email enviado a', destinatarios.map(d => d.email).join(', '))
     return new Response('OK', { status: 200 })
   } catch (e) {
     return new Response(String(e), { status: 500 })
