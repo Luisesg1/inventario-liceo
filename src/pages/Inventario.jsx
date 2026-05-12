@@ -2594,6 +2594,17 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <div className="acciones">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
+                      {!b._pendiente && (
+                        <button
+                          className="btn-ver"
+                          title={bienesConPrestamo.has(b.id) ? 'Ver préstamo activo' : 'Registrar préstamo'}
+                          style={{ fontSize: 14, opacity: bienesConPrestamo.has(b.id) ? 1 : 0.55 }}
+                          onClick={() => {
+                            setVerDetalle(b)
+                            if (!bienesConPrestamo.has(b.id)) setMostrarFormPrestamo(true)
+                          }}
+                        >📤</button>
+                      )}
                       {puedeEliminar && !b._pendiente && <button className="btn-del" onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
                       {b._pendiente && (
                         <button className="btn-del" title="Cancelar (quitar pendiente)"
@@ -2862,8 +2873,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 {!cargandoPrestamo && !prestamoBien && !mostrarFormPrestamo && (
                   <button
                     onClick={() => setMostrarFormPrestamo(true)}
-                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
-                  >+ Registrar préstamo</button>
+                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', background: 'none', border: '1px solid #c7d2fe', color: '#1a237e', borderRadius: 7, cursor: 'pointer' }}
+                  >+ Registrar</button>
                 )}
               </div>
 
