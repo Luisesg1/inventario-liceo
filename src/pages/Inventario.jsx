@@ -147,6 +147,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [menuExportar, setMenuExportar] = useState(false)
   const [modoQR, setModoQR]           = useState(false)
   const [seleccionQR, setSeleccionQR] = useState(new Set())
+  const [prestamoBien, setPrestamoBien]       = useState(null)  // préstamo activo del bien en detalle
+  const [cargandoPrestamo, setCargandoPrestamo] = useState(false)
+  const [mostrarFormPrestamo, setMostrarFormPrestamo] = useState(false)
+  const [formPrestamo, setFormPrestamo]       = useState({ prestado_a: '', cargo: '', fecha_devolucion_esperada: '', notas: '' })
+  const [guardandoPrestamo, setGuardandoPrestamo] = useState(false)
+  const [bienesConPrestamo, setBienesConPrestamo] = useState(new Set()) // ids con préstamo activo
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
   // Drag & drop + pin
@@ -455,6 +461,23 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       })
   }, [abrirBienId])
 
+
+  // ── Cargar IDs de bienes con préstamo activo (para badge en tabla) ────────
+  const cargarBienesConPrestamo = async () => {
+    const { data } = await supabase.from('prestamos').select('bien_id').is('fecha_devolucion_real', null)
+    setBienesConPrestamo(new Set((data ?? []).map(p => p.bien_id)))
+  }
+  useEffect(() => { cargarBienesConPrestamo() }, [])
+
+  // ── Cargar préstamo activo del bien en detalle ────────────────────────────
+  useEffect(() => {
+    if (!verDetalle?.id) { setPrestamoBien(null); setMostrarFormPrestamo(false); return }
+    setCargandoPrestamo(true)
+    supabase.from('prestamos').select('*')
+      .eq('bien_id', verDetalle.id).is('fecha_devolucion_real', null)
+      .maybeSingle()
+      .then(({ data }) => { setPrestamoBien(data ?? null); setCargandoPrestamo(false) })
+  }, [verDetalle?.id])
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
@@ -1109,6 +1132,40 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       <div class="grid">${cards}</div>
     </body></html>`)
     win.document.close()
+  }
+
+  const registrarPrestamo = async () => {
+    if (!formPrestamo.prestado_a.trim()) return
+    if (!formPrestamo.fecha_devolucion_esperada) return
+    setGuardandoPrestamo(true)
+    const { data, error } = await supabase.from('prestamos').insert({
+      bien_id: verDetalle.id,
+      prestado_a: formPrestamo.prestado_a.trim(),
+      cargo: formPrestamo.cargo.trim() || null,
+      fecha_devolucion_esperada: formPrestamo.fecha_devolucion_esperada,
+      notas: formPrestamo.notas.trim() || null,
+      registrado_por: usuario.id,
+      registrado_por_nombre: usuario.nombre,
+    }).select().single()
+    if (!error && data) {
+      setPrestamoBien(data)
+      setBienesConPrestamo(prev => new Set([...prev, verDetalle.id]))
+      setMostrarFormPrestamo(false)
+      setFormPrestamo({ prestado_a: '', cargo: '', fecha_devolucion_esperada: '', notas: '' })
+    }
+    setGuardandoPrestamo(false)
+  }
+
+  const marcarDevuelto = async () => {
+    if (!prestamoBien) return
+    const { error } = await supabase.rpc('devolver_prestamo', {
+      p_prestamo_id: prestamoBien.id,
+      p_devuelto_por: usuario.nombre,
+    })
+    if (!error) {
+      setPrestamoBien(null)
+      setBienesConPrestamo(prev => { const s = new Set(prev); s.delete(verDetalle.id); return s })
+    }
   }
 
   const descargarPDF = () => {
@@ -2495,6 +2552,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   <td className="td-code">{b.codigo}</td>
                   <td className="td-name">
                     {b.nombre}
+                    {bienesConPrestamo.has(b.id) && (
+                      <span title="Bien prestado" style={{
+                        fontSize: 10, background: '#fef9c3', color: '#854d0e',
+                        borderRadius: 4, padding: '1px 6px', marginLeft: 6,
+                        fontWeight: 700, verticalAlign: 'middle',
+                      }}>📤 Prestado</span>
+                    )}
                     {b._pendiente && (
                       <span style={{
                         fontSize: 10, background: '#fef3c7', color: '#92400e',
@@ -2789,6 +2853,113 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
 
             </div>{/* fin detalle-pdf-content */}
+
+            {/* ── Sección Préstamo (fuera del PDF) ── */}
+            <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  📤 Préstamo
+                </p>
+                {!cargandoPrestamo && !prestamoBien && !mostrarFormPrestamo && (
+                  <button
+                    onClick={() => setMostrarFormPrestamo(true)}
+                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
+                  >+ Registrar préstamo</button>
+                )}
+              </div>
+
+              {cargandoPrestamo && <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>Cargando…</p>}
+
+              {!cargandoPrestamo && prestamoBien && (
+                <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                    <div>
+                      <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 14, color: '#92400e' }}>
+                        {prestamoBien.prestado_a}
+                        {prestamoBien.cargo && <span style={{ fontWeight: 400, fontSize: 12, color: '#a16207', marginLeft: 6 }}>· {prestamoBien.cargo}</span>}
+                      </p>
+                      <p style={{ margin: '0 0 2px', fontSize: 12, color: '#78350f' }}>
+                        Devolución esperada: <strong>{new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                        {(() => {
+                          const dias = Math.round((new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00') - new Date()) / 86400000)
+                          return dias < 0
+                            ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 7px', borderRadius: 20 }}>Vencido hace {Math.abs(dias)} día{Math.abs(dias) !== 1 ? 's' : ''}</span>
+                            : dias === 0
+                            ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '1px 7px', borderRadius: 20 }}>Vence hoy</span>
+                            : <span style={{ marginLeft: 8, fontSize: 11, color: '#78350f' }}>({dias} día{dias !== 1 ? 's' : ''})</span>
+                        })()}
+                      </p>
+                      {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
+                      <p style={{ margin: '4px 0 0', fontSize: 10, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
+                    </div>
+                    <button
+                      onClick={marcarDevuelto}
+                      style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
+                    >✓ Marcar devuelto</button>
+                  </div>
+                </div>
+              )}
+
+              {!cargandoPrestamo && !prestamoBien && !mostrarFormPrestamo && (
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>Sin préstamos activos.</p>
+              )}
+
+              {mostrarFormPrestamo && (
+                <div style={{ background: '#f8faff', border: '1px solid #c7d2fe', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px' }}>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Prestado a *</label>
+                      <input
+                        value={formPrestamo.prestado_a}
+                        onChange={e => setFormPrestamo(p => ({ ...p, prestado_a: e.target.value }))}
+                        placeholder="ej: Prof. García"
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Cargo</label>
+                      <input
+                        value={formPrestamo.cargo}
+                        onChange={e => setFormPrestamo(p => ({ ...p, cargo: e.target.value }))}
+                        placeholder="ej: Profesor de Matemáticas"
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Fecha devolución *</label>
+                      <input
+                        type="date"
+                        value={formPrestamo.fecha_devolucion_esperada}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={e => setFormPrestamo(p => ({ ...p, fecha_devolucion_esperada: e.target.value }))}
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13 }}
+                      />
+                    </div>
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Notas</label>
+                      <input
+                        value={formPrestamo.notas}
+                        onChange={e => setFormPrestamo(p => ({ ...p, notas: e.target.value }))}
+                        placeholder="ej: Usar en sala 3B hasta el viernes"
+                        style={{ width: '100%', padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => { setMostrarFormPrestamo(false); setFormPrestamo({ prestado_a: '', cargo: '', fecha_devolucion_esperada: '', notas: '' }) }}
+                      style={{ fontSize: 12, padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', color: '#6b7280' }}
+                    >Cancelar</button>
+                    <button
+                      onClick={registrarPrestamo}
+                      disabled={guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.fecha_devolucion_esperada}
+                      style={{ fontSize: 12, fontWeight: 600, padding: '6px 16px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', opacity: guardandoPrestamo ? 0.6 : 1 }}
+                    >{guardandoPrestamo ? 'Guardando…' : 'Guardar préstamo'}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       )}
