@@ -153,7 +153,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [modalPrestamo, setModalPrestamo]     = useState(null) // bien para el modal de registro
   const [formPrestamo, setFormPrestamo]       = useState({ prestado_a: '', cargo: '', fecha_devolucion_esperada: '', notas: '' })
   const [guardandoPrestamo, setGuardandoPrestamo] = useState(false)
-  const [bienesConPrestamo, setBienesConPrestamo] = useState(new Set()) // ids con préstamo activo
+  const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map()) // Map<id, fecha_devolucion_esperada>
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
   // Drag & drop + pin
@@ -379,10 +379,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
       .some(v => v && String(v).toLowerCase().includes(q))
     const matchEstado = !filtroEstado || b.estado === filtroEstado
-    const matchPrestado = !filtroPrestado || (filtroPrestado === 'prestado' ? bienesConPrestamo.has(b.id) : !bienesConPrestamo.has(b.id))
+    const matchPrestado = !filtroPrestado
+      || (filtroPrestado === 'prestado' && bienesConPrestamo.has(b.id))
+      || (filtroPrestado === 'vencido'   && esVencido(b.id))
+      || (filtroPrestado === 'disponible' && !bienesConPrestamo.has(b.id))
     const matchFiltros = Object.entries(filtros).every(([campo, val]) => !val || String(b[campo] ?? '').toLowerCase() === val.toLowerCase())
     return matchBusqueda && matchEstado && matchPrestado && matchFiltros
   })
+
+  const hoy = new Date().toISOString().slice(0, 10)
+  const esVencido = (id) => { const f = bienesConPrestamo.get(id); return !!f && f < hoy }
 
   // Valores únicos para dropdowns dinámicos
   const unicos = (campo) => [...new Set(filtradosBase.map(b => b[campo]).filter(Boolean))].sort()
@@ -466,8 +472,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   // ── Cargar IDs de bienes con préstamo activo (para badge en tabla) ────────
   const cargarBienesConPrestamo = async () => {
-    const { data } = await supabase.from('prestamos').select('bien_id').is('fecha_devolucion_real', null)
-    setBienesConPrestamo(new Set((data ?? []).map(p => p.bien_id)))
+    const { data } = await supabase.from('prestamos').select('bien_id, fecha_devolucion_esperada').is('fecha_devolucion_real', null)
+    setBienesConPrestamo(new Map((data ?? []).map(p => [p.bien_id, p.fecha_devolucion_esperada])))
   }
   useEffect(() => { cargarBienesConPrestamo() }, [])
 
@@ -1156,7 +1162,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       registrado_por_nombre: usuario.nombre,
     }).select().single()
     if (!error && data) {
-      setBienesConPrestamo(prev => new Set([...prev, bien.id]))
+      setBienesConPrestamo(prev => new Map([...prev, [bien.id, formPrestamo.fecha_devolucion_esperada]]))
       if (verDetalle?.id === bien.id) setPrestamoBien(data)
       cerrarModalPrestamo()
     }
@@ -1172,7 +1178,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     if (!error) {
       setPrestamoBien(null)
       const bienId = modalPrestamo?.id ?? verDetalle?.id
-      setBienesConPrestamo(prev => { const s = new Set(prev); s.delete(bienId); return s })
+      setBienesConPrestamo(prev => { const m = new Map(prev); m.delete(bienId); return m })
     }
   }
 
@@ -1490,6 +1496,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
                       <option value="">Todos</option>
                       <option value="prestado">📤 Prestado</option>
+                      <option value="vencido">⚠️ Vencido</option>
                       <option value="disponible">✅ Disponible</option>
                     </select>
                   </div>
@@ -2555,7 +2562,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </thead>
             <tbody>
               {filtrados.map(b => (
-                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={bienesConPrestamo.has(b.id) ? { background: '#fff7ed', borderLeft: '3px solid #f97316' } : {}}>
+                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={esVencido(b.id) ? { background: '#fff1f2', borderLeft: '3px solid #ef4444' } : bienesConPrestamo.has(b.id) ? { background: '#fff7ed', borderLeft: '3px solid #f97316' } : {}}>
                   {modoQR && (
                     <td style={{ textAlign: 'center' }}>
                       <input
@@ -2579,7 +2586,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   <td className="td-code">{b.codigo}</td>
                   <td className="td-name">
                     {b.nombre}
-                    {bienesConPrestamo.has(b.id) && (
+                    {esVencido(b.id) && (
+                      <span title="Préstamo vencido" style={{
+                        fontSize: 10, background: '#fee2e2', color: '#b91c1c',
+                        borderRadius: 4, padding: '1px 6px', marginLeft: 6,
+                        fontWeight: 700, verticalAlign: 'middle',
+                      }}>⚠️ Vencido</span>
+                    )}
+                    {bienesConPrestamo.has(b.id) && !esVencido(b.id) && (
                       <span title="Bien prestado" style={{
                         fontSize: 10, background: '#fef9c3', color: '#854d0e',
                         borderRadius: 4, padding: '1px 6px', marginLeft: 6,
