@@ -469,15 +469,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
   useEffect(() => { cargarBienesConPrestamo() }, [])
 
-  // ── Cargar préstamo activo del bien en detalle ────────────────────────────
+  // ── Cargar préstamo activo cuando se abre el modal de préstamo ───────────
   useEffect(() => {
-    if (!verDetalle?.id) { setPrestamoBien(null); return }
+    if (!modalPrestamo?.id) { setPrestamoBien(null); return }
     setCargandoPrestamo(true)
     supabase.from('prestamos').select('*')
-      .eq('bien_id', verDetalle.id).is('fecha_devolucion_real', null)
+      .eq('bien_id', modalPrestamo.id).is('fecha_devolucion_real', null)
       .maybeSingle()
       .then(({ data }) => { setPrestamoBien(data ?? null); setCargandoPrestamo(false) })
-  }, [verDetalle?.id])
+  }, [modalPrestamo?.id])
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
@@ -2603,7 +2603,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                           className="btn-ver"
                           title={bienesConPrestamo.has(b.id) ? 'Ver préstamo activo' : 'Registrar préstamo'}
                           style={{ fontSize: 14, opacity: bienesConPrestamo.has(b.id) ? 1 : 0.55 }}
-                          onClick={() => bienesConPrestamo.has(b.id) ? setVerDetalle(b) : setModalPrestamo(b)}
+                          onClick={() => setModalPrestamo(b)}
                         >📤</button>
                       )}
                       {puedeEliminar && !b._pendiente && <button className="btn-del" onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
@@ -2865,118 +2865,79 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             </div>{/* fin detalle-pdf-content */}
 
-            {/* ── Sección Préstamo (fuera del PDF) ── */}
-            <div style={{ borderTop: '1px solid #f3f4f6', padding: '16px 20px 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#374151' }}>📤 Préstamo</p>
-                {!cargandoPrestamo && !prestamoBien && (
-                  <button
-                    onClick={() => setModalPrestamo(verDetalle)}
-                    style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', background: 'none', border: '1px solid #c7d2fe', color: '#1a237e', borderRadius: 7, cursor: 'pointer' }}
-                  >+ Registrar</button>
-                )}
-              </div>
-
-              {cargandoPrestamo && <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>Cargando…</p>}
-
-              {!cargandoPrestamo && !prestamoBien && (
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 12px' }}>Sin préstamos activos.</p>
-              )}
-
-              {!cargandoPrestamo && prestamoBien && (
-                <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                    <div>
-                      <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 14, color: '#92400e' }}>
-                        {prestamoBien.prestado_a}
-                        {prestamoBien.cargo && <span style={{ fontWeight: 400, fontSize: 12, color: '#a16207', marginLeft: 6 }}>· {prestamoBien.cargo}</span>}
-                      </p>
-                      <p style={{ margin: '0 0 2px', fontSize: 12, color: '#78350f' }}>
-                        Devolución: <strong>{new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
-                        {(() => {
-                          const dias = Math.round((new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00') - new Date()) / 86400000)
-                          return dias < 0
-                            ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 7px', borderRadius: 20 }}>Vencido hace {Math.abs(dias)} día{Math.abs(dias) !== 1 ? 's' : ''}</span>
-                            : dias === 0
-                            ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '1px 7px', borderRadius: 20 }}>Vence hoy</span>
-                            : <span style={{ marginLeft: 8, fontSize: 11, color: '#78350f' }}>({dias} día{dias !== 1 ? 's' : ''})</span>
-                        })()}
-                      </p>
-                      {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 11, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
-                      <p style={{ margin: '4px 0 0', fontSize: 10, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
-                    </div>
-                    <button
-                      onClick={marcarDevuelto}
-                      style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', flexShrink: 0 }}
-                    >✓ Marcar devuelto</button>
-                  </div>
-                </div>
-              )}
-            </div>
-
           </div>
         </div>
       )}
 
-      {/* Modal registrar préstamo */}
+      {/* Modal préstamo */}
       {modalPrestamo && (
         <div className="modal-overlay" onClick={cerrarModalPrestamo}>
           <div className="modal" style={{ maxWidth: 460, width: '94%' }} onClick={e => e.stopPropagation()}>
             <div style={{ marginBottom: 18 }}>
-              <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 16, color: '#1a237e' }}>📤 Registrar préstamo</p>
+              <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 16, color: '#1a237e' }}>
+                📤 {prestamoBien ? 'Préstamo activo' : 'Registrar préstamo'}
+              </p>
               <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{modalPrestamo.nombre} · {modalPrestamo.codigo}</p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Prestado a *</label>
-                <input
-                  autoFocus
-                  value={formPrestamo.prestado_a}
-                  onChange={e => setFormPrestamo(p => ({ ...p, prestado_a: e.target.value }))}
-                  placeholder="ej: Prof. García"
-                  style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Cargo</label>
-                <input
-                  value={formPrestamo.cargo}
-                  onChange={e => setFormPrestamo(p => ({ ...p, cargo: e.target.value }))}
-                  placeholder="ej: Profesor de Matemáticas"
-                  style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Fecha devolución *</label>
-                <input
-                  type="date"
-                  value={formPrestamo.fecha_devolucion_esperada}
-                  min={new Date().toISOString().slice(0, 10)}
-                  onChange={e => setFormPrestamo(p => ({ ...p, fecha_devolucion_esperada: e.target.value }))}
-                  style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Notas</label>
-                <input
-                  value={formPrestamo.notas}
-                  onChange={e => setFormPrestamo(p => ({ ...p, notas: e.target.value }))}
-                  placeholder="ej: Usar en sala 3B hasta el viernes"
-                  style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button
-                onClick={cerrarModalPrestamo}
-                style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}
-              >Cancelar</button>
-              <button
-                onClick={registrarPrestamo}
-                disabled={guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.fecha_devolucion_esperada}
-                style={{ padding: '8px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: guardandoPrestamo ? 0.6 : 1 }}
-              >{guardandoPrestamo ? 'Guardando…' : 'Guardar préstamo'}</button>
-            </div>
+
+            {cargandoPrestamo && <p style={{ fontSize: 13, color: '#9ca3af' }}>Cargando…</p>}
+
+            {!cargandoPrestamo && prestamoBien && (
+              <>
+                <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 16px', marginBottom: 18 }}>
+                  <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: '#92400e' }}>
+                    {prestamoBien.prestado_a}
+                    {prestamoBien.cargo && <span style={{ fontWeight: 400, fontSize: 12, color: '#a16207', marginLeft: 8 }}>· {prestamoBien.cargo}</span>}
+                  </p>
+                  <p style={{ margin: '0 0 4px', fontSize: 13, color: '#78350f' }}>
+                    Devolución: <strong>{new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                    {(() => {
+                      const dias = Math.round((new Date(prestamoBien.fecha_devolucion_esperada + 'T12:00:00') - new Date()) / 86400000)
+                      return dias < 0
+                        ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#dc2626', background: '#fee2e2', padding: '1px 7px', borderRadius: 20 }}>Vencido hace {Math.abs(dias)} día{Math.abs(dias) !== 1 ? 's' : ''}</span>
+                        : dias === 0
+                        ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#d97706', background: '#fef3c7', padding: '1px 7px', borderRadius: 20 }}>Vence hoy</span>
+                        : <span style={{ marginLeft: 8, fontSize: 11, color: '#78350f' }}>({dias} día{dias !== 1 ? 's' : ''})</span>
+                    })()}
+                  </p>
+                  {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
+                  <button onClick={async () => { await marcarDevuelto(); cerrarModalPrestamo() }} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
+                </div>
+              </>
+            )}
+
+            {!cargandoPrestamo && !prestamoBien && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Prestado a *</label>
+                    <input autoFocus value={formPrestamo.prestado_a} onChange={e => setFormPrestamo(p => ({ ...p, prestado_a: e.target.value }))} placeholder="ej: Prof. García" style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Cargo</label>
+                    <input value={formPrestamo.cargo} onChange={e => setFormPrestamo(p => ({ ...p, cargo: e.target.value }))} placeholder="ej: Profesor de Matemáticas" style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Fecha devolución *</label>
+                    <input type="date" value={formPrestamo.fecha_devolucion_esperada} min={new Date().toISOString().slice(0, 10)} onChange={e => setFormPrestamo(p => ({ ...p, fecha_devolucion_esperada: e.target.value }))} style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Notas</label>
+                    <input value={formPrestamo.notas} onChange={e => setFormPrestamo(p => ({ ...p, notas: e.target.value }))} placeholder="ej: Usar en sala 3B hasta el viernes" style={{ width: '100%', padding: '8px 11px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+                  <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cancelar</button>
+                  <button onClick={registrarPrestamo} disabled={guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.fecha_devolucion_esperada} style={{ padding: '8px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: guardandoPrestamo ? 0.6 : 1 }}>
+                    {guardandoPrestamo ? 'Guardando…' : 'Guardar préstamo'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
