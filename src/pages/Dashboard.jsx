@@ -129,9 +129,9 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   useEffect(() => { const t = setTimeout(() => setAnimado(true), 60); return () => clearTimeout(t) }, [])
 
   if (total === 0) return (
-    <svg width="144" height="144">
-      <circle cx={72} cy={72} r={r} fill="none" stroke="#e5e7eb" strokeWidth="20" />
-      <text x={72} y={77} textAnchor="middle" fontSize="13" fill="#9ca3af">Sin datos</text>
+    <svg width="160" height="160" viewBox="0 0 160 160" style={{ maxWidth: '100%' }}>
+      <circle cx={80} cy={80} r={r} fill="none" stroke="#e5e7eb" strokeWidth="20" />
+      <text x={80} y={85} textAnchor="middle" fontSize="13" fill="#9ca3af">Sin datos</text>
     </svg>
   )
 
@@ -144,7 +144,7 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   })
 
   return (
-    <svg width="160" height="160" viewBox="0 0 160 160" style={{ cursor: 'pointer', flexShrink: 0 }}>
+    <svg width="160" height="160" viewBox="0 0 160 160" style={{ cursor: 'pointer', flexShrink: 0, maxWidth: '100%' }}>
       {segmentos.map((seg, i) => {
         const activo = !estadoActivo || seg.estado === estadoActivo
         const r2     = estadoActivo === seg.estado ? 56 : r
@@ -312,9 +312,9 @@ export default function Dashboard({ usuario }) {
       <div className="dash-charts">
         <div className="dash-card">
           <p style={secTitle}>Distribución por estado</p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div className="dash-donut-wrap">
             <DonutChart datos={estadoDatos} total={bienesFiltrados.length} estadoActivo={estadoFiltro} onEstadoClick={toggleEstado} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="dash-donut-leyenda">
               {estadoDatos.map(d => {
                 const pct = bienesPorCategoria.length > 0 ? Math.round((d.count / bienesPorCategoria.length) * 100) : 0
                 return (

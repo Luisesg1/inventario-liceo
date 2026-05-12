@@ -42,6 +42,21 @@
   align-items: stretch;
 }
 
+/* Contenedor interior del donut */
+.dash-donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dash-donut-leyenda {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Paneles blancos genéricos */
 .dash-card {
   background: #fff;
@@ -225,6 +240,15 @@
   .dash-charts {
     gap: 0.65rem;
     margin-bottom: 1rem;
+  }
+  .dash-donut-wrap {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .dash-donut-leyenda {
+    width: 100%;
+    align-items: center;
   }
   .dash-cat-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
