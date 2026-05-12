@@ -148,7 +148,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       </div>}
 
       {/* Toolbar */}
-      <div className="tickets-toolbar">
+      <div className={`tickets-toolbar ${!esAdmin ? 'tickets-toolbar-center' : ''}`}>
         {esAdmin && (
           <div className="tickets-filtros">
             <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>

@@ -91,6 +91,8 @@
 }
 .btn-limpiar-filtros:hover { background: rgba(239,68,68,0.2); }
 
+.tickets-toolbar-center { justify-content: center; }
+
 .btn-nuevo-ticket {
   padding: 9px 22px;
   background: linear-gradient(135deg, #d4a017, #f0d060);
