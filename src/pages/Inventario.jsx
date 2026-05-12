@@ -1059,20 +1059,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         <div class="logo-row">
           <span>Liceo JHJ — Inventario</span>
         </div>
-        <img class="qr" src="${qr}" alt="QR" />
+        <img class="qr" id="qr-img" src="${qr}" alt="QR" />
+        <script>(function(){ var s=Math.min(300,Math.round(window.screen.width*0.82)); var el=document.getElementById('qr-img'); if(el){el.style.width=s+'px';el.style.height=s+'px';} })();<\/script>
         <p class="nombre">${bien.nombre}</p>
         <p class="codigo">Código: ${bien.codigo || 'S/C'}</p>
         <p class="cat">${cat ? cat.icon + ' ' + cat.label : bien.categoria || ''}</p>
         <p class="hint">Escanea para ver el detalle en el sistema</p>
         <button class="btn no-print" onclick="window.print()">🖨 Imprimir</button>
       </div>
-      <script>
-        window.addEventListener('load', function() {
-          var s = Math.min(300, Math.round(window.innerWidth * 0.82));
-          var img = document.querySelector('img.qr');
-          if (img) { img.style.width = s + 'px'; img.style.height = s + 'px'; }
-        });
-      <\/script>
     </body></html>`)
     win.document.close()
   }
@@ -2651,7 +2645,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             <div className="detalle-header-modal">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
-                <div style={{ minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
                   <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
