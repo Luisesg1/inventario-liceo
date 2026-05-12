@@ -112,6 +112,7 @@ export default function App() {
     }
 
     setUsuario(data)
+    if (data.rol === 'docente') { setPagina('tickets'); localStorage.setItem('app_pagina', 'tickets') }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
@@ -137,8 +138,12 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} />
 
-  const soloAdmin = pagina === 'usuarios' || pagina === 'auditoria'
-  const paginaSegura = usuario.rol !== 'admin' && soloAdmin ? 'dashboard' : pagina
+  const esDocente  = usuario.rol === 'docente'
+  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria'
+  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
+  const paginaSegura = esDocente && soloStaff ? 'tickets'
+    : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
+    : pagina
 
   return (
     <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }}>
