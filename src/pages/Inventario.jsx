@@ -145,6 +145,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [seleccion, setSeleccion]     = useState(new Set()) // ids seleccionados
   const [filtros, setFiltros]         = useState({}) // filtros dinámicos { campo: valor }
   const [menuExportar, setMenuExportar] = useState(false)
+  const [modoQR, setModoQR]           = useState(false)
+  const [seleccionQR, setSeleccionQR] = useState(new Set())
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
   // Drag & drop + pin
@@ -154,8 +156,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   })
   const [dragOver, setDragOver]     = useState(null) // id sobre el que se arrastra
   const [dragging, setDragging]     = useState(null) // id que se arrastra
-  const [historialBien, setHistorialBien] = useState([])
-  const [cargandoHistorial, setCargandoHistorial] = useState(false)
 
   // ── Sincronizar pendientes con Supabase ───────────────────────────────────
   async function sincronizarPendientes() {
@@ -455,18 +455,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       })
   }, [abrirBienId])
 
-  // ── Historial del bien seleccionado ──────────────────────────────────────
-  useEffect(() => {
-    if (!verDetalle?.id) { setHistorialBien([]); return }
-    setCargandoHistorial(true)
-    supabase
-      .from('audit_logs')
-      .select('id,accion,cambios,usuario_nombre,dispositivo,creado_en')
-      .eq('bien_id', verDetalle.id)
-      .order('creado_en', { ascending: false })
-      .limit(20)
-      .then(({ data }) => { setHistorialBien(data ?? []); setCargandoHistorial(false) })
-  }, [verDetalle?.id])
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
@@ -1059,6 +1047,70 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     win.document.close()
   }
 
+  const toggleQRItem = (id) => setSeleccionQR(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const abrirQRMultiple = (bienesSel) => {
+    const origin = window.location.origin
+    const cards = bienesSel.map(b => {
+      const url = `${origin}/?bien=${b.id}`
+      const qr  = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(url)}`
+      const cat = categorias.find(c => c.id === b.categoria)
+      return `
+        <div class="card">
+          <img class="qr" src="${qr}" alt="QR" />
+          <p class="nombre">${b.nombre}</p>
+          <p class="codigo">${b.codigo || 'S/C'}</p>
+          <p class="cat">${cat ? cat.icon + ' ' + cat.label : b.categoria || ''}</p>
+        </div>`
+    }).join('')
+
+    const win = window.open('', '_blank')
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>QR — ${bienesSel.length} bienes</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; padding: 16px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-size: 16px; color: #1a237e; font-weight: 700; }
+        .header p  { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+        .card { background: #fff; border: 1.5px solid #1a237e; border-radius: 12px; padding: 16px 12px; text-align: center; break-inside: avoid; }
+        .qr  { width: 160px; height: 160px; border: 1px solid #e5e7eb; border-radius: 6px; }
+        .nombre { font-size: 13px; font-weight: 700; color: #111827; margin: 10px 0 2px; line-height: 1.3; }
+        .codigo { font-size: 11px; color: #6b7280; margin-bottom: 2px; }
+        .cat    { font-size: 10px; color: #9ca3af; }
+        .no-print { text-align: center; margin-bottom: 20px; }
+        .btn { padding: 10px 28px; background: #1a237e; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        @media print {
+          body { background: #fff; padding: 0; }
+          .no-print { display: none; }
+          .grid { gap: 10px; }
+          .card { border-color: #999; }
+        }
+        @media (max-width: 480px) {
+          .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .qr { width: 130px; height: 130px; }
+        }
+      </style>
+    </head><body>
+      <div class="no-print">
+        <div class="header">
+          <h1>Liceo JHJ — Inventario</h1>
+          <p>${bienesSel.length} código${bienesSel.length !== 1 ? 's' : ''} QR</p>
+        </div>
+        <button class="btn" onclick="window.print()">🖨 Imprimir todos</button>
+      </div>
+      <div class="grid">${cards}</div>
+    </body></html>`)
+    win.document.close()
+  }
+
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
@@ -1276,6 +1328,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               <span className="btn-label-short">📥</span>
             </button>
           )}
+          <button
+            className="btn-import"
+            onClick={() => { setModoQR(v => !v); setSeleccionQR(new Set()) }}
+            style={modoQR ? { background: '#1a237e', color: '#fff', borderColor: '#1a237e' } : {}}
+            title="Seleccionar bienes para imprimir QR"
+          >
+            <span className="btn-label-full">▦ {modoQR ? 'Cancelar QR' : 'Generar QR'}</span>
+            <span className="btn-label-short">▦</span>
+          </button>
           {puedeAgregar && (
             <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
               {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
@@ -2326,6 +2387,29 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         </>
       )}
 
+      {/* Barra selección QR */}
+      {modoQR && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '8px 14px', marginBottom: '0.75rem' }}>
+          <span style={{ fontSize: '0.88rem', color: '#1a237e', fontWeight: 600 }}>
+            {seleccionQR.size === 0 ? 'Selecciona bienes para imprimir sus QR' : `${seleccionQR.size} seleccionado${seleccionQR.size !== 1 ? 's' : ''}`}
+          </span>
+          <button
+            onClick={() => setSeleccionQR(new Set(filtrados.map(b => b.id)))}
+            style={{ padding: '5px 12px', background: '#fff', border: '1px solid #c7d2fe', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', color: '#1a237e', fontWeight: 500 }}
+          >Seleccionar todos</button>
+          {seleccionQR.size > 0 && <>
+            <button
+              onClick={() => abrirQRMultiple(filtrados.filter(b => seleccionQR.has(b.id)))}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 14px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}
+            >🖨 Imprimir {seleccionQR.size} QR</button>
+            <button
+              onClick={() => setSeleccionQR(new Set())}
+              style={{ padding: '5px 10px', background: '#fff', border: '1px solid #c7d2fe', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', color: '#6b7280' }}
+            >Limpiar</button>
+          </>}
+        </div>
+      )}
+
       {/* Barra selección múltiple */}
       {puedeEliminarLote && seleccion.size > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '8px 14px', marginBottom: '0.75rem' }}>
@@ -2353,7 +2437,18 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           <table>
             <thead>
               <tr>
-                {puedeEliminarLote && (
+                {modoQR && (
+                  <th style={{ width: '36px' }}>
+                    <input
+                      type="checkbox"
+                      checked={seleccionQR.size === filtrados.length && filtrados.length > 0}
+                      ref={el => { if (el) el.indeterminate = seleccionQR.size > 0 && seleccionQR.size < filtrados.length }}
+                      onChange={() => setSeleccionQR(seleccionQR.size === filtrados.length ? new Set() : new Set(filtrados.map(b => b.id)))}
+                      style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1a237e' }}
+                    />
+                  </th>
+                )}
+                {puedeEliminarLote && !modoQR && (
                   <th style={{ width: '36px' }}>
                     <input
                       type="checkbox"
@@ -2376,8 +2471,18 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </thead>
             <tbody>
               {filtrados.map(b => (
-                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''}`}>
-                  {puedeEliminarLote && (
+                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`}>
+                  {modoQR && (
+                    <td style={{ textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={seleccionQR.has(b.id)}
+                        onChange={() => toggleQRItem(b.id)}
+                        style={{ cursor: 'pointer', width: '15px', height: '15px', accentColor: '#1a237e' }}
+                      />
+                    </td>
+                  )}
+                  {puedeEliminarLote && !modoQR && (
                     <td style={{ textAlign: 'center' }}>
                       <input
                         type="checkbox"
@@ -2682,51 +2787,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
             </>)}
 
-            {/* ── Historial de cambios ── */}
-            <div className="detalle-seccion" style={{ marginTop: 8 }}>
-              <p className="detalle-titulo">🕓 Historial de cambios</p>
-              {cargandoHistorial ? (
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '8px 0' }}>Cargando…</p>
-              ) : !historialBien.length ? (
-                <p style={{ fontSize: 12, color: '#9ca3af', margin: '8px 0' }}>Sin registros de auditoría aún.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
-                  {historialBien.map(log => {
-                    const cambios = Array.isArray(log.cambios) ? log.cambios : []
-                    const colorAccion = log.accion === 'crear' ? '#16a34a' : log.accion === 'eliminar' ? '#dc2626' : '#2563eb'
-                    const bgAccion   = log.accion === 'crear' ? '#dcfce7' : log.accion === 'eliminar' ? '#fee2e2' : '#dbeafe'
-                    const labelAccion = log.accion === 'crear' ? 'Creado' : log.accion === 'eliminar' ? 'Eliminado' : 'Editado'
-                    const fecha = new Date(log.creado_en)
-                    const fechaStr = fecha.toLocaleDateString('es-CL') + ' ' + fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-                    return (
-                      <div key={log.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ background: bgAccion, color: colorAccion, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>{labelAccion}</span>
-                          <span style={{ fontSize: 11.5, fontWeight: 600, color: '#111827' }}>{log.usuario_nombre}</span>
-                          <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 'auto' }}>{fechaStr}</span>
-                        </div>
-                        {cambios.map((c, i) => {
-                          const CAMPO_LABEL = {
-                            nombre:'Nombre', estado:'Estado', ubicacion:'Ubicación', responsable:'Responsable',
-                            codigo:'Código', cantidad:'Cantidad', obs:'Observaciones', tipo:'Tipo',
-                            marca:'Marca', modelo:'Modelo', numero_serie:'N° Serie', cpu:'CPU',
-                            ram:'RAM', memoria:'Almacenamiento', sistema_operativo:'S.O.',
-                          }
-                          return (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', minWidth: 90 }}>{CAMPO_LABEL[c.campo] ?? c.campo}</span>
-                              <span style={{ fontSize: 11, color: '#dc2626', background: '#fef2f2', padding: '1px 6px', borderRadius: 5 }}>{c.anterior ?? '—'}</span>
-                              <span style={{ fontSize: 11, color: '#9ca3af' }}>→</span>
-                              <span style={{ fontSize: 11, color: '#16a34a', background: '#f0fdf4', padding: '1px 6px', borderRadius: 5 }}>{c.nuevo ?? '—'}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
 
             </div>{/* fin detalle-pdf-content */}
           </div>

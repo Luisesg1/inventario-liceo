@@ -119,6 +119,231 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     setExportando(false)
   }
 
+  const exportarInformePDF = async () => {
+    setExportando(true)
+    const { bienes, cats } = await fetchBackupData()
+    if (!bienes.length) { setExportando(false); return }
+
+    const cargarPDF = () => {
+      const { jsPDF } = window.jspdf
+      const fecha = new Date()
+      const fechaStr = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })
+      const fechaArchivo = fecha.toISOString().slice(0, 10)
+
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const W = doc.internal.pageSize.getWidth()
+      const AZUL = [26, 35, 126]
+      const DORADO = [212, 160, 23]
+      const GRIS = [107, 114, 128]
+
+      const addHeader = (pageNum) => {
+        // Franja azul superior
+        doc.setFillColor(...AZUL)
+        doc.rect(0, 0, W, 22, 'F')
+        // Línea dorada
+        doc.setFillColor(...DORADO)
+        doc.rect(0, 22, W, 1.5, 'F')
+
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(13)
+        doc.text('Liceo Bicentenario Juan Henríquez Jiménez', W / 2, 9, { align: 'center' })
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.5)
+        doc.text('Inventario de Bienes — Informe Oficial', W / 2, 15.5, { align: 'center' })
+
+        // Fecha y N° página en esquina
+        doc.setTextColor(...GRIS)
+        doc.setFontSize(7.5)
+        doc.text(fechaStr, W - 12, 28, { align: 'right' })
+        if (pageNum > 1) {
+          doc.text(`Página ${pageNum}`, 12, 28)
+        }
+      }
+
+      const addFooter = () => {
+        const pageCount = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i)
+          doc.setFillColor(245, 245, 250)
+          doc.rect(0, 284, W, 13, 'F')
+          doc.setDrawColor(220, 220, 235)
+          doc.setLineWidth(0.3)
+          doc.line(0, 284, W, 284)
+          doc.setTextColor(...GRIS)
+          doc.setFontSize(7.5)
+          doc.text('Liceo Bicentenario Juan Henríquez Jiménez — Sistema de Inventario', W / 2, 290, { align: 'center' })
+          doc.text(`${i} / ${pageCount}`, W - 12, 290, { align: 'right' })
+        }
+      }
+
+      // ── Página 1: portada + resumen ────────────────────────
+      addHeader(1)
+
+      // Título principal
+      doc.setTextColor(...AZUL)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(18)
+      doc.text('Informe de Inventario', W / 2, 45, { align: 'center' })
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      doc.setTextColor(...GRIS)
+      doc.text(`Generado el ${fechaStr}`, W / 2, 53, { align: 'center' })
+
+      // Línea separadora
+      doc.setDrawColor(...DORADO)
+      doc.setLineWidth(0.8)
+      doc.line(14, 58, W - 14, 58)
+
+      // KPIs en cajas
+      const estados = { bueno: 0, regular: 0, malo: 0, dado_de_baja: 0 }
+      bienes.forEach(b => { if (b.estado && estados[b.estado] !== undefined) estados[b.estado]++ })
+      const kpis = [
+        { label: 'Total Bienes', value: bienes.length, color: AZUL },
+        { label: 'En Buen Estado', value: estados.bueno, color: [22, 163, 74] },
+        { label: 'Estado Regular', value: estados.regular, color: [217, 119, 6] },
+        { label: 'Mal Estado', value: estados.malo, color: [220, 38, 38] },
+        { label: 'Categorías', value: cats.length, color: [109, 40, 217] },
+      ]
+      const boxW = (W - 28 - 8 * 4) / 5
+      kpis.forEach((k, i) => {
+        const x = 14 + i * (boxW + 8)
+        doc.setFillColor(248, 249, 255)
+        doc.setDrawColor(...k.color)
+        doc.setLineWidth(0.4)
+        doc.roundedRect(x, 63, boxW, 22, 3, 3, 'FD')
+        doc.setTextColor(...k.color)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(16)
+        doc.text(String(k.value), x + boxW / 2, 75, { align: 'center' })
+        doc.setFontSize(6.5)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(...GRIS)
+        doc.text(k.label, x + boxW / 2, 80.5, { align: 'center' })
+      })
+
+      // Tabla resumen por categoría
+      doc.setTextColor(...AZUL)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text('Resumen por Categoría', 14, 95)
+
+      const grupos = {}
+      bienes.forEach(b => {
+        const cat = cats.find(c => c.id === b.categoria)
+        const key = b.categoria || 'sin_categoria'
+        if (!grupos[key]) grupos[key] = { label: cat?.label ?? 'Sin categoría', icon: cat?.icon ?? '📦', items: [] }
+        grupos[key].items.push(b)
+      })
+
+      const resumenBody = Object.values(grupos).map(g => {
+        const bs = g.items.filter(b => b.estado === 'bueno').length
+        const rs = g.items.filter(b => b.estado === 'regular').length
+        const ms = g.items.filter(b => b.estado === 'malo').length
+        return [g.label, g.items.length, bs, rs, ms]
+      })
+      resumenBody.push(['TOTAL', bienes.length, estados.bueno, estados.regular, estados.malo])
+
+      doc.autoTable({
+        startY: 99,
+        head: [['Categoría', 'Total', 'Bueno', 'Regular', 'Malo']],
+        body: resumenBody,
+        styles: { fontSize: 9, cellPadding: 3.5 },
+        headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold', halign: 'center' },
+        columnStyles: {
+          0: { halign: 'left', cellWidth: 80 },
+          1: { halign: 'center', fontStyle: 'bold' },
+          2: { halign: 'center', textColor: [22, 163, 74] },
+          3: { halign: 'center', textColor: [217, 119, 6] },
+          4: { halign: 'center', textColor: [220, 38, 38] },
+        },
+        alternateRowStyles: { fillColor: [248, 249, 255] },
+        footStyles: { fillColor: [230, 232, 245], fontStyle: 'bold', textColor: AZUL },
+        didParseCell: (data) => {
+          if (data.row.index === resumenBody.length - 1) {
+            data.cell.styles.fontStyle = 'bold'
+            data.cell.styles.fillColor = [230, 232, 245]
+          }
+        },
+        margin: { left: 14, right: 14 },
+      })
+
+      // ── Páginas siguientes: detalle por categoría ──────────
+      let pageNum = 2
+      Object.values(grupos).forEach(({ label, items }) => {
+        if (!items.length) return
+        doc.addPage()
+        addHeader(pageNum++)
+
+        doc.setTextColor(...AZUL)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(12)
+        doc.text(label, 14, 35)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8.5)
+        doc.setTextColor(...GRIS)
+        doc.text(`${items.length} bien${items.length !== 1 ? 'es' : ''}`, 14, 41)
+
+        // Columnas dinámicas: siempre nombre/codigo/estado/cantidad/ubicacion/responsable + específicas no vacías
+        const extras = ['tipo','marca','modelo','numero_serie','isbn','autor'].filter(c =>
+          items.some(b => b[c] != null && b[c] !== '')
+        )
+        const cols = ['nombre', 'codigo', 'estado', 'cantidad', 'ubicacion', ...extras]
+        const hdrs = {
+          nombre: 'Nombre', codigo: 'Código', estado: 'Estado', cantidad: 'Cant.',
+          ubicacion: 'Ubicación', responsable: 'Responsable',
+          tipo: 'Tipo', marca: 'Marca', modelo: 'Modelo', numero_serie: 'N° Serie',
+          isbn: 'ISBN', autor: 'Autor',
+        }
+
+        const ESTADO_COLOR = {
+          bueno: [22, 163, 74], regular: [217, 119, 6], malo: [220, 38, 38], dado_de_baja: [107, 114, 128]
+        }
+
+        doc.autoTable({
+          startY: 45,
+          head: [cols.map(c => hdrs[c] ?? c)],
+          body: items.map(b => cols.map(c => b[c] ?? '')),
+          styles: { fontSize: 8, cellPadding: 2.8, overflow: 'ellipsize' },
+          headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [248, 249, 255] },
+          didParseCell: (data) => {
+            if (data.section === 'body') {
+              const estadoIdx = cols.indexOf('estado')
+              if (data.column.index === estadoIdx) {
+                const v = data.cell.raw
+                const color = ESTADO_COLOR[v]
+                if (color) data.cell.styles.textColor = color
+                data.cell.styles.fontStyle = 'bold'
+              }
+            }
+          },
+          margin: { left: 14, right: 14 },
+        })
+      })
+
+      addFooter()
+      doc.save(`informe_inventario_${fechaArchivo}.pdf`)
+      setExportando(false)
+    }
+
+    const loadScript = (src, id) => new Promise((resolve, reject) => {
+      if (document.getElementById(id)) { resolve(); return }
+      const s = document.createElement('script')
+      s.id = id; s.src = src
+      s.onload = resolve; s.onerror = reject
+      document.head.appendChild(s)
+    })
+
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf-script')
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'jspdf-autotable-script')
+      cargarPDF()
+    } catch {
+      setExportando(false)
+    }
+  }
+
   const navItems = [
     { id: 'dashboard',  icon: '◉', label: 'Inicio' },
     { id: 'inventario', icon: '▤', label: 'Inventario' },
@@ -163,8 +388,9 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         {esAdmin && <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>
           <p className="nav-section">Herramientas</p>
           {[
-            { icon: '🗂️', label: 'Backup Excel', fn: exportarBackupExcel },
-            { icon: '💾', label: 'Backup JSON',  fn: exportarBackupJSON  },
+            { icon: '🗂️', label: 'Backup Excel',   fn: exportarBackupExcel },
+            { icon: '💾', label: 'Backup JSON',    fn: exportarBackupJSON  },
+            { icon: '📄', label: 'Informe PDF',    fn: exportarInformePDF  },
           ].map(({ icon, label, fn }) => (
             <button key={label} onClick={fn} disabled={exportando} style={{
               display: 'flex', alignItems: 'center', gap: 11, width: '100%',
