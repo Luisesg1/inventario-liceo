@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const SUPABASE_URL        = Deno.env.get('SUPABASE_URL')!
-const SERVICE_ROLE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +18,7 @@ serve(async (req) => {
   try {
     const { nombre, email, password, codigo } = await req.json()
 
-    if (!nombre?.trim() || !email?.trim() || !password) {
+    if (!nombre?.trim() || !email?.trim() || !password || !codigo) {
       return json({ error: 'Faltan campos obligatorios' }, 400)
     }
 
@@ -34,7 +34,6 @@ serve(async (req) => {
       .single()
 
     if (configError || !configData) {
-      console.error('configuracion query error:', JSON.stringify(configError))
       return json({ error: 'Error de configuración: ' + (configError?.message ?? 'sin datos') }, 500)
     }
 
@@ -42,6 +41,7 @@ serve(async (req) => {
       return json({ error: 'Código de invitación incorrecto' }, 400)
     }
 
+    // Crear usuario en auth
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password,
@@ -55,6 +55,7 @@ serve(async (req) => {
       return json({ error: msg }, 400)
     }
 
+    // Insertar en tabla usuarios
     const { error: dbError } = await admin.from('usuarios').insert({
       id:     authData.user.id,
       nombre: nombre.trim(),
