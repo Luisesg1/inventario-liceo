@@ -234,42 +234,74 @@ const descargarPlantilla = async (catId, catLabel, categorias) => {
   const ejemplo = getEjemplo(tipo, catLabel)
   const exampleRow = headers.map(h => ejemplo[h] ?? '')
 
-  // Cargar SheetJS si no está disponible
-  if (!window.XLSX) {
+  // Cargar ExcelJS si no está disponible (soporta estilos: negrita, bordes, colores)
+  if (!window.ExcelJS) {
     await new Promise((resolve, reject) => {
-      const s = document.getElementById('sheetjs-script') || document.createElement('script')
-      s.id = 'sheetjs-script'
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      const s = document.getElementById('exceljs-script') || document.createElement('script')
+      s.id = 'exceljs-script'
+      s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
       s.onload = resolve
       s.onerror = reject
       document.head.appendChild(s)
     })
   }
 
-  const XLSX = window.XLSX
-  const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow])
+  const workbook  = new window.ExcelJS.Workbook()
+  const worksheet = workbook.addWorksheet(catLabel.slice(0, 31))
 
-  // Ancho de columnas según longitud del contenido del ejemplo
-  ws['!cols'] = headers.map((h, i) => ({ wch: Math.max(h.length + 4, String(exampleRow[i] ?? '').length + 4, 14) }))
+  // Anchos de columna
+  worksheet.columns = headers.map((h, i) => ({
+    width: Math.max(h.length + 4, String(exampleRow[i] ?? '').length + 4, 14),
+  }))
 
-  // Auto-filtro en la fila de encabezados
-  ws['!autofilter'] = {
-    ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }),
+  // ── Fila de encabezados con negrita, fondo azul y bordes ──
+  const headerRow = worksheet.addRow(headers)
+  headerRow.height = 20
+  headerRow.eachCell(cell => {
+    cell.font      = { bold: true, color: { argb: 'FF1A237E' }, size: 11 }
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAF6' } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    cell.border    = {
+      top:    { style: 'medium', color: { argb: 'FF9FA8DA' } },
+      bottom: { style: 'medium', color: { argb: 'FF9FA8DA' } },
+      left:   { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+      right:  { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+    }
+  })
+
+  // ── Fila de ejemplo con fondo claro y bordes ──
+  const exRow = worksheet.addRow(exampleRow)
+  exRow.height = 18
+  exRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+    cell.fill   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8F9FF' } }
+    cell.border = {
+      top:    { style: 'thin', color: { argb: 'FFC5CAE9' } },
+      bottom: { style: 'thin', color: { argb: 'FFC5CAE9' } },
+      left:   { style: 'thin', color: { argb: 'FFC5CAE9' } },
+      right:  { style: 'thin', color: { argb: 'FFC5CAE9' } },
+    }
+    cell.font      = { italic: true, color: { argb: 'FF6B7280' }, size: 10 }
+    cell.alignment = { horizontal: 'left', vertical: 'middle' }
+  })
+
+  // ── Auto-filtro en encabezados ──
+  worksheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to:   { row: 1, column: headers.length },
   }
 
-  // Definir como tabla de Excel con estilo
-  ws['!tables'] = [{
-    name: 'Plantilla',
-    ref:  XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 1, c: headers.length - 1 } }),
-    headerRow:  true,
-    totalsRow:  false,
-    style: { theme: 'TableStyleMedium2', showRowStripes: true },
-    columns: headers.map(h => ({ name: h })),
-  }]
+  // ── Fijar fila de encabezado al hacer scroll ──
+  worksheet.views = [{ state: 'frozen', ySplit: 1 }]
 
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, catLabel.slice(0, 31))
-  XLSX.writeFile(wb, `plantilla_${catLabel.toLowerCase().replace(/\s+/g, '_')}.xlsx`)
+  // ── Descargar ──
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url    = URL.createObjectURL(blob)
+  const a      = document.createElement('a')
+  a.href       = url
+  a.download   = `plantilla_${catLabel.toLowerCase().replace(/\s+/g, '_')}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 // ── Normalizar un valor de celda ──────────────────────────────────────────
