@@ -471,7 +471,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   // ── Cargar préstamo activo del bien en detalle ────────────────────────────
   useEffect(() => {
-    if (!verDetalle?.id) { setPrestamoBien(null); setMostrarFormPrestamo(false); return }
+    if (!verDetalle?.id) { setPrestamoBien(null); return }
     setCargandoPrestamo(true)
     supabase.from('prestamos').select('*')
       .eq('bien_id', verDetalle.id).is('fecha_devolucion_real', null)
