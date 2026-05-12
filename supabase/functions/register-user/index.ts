@@ -16,56 +16,24 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
-    const { nombre, email, password, codigo } = await req.json()
+    const { codigo } = await req.json()
 
-    if (!nombre?.trim() || !email?.trim() || !password || !codigo) {
-      return json({ error: 'Faltan campos obligatorios' }, 400)
-    }
+    if (!codigo?.trim()) return json({ error: 'Código requerido' }, 400)
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    // Leer código desde la base de datos
-    const { data: configData, error: configError } = await admin
+    const { data, error } = await admin
       .from('configuracion')
       .select('valor')
       .eq('clave', 'codigo_invitacion')
       .single()
 
-    if (configError || !configData) {
-      return json({ error: 'Error de configuración: ' + (configError?.message ?? 'sin datos') }, 500)
-    }
+    if (error || !data) return json({ error: 'Error de configuración' }, 500)
 
-    if (codigo.trim() !== configData.valor.trim()) {
+    if (codigo.trim() !== data.valor.trim()) {
       return json({ error: 'Código de invitación incorrecto' }, 400)
-    }
-
-    // Crear usuario en auth
-    const { data: authData, error: authError } = await admin.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
-      password,
-      email_confirm: true,
-    })
-
-    if (authError) {
-      const msg = authError.message.includes('already registered')
-        ? 'Este correo ya está registrado'
-        : authError.message
-      return json({ error: msg }, 400)
-    }
-
-    // Insertar en tabla usuarios
-    const { error: dbError } = await admin.from('usuarios').insert({
-      id:     authData.user.id,
-      nombre: nombre.trim(),
-      email:  email.trim().toLowerCase(),
-      rol:    'docente',
-    })
-
-    if (dbError) {
-      await admin.auth.admin.deleteUser(authData.user.id)
-      return json({ error: 'Error al crear el perfil: ' + dbError.message }, 500)
     }
 
     return json({ ok: true })

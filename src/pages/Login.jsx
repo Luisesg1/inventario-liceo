@@ -31,14 +31,34 @@ export default function Login({ onLogin }) {
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
     if (regPass.length < 6)      { setError('La contraseña debe tener al menos 6 caracteres'); return }
     setCargando(true)
-    const { data, error: fnError } = await supabase.functions.invoke('register-user', {
-      body: { nombre: regNombre, email: regEmail, password: regPass, codigo: regCodigo },
+
+    // Paso 1: validar código de invitación
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('register-user', {
+      body: { codigo: regCodigo },
+    })
+    if (fnError || fnData?.error) {
+      setError(fnData?.error || 'Error al validar el código')
+      setCargando(false)
+      return
+    }
+
+    // Paso 2: crear cuenta
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: regEmail,
+      password: regPass,
+      options: { data: { nombre: regNombre, via_invitacion: 'true' } },
     })
     setCargando(false)
-    if (fnError || data?.error) { setError(data?.error || 'Error al registrarse'); return }
+    if (signUpError) {
+      setError(signUpError.message === 'User already registered'
+        ? 'Ya existe una cuenta con ese correo'
+        : 'Error al crear la cuenta: ' + signUpError.message)
+      return
+    }
+
     // Auto-login
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: regEmail, password: regPass })
-    if (loginError) { setRegExito(true) } // Si falla el auto-login, mostrar éxito manual
+    if (loginError) { setRegExito(true) }
   }
 
   function volverAlLogin() {
