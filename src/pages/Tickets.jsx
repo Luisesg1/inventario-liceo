@@ -62,7 +62,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       const hay = (s) => (s ?? '').toLowerCase().includes(q)
       const label = (t.area_reporte === 'Otro' && t.area_otro) ? t.area_otro : (t.area_reporte ?? '')
       if (!hay(label) && !hay(t.area_reporte) && !hay(t.descripcion) &&
-          !hay(t.creado_por_nombre) && !hay(t.apellidos) &&
+          !hay(t.creado_por_nombre) && !hay(t.apellidos) && !hay(t.rol_solicitante) &&
           !hay(t.lugar_falla) && !hay(t.marca_modelo_falla))
         return false
     }
