@@ -14,11 +14,18 @@ const ESTADO = {
 }
 const KPI_BORDER = { 'Abierto': '#2563eb', 'En proceso': '#d97706', 'Resuelto': '#16a34a' }
 
-const FORM_VACIO = { titulo: '', descripcion: '', bien_id: '', prioridad: 'media' }
+const AREAS = ['Proyector', 'Conector HDMI Muro', 'Conector HDMI Proyector', 'Notebook',
+  'Computador de escritorio', 'Impresora', 'Red de Internet', 'Teclado', 'Mouse', 'Otro']
+const ROLES = ['Directivo', 'Docente', 'Asistente de la educación', 'Coordinador(a)']
+
+const FORM_VACIO = {
+  nombre: '', apellidos: '', rol_solicitante: '', correo_contacto: '',
+  area_reporte: '', area_otro: '', marca_modelo_falla: '',
+  lugar_falla: '', descripcion: '', prioridad: 'media',
+}
 
 export default function Tickets({ usuario }) {
   const [tickets,         setTickets]         = useState([])
-  const [bienes,          setBienes]          = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState('')
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
@@ -29,18 +36,13 @@ export default function Tickets({ usuario }) {
   const [editEstado,      setEditEstado]      = useState('')
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
-  const [bienQuery,       setBienQuery]       = useState('')
 
   useEffect(() => { cargar() }, [])
 
   const cargar = async () => {
     setCargando(true)
-    const [{ data: t }, { data: b }] = await Promise.all([
-      supabase.from('tickets').select('*').order('creado_en', { ascending: false }),
-      supabase.from('bienes').select('id, nombre, codigo').order('nombre'),
-    ])
-    setTickets(t ?? [])
-    setBienes(b ?? [])
+    const { data } = await supabase.from('tickets').select('*').order('creado_en', { ascending: false })
+    setTickets(data ?? [])
     setCargando(false)
   }
 
@@ -49,25 +51,37 @@ export default function Tickets({ usuario }) {
     (!filtroPrioridad || t.prioridad === filtroPrioridad)
   )
 
-  const abrirNuevo  = () => { setForm(FORM_VACIO); setBienQuery(''); setModalNuevo(true) }
+  const abrirNuevo = () => {
+    const [nombre = '', ...rest] = (usuario.nombre || '').split(' ')
+    setForm({ ...FORM_VACIO, nombre, apellidos: rest.join(' '), correo_contacto: usuario.email || '' })
+    setModalNuevo(true)
+  }
   const cerrarNuevo = () => setModalNuevo(false)
+  const setF = (campo, val) => setForm(f => ({ ...f, [campo]: val }))
 
-  const bienSel         = bienes.find(b => String(b.id) === String(form.bien_id))
-  const bienesFiltrados = bienQuery
-    ? bienes.filter(b => `${b.nombre} ${b.codigo}`.toLowerCase().includes(bienQuery.toLowerCase())).slice(0, 8)
-    : []
+  const areaLabel = (t) => t.area_reporte === 'Otro' && t.area_otro ? `Otro — ${t.area_otro}` : (t.area_reporte || t.titulo || '—')
+
+  const formValido = form.nombre.trim() && form.area_reporte && form.lugar_falla.trim() && form.descripcion.trim()
 
   const crearTicket = async () => {
-    if (!form.titulo.trim()) return
+    if (!formValido) return
     setGuardando(true)
+    const titulo = form.area_reporte === 'Otro' && form.area_otro
+      ? `Otro — ${form.area_otro}`
+      : form.area_reporte
     const { error } = await supabase.from('tickets').insert({
-      titulo:            form.titulo.trim(),
-      descripcion:       form.descripcion.trim() || null,
-      bien_id:           form.bien_id || null,
-      bien_nombre:       bienSel ? `${bienSel.nombre} (${bienSel.codigo})` : null,
-      prioridad:         form.prioridad,
-      creado_por:        usuario.id,
-      creado_por_nombre: usuario.nombre,
+      titulo,
+      descripcion:        form.descripcion.trim(),
+      area_reporte:       form.area_reporte,
+      area_otro:          form.area_otro.trim() || null,
+      marca_modelo_falla: form.marca_modelo_falla.trim() || null,
+      lugar_falla:        form.lugar_falla.trim(),
+      apellidos:          form.apellidos.trim() || null,
+      rol_solicitante:    form.rol_solicitante || null,
+      correo_contacto:    form.correo_contacto.trim() || null,
+      prioridad:          form.prioridad,
+      creado_por:         usuario.id,
+      creado_por_nombre:  `${form.nombre.trim()} ${form.apellidos.trim()}`.trim() || usuario.nombre,
     })
     if (!error) { await cargar(); cerrarNuevo() }
     setGuardando(false)
@@ -80,8 +94,7 @@ export default function Tickets({ usuario }) {
     if (!ticketDetalle) return
     setGuardandoEdit(true)
     const { error } = await supabase.from('tickets').update({
-      estado: editEstado,
-      notas:  editNotas.trim() || null,
+      estado: editEstado, notas: editNotas.trim() || null,
     }).eq('id', ticketDetalle.id)
     if (!error) {
       setTickets(prev => prev.map(t => t.id === ticketDetalle.id
@@ -116,13 +129,10 @@ export default function Tickets({ usuario }) {
           const n = tickets.filter(t => t.estado === e).length
           const est = ESTADO[e]
           return (
-            <div key={e} className="tickets-kpi" style={{ borderLeftColor: KPI_BORDER[e] }}
-              onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)} title={`Filtrar por ${e}`}>
+            <div key={e} className="tickets-kpi" style={{ borderLeftColor: KPI_BORDER[e], cursor: 'pointer' }}
+              onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}>
               <span className="tickets-kpi-icon">{est.icon}</span>
-              <div>
-                <p className="tickets-kpi-val">{n}</p>
-                <p className="tickets-kpi-lbl">{e}</p>
-              </div>
+              <div><p className="tickets-kpi-val">{n}</p><p className="tickets-kpi-lbl">{e}</p></div>
             </div>
           )
         })}
@@ -165,10 +175,10 @@ export default function Tickets({ usuario }) {
               <div key={t.id} className="ticket-card" onClick={() => abrirDetalle(t)}>
                 <div className="ticket-card-body">
                   <div className="ticket-card-info">
-                    <p className="ticket-titulo">{t.titulo}</p>
-                    {t.bien_nombre && <p className="ticket-bien">📦 {t.bien_nombre}</p>}
+                    <p className="ticket-titulo">{areaLabel(t)}</p>
+                    <p className="ticket-bien">📍 {t.lugar_falla || '—'}</p>
                     {t.descripcion && <p className="ticket-desc">{t.descripcion}</p>}
-                    <p className="ticket-meta">Por {t.creado_por_nombre} · {fmt(t.creado_en)}</p>
+                    <p className="ticket-meta">Por {t.creado_por_nombre}{t.rol_solicitante ? ` · ${t.rol_solicitante}` : ''} · {fmt(t.creado_en)}</p>
                   </div>
                   <div className="ticket-badges">
                     <span className="badge-estado" style={{ background: e.bg, color: e.color }}>{t.estado}</span>
@@ -181,7 +191,7 @@ export default function Tickets({ usuario }) {
         </div>
       )}
 
-      {/* Modal — Nuevo ticket */}
+      {/* ── Modal: Nuevo ticket ── */}
       {modalNuevo && (
         <div className="modal-tickets-overlay" onClick={cerrarNuevo}>
           <div className="modal-tickets" onClick={e => e.stopPropagation()}>
@@ -190,43 +200,65 @@ export default function Tickets({ usuario }) {
               <button className="modal-tickets-close" onClick={cerrarNuevo}>✕</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="modal-field">
-                <label className="modal-label">Título *</label>
-                <input className="modal-input" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Ej: Proyector de sala 3 no enciende" />
-              </div>
-              <div className="modal-field">
-                <label className="modal-label">Descripción</label>
-                <textarea className="modal-textarea" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Detalla el problema…" />
-              </div>
-              <div className="modal-field">
-                <label className="modal-label">Bien afectado (opcional)</label>
-                <div style={{ position: 'relative' }}>
-                  <input className="modal-input"
-                    value={bienQuery || (bienSel ? `${bienSel.nombre} (${bienSel.codigo})` : '')}
-                    onChange={e => { setBienQuery(e.target.value); setForm(f => ({ ...f, bien_id: '' })) }}
-                    placeholder="Buscar por nombre o código…" />
-                  {bienesFiltrados.length > 0 && !form.bien_id && (
-                    <div className="bien-dropdown">
-                      {bienesFiltrados.map(b => (
-                        <div key={b.id} className="bien-dropdown-item"
-                          onClick={() => { setForm(f => ({ ...f, bien_id: b.id })); setBienQuery('') }}>
-                          {b.nombre} <span style={{ color: '#9ca3af' }}>· {b.codigo}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            {/* ── Sección 1: Contacto ── */}
+            <p className="modal-seccion-label">Información de contacto</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="modal-field">
+                  <label className="modal-label">Nombre *</label>
+                  <input className="modal-input" value={form.nombre} onChange={e => setF('nombre', e.target.value)} placeholder="Nombre" />
                 </div>
-                {form.bien_id && (
-                  <button onClick={() => { setForm(f => ({ ...f, bien_id: '' })); setBienQuery('') }}
-                    style={{ alignSelf: 'flex-start', marginTop: 4, fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    ✕ Quitar bien
-                  </button>
-                )}
+                <div className="modal-field">
+                  <label className="modal-label">Apellidos</label>
+                  <input className="modal-input" value={form.apellidos} onChange={e => setF('apellidos', e.target.value)} placeholder="Apellidos" />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="modal-field">
+                  <label className="modal-label">Rol</label>
+                  <select className="modal-select" value={form.rol_solicitante} onChange={e => setF('rol_solicitante', e.target.value)}>
+                    <option value="">Seleccionar…</option>
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="modal-field">
+                  <label className="modal-label">Correo electrónico</label>
+                  <input className="modal-input" type="email" value={form.correo_contacto} onChange={e => setF('correo_contacto', e.target.value)} placeholder="correo@liceo.cl" />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Sección 2: Reporte ── */}
+            <p className="modal-seccion-label" style={{ marginTop: 18 }}>Reporte de falla o incidencia</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="modal-field">
+                <label className="modal-label">Área del reporte *</label>
+                <select className="modal-select" value={form.area_reporte} onChange={e => setF('area_reporte', e.target.value)}>
+                  <option value="">Seleccionar…</option>
+                  {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              {form.area_reporte === 'Otro' && (
+                <div className="modal-field">
+                  <label className="modal-label">¿Cuál?</label>
+                  <input className="modal-input" value={form.area_otro} onChange={e => setF('area_otro', e.target.value)} placeholder="Especifica el área…" />
+                </div>
+              )}
+              <div className="modal-field">
+                <label className="modal-label">Marca y modelo del dispositivo con falla <span style={{ color: '#9ca3af', fontWeight: 400 }}>(si corresponde)</span></label>
+                <input className="modal-input" value={form.marca_modelo_falla} onChange={e => setF('marca_modelo_falla', e.target.value)} placeholder="Ej: HP ProBook 440 G7" />
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Lugar donde se detecta la falla *</label>
+                <input className="modal-input" value={form.lugar_falla} onChange={e => setF('lugar_falla', e.target.value)} placeholder="Nº de sala, curso, oficina, etc." />
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Describe la falla o incidencia *</label>
+                <textarea className="modal-textarea" value={form.descripcion} onChange={e => setF('descripcion', e.target.value)} placeholder="Detalla el problema…" />
               </div>
               <div className="modal-field">
                 <label className="modal-label">Prioridad</label>
-                <select className="modal-select" value={form.prioridad} onChange={e => setForm(f => ({ ...f, prioridad: e.target.value }))}>
+                <select className="modal-select" value={form.prioridad} onChange={e => setF('prioridad', e.target.value)}>
                   <option value="alta">🔴 Alta</option>
                   <option value="media">🟡 Media</option>
                   <option value="baja">🟢 Baja</option>
@@ -236,7 +268,7 @@ export default function Tickets({ usuario }) {
 
             <div className="modal-actions">
               <button className="btn-modal-cancel" onClick={cerrarNuevo}>Cancelar</button>
-              <button className="btn-modal-save" onClick={crearTicket} disabled={guardando || !form.titulo.trim()}>
+              <button className="btn-modal-save" onClick={crearTicket} disabled={guardando || !formValido}>
                 {guardando ? 'Guardando…' : 'Crear ticket'}
               </button>
             </div>
@@ -244,23 +276,34 @@ export default function Tickets({ usuario }) {
         </div>
       )}
 
-      {/* Modal — Ver / Actualizar ticket */}
+      {/* ── Modal: Ver / Actualizar ticket ── */}
       {ticketDetalle && (
         <div className="modal-tickets-overlay" onClick={cerrarDetalle}>
           <div className="modal-tickets" onClick={e => e.stopPropagation()}>
             <div className="modal-tickets-header">
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#111827', overflowWrap: 'break-word' }}>{ticketDetalle.titulo}</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#9ca3af' }}>Por {ticketDetalle.creado_por_nombre} · {fmt(ticketDetalle.creado_en)}</p>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#111827' }}>{areaLabel(ticketDetalle)}</p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#9ca3af' }}>
+                  {ticketDetalle.creado_por_nombre}{ticketDetalle.rol_solicitante ? ` · ${ticketDetalle.rol_solicitante}` : ''} · {fmt(ticketDetalle.creado_en)}
+                </p>
               </div>
               <button className="modal-tickets-close" onClick={cerrarDetalle}>✕</button>
             </div>
 
-            {ticketDetalle.bien_nombre && (
-              <div className="ticket-detalle-bien">📦 {ticketDetalle.bien_nombre}</div>
-            )}
+            {/* Info del solicitante */}
+            <div className="ticket-detalle-bien" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 12 }}>
+              {ticketDetalle.correo_contacto && <span>✉️ {ticketDetalle.correo_contacto}</span>}
+              {ticketDetalle.lugar_falla     && <span>📍 {ticketDetalle.lugar_falla}</span>}
+              {ticketDetalle.marca_modelo_falla && <span style={{ gridColumn: '1/-1' }}>🖥️ {ticketDetalle.marca_modelo_falla}</span>}
+            </div>
+
             {ticketDetalle.descripcion && (
               <div className="ticket-detalle-desc">{ticketDetalle.descripcion}</div>
+            )}
+            {ticketDetalle.notas && (
+              <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '9px 12px', fontSize: '0.83rem', color: '#166534', marginBottom: 14 }}>
+                📝 <strong>Notas:</strong> {ticketDetalle.notas}
+              </div>
             )}
 
             <div className="ticket-detalle-badges">
@@ -269,7 +312,7 @@ export default function Tickets({ usuario }) {
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div className="modal-field">
                 <label className="modal-label">Estado</label>
                 <select className="modal-select" value={editEstado} onChange={e => setEditEstado(e.target.value)}>
@@ -286,7 +329,7 @@ export default function Tickets({ usuario }) {
 
             <div className="modal-actions-split">
               <button className="btn-modal-del" onClick={() => eliminarTicket(ticketDetalle.id)}>Eliminar</button>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
                 <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>
                   {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}

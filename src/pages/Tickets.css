@@ -194,6 +194,18 @@
   line-height: 1.4;
 }
 
+/* Separador de sección en modal */
+.modal-seccion-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #d4a017;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid rgba(212,160,23,0.2);
+}
+
 /* Detalle — info block */
 .ticket-detalle-bien {
   background: #f0f4ff; border-radius: 8px;
