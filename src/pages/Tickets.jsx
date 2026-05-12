@@ -127,13 +127,18 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   return (
     <div className="tickets-wrap">
 
+      <div className="tickets-page-header">
+        <p className="tickets-page-title">🎫 Tickets de soporte</p>
+        <p className="tickets-page-sub">{esAdmin ? 'Gestiona y resuelve los reportes del equipo' : 'Reporta fallas o incidencias del establecimiento'}</p>
+      </div>
+
       {/* KPIs — solo admin */}
       {esAdmin && <div className="tickets-kpis">
         {['Abierto', 'En proceso', 'Resuelto'].map(e => {
           const n = tickets.filter(t => t.estado === e).length
           const est = ESTADO[e]
           return (
-            <div key={e} className="tickets-kpi" style={{ borderLeftColor: KPI_BORDER[e], cursor: 'pointer' }}
+            <div key={e} className={`tickets-kpi ${filtroEstado === e ? 'activo' : ''}`}
               onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}>
               <span className="tickets-kpi-icon">{est.icon}</span>
               <div><p className="tickets-kpi-val">{n}</p><p className="tickets-kpi-lbl">{e}</p></div>
