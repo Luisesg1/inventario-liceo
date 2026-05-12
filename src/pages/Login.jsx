@@ -2,6 +2,15 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import './Login.css'
 
+const REQUISITOS_PASS = [
+  { id: 'length', label: 'Mínimo 8 caracteres',  test: (p) => p.length >= 8 },
+  { id: 'upper',  label: 'Una mayúscula',         test: (p) => /[A-Z]/.test(p) },
+  { id: 'lower',  label: 'Una minúscula',         test: (p) => /[a-z]/.test(p) },
+  { id: 'number', label: 'Un número',             test: (p) => /[0-9]/.test(p) },
+  { id: 'symbol', label: 'Un símbolo (!@#...)',   test: (p) => /[^A-Za-z0-9]/.test(p) },
+]
+const STRENGTH_COLORS = [null, '#dc2626', '#f97316', '#eab308', '#16a34a', '#15803d']
+
 export default function Login({ onLogin }) {
   const [email,    setEmail]    = useState('')
   const [pass,     setPass]     = useState('')
@@ -29,7 +38,7 @@ export default function Login({ onLogin }) {
     e.preventDefault()
     setError('')
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
-    if (regPass.length < 6)      { setError('La contraseña debe tener al menos 6 caracteres'); return }
+    if (!REQUISITOS_PASS.every(r => r.test(regPass))) { setError('La contraseña no cumple todos los requisitos de seguridad'); return }
     setCargando(true)
 
     // Paso 1: validar código de invitación
@@ -144,11 +153,33 @@ export default function Login({ onLogin }) {
                     <label>Contraseña</label>
                     <div className="login-pass-wrap">
                       <input type={regShowPass ? 'text' : 'password'} value={regPass}
-                        onChange={e => setRegPass(e.target.value)} placeholder="Mínimo 6 caracteres" required />
+                        onChange={e => setRegPass(e.target.value)} placeholder="Mínimo 8 caracteres" required />
                       <button type="button" className="login-eye" onClick={() => setRegShowPass(!regShowPass)} tabIndex={-1}>
                         {regShowPass ? '🙈' : '👁️'}
                       </button>
                     </div>
+                    {regPass.length > 0 && (() => {
+                      const checks   = REQUISITOS_PASS.map(r => ({ ...r, ok: r.test(regPass) }))
+                      const strength = checks.filter(c => c.ok).length
+                      const color    = STRENGTH_COLORS[strength]
+                      return (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ display: 'flex', gap: 3, height: 4, borderRadius: 3, marginBottom: 5 }}>
+                            {[1,2,3,4,5].map(i => (
+                              <div key={i} style={{ flex: 1, borderRadius: 3, transition: 'background 0.2s',
+                                backgroundColor: i <= strength ? color : '#e5e7eb' }} />
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px 10px' }}>
+                            {checks.map(c => (
+                              <span key={c.id} style={{ fontSize: 11, color: c.ok ? '#16a34a' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                <span style={{ fontWeight: 700 }}>{c.ok ? '✓' : '○'}</span> {c.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })()}
                   </div>
                   <div className="login-field login-field--recovery">
                     <label>Confirmar contraseña</label>

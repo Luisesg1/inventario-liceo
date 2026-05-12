@@ -635,6 +635,12 @@ export default function Usuarios({ usuario }) {
   const [guardandoCodigo, setGuardandoCodigo] = useState(false)
   const [mensajeCodigo,   setMensajeCodigo]   = useState('')
   const [verCodigo,       setVerCodigo]       = useState(false)
+  const [confirmarCodigo, setConfirmarCodigo] = useState(false)
+
+  const generarCodigoAleatorio = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  }
 
   const cargarCodigo = useCallback(async () => {
     const { data } = await supabase.from('configuracion').select('valor').eq('clave', 'codigo_invitacion').single()
@@ -642,6 +648,7 @@ export default function Usuarios({ usuario }) {
   }, [])
 
   const guardarCodigo = async () => {
+    setConfirmarCodigo(false)
     if (!nuevoCodigo.trim()) return
     setGuardandoCodigo(true)
     const { error } = await supabase.from('configuracion').update({ valor: nuevoCodigo.trim() }).eq('clave', 'codigo_invitacion')
@@ -850,18 +857,45 @@ export default function Usuarios({ usuario }) {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value.toUpperCase())}
                   style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #6366f1', outline: 'none', width: 160, letterSpacing: '0.05em' }}
-                  autoFocus onKeyDown={e => e.key === 'Enter' && guardarCodigo()} />
-                <button onClick={guardarCodigo} disabled={guardandoCodigo || !nuevoCodigo.trim()}
+                  autoFocus onKeyDown={e => e.key === 'Enter' && nuevoCodigo.trim() && setConfirmarCodigo(true)} />
+                <button onClick={() => setNuevoCodigo(generarCodigoAleatorio())}
+                  title="Generar código aleatorio"
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #6366f1', background: '#f0f4ff', color: '#6366f1', fontSize: 14, cursor: 'pointer' }}>
+                  🎲
+                </button>
+                <button onClick={() => nuevoCodigo.trim() && setConfirmarCodigo(true)} disabled={guardandoCodigo || !nuevoCodigo.trim()}
                   style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                   {guardandoCodigo ? '…' : 'Guardar'}
                 </button>
-                <button onClick={() => { setEditandoCodigo(false); setNuevoCodigo('') }}
+                <button onClick={() => { setEditandoCodigo(false); setNuevoCodigo(''); setConfirmarCodigo(false) }}
                   style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer' }}>
                   Cancelar
                 </button>
+              </div>
+            )}
+            {/* Modal confirmación cambio de código */}
+            {confirmarCodigo && (
+              <div style={ps.modalOverlay} onClick={() => setConfirmarCodigo(false)}>
+                <div style={ps.modal} onClick={e => e.stopPropagation()}>
+                  <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: '#111827' }}>
+                    ¿Cambiar código de invitación?
+                  </p>
+                  <p style={{ margin: '0 0 8px', fontSize: 13, color: '#6b7280' }}>
+                    El código actual dejará de funcionar inmediatamente.
+                  </p>
+                  <p style={{ margin: '0 0 20px', fontSize: 13, color: '#6b7280' }}>
+                    Nuevo código: <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#1a237e', letterSpacing: '0.08em' }}>{nuevoCodigo}</span>
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button className="btn-secundario" onClick={() => setConfirmarCodigo(false)}>Cancelar</button>
+                    <button className="btn-primario" onClick={guardarCodigo} style={{ minWidth: 100 }}>
+                      Sí, cambiar
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
