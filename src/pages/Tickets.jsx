@@ -220,7 +220,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
               style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1a237e', flexShrink: 0 }}
             />
             {seleccionados.size > 0
-              ? <><span className="tickets-sel-count">{seleccionados.size}</span> seleccionado{seleccionados.size !== 1 ? 's' : ''}</>
+              ? <><span className="tickets-sel-count">{seleccionados.size}</span> Seleccionado{seleccionados.size !== 1 ? 's' : ''}</>
               : <>Seleccionar todos <span className="tickets-sel-total">({filtrados.length})</span></>
             }
           </label>

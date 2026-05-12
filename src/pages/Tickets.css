@@ -299,16 +299,21 @@
   color: rgba(255,255,255,0.6);
   cursor: pointer;
   user-select: none;
+  line-height: 1;
 }
 .tickets-sel-bar--activa .tickets-sel-label { color: rgba(255,255,255,0.85); }
 .tickets-sel-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: #ef4444;
   color: #fff;
   font-size: 0.72rem;
   font-weight: 800;
   border-radius: 20px;
-  padding: 1px 8px;
-  line-height: 1.6;
+  padding: 2px 9px;
+  line-height: 1;
+  height: 20px;
 }
 .tickets-sel-total { color: rgba(255,255,255,0.35); }
 .tickets-sel-btn-del {
