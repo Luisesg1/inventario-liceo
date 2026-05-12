@@ -628,6 +628,32 @@ export default function Usuarios({ usuario }) {
 
   const esAdmin = usuario?.rol === 'admin'
 
+  // Código de invitación
+  const [codigoActual,    setCodigoActual]    = useState('')
+  const [editandoCodigo,  setEditandoCodigo]  = useState(false)
+  const [nuevoCodigo,     setNuevoCodigo]     = useState('')
+  const [guardandoCodigo, setGuardandoCodigo] = useState(false)
+  const [mensajeCodigo,   setMensajeCodigo]   = useState('')
+  const [verCodigo,       setVerCodigo]       = useState(false)
+
+  const cargarCodigo = useCallback(async () => {
+    const { data } = await supabase.from('configuracion').select('valor').eq('clave', 'codigo_invitacion').single()
+    if (data) setCodigoActual(data.valor)
+  }, [])
+
+  const guardarCodigo = async () => {
+    if (!nuevoCodigo.trim()) return
+    setGuardandoCodigo(true)
+    const { error } = await supabase.from('configuracion').update({ valor: nuevoCodigo.trim() }).eq('clave', 'codigo_invitacion')
+    setGuardandoCodigo(false)
+    if (error) { setMensajeCodigo('Error al guardar'); return }
+    setCodigoActual(nuevoCodigo.trim())
+    setEditandoCodigo(false)
+    setNuevoCodigo('')
+    setMensajeCodigo('Código actualizado ✓')
+    setTimeout(() => setMensajeCodigo(''), 3000)
+  }
+
   const cargarUsuarios = useCallback(async () => {
     setEstado('cargando')
     const { data, error } = await supabase
@@ -636,7 +662,7 @@ export default function Usuarios({ usuario }) {
     else { setUsuarios(data || []); setEstado('ok') }
   }, [])
 
-  useEffect(() => { cargarUsuarios() }, [cargarUsuarios])
+  useEffect(() => { cargarUsuarios(); if (esAdmin) cargarCodigo() }, [cargarUsuarios, cargarCodigo, esAdmin])
 
   const usuariosFiltrados = usuarios
     .filter((u) =>
@@ -794,6 +820,58 @@ export default function Usuarios({ usuario }) {
           </button>
         )}
       </div>
+
+      {/* Código de invitación */}
+      {esAdmin && (
+        <div style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 12, padding: '14px 18px', marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                🔑 Código de invitación para docentes
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>
+                Comparte este código para que los profesores puedan crear su cuenta
+              </p>
+            </div>
+            {!editandoCodigo ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 800, color: '#1a237e', letterSpacing: '0.1em', background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 8, padding: '5px 14px', userSelect: 'all' }}>
+                  {verCodigo ? codigoActual : '••••••••'}
+                </span>
+                <button onClick={() => setVerCodigo(!verCodigo)} title={verCodigo ? 'Ocultar' : 'Mostrar'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '4px 6px' }}>
+                  {verCodigo ? '🙈' : '👁️'}
+                </button>
+                <button onClick={() => navigator.clipboard.writeText(codigoActual).then(() => { setMensajeCodigo('¡Copiado!'); setTimeout(() => setMensajeCodigo(''), 2000) })}
+                  title="Copiar" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: '4px 6px' }}>📋</button>
+                <button onClick={() => { setEditandoCodigo(true); setNuevoCodigo(codigoActual) }}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #6366f1', background: '#fff', color: '#6366f1', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  Cambiar
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value)}
+                  style={{ fontFamily: 'monospace', fontSize: 14, fontWeight: 700, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #6366f1', outline: 'none', width: 160, letterSpacing: '0.05em' }}
+                  autoFocus onKeyDown={e => e.key === 'Enter' && guardarCodigo()} />
+                <button onClick={guardarCodigo} disabled={guardandoCodigo || !nuevoCodigo.trim()}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  {guardandoCodigo ? '…' : 'Guardar'}
+                </button>
+                <button onClick={() => { setEditandoCodigo(false); setNuevoCodigo('') }}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 12, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+              </div>
+            )}
+          </div>
+          {mensajeCodigo && (
+            <p style={{ margin: '8px 0 0', fontSize: 12, fontWeight: 600, color: mensajeCodigo.includes('Error') ? '#dc2626' : '#16a34a' }}>
+              {mensajeCodigo}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Buscador + filtro por rol */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px', gap: 10, marginBottom: 16 }}>

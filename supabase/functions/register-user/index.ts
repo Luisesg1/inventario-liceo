@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const INVITE_CODE         = Deno.env.get('INVITE_CODE')!
 const SUPABASE_URL        = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -19,9 +18,6 @@ serve(async (req) => {
   try {
     const { nombre, email, password, codigo } = await req.json()
 
-    if (!codigo || codigo.trim() !== INVITE_CODE.trim()) {
-      return json({ error: 'Código de invitación incorrecto' }, 400)
-    }
     if (!nombre?.trim() || !email?.trim() || !password) {
       return json({ error: 'Faltan campos obligatorios' }, 400)
     }
@@ -29,6 +25,21 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    // Leer código desde la base de datos
+    const { data: configData, error: configError } = await admin
+      .from('configuracion')
+      .select('valor')
+      .eq('clave', 'codigo_invitacion')
+      .single()
+
+    if (configError || !configData) {
+      return json({ error: 'Error de configuración del servidor' }, 500)
+    }
+
+    if (codigo.trim() !== configData.valor.trim()) {
+      return json({ error: 'Código de invitación incorrecto' }, 400)
+    }
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: email.trim().toLowerCase(),
