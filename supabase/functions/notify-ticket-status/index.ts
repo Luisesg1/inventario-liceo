@@ -64,9 +64,11 @@ serve(async (req) => {
 
     if (!res.ok) {
       const body = await res.text()
+      console.error('Resend error', res.status, body)
       return new Response(`Resend error: ${body}`, { status: 500, headers: cors })
     }
 
+    console.log('Email enviado a', correo)
     return new Response('OK', { status: 200, headers: cors })
   } catch (e) {
     return new Response(String(e), { status: 500, headers: cors })
