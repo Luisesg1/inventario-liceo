@@ -273,6 +273,62 @@
   50%       { opacity: 0.7; }
 }
 
+/* Barra selección masiva */
+.tickets-sel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 0.6rem;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  transition: background 0.2s, border-color 0.2s;
+}
+.tickets-sel-bar--activa {
+  background: rgba(239,68,68,0.07);
+  border-color: rgba(239,68,68,0.3);
+}
+.tickets-sel-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  user-select: none;
+}
+.tickets-sel-bar--activa .tickets-sel-label { color: rgba(255,255,255,0.85); }
+.tickets-sel-count {
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 20px;
+  padding: 1px 8px;
+  line-height: 1.6;
+}
+.tickets-sel-total { color: rgba(255,255,255,0.35); }
+.tickets-sel-btn-del {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.15s;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.35);
+}
+.tickets-sel-btn-del:hover { background: #dc2626; transform: translateY(-1px); }
+
 @media (max-width: 600px) {
   .tickets-kpis { grid-template-columns: 1fr; gap: 8px; }
   .tickets-toolbar { flex-direction: column; align-items: stretch; }
@@ -282,7 +338,6 @@
   .modal-tickets { border-radius: 18px 18px 0 0; }
 
   /* Barra selección masiva */
-  .tickets-sel-bar { flex-direction: column; align-items: stretch !important; gap: 8px !important; }
-  .tickets-sel-bar-actions { margin-left: 0 !important; justify-content: stretch; }
-  .tickets-sel-bar-actions button { flex: 1; justify-content: center; }
+  .tickets-sel-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tickets-sel-btn-del { justify-content: center; }
 }

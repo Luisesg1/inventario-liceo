@@ -208,28 +208,28 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
       </div>
 
-      {/* Barra de selección masiva */}
-      {esAdmin && seleccionados.size > 0 && (
-        <div className="tickets-sel-bar" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 14px', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600, userSelect: 'none' }}>
-            <input type="checkbox"
+      {/* Barra selección — siempre visible para admin */}
+      {esAdmin && filtrados.length > 0 && (
+        <div className={`tickets-sel-bar ${seleccionados.size > 0 ? 'tickets-sel-bar--activa' : ''}`}>
+          <label className="tickets-sel-label">
+            <input
+              type="checkbox"
               checked={seleccionados.size === filtrados.length && filtrados.length > 0}
               ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
               onChange={toggleTodos}
-              style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#1a237e' }} />
-            Seleccionar todos ({filtrados.length})
+              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1a237e', flexShrink: 0 }}
+            />
+            {seleccionados.size > 0
+              ? <><span className="tickets-sel-count">{seleccionados.size}</span> seleccionado{seleccionados.size !== 1 ? 's' : ''}</>
+              : <>Seleccionar todos <span className="tickets-sel-total">({filtrados.length})</span></>
+            }
           </label>
-          <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600 }}>
-            · {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
-          </span>
-          <div className="tickets-sel-bar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button onClick={salirSeleccion} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#fff', color: '#374151', fontSize: '0.82rem', cursor: 'pointer' }}>
-              ✕ Deseleccionar
-            </button>
-            <button onClick={() => setConfirmandoBulk(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+
+          {seleccionados.size > 0 && (
+            <button className="tickets-sel-btn-del" onClick={() => setConfirmandoBulk(true)}>
               🗑 Eliminar {seleccionados.size} ticket{seleccionados.size !== 1 ? 's' : ''}
             </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -249,23 +249,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
               <button className="btn-modal-del" onClick={eliminarSeleccionados}>Sí, eliminar</button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Encabezado seleccionar todos */}
-      {esAdmin && filtrados.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 4px', marginBottom: '0.25rem' }}>
-          <input
-            type="checkbox"
-            checked={seleccionados.size === filtrados.length && filtrados.length > 0}
-            ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
-            onChange={toggleTodos}
-            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1a237e' }}
-          />
-          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', fontWeight: 600, userSelect: 'none', cursor: 'pointer' }}
-            onClick={toggleTodos}>
-            Seleccionar todos ({filtrados.length})
-          </span>
         </div>
       )}
 
