@@ -35,6 +35,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [guardando,       setGuardando]       = useState(false)
   const [ticketDetalle,   setTicketDetalle]   = useState(null)
   const [editEstado,      setEditEstado]      = useState('')
+  const [editPrioridad,   setEditPrioridad]   = useState('media')
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
 
@@ -90,19 +91,31 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     setGuardando(false)
   }
 
-  const abrirDetalle = (t) => { setTicketDetalle(t); setEditEstado(t.estado); setEditNotas(t.notas ?? '') }
+  const abrirDetalle = (t) => { setTicketDetalle(t); setEditEstado(t.estado); setEditPrioridad(t.prioridad ?? 'media'); setEditNotas(t.notas ?? '') }
   const cerrarDetalle = () => setTicketDetalle(null)
 
   const guardarCambios = async () => {
     if (!ticketDetalle) return
     setGuardandoEdit(true)
+    const notasVal = editNotas.trim() || null
     const { error } = await supabase.from('tickets').update({
-      estado: editEstado, notas: editNotas.trim() || null,
+      estado: editEstado, prioridad: editPrioridad, notas: notasVal,
     }).eq('id', ticketDetalle.id)
     if (!error) {
       setTickets(prev => prev.map(t => t.id === ticketDetalle.id
-        ? { ...t, estado: editEstado, notas: editNotas.trim() || null } : t))
+        ? { ...t, estado: editEstado, prioridad: editPrioridad, notas: notasVal } : t))
       onTicketActualizado?.()
+      if ((editEstado === 'En proceso' || editEstado === 'Resuelto') && ticketDetalle.correo_contacto) {
+        supabase.functions.invoke('notify-ticket-status', {
+          body: {
+            correo: ticketDetalle.correo_contacto,
+            nombre: ticketDetalle.creado_por_nombre,
+            area:   areaLabel(ticketDetalle),
+            estado: editEstado,
+            notas:  notasVal,
+          },
+        })
+      }
       cerrarDetalle()
     }
     setGuardandoEdit(false)
@@ -267,14 +280,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                 <label className="modal-label">Describe la falla o incidencia *</label>
                 <textarea className="modal-textarea" value={form.descripcion} onChange={e => setF('descripcion', e.target.value)} placeholder="Detalla el problema…" />
               </div>
-              <div className="modal-field">
-                <label className="modal-label">Prioridad</label>
-                <select className="modal-select" value={form.prioridad} onChange={e => setF('prioridad', e.target.value)}>
-                  <option value="alta">🔴 Alta</option>
-                  <option value="media">🟡 Media</option>
-                  <option value="baja">🟢 Baja</option>
-                </select>
-              </div>
             </div>
 
             <div className="modal-actions">
@@ -294,18 +299,29 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             <div className="modal-tickets-header">
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#111827' }}>{areaLabel(ticketDetalle)}</p>
-                <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#9ca3af' }}>
-                  {ticketDetalle.creado_por_nombre}{ticketDetalle.rol_solicitante ? ` · ${ticketDetalle.rol_solicitante}` : ''} · {fmt(ticketDetalle.creado_en)}
-                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.73rem', color: '#9ca3af' }}>{fmt(ticketDetalle.creado_en)}</p>
               </div>
               <button className="modal-tickets-close" onClick={cerrarDetalle}>✕</button>
             </div>
 
-            {/* Info del solicitante */}
-            <div className="ticket-detalle-bien" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', marginBottom: 12 }}>
-              {ticketDetalle.correo_contacto && <span>✉️ {ticketDetalle.correo_contacto}</span>}
-              {ticketDetalle.lugar_falla     && <span>📍 {ticketDetalle.lugar_falla}</span>}
-              {ticketDetalle.marca_modelo_falla && <span style={{ gridColumn: '1/-1' }}>🖥️ {ticketDetalle.marca_modelo_falla}</span>}
+            {/* Datos del solicitante */}
+            <div className="ticket-detalle-bien" style={{ marginBottom: 10 }}>
+              <p className="modal-seccion-label" style={{ margin: '0 0 8px' }}>Solicitante</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 16px', fontSize: '0.82rem' }}>
+                <span>👤 {ticketDetalle.creado_por_nombre}</span>
+                {ticketDetalle.rol_solicitante && <span>🏷️ {ticketDetalle.rol_solicitante}</span>}
+                {ticketDetalle.correo_contacto && <span style={{ gridColumn: '1/-1' }}>✉️ {ticketDetalle.correo_contacto}</span>}
+              </div>
+            </div>
+
+            {/* Datos del reporte */}
+            <div className="ticket-detalle-bien" style={{ marginBottom: 10 }}>
+              <p className="modal-seccion-label" style={{ margin: '0 0 8px' }}>Reporte</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 16px', fontSize: '0.82rem' }}>
+                <span style={{ gridColumn: '1/-1' }}>🖥️ Área: {areaLabel(ticketDetalle)}</span>
+                {ticketDetalle.lugar_falla && <span style={{ gridColumn: '1/-1' }}>📍 {ticketDetalle.lugar_falla}</span>}
+                {ticketDetalle.marca_modelo_falla && <span style={{ gridColumn: '1/-1' }}>🔧 {ticketDetalle.marca_modelo_falla}</span>}
+              </div>
             </div>
 
             {ticketDetalle.descripcion && (
@@ -326,16 +342,26 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             {esAdmin ? (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div className="modal-field">
-                    <label className="modal-label">Estado</label>
-                    <select className="modal-select" value={editEstado} onChange={e => setEditEstado(e.target.value)}>
-                      <option value="Abierto">🔵 Abierto</option>
-                      <option value="En proceso">🟡 En proceso</option>
-                      <option value="Resuelto">🟢 Resuelto</option>
-                    </select>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div className="modal-field">
+                      <label className="modal-label">Estado</label>
+                      <select className="modal-select" value={editEstado} onChange={e => setEditEstado(e.target.value)}>
+                        <option value="Abierto">🔵 Abierto</option>
+                        <option value="En proceso">🟡 En proceso</option>
+                        <option value="Resuelto">🟢 Resuelto</option>
+                      </select>
+                    </div>
+                    <div className="modal-field">
+                      <label className="modal-label">Prioridad</label>
+                      <select className="modal-select" value={editPrioridad} onChange={e => setEditPrioridad(e.target.value)}>
+                        <option value="alta">🔴 Alta</option>
+                        <option value="media">🟡 Media</option>
+                        <option value="baja">🟢 Baja</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="modal-field">
-                    <label className="modal-label">Notas / Resolución</label>
+                    <label className="modal-label">Notas / Resolución {(editEstado === 'En proceso' || editEstado === 'Resuelto') && <span style={{ color: '#d4a017', fontWeight: 400 }}>(se enviará por correo al solicitante)</span>}</label>
                     <textarea className="modal-textarea" value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Agrega observaciones o cómo se resolvió…" />
                   </div>
                 </div>
