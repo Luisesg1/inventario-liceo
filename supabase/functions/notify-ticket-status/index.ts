@@ -2,11 +2,20 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: cors })
+  }
+
   try {
     const { correo, nombre, area, estado, notas } = await req.json()
 
-    if (!correo) return new Response('No correo', { status: 400 })
+    if (!correo) return new Response('No correo', { status: 400, headers: cors })
 
     const estadoColor = estado === 'Resuelto' ? '#16a34a' : '#d97706'
     const estadoBg    = estado === 'Resuelto' ? '#dcfce7' : '#fef9c3'
@@ -23,7 +32,7 @@ serve(async (req) => {
             Tu ticket <strong>"${area}"</strong> ha sido actualizado.
           </p>
 
-          <div style="background:${estadoBg};border-radius:8px;padding:12px 16px;margin-bottom:20px;display:inline-block">
+          <div style="display:inline-block;background:${estadoBg};border-radius:8px;padding:10px 18px;margin-bottom:20px">
             <span style="font-size:14px;font-weight:700;color:${estadoColor}">${estadoIcon} ${estado}</span>
           </div>
 
@@ -55,11 +64,11 @@ serve(async (req) => {
 
     if (!res.ok) {
       const body = await res.text()
-      return new Response(`Resend error: ${body}`, { status: 500 })
+      return new Response(`Resend error: ${body}`, { status: 500, headers: cors })
     }
 
-    return new Response('OK', { status: 200 })
+    return new Response('OK', { status: 200, headers: cors })
   } catch (e) {
-    return new Response(String(e), { status: 500 })
+    return new Response(String(e), { status: 500, headers: cors })
   }
 })
