@@ -83,6 +83,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       apellidos:          form.apellidos.trim() || null,
       rol_solicitante:    form.rol_solicitante || null,
       correo_contacto:    form.correo_contacto.trim() || null,
+      prioridad:          null,
       creado_por:         usuario.id,
       creado_por_nombre:  `${form.nombre.trim()} ${form.apellidos.trim()}`.trim() || usuario.nombre,
     })
@@ -105,6 +106,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         ? { ...t, estado: editEstado, prioridad: editPrioridad, notas: notasVal } : t))
       onTicketActualizado?.()
       if ((editEstado === 'En proceso' || editEstado === 'Resuelto') && ticketDetalle.correo_contacto) {
+        console.log('[notify-ticket-status] invocando para', ticketDetalle.correo_contacto, editEstado)
         supabase.functions.invoke('notify-ticket-status', {
           body: {
             correo: ticketDetalle.correo_contacto,
@@ -113,6 +115,9 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             estado: editEstado,
             notas:  notasVal,
           },
+        }).then(({ error }) => {
+          if (error) console.error('[notify-ticket-status] error:', error)
+          else console.log('[notify-ticket-status] OK')
         })
       }
       cerrarDetalle()
