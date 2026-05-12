@@ -509,6 +509,18 @@ tr.fila-editando td { background: #fffbeb; }
   border-bottom: 2px solid rgba(212,160,23,0.25);
   gap: 12px;
 }
+.detalle-titulo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.detalle-titulo-text {
+  flex: 1;
+  min-width: 0;
+}
+.detalle-titulo-text p { overflow-wrap: break-word; word-break: break-word; }
 .detalle-header-actions {
   display: flex;
   align-items: center;
@@ -789,9 +801,8 @@ tr.fila-editando td { background: #fffbeb; }
     align-items: flex-start;
     gap: 10px;
   }
-  .detalle-header-modal > div:first-child {
+  .detalle-titulo-wrap {
     width: 100%;
-    min-width: 0;
   }
   .detalle-header-actions {
     width: 100%;

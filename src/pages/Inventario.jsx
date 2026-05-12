@@ -1040,10 +1040,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const abrirQR = (bien) => {
-    const url  = `${window.location.origin}/?bien=${bien.id}`
-    const qr   = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`
-    const cat  = categorias.find(c => c.id === bien.categoria)
-    const win  = window.open('', '_blank')
+    const url     = `${window.location.origin}/?bien=${bien.id}`
+    const qrSize  = Math.min(300, Math.round(window.screen.width * 0.82))
+    const qr      = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`
+    const cat     = categorias.find(c => c.id === bien.categoria)
+    const win     = window.open('', '_blank')
     win.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -1054,7 +1055,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         .card { border: 2px solid #1a237e; border-radius: 16px; padding: 28px 20px; width: 100%; max-width: 420px; text-align: center; background: #fff; }
         .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
         .logo-row span { font-size: 13px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: 0.05em; }
-        img.qr { width: 260px; height: 260px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        img.qr { width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #e5e7eb; border-radius: 8px; }
         .nombre { font-size: 18px; font-weight: 700; color: #111827; margin: 16px 0 4px; }
         .codigo { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
         .cat    { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
@@ -1067,8 +1068,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         <div class="logo-row">
           <span>Liceo JHJ — Inventario</span>
         </div>
-        <img class="qr" id="qr-img" src="${qr}" alt="QR" />
-        <script>(function(){ var s=Math.min(300,Math.round(window.screen.width*0.82)); var el=document.getElementById('qr-img'); if(el){el.style.width=s+'px';el.style.height=s+'px';} })();<\/script>
+        <img class="qr" src="${qr}" alt="QR" />
         <p class="nombre">${bien.nombre}</p>
         <p class="codigo">Código: ${bien.codigo || 'S/C'}</p>
         <p class="cat">${cat ? cat.icon + ' ' + cat.label : bien.categoria || ''}</p>
@@ -2668,9 +2668,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             {/* Header */}
             <div className="detalle-header-modal">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              <div className="detalle-titulo-wrap">
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="detalle-titulo-text">
                   <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
                   <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
