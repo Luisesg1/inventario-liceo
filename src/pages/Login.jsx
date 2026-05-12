@@ -275,8 +275,7 @@ export default function Login({ onLogin }) {
             <button className="login-link" onClick={() => { setVistaOlvide(true); setError('') }}>
               ¿Olvidaste tu contraseña?
             </button>
-            <button className="login-link" onClick={() => { setVistaRegistro(true); setError('') }}
-              style={{ marginTop: 6, color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+            <button className="login-link" onClick={() => { setVistaRegistro(true); setError('') }}>
               ¿No tienes cuenta? Crear cuenta
             </button>
           </div>
