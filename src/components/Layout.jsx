@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './Layout.css'
 import { supabase } from '../supabase'
 
@@ -17,6 +17,20 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [exportando, setExportando] = useState(false)
+  const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
+
+  useEffect(() => {
+    if (!esAdmin) return
+    const cargar = async () => {
+      const { count } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
+      setTicketsAbiertos(count ?? 0)
+    }
+    cargar()
+    const sub = supabase.channel('tickets-badge')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargar)
+      .subscribe()
+    return () => supabase.removeChannel(sub)
+  }, [esAdmin])
 
   const fetchBackupData = async () => {
     const [{ data: bienes }, { data: cats }] = await Promise.all([
@@ -383,6 +397,9 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
             <div key={item.id} className={`nav-item ${paginaActual === item.id ? 'active' : ''}`} onClick={() => handleNav(item.id)}>
               <span className="nav-icon">{item.icon}</span>
               {item.label}
+              {item.id === 'tickets' && esAdmin && ticketsAbiertos > 0 && (
+                <span className="nav-ticket-badge">{ticketsAbiertos}</span>
+              )}
             </div>
           ))}
         </nav>
