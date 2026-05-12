@@ -206,7 +206,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                   </div>
                   <div className="ticket-badges">
                     <span className="badge-estado" style={{ background: e.bg, color: e.color }}>{t.estado}</span>
-                    <span className="badge-prio"   style={{ background: p.bg, color: p.color }}>{p.label}</span>
+                    {esAdmin && <span className="badge-prio" style={{ background: p.bg, color: p.color }}>{p.label}</span>}
                   </div>
                 </div>
               </div>
@@ -374,9 +374,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: ESTADO[ticketDetalle.estado].bg, color: ESTADO[ticketDetalle.estado].color, borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: '0.85rem' }}>
                     {ESTADO[ticketDetalle.estado].icon} {ticketDetalle.estado}
-                  </span>
-                  <span className="badge-prio" style={{ background: PRIORIDAD[ticketDetalle.prioridad].bg, color: PRIORIDAD[ticketDetalle.prioridad].color, padding: '6px 14px' }}>
-                    {PRIORIDAD[ticketDetalle.prioridad].label}
                   </span>
                 </div>
                 <div style={{ textAlign: 'right' }}>

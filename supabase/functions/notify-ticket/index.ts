@@ -23,6 +23,7 @@ serve(async (req) => {
           <table style="width:100%;border-collapse:collapse;font-size:14px;color:#374151">
             <tr><td style="padding:6px 0;font-weight:700;width:160px">Solicitante</td><td>${t.creado_por_nombre ?? '—'}${t.rol_solicitante ? ` · ${t.rol_solicitante}` : ''}</td></tr>
             ${t.correo_contacto ? `<tr><td style="padding:6px 0;font-weight:700">Correo</td><td>${t.correo_contacto}</td></tr>` : ''}
+            <tr><td style="padding:6px 0;font-weight:700">Área</td><td>${area}</td></tr>
             ${t.lugar_falla    ? `<tr><td style="padding:6px 0;font-weight:700">Lugar</td><td>${t.lugar_falla}</td></tr>` : ''}
             ${t.marca_modelo_falla ? `<tr><td style="padding:6px 0;font-weight:700">Dispositivo</td><td>${t.marca_modelo_falla}</td></tr>` : ''}
             <tr><td style="padding:6px 0;font-weight:700">Prioridad</td><td>${t.prioridad?.toUpperCase() ?? '—'}</td></tr>
