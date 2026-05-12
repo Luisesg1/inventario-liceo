@@ -1057,7 +1057,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const origin = window.location.origin
     const cards = bienesSel.map(b => {
       const url = `${origin}/?bien=${b.id}`
-      const qr  = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(url)}`
+      const qr  = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&margin=6&data=${encodeURIComponent(url)}`
       const cat = categorias.find(c => c.id === b.categoria)
       return `
         <div class="card">
@@ -1075,27 +1075,27 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       <title>QR — ${bienesSel.length} bienes</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; padding: 16px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { font-size: 16px; color: #1a237e; font-weight: 700; }
-        .header p  { font-size: 12px; color: #6b7280; margin-top: 4px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
-        .card { background: #fff; border: 1.5px solid #1a237e; border-radius: 12px; padding: 16px 12px; text-align: center; break-inside: avoid; }
-        .qr  { width: 160px; height: 160px; border: 1px solid #e5e7eb; border-radius: 6px; }
-        .nombre { font-size: 13px; font-weight: 700; color: #111827; margin: 10px 0 2px; line-height: 1.3; }
-        .codigo { font-size: 11px; color: #6b7280; margin-bottom: 2px; }
-        .cat    { font-size: 10px; color: #9ca3af; }
-        .no-print { text-align: center; margin-bottom: 20px; }
-        .btn { padding: 10px 28px; background: #1a237e; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; padding: 12px; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { font-size: 15px; color: #1a237e; font-weight: 700; }
+        .header p  { font-size: 11px; color: #6b7280; margin-top: 3px; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .card { background: #fff; border: 1px solid #1a237e; border-radius: 8px; padding: 10px 8px; text-align: center; break-inside: avoid; }
+        .qr  { width: 110px; height: 110px; border: 1px solid #e5e7eb; border-radius: 4px; }
+        .nombre { font-size: 10px; font-weight: 700; color: #111827; margin: 6px 0 2px; line-height: 1.3; }
+        .codigo { font-size: 9px; color: #6b7280; margin-bottom: 1px; }
+        .cat    { font-size: 9px; color: #9ca3af; }
+        .no-print { text-align: center; margin-bottom: 16px; }
+        .btn { padding: 9px 26px; background: #1a237e; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
         @media print {
-          body { background: #fff; padding: 0; }
+          body { background: #fff; padding: 6mm; }
           .no-print { display: none; }
-          .grid { gap: 10px; }
-          .card { border-color: #999; }
+          .grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+          .card { border-color: #888; page-break-inside: avoid; }
         }
-        @media (max-width: 480px) {
-          .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-          .qr { width: 130px; height: 130px; }
+        @media (max-width: 600px) {
+          .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+          .qr { width: 100px; height: 100px; }
         }
       </style>
     </head><body>
