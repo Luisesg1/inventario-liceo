@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
+const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +22,8 @@ serve(async (req) => {
     const estadoBg    = estado === 'Resuelto' ? '#dcfce7' : '#fef9c3'
     const estadoIcon  = estado === 'Resuelto' ? '✅' : '🔄'
 
-    const html = `
-      <div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+    const htmlContent = `
+      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
           <h2 style="color:#f0d060;margin:0;font-size:18px">${estadoIcon} Actualización de tu ticket — Liceo JHJ</h2>
         </div>
@@ -48,24 +49,24 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Inventario JHJ <onboarding@resend.dev>',
-        to:   [correo],
-        subject: `${estadoIcon} Tu ticket "${area}" está ${estado}`,
-        html,
+        sender:      { name: 'Inventario JHJ', email: ADMIN_EMAIL },
+        to:          [{ email: correo, name: nombre ?? correo }],
+        subject:     `${estadoIcon} Tu ticket "${area}" está ${estado}`,
+        htmlContent,
       }),
     })
 
     if (!res.ok) {
       const body = await res.text()
-      console.error('Resend error', res.status, body)
-      return new Response(`Resend error: ${body}`, { status: 500, headers: cors })
+      console.error('Brevo error', res.status, body)
+      return new Response(`Brevo error: ${body}`, { status: 500, headers: cors })
     }
 
     console.log('Email enviado a', correo)
