@@ -832,15 +832,15 @@ export default function Usuarios({ usuario }) {
       {/* Código de invitación */}
       {esAdmin && (
         <div style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 12, padding: '16px 20px', marginBottom: 18 }}>
-          <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: 'center' }}>
             🔑 Código de invitación para docentes
           </p>
-          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280', textAlign: 'center' }}>
             Comparte este código para que los profesores puedan crear su cuenta
           </p>
 
           {!editandoCodigo ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
               <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 800, color: '#1a237e', letterSpacing: '0.12em', background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 8, padding: '7px 16px', userSelect: 'all' }}>
                 {verCodigo ? codigoActual : '••••••••'}
               </span>
