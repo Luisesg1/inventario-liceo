@@ -60,8 +60,10 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     if (busqueda.trim()) {
       const q = busqueda.toLowerCase()
       const hay = (s) => (s ?? '').toLowerCase().includes(q)
-      if (!hay(t.titulo) && !hay(t.area_reporte) && !hay(t.descripcion) &&
-          !hay(t.creado_por_nombre) && !hay(t.lugar_falla) && !hay(t.marca_modelo_falla))
+      const label = (t.area_reporte === 'Otro' && t.area_otro) ? t.area_otro : (t.area_reporte ?? '')
+      if (!hay(label) && !hay(t.area_reporte) && !hay(t.descripcion) &&
+          !hay(t.creado_por_nombre) && !hay(t.apellidos) &&
+          !hay(t.lugar_falla) && !hay(t.marca_modelo_falla))
         return false
     }
     return true
