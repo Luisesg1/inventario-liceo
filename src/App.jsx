@@ -12,8 +12,17 @@ export default function App() {
   const [usuario,            setUsuario]            = useState(null)
   const [cargando,           setCargando]           = useState(true)
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
-  const [pagina,             setPagina]             = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
-  const [abrirBienId,        setAbrirBienId]        = useState(null)
+  const [pagina,             setPagina]             = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('bien')) return 'inventario'
+    return localStorage.getItem('app_pagina') || 'dashboard'
+  })
+  const [abrirBienId,        setAbrirBienId]        = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('bien')
+    if (id) window.history.replaceState(null, '', window.location.pathname)
+    return id ? Number(id) : null
+  })
   const [abrirCatId,         setAbrirCatId]         = useState(null)
 
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }

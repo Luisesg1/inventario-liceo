@@ -1020,6 +1020,45 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     )
   }
 
+  const abrirQR = (bien) => {
+    const url  = `${window.location.origin}/?bien=${bien.id}`
+    const qr   = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(url)}`
+    const cat  = categorias.find(c => c.id === bien.categoria)
+    const win  = window.open('', '_blank', 'width=480,height=640')
+    win.document.write(`<!DOCTYPE html><html lang="es"><head>
+      <meta charset="UTF-8">
+      <title>QR — ${bien.nombre}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { border: 2px solid #1a237e; border-radius: 16px; padding: 28px 32px; width: 380px; text-align: center; }
+        .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .logo-row span { font-size: 13px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: 0.05em; }
+        img.qr { width: 220px; height: 220px; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .nombre { font-size: 18px; font-weight: 700; color: #111827; margin: 16px 0 4px; }
+        .codigo { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+        .cat    { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
+        .hint   { font-size: 11px; color: #9ca3af; border-top: 1px solid #f3f4f6; padding-top: 14px; }
+        @media print { body { margin: 0; } .no-print { display: none; } }
+        .btn { margin-top: 20px; padding: 10px 24px; background: #1a237e; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+      </style>
+    </head><body>
+      <div class="card">
+        <div class="logo-row">
+          <span>Liceo JHJ — Inventario</span>
+        </div>
+        <img class="qr" src="${qr}" alt="QR" />
+        <p class="nombre">${bien.nombre}</p>
+        <p class="codigo">Código: ${bien.codigo || 'S/C'}</p>
+        <p class="cat">${cat ? cat.icon + ' ' + cat.label : bien.categoria || ''}</p>
+        <p class="hint">Escanea para ver el detalle en el sistema</p>
+        <button class="btn no-print" onclick="window.print()">🖨 Imprimir</button>
+      </div>
+      <script>setTimeout(() => {}, 200)<\/script>
+    </body></html>`)
+    win.document.close()
+  }
+
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
@@ -2420,6 +2459,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
               <div className="detalle-header-actions">
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
+                <button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR imprimible">▦ QR</button>
                 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
               </div>
