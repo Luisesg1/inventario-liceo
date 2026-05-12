@@ -65,7 +65,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
 
   const areaLabel = (t) => t.area_reporte === 'Otro' && t.area_otro ? `Otro — ${t.area_otro}` : (t.area_reporte || t.titulo || '—')
 
-  const formValido = form.nombre.trim() && form.area_reporte && form.lugar_falla.trim() && form.descripcion.trim()
+  const formValido = form.nombre.trim() && form.apellidos.trim() && form.rol_solicitante && form.correo_contacto.trim() && form.area_reporte && form.lugar_falla.trim() && form.descripcion.trim()
 
   const crearTicket = async () => {
     if (!formValido) return
@@ -237,20 +237,20 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                   <input className="modal-input" value={form.nombre} onChange={e => setF('nombre', e.target.value)} placeholder="Nombre" />
                 </div>
                 <div className="modal-field">
-                  <label className="modal-label">Apellidos</label>
+                  <label className="modal-label">Apellidos *</label>
                   <input className="modal-input" value={form.apellidos} onChange={e => setF('apellidos', e.target.value)} placeholder="Apellidos" />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div className="modal-field">
-                  <label className="modal-label">Rol</label>
+                  <label className="modal-label">Rol *</label>
                   <select className="modal-select" value={form.rol_solicitante} onChange={e => setF('rol_solicitante', e.target.value)}>
                     <option value="">Seleccionar…</option>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div className="modal-field">
-                  <label className="modal-label">Correo electrónico</label>
+                  <label className="modal-label">Correo electrónico *</label>
                   <input className="modal-input" type="email" value={form.correo_contacto} onChange={e => setF('correo_contacto', e.target.value)} placeholder="correo@liceo.cl" />
                 </div>
               </div>
