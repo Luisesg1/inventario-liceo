@@ -25,6 +25,7 @@ const FORM_VACIO = {
 }
 
 export default function Tickets({ usuario }) {
+  const esAdmin = usuario.rol === 'admin'
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState('')
@@ -41,7 +42,9 @@ export default function Tickets({ usuario }) {
 
   const cargar = async () => {
     setCargando(true)
-    const { data } = await supabase.from('tickets').select('*').order('creado_en', { ascending: false })
+    let q = supabase.from('tickets').select('*').order('creado_en', { ascending: false })
+    if (!esAdmin) q = q.eq('creado_por', usuario.id)
+    const { data } = await q
     setTickets(data ?? [])
     setCargando(false)
   }
@@ -123,8 +126,8 @@ export default function Tickets({ usuario }) {
   return (
     <div className="tickets-wrap">
 
-      {/* KPIs */}
-      <div className="tickets-kpis">
+      {/* KPIs — solo admin */}
+      {esAdmin && <div className="tickets-kpis">
         {['Abierto', 'En proceso', 'Resuelto'].map(e => {
           const n = tickets.filter(t => t.estado === e).length
           const est = ESTADO[e]
@@ -136,27 +139,29 @@ export default function Tickets({ usuario }) {
             </div>
           )
         })}
-      </div>
+      </div>}
 
       {/* Toolbar */}
       <div className="tickets-toolbar">
-        <div className="tickets-filtros">
-          <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-            <option value="">Todos los estados</option>
-            <option value="Abierto">🔵 Abierto</option>
-            <option value="En proceso">🟡 En proceso</option>
-            <option value="Resuelto">🟢 Resuelto</option>
-          </select>
-          <select className={filtroPrioridad ? 'activo' : ''} value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)}>
-            <option value="">Todas las prioridades</option>
-            <option value="alta">🔴 Alta</option>
-            <option value="media">🟡 Media</option>
-            <option value="baja">🟢 Baja</option>
-          </select>
-          {(filtroEstado || filtroPrioridad) && (
-            <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad('') }}>✕ Limpiar</button>
-          )}
-        </div>
+        {esAdmin && (
+          <div className="tickets-filtros">
+            <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+              <option value="">Todos los estados</option>
+              <option value="Abierto">🔵 Abierto</option>
+              <option value="En proceso">🟡 En proceso</option>
+              <option value="Resuelto">🟢 Resuelto</option>
+            </select>
+            <select className={filtroPrioridad ? 'activo' : ''} value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)}>
+              <option value="">Todas las prioridades</option>
+              <option value="alta">🔴 Alta</option>
+              <option value="media">🟡 Media</option>
+              <option value="baja">🟢 Baja</option>
+            </select>
+            {(filtroEstado || filtroPrioridad) && (
+              <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad('') }}>✕ Limpiar</button>
+            )}
+          </div>
+        )}
         <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
       </div>
 
@@ -312,30 +317,42 @@ export default function Tickets({ usuario }) {
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div className="modal-field">
-                <label className="modal-label">Estado</label>
-                <select className="modal-select" value={editEstado} onChange={e => setEditEstado(e.target.value)}>
-                  <option value="Abierto">🔵 Abierto</option>
-                  <option value="En proceso">🟡 En proceso</option>
-                  <option value="Resuelto">🟢 Resuelto</option>
-                </select>
+            {esAdmin ? (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="modal-field">
+                    <label className="modal-label">Estado</label>
+                    <select className="modal-select" value={editEstado} onChange={e => setEditEstado(e.target.value)}>
+                      <option value="Abierto">🔵 Abierto</option>
+                      <option value="En proceso">🟡 En proceso</option>
+                      <option value="Resuelto">🟢 Resuelto</option>
+                    </select>
+                  </div>
+                  <div className="modal-field">
+                    <label className="modal-label">Notas / Resolución</label>
+                    <textarea className="modal-textarea" value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Agrega observaciones o cómo se resolvió…" />
+                  </div>
+                </div>
+                <div className="modal-actions-split">
+                  <button className="btn-modal-del" onClick={() => eliminarTicket(ticketDetalle.id)}>Eliminar</button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
+                    <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>
+                      {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ marginTop: 16, textAlign: 'right' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: ESTADO[ticketDetalle.estado].bg, color: ESTADO[ticketDetalle.estado].color, borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: '0.85rem' }}>
+                  {ESTADO[ticketDetalle.estado].icon} {ticketDetalle.estado}
+                </span>
+                <div style={{ marginTop: 12 }}>
+                  <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cerrar</button>
+                </div>
               </div>
-              <div className="modal-field">
-                <label className="modal-label">Notas / Resolución</label>
-                <textarea className="modal-textarea" value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Agrega observaciones o cómo se resolvió…" />
-              </div>
-            </div>
-
-            <div className="modal-actions-split">
-              <button className="btn-modal-del" onClick={() => eliminarTicket(ticketDetalle.id)}>Eliminar</button>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
-                <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>
-                  {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
