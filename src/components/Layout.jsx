@@ -147,7 +147,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         doc.setTextColor(255, 255, 255)
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(13)
-        doc.text('Liceo Bicentenario Juan Henríquez Jiménez', W / 2, 9, { align: 'center' })
+        doc.text('Liceo Bicentenario Juvenal Hernández Jaque', W / 2, 9, { align: 'center' })
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(8.5)
         doc.text('Inventario de Bienes — Informe Oficial', W / 2, 15.5, { align: 'center' })
@@ -172,7 +172,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
           doc.line(0, 284, W, 284)
           doc.setTextColor(...GRIS)
           doc.setFontSize(7.5)
-          doc.text('Liceo Bicentenario Juan Henríquez Jiménez — Sistema de Inventario', W / 2, 290, { align: 'center' })
+          doc.text('Liceo Bicentenario Juvenal Hernández Jaque — Sistema de Inventario', W / 2, 290, { align: 'center' })
           doc.text(`${i} / ${pageCount}`, W - 12, 290, { align: 'right' })
         }
       }
