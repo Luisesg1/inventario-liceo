@@ -21,7 +21,7 @@ const ROLES = ['Directivo', 'Docente', 'Asistente de la educación', 'Coordinado
 const FORM_VACIO = {
   nombre: '', apellidos: '', rol_solicitante: '', correo_contacto: '',
   area_reporte: '', area_otro: '', marca_modelo_falla: '',
-  lugar_falla: '', descripcion: '', prioridad: 'media',
+  lugar_falla: '', descripcion: '',
 }
 
 export default function Tickets({ usuario, onTicketActualizado }) {
@@ -83,7 +83,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       apellidos:          form.apellidos.trim() || null,
       rol_solicitante:    form.rol_solicitante || null,
       correo_contacto:    form.correo_contacto.trim() || null,
-      prioridad:          form.prioridad,
       creado_por:         usuario.id,
       creado_por_nombre:  `${form.nombre.trim()} ${form.apellidos.trim()}`.trim() || usuario.nombre,
     })
@@ -194,6 +193,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         <div className="tickets-lista">
           {filtrados.map(t => {
             const e = ESTADO[t.estado]
+            const p = t.prioridad ? PRIORIDAD[t.prioridad] : null
             return (
               <div key={t.id} className="ticket-card" onClick={() => abrirDetalle(t)}>
                 <div className="ticket-card-body">
@@ -205,6 +205,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                   </div>
                   <div className="ticket-badges">
                     <span className="badge-estado" style={{ background: e.bg, color: e.color }}>{t.estado}</span>
+                    {p && <span className="badge-prio" style={{ background: p.bg, color: p.color }}>{p.label}</span>}
                   </div>
                 </div>
               </div>
@@ -345,7 +346,8 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                     </div>
                     <div className="modal-field">
                       <label className="modal-label">Prioridad</label>
-                      <select className="modal-select" value={editPrioridad} onChange={e => setEditPrioridad(e.target.value)}>
+                      <select className="modal-select" value={editPrioridad ?? ''} onChange={e => setEditPrioridad(e.target.value || null)}>
+                        <option value="">Sin asignar</option>
                         <option value="alta">🔴 Alta</option>
                         <option value="media">🟡 Media</option>
                         <option value="baja">🟢 Baja</option>
