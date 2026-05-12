@@ -1035,18 +1035,18 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const url  = `${window.location.origin}/?bien=${bien.id}`
     const qr   = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`
     const cat  = categorias.find(c => c.id === bien.categoria)
-    const win  = window.open('', '_blank', 'width=480,height=640')
+    const win  = window.open('', '_blank')
     win.document.write(`<!DOCTYPE html><html lang="es"><head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>QR — ${bien.nombre}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 12px; }
-        .card { border: 2px solid #1a237e; border-radius: 16px; padding: 24px 16px; width: 100%; max-width: 400px; text-align: center; background: #fff; }
-        .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+        .card { border: 2px solid #1a237e; border-radius: 16px; padding: 28px 20px; width: 100%; max-width: 420px; text-align: center; background: #fff; }
+        .logo-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 18px; }
         .logo-row span { font-size: 13px; font-weight: 700; color: #1a237e; text-transform: uppercase; letter-spacing: 0.05em; }
-        img.qr { width: min(300px, 88vw); height: min(300px, 88vw); border: 1px solid #e5e7eb; border-radius: 8px; }
+        img.qr { width: 85vw; max-width: 300px; height: 85vw; max-height: 300px; border: 1px solid #e5e7eb; border-radius: 8px; }
         .nombre { font-size: 18px; font-weight: 700; color: #111827; margin: 16px 0 4px; }
         .codigo { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
         .cat    { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
@@ -2635,7 +2635,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{verDetalle.nombre}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
                   <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
               </div>
