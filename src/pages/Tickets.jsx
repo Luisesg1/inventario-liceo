@@ -39,7 +39,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
-  const [modoSeleccion,   setModoSeleccion]   = useState(false)
   const [seleccionados,   setSeleccionados]   = useState(new Set())
   const [confirmandoBulk, setConfirmandoBulk] = useState(false)
 
@@ -130,7 +129,8 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   }
 
   const eliminarTicket = async (id) => {
-    await supabase.from('tickets').delete().eq('id', id)
+    const { error } = await supabase.from('tickets').delete().eq('id', id)
+    if (error) { console.error('Error al eliminar ticket:', error); return }
     setTickets(prev => prev.filter(t => t.id !== id))
     setConfirmarEliminar(false)
     cerrarDetalle()
@@ -144,9 +144,10 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const toggleTodos = () => setSeleccionados(
     seleccionados.size === filtrados.length ? new Set() : new Set(filtrados.map(t => t.id))
   )
-  const salirSeleccion = () => { setModoSeleccion(false); setSeleccionados(new Set()); setConfirmandoBulk(false) }
+  const salirSeleccion = () => { setSeleccionados(new Set()); setConfirmandoBulk(false) }
   const eliminarSeleccionados = async () => {
-    await supabase.from('tickets').delete().in('id', [...seleccionados])
+    const { error } = await supabase.from('tickets').delete().in('id', [...seleccionados])
+    if (error) { console.error('Error al eliminar tickets:', error); return }
     setTickets(prev => prev.filter(t => !seleccionados.has(t.id)))
     salirSeleccion()
   }
@@ -204,37 +205,49 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             )}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {esAdmin && filtrados.length > 0 && !modoSeleccion && (
-            <button style={{ padding: '9px 16px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', cursor: 'pointer' }}
-              onClick={() => setModoSeleccion(true)}>☑ Seleccionar</button>
-          )}
-          <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
-        </div>
+        <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
       </div>
 
       {/* Barra de selección masiva */}
-      {modoSeleccion && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem', background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 16px', flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', fontWeight: 600 }}>
-            <input type="checkbox" checked={seleccionados.size === filtrados.length && filtrados.length > 0} onChange={toggleTodos} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+      {esAdmin && seleccionados.size > 0 && (
+        <div className="tickets-sel-bar" style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 14px', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600, userSelect: 'none' }}>
+            <input type="checkbox"
+              checked={seleccionados.size === filtrados.length && filtrados.length > 0}
+              ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
+              onChange={toggleTodos}
+              style={{ cursor: 'pointer', width: 15, height: 15, accentColor: '#1a237e' }} />
             Seleccionar todos ({filtrados.length})
           </label>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>{seleccionados.size} seleccionados</span>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', cursor: 'pointer' }} onClick={salirSeleccion}>Cancelar</button>
-            {seleccionados.size > 0 && !confirmandoBulk && (
-              <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: 'rgba(239,68,68,0.15)', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
-                onClick={() => setConfirmandoBulk(true)}>🗑 Eliminar {seleccionados.size}</button>
-            )}
-            {confirmandoBulk && (
-              <>
-                <span style={{ color: '#fca5a5', fontSize: '0.82rem', alignSelf: 'center' }}>¿Confirmar?</span>
-                <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', cursor: 'pointer' }} onClick={() => setConfirmandoBulk(false)}>No</button>
-                <button style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
-                  onClick={eliminarSeleccionados}>Sí, eliminar</button>
-              </>
-            )}
+          <span style={{ fontSize: '0.88rem', color: '#1d4ed8', fontWeight: 600 }}>
+            · {seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}
+          </span>
+          <div className="tickets-sel-bar-actions" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button onClick={salirSeleccion} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #bfdbfe', background: '#fff', color: '#374151', fontSize: '0.82rem', cursor: 'pointer' }}>
+              ✕ Deseleccionar
+            </button>
+            <button onClick={() => setConfirmandoBulk(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+              🗑 Eliminar {seleccionados.size} ticket{seleccionados.size !== 1 ? 's' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmación bulk */}
+      {confirmandoBulk && (
+        <div className="modal-tickets-overlay" onClick={() => setConfirmandoBulk(false)}>
+          <div className="modal-tickets" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-tickets-header">
+              <h2 className="modal-tickets-title">🗑 Eliminar tickets</h2>
+              <button className="modal-tickets-close" onClick={() => setConfirmandoBulk(false)}>✕</button>
+            </div>
+            <p style={{ margin: '0 0 20px', fontSize: '0.9rem', color: '#374151' }}>
+              ¿Eliminar <strong>{seleccionados.size} ticket{seleccionados.size !== 1 ? 's' : ''}</strong> seleccionado{seleccionados.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.
+            </p>
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={() => setConfirmandoBulk(false)}>Cancelar</button>
+              <button className="btn-modal-del" onClick={eliminarSeleccionados}>Sí, eliminar</button>
+            </div>
           </div>
         </div>
       )}
@@ -251,13 +264,13 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             const e = ESTADO[t.estado]
             const p = t.prioridad ? PRIORIDAD[t.prioridad] : null
             return (
-              <div key={t.id} className={`ticket-card ${modoSeleccion && seleccionados.has(t.id) ? 'ticket-card-sel' : ''}`}
-                onClick={() => modoSeleccion ? toggleSeleccion(t.id) : abrirDetalle(t)}>
+              <div key={t.id} className={`ticket-card ${seleccionados.has(t.id) ? 'ticket-card-sel' : ''}`}
+                onClick={() => abrirDetalle(t)}>
                 <div className="ticket-card-body">
-                  {modoSeleccion && (
+                  {esAdmin && (
                     <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
                       onClick={e => e.stopPropagation()}
-                      style={{ width: 18, height: 18, flexShrink: 0, cursor: 'pointer', marginTop: 2 }} />
+                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', marginTop: 3, accentColor: '#1a237e' }} />
                   )}
                   <div className="ticket-card-info">
                     <p className="ticket-titulo">{areaLabel(t)}</p>
