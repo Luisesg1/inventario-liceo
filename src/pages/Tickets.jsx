@@ -199,55 +199,55 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         })}
       </div>}
 
-      {/* Buscador */}
-      <div className="tickets-search-wrap">
-        <span className="tickets-search-icon">🔍</span>
-        <input
-          className="tickets-search-input"
-          type="text"
-          placeholder="Buscar por área, descripción, nombre…"
-          value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-        />
-        {busqueda && (
-          <button className="tickets-search-clear" onClick={() => setBusqueda('')}>✕</button>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className={`tickets-toolbar ${!esAdmin ? 'tickets-toolbar-center' : ''}`}>
-        {esAdmin && (
-          <div className="tickets-filtros">
-            <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-              <option value="">Todos los estados</option>
-              <option value="Abierto">🔵 Abierto</option>
-              <option value="En proceso">🟡 En proceso</option>
-              <option value="Resuelto">🟢 Resuelto</option>
-            </select>
-            <select className={filtroPrioridad ? 'activo' : ''} value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)}>
-              <option value="">Todas las prioridades</option>
-              <option value="alta">🔴 Alta</option>
-              <option value="media">🟡 Media</option>
-              <option value="baja">🟢 Baja</option>
-            </select>
-            <select className={filtroArea ? 'activo' : ''} value={filtroArea} onChange={e => setFiltroArea(e.target.value)}>
-              <option value="">Todas las áreas</option>
-              {AREAS.filter(a => a !== 'Otro').map(a => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-              <option value="Otro">Otro</option>
-            </select>
-            <select className={filtroRol ? 'activo' : ''} value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
-              <option value="">Todos los roles</option>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            {(filtroEstado || filtroPrioridad || filtroArea || filtroRol) && (
-              <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad(''); setFiltroArea(''); setFiltroRol('') }}>✕ Limpiar</button>
-            )}
-          </div>
-        )}
+      {/* Fila buscador + botón nuevo */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: '0.9rem', alignItems: 'center' }}>
+        <div className="tickets-search-wrap" style={{ flex: 1, marginBottom: 0 }}>
+          <span className="tickets-search-icon">🔍</span>
+          <input
+            className="tickets-search-input"
+            type="text"
+            placeholder="Buscar por área, descripción, nombre…"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+          {busqueda && (
+            <button className="tickets-search-clear" onClick={() => setBusqueda('')}>✕</button>
+          )}
+        </div>
         <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
       </div>
+
+      {/* Filtros */}
+      {esAdmin && (
+        <div className="tickets-filtros" style={{ marginBottom: '1.1rem' }}>
+          <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+            <option value="">Todos los estados</option>
+            <option value="Abierto">🔵 Abierto</option>
+            <option value="En proceso">🟡 En proceso</option>
+            <option value="Resuelto">🟢 Resuelto</option>
+          </select>
+          <select className={filtroPrioridad ? 'activo' : ''} value={filtroPrioridad} onChange={e => setFiltroPrioridad(e.target.value)}>
+            <option value="">Todas las prioridades</option>
+            <option value="alta">🔴 Alta</option>
+            <option value="media">🟡 Media</option>
+            <option value="baja">🟢 Baja</option>
+          </select>
+          <select className={filtroArea ? 'activo' : ''} value={filtroArea} onChange={e => setFiltroArea(e.target.value)}>
+            <option value="">Todas las áreas</option>
+            {AREAS.filter(a => a !== 'Otro').map(a => (
+              <option key={a} value={a}>{a}</option>
+            ))}
+            <option value="Otro">Otro</option>
+          </select>
+          <select className={filtroRol ? 'activo' : ''} value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
+            <option value="">Todos los roles</option>
+            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {(filtroEstado || filtroPrioridad || filtroArea || filtroRol) && (
+            <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad(''); setFiltroArea(''); setFiltroRol('') }}>✕ Limpiar</button>
+          )}
+        </div>
+      )}
 
       {/* Barra selección — solo visible cuando hay algo seleccionado */}
       {esAdmin && seleccionados.size > 0 && filtrados.length > 0 && (
