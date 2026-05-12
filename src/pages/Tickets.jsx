@@ -234,8 +234,8 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
       </div>
 
-      {/* Barra selección — siempre visible para admin */}
-      {esAdmin && filtrados.length > 0 && (
+      {/* Barra selección — solo visible cuando hay algo seleccionado */}
+      {esAdmin && seleccionados.size > 0 && filtrados.length > 0 && (
         <div className={`tickets-sel-bar ${seleccionados.size > 0 ? 'tickets-sel-bar--activa' : ''}`}>
           <label className="tickets-sel-label">
             <input
