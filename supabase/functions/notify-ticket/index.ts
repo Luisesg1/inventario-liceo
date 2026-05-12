@@ -11,31 +11,44 @@ serve(async (req) => {
     const area = t.area_reporte === 'Otro' && t.area_otro
       ? `Otro — ${t.area_otro}` : (t.area_reporte ?? t.titulo ?? '—')
 
+    const sectionLabel = (text: string) =>
+      `<p style="margin:0 0 10px;font-size:11px;font-weight:800;color:#d4a017;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:6px;border-bottom:1.5px solid rgba(212,160,23,0.25)">${text}</p>`
+
+    const field = (label: string, value: string) =>
+      `<div style="margin-bottom:10px">
+        <p style="margin:0 0 2px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">${label}</p>
+        <p style="margin:0;font-size:14px;color:#111827">${value}</p>
+      </div>`
+
     const html = `
-      <div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
+      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
           <h2 style="color:#f0d060;margin:0;font-size:18px">🎫 Nuevo ticket — Liceo JHJ</h2>
+          <p style="color:rgba(255,255,255,0.6);margin:4px 0 0;font-size:13px">${new Date(t.creado_en).toLocaleString('es-CL')}</p>
         </div>
         <div style="padding:24px">
-          <h3 style="margin:0 0 16px;color:#111827;font-size:16px">${area}</h3>
 
-          <table style="width:100%;border-collapse:collapse;font-size:14px;color:#374151">
-            <tr><td style="padding:6px 0;font-weight:700;width:160px">Nombre</td><td>${t.creado_por_nombre ?? '—'}</td></tr>
-            ${t.rol_solicitante ? `<tr><td style="padding:6px 0;font-weight:700">Rol</td><td>${t.rol_solicitante}</td></tr>` : ''}
-            ${t.correo_contacto ? `<tr><td style="padding:6px 0;font-weight:700">Correo</td><td>${t.correo_contacto}</td></tr>` : ''}
-            <tr><td style="padding:6px 0;font-weight:700">Área</td><td>${area}</td></tr>
-            ${t.lugar_falla ? `<tr><td style="padding:6px 0;font-weight:700">Lugar</td><td>${t.lugar_falla}</td></tr>` : ''}
-            ${t.marca_modelo_falla ? `<tr><td style="padding:6px 0;font-weight:700">Dispositivo</td><td>${t.marca_modelo_falla}</td></tr>` : ''}
-          </table>
+          <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:16px;margin-bottom:16px">
+            ${sectionLabel('Información de contacto')}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">
+              ${field('Nombre', t.creado_por_nombre ?? '—')}
+              ${t.rol_solicitante ? field('Rol', t.rol_solicitante) : ''}
+            </div>
+            ${t.correo_contacto ? field('Correo electrónico', `<a href="mailto:${t.correo_contacto}" style="color:#1a237e">${t.correo_contacto}</a>`) : ''}
+          </div>
 
-          ${t.descripcion ? `
-          <div style="margin-top:16px;background:#f9fafb;border-left:4px solid #1a237e;padding:12px 16px;border-radius:0 8px 8px 0">
-            <p style="margin:0;font-size:13px;color:#374151">${t.descripcion}</p>
-          </div>` : ''}
+          <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:16px;margin-bottom:16px">
+            ${sectionLabel('Reporte de falla o incidencia')}
+            ${field('Área del reporte', area)}
+            ${t.lugar_falla ? field('Lugar donde se detecta la falla', t.lugar_falla) : ''}
+            ${t.marca_modelo_falla ? field('Marca y modelo del dispositivo', t.marca_modelo_falla) : ''}
+            ${t.descripcion ? `
+            <div style="margin-top:4px">
+              <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em">Descripción de la falla</p>
+              <div style="background:#fff;border-left:3px solid #1a237e;padding:10px 14px;border-radius:0 6px 6px 0;font-size:14px;color:#374151">${t.descripcion}</div>
+            </div>` : ''}
+          </div>
 
-          <p style="margin-top:20px;font-size:12px;color:#9ca3af">
-            Ticket creado el ${new Date(t.creado_en).toLocaleString('es-CL')}
-          </p>
         </div>
       </div>`
 
