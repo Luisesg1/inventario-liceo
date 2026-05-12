@@ -14,6 +14,7 @@ export default function App() {
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [pagina,             setPagina]             = useState(() => localStorage.getItem('app_pagina') || 'dashboard')
   const [abrirBienId,        setAbrirBienId]        = useState(null)
+  const [abrirCatId,         setAbrirCatId]         = useState(null)
 
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const procesandoCambio = useRef(false)
@@ -130,9 +131,9 @@ export default function App() {
 
   return (
     <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina}>
-      {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} />}
+      {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
-      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} />}
+      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
     </Layout>
   )

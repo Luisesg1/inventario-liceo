@@ -91,7 +91,7 @@ function ComboField({ name, value, onChange, placeholder, opciones = [], maxLeng
   )
 }
 
-export default function Inventario({ usuario, abrirBienId, onAbrirBienDone }) {
+export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abrirCatId, onAbrirCatDone }) {
   const esAdmin  = usuario?.rol === 'admin'
 
   // ── Estado de conexión ────────────────────────────────────────────────────
@@ -432,6 +432,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone }) {
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
+
+  // ── Abrir categoría desde Auditoría ─────────────────────────────────────
+  useEffect(() => {
+    if (!abrirCatId) return
+    seleccionarCat(abrirCatId)
+    onAbrirCatDone?.()
+  }, [abrirCatId])
 
   // ── Abrir bien desde Auditoría ───────────────────────────────────────────
   useEffect(() => {

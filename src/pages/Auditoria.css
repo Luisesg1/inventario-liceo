@@ -237,6 +237,15 @@
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #e5e7eb;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.audit-cat-tag-link {
+  cursor: pointer;
+}
+.audit-cat-tag-link:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
 }
 
 .audit-item-campos {

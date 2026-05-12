@@ -63,7 +63,7 @@ function agruparPorDia(logs) {
   return items
 }
 
-export default function Auditoria({ usuario, onVerBien }) {
+export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
   const [cargando, setCargando]       = useState(true)
@@ -289,7 +289,13 @@ export default function Auditoria({ usuario, onVerBien }) {
                         </span>
                       )}
                       {log.categoria && (
-                        <span className="audit-cat-tag">{catLabel(log.categoria)}</span>
+                        <span
+                          className={`audit-cat-tag ${onVerCategoria ? 'audit-cat-tag-link' : ''}`}
+                          title={onVerCategoria ? 'Ver categoría en inventario' : undefined}
+                          onClick={onVerCategoria ? e => { e.stopPropagation(); onVerCategoria(log.categoria) } : undefined}
+                        >
+                          {catLabel(log.categoria)}
+                        </span>
                       )}
                       <span title={formatFecha(log.creado_en)}>
                         · {esHoy ? tiempoRelativo(log.creado_en) : formatFecha(log.creado_en)}
