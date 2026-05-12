@@ -273,6 +273,52 @@
   50%       { opacity: 0.7; }
 }
 
+/* Buscador */
+.tickets-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.tickets-search-icon {
+  position: absolute;
+  left: 13px;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+.tickets-search-input {
+  width: 100%;
+  padding: 10px 38px 10px 38px;
+  border-radius: 11px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+.tickets-search-input::placeholder { color: rgba(255,255,255,0.35); }
+.tickets-search-input:focus {
+  outline: none;
+  border-color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.11);
+}
+.tickets-search-clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.tickets-search-clear:hover { color: rgba(255,255,255,0.8); }
+
 /* Barra selección masiva */
 .tickets-sel-bar {
   display: flex;

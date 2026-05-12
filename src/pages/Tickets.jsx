@@ -41,6 +41,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const [seleccionados,   setSeleccionados]   = useState(new Set())
   const [confirmandoBulk, setConfirmandoBulk] = useState(false)
+  const [busqueda,        setBusqueda]        = useState('')
 
   useEffect(() => { cargar() }, [])
 
@@ -53,10 +54,18 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     setCargando(false)
   }
 
-  const filtrados = tickets.filter(t =>
-    (!filtroEstado    || t.estado    === filtroEstado) &&
-    (!filtroPrioridad || t.prioridad === filtroPrioridad)
-  )
+  const filtrados = tickets.filter(t => {
+    if (filtroEstado    && t.estado    !== filtroEstado)    return false
+    if (filtroPrioridad && t.prioridad !== filtroPrioridad) return false
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase()
+      const hay = (s) => (s ?? '').toLowerCase().includes(q)
+      if (!hay(t.titulo) && !hay(t.area_reporte) && !hay(t.descripcion) &&
+          !hay(t.creado_por_nombre) && !hay(t.lugar_falla) && !hay(t.marca_modelo_falla))
+        return false
+    }
+    return true
+  })
 
   const abrirNuevo = () => {
     const [nombre = '', ...rest] = (usuario.nombre || '').split(' ')
@@ -184,6 +193,21 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         })}
       </div>}
 
+      {/* Buscador */}
+      <div className="tickets-search-wrap">
+        <span className="tickets-search-icon">🔍</span>
+        <input
+          className="tickets-search-input"
+          type="text"
+          placeholder="Buscar por área, descripción, nombre…"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
+        {busqueda && (
+          <button className="tickets-search-clear" onClick={() => setBusqueda('')}>✕</button>
+        )}
+      </div>
+
       {/* Toolbar */}
       <div className={`tickets-toolbar ${!esAdmin ? 'tickets-toolbar-center' : ''}`}>
         {esAdmin && (
@@ -270,7 +294,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                   {esAdmin && (
                     <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
                       onClick={e => e.stopPropagation()}
-                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', marginTop: 3, accentColor: '#1a237e' }} />
+                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', alignSelf: 'center', accentColor: '#1a237e' }} />
                   )}
                   <div className="ticket-card-info">
                     <p className="ticket-titulo">{areaLabel(t)}</p>
