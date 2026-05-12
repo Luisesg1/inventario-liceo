@@ -2,7 +2,6 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const ADMIN_EMAIL    = Deno.env.get('ADMIN_EMAIL')!
-const ADMIN_EMAIL_2  = Deno.env.get('ADMIN_EMAIL_2')
 
 serve(async (req) => {
   try {
@@ -40,7 +39,7 @@ serve(async (req) => {
         </div>
       </div>`
 
-    await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -48,12 +47,19 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'Inventario JHJ <onboarding@resend.dev>',
-        to:   ADMIN_EMAIL_2 ? [ADMIN_EMAIL, ADMIN_EMAIL_2] : [ADMIN_EMAIL],
+        to:   [ADMIN_EMAIL],
         subject: `🎫 Nuevo ticket: ${area}`,
         html,
       }),
     })
 
+    if (!res.ok) {
+      const body = await res.text()
+      console.error('Resend error:', res.status, body)
+      return new Response(`Resend error: ${body}`, { status: 500 })
+    }
+
+    console.log('Email enviado a', ADMIN_EMAIL)
     return new Response('OK', { status: 200 })
   } catch (e) {
     return new Response(String(e), { status: 500 })
