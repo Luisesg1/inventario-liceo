@@ -39,6 +39,9 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const [modoSeleccion,   setModoSeleccion]   = useState(false)
+  const [seleccionados,   setSeleccionados]   = useState(new Set())
+  const [confirmandoBulk, setConfirmandoBulk] = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -133,6 +136,21 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     cerrarDetalle()
   }
 
+  const toggleSeleccion = (id) => setSeleccionados(prev => {
+    const s = new Set(prev)
+    s.has(id) ? s.delete(id) : s.add(id)
+    return s
+  })
+  const toggleTodos = () => setSeleccionados(
+    seleccionados.size === filtrados.length ? new Set() : new Set(filtrados.map(t => t.id))
+  )
+  const salirSeleccion = () => { setModoSeleccion(false); setSeleccionados(new Set()); setConfirmandoBulk(false) }
+  const eliminarSeleccionados = async () => {
+    await supabase.from('tickets').delete().in('id', [...seleccionados])
+    setTickets(prev => prev.filter(t => !seleccionados.has(t.id)))
+    salirSeleccion()
+  }
+
   const fmt = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
 
   if (cargando) return (
@@ -186,8 +204,40 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             )}
           </div>
         )}
-        <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {esAdmin && filtrados.length > 0 && !modoSeleccion && (
+            <button style={{ padding: '9px 16px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', cursor: 'pointer' }}
+              onClick={() => setModoSeleccion(true)}>☑ Seleccionar</button>
+          )}
+          <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
+        </div>
       </div>
+
+      {/* Barra de selección masiva */}
+      {modoSeleccion && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '1rem', background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 16px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', fontWeight: 600 }}>
+            <input type="checkbox" checked={seleccionados.size === filtrados.length && filtrados.length > 0} onChange={toggleTodos} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+            Seleccionar todos ({filtrados.length})
+          </label>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>{seleccionados.size} seleccionados</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', cursor: 'pointer' }} onClick={salirSeleccion}>Cancelar</button>
+            {seleccionados.size > 0 && !confirmandoBulk && (
+              <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: 'rgba(239,68,68,0.15)', color: '#fca5a5', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => setConfirmandoBulk(true)}>🗑 Eliminar {seleccionados.size}</button>
+            )}
+            {confirmandoBulk && (
+              <>
+                <span style={{ color: '#fca5a5', fontSize: '0.82rem', alignSelf: 'center' }}>¿Confirmar?</span>
+                <button style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', cursor: 'pointer' }} onClick={() => setConfirmandoBulk(false)}>No</button>
+                <button style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                  onClick={eliminarSeleccionados}>Sí, eliminar</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lista */}
       {filtrados.length === 0 ? (
@@ -201,8 +251,14 @@ export default function Tickets({ usuario, onTicketActualizado }) {
             const e = ESTADO[t.estado]
             const p = t.prioridad ? PRIORIDAD[t.prioridad] : null
             return (
-              <div key={t.id} className="ticket-card" onClick={() => abrirDetalle(t)}>
+              <div key={t.id} className={`ticket-card ${modoSeleccion && seleccionados.has(t.id) ? 'ticket-card-sel' : ''}`}
+                onClick={() => modoSeleccion ? toggleSeleccion(t.id) : abrirDetalle(t)}>
                 <div className="ticket-card-body">
+                  {modoSeleccion && (
+                    <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
+                      onClick={e => e.stopPropagation()}
+                      style={{ width: 18, height: 18, flexShrink: 0, cursor: 'pointer', marginTop: 2 }} />
+                  )}
                   <div className="ticket-card-info">
                     <p className="ticket-titulo">{areaLabel(t)}</p>
                     <p className="ticket-bien">📍 {t.lugar_falla || '—'}</p>

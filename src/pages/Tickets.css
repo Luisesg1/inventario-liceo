@@ -120,6 +120,10 @@
   box-shadow: 0 8px 28px rgba(0,0,0,0.22);
   transform: translateY(-1px);
 }
+.ticket-card-sel {
+  border-color: #2563eb !important;
+  background: rgba(37,99,235,0.06) !important;
+}
 .ticket-card-body {
   display: flex;
   align-items: flex-start;
