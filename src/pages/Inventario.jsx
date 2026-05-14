@@ -156,6 +156,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map()) // Map<id, fecha_devolucion_esperada>
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
+  const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
   // Drag & drop + pin
   const [catOrder, setCatOrder]     = useState([]) // orden de ids
   const [pinnedCats, setPinnedCats] = useState(() => {
@@ -2635,6 +2636,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <div className="acciones">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
+                      {!b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
+                        <button className="btn-ver" title="Incidencias" style={{ fontSize: 14 }}
+                          onClick={() => setModalIncidencias(b)}>🔧</button>
+                      )}
                       {!b._pendiente && (
                         <button
                           className="btn-ver"
@@ -2679,6 +2684,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
 <button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR">▦ QR</button>
 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
+                {(esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
+                  <button className="btn-descargar-pdf" onClick={() => { setVerDetalle(null); setModalIncidencias(verDetalle) }} title="Incidencias">🔧 Incidencias</button>
+                )}
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
               </div>
             </div>
@@ -3064,6 +3072,142 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           </div>
         </div>
       )}
+
+      {/* Modal Incidencias */}
+      {modalIncidencias && (
+        <ModalIncidencias
+          bien={modalIncidencias}
+          usuario={usuario}
+          onCerrar={() => setModalIncidencias(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Modal de Incidencias
+// ══════════════════════════════════════════════════════════════════════════
+function ModalIncidencias({ bien, usuario, onCerrar }) {
+  const [incidencias,   setIncidencias]   = useState([])
+  const [cargando,      setCargando]      = useState(true)
+  const [titulo,        setTitulo]        = useState('')
+  const [descripcion,   setDescripcion]   = useState('')
+  const [fecha,         setFecha]         = useState(() => new Date().toISOString().slice(0, 10))
+  const [guardando,     setGuardando]     = useState(false)
+  const [error,         setError]         = useState('')
+  const [eliminandoId,  setEliminandoId]  = useState(null)
+
+  const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'editor'
+
+  useEffect(() => { cargar() }, [bien.id]) // eslint-disable-line
+
+  async function cargar() {
+    setCargando(true)
+    const { data } = await supabase
+      .from('incidencias')
+      .select('*, usuarios(nombre)')
+      .eq('bien_id', bien.id)
+      .order('fecha', { ascending: false })
+      .order('creado_en', { ascending: false })
+    setIncidencias(data || [])
+    setCargando(false)
+  }
+
+  async function guardar(e) {
+    e.preventDefault()
+    if (!titulo.trim()) { setError('El título es obligatorio'); return }
+    setGuardando(true); setError('')
+    const { error: err } = await supabase.from('incidencias').insert({
+      bien_id:     bien.id,
+      titulo:      titulo.trim(),
+      descripcion: descripcion.trim() || null,
+      fecha,
+      creado_por:  usuario?.id,
+    })
+    setGuardando(false)
+    if (err) { setError('Error al guardar: ' + err.message); return }
+    setTitulo(''); setDescripcion(''); setFecha(new Date().toISOString().slice(0, 10))
+    cargar()
+  }
+
+  async function eliminar(id) {
+    setEliminandoId(id)
+    await supabase.from('incidencias').delete().eq('id', id)
+    setIncidencias(prev => prev.filter(i => i.id !== id))
+    setEliminandoId(null)
+  }
+
+  const ovl = { position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }
+  const mod = { background: '#fff', borderRadius: 14, padding: '24px 26px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }
+
+  return (
+    <div style={ovl} onClick={onCerrar}>
+      <div style={mod} onClick={e => e.stopPropagation()}>
+
+        {/* Cabecera */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <p style={{ margin: '0 0 2px', fontWeight: 800, fontSize: 15, color: '#111827' }}>🔧 Incidencias</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{bien.nombre} · {bien.codigo}</p>
+          </div>
+          <button onClick={onCerrar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#6b7280', lineHeight: 1, flexShrink: 0 }}>✕</button>
+        </div>
+
+        {/* Formulario nueva incidencia */}
+        <form onSubmit={guardar} style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Nueva incidencia</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título de la incidencia *"
+              style={{ flex: '1 1 200px', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, outline: 'none', minWidth: 0 }} />
+            <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
+              style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, outline: 'none' }} />
+          </div>
+          <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción opcional (qué se hizo, qué se encontró...)" rows={2}
+            style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
+          {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626' }}>⚠️ {error}</p>}
+          <button type="submit" disabled={guardando}
+            style={{ alignSelf: 'flex-end', padding: '8px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            {guardando ? 'Guardando…' : '+ Registrar'}
+          </button>
+        </form>
+
+        {/* Lista de incidencias */}
+        <div>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            Historial ({incidencias.length})
+          </p>
+          {cargando ? (
+            <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Cargando…</p>
+          ) : incidencias.length === 0 ? (
+            <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Sin incidencias registradas</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {incidencias.map(inc => (
+                <div key={inc.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: '0 0 2px', fontWeight: 700, fontSize: 13, color: '#111827', wordBreak: 'break-word' }}>{inc.titulo}</p>
+                      <p style={{ margin: '0 0 4px', fontSize: 11, color: '#9ca3af' }}>
+                        {new Date(inc.fecha + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        {inc.usuarios?.nombre && <span> · {inc.usuarios.nombre}</span>}
+                      </p>
+                      {inc.descripcion && <p style={{ margin: 0, fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{inc.descripcion}</p>}
+                    </div>
+                    {esAdmin && (
+                      <button onClick={() => eliminar(inc.id)} disabled={eliminandoId === inc.id}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, flexShrink: 0, lineHeight: 1, padding: 4 }}
+                        title="Eliminar incidencia">
+                        {eliminandoId === inc.id ? '…' : '✕'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
