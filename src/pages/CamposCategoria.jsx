@@ -148,6 +148,69 @@ function ModalCategoria({ cat, onClose, onSave }) {
   )
 }
 
+const CAMPOS_FIJOS_PREVIEW = [
+  { id: 'nombre',      nombre: 'Nombre / descripción', tipo: 'texto',  requerido: true },
+  { id: 'cantidad',    nombre: 'Cantidad',             tipo: 'numero' },
+  { id: 'estado',      nombre: 'Estado',               tipo: 'select', opciones: ['Bueno', 'Regular', 'Malo'] },
+  { id: 'ubicacion',   nombre: 'Ubicación',            tipo: 'texto'  },
+  { id: 'responsable', nombre: 'Responsable',          tipo: 'texto'  },
+]
+
+function MockField({ nombre, tipo, requerido, opciones }) {
+  const s = { width: '100%', padding: '5px 8px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11, background: '#f9fafb', color: '#9ca3af', outline: 'none', boxSizing: 'border-box' }
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+        {nombre}{requerido && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
+      </label>
+      {tipo === 'fecha'     ? <input type="date" readOnly style={s} />
+      : tipo === 'booleano' ? <select disabled style={s}><option>Sí</option><option>No</option></select>
+      : tipo === 'select'   ? <select disabled style={s}>{(opciones?.length ? opciones : ['Seleccionar…']).map(o => <option key={o}>{o}</option>)}</select>
+      : <input readOnly type={tipo === 'numero' ? 'number' : 'text'} placeholder={`${nombre}…`} style={s} />}
+    </div>
+  )
+}
+
+function PreviewFormulario({ catObj, sistemaCamposVisibles, camposNombres, campos }) {
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding: '12px 16px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 20 }}>{catObj.icon || '📦'}</span>
+        <div>
+          <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#fff' }}>{catObj.label}</p>
+          <p style={{ margin: 0, fontSize: 9, color: 'rgba(255,255,255,0.55)' }}>Vista previa del formulario</p>
+        </div>
+      </div>
+      <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 520, overflowY: 'auto' }}>
+        {CAMPOS_FIJOS_PREVIEW.map(c => <MockField key={c.id} {...c} />)}
+        {sistemaCamposVisibles.length > 0 && (
+          <div style={{ borderTop: '1px dashed #e5e7eb', paddingTop: 7, marginTop: 1 }}>
+            <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Campos categoría</p>
+            {sistemaCamposVisibles.map(c => (
+              <div key={c.id} style={{ marginBottom: 7 }}>
+                <MockField nombre={camposNombres[c.id] || c.nombre} tipo={c.tipo} opciones={c.opciones} />
+              </div>
+            ))}
+          </div>
+        )}
+        {campos.length > 0 && (
+          <div style={{ borderTop: '1px dashed #e5e7eb', paddingTop: 7, marginTop: 1 }}>
+            <p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personalizados</p>
+            {campos.map(c => (
+              <div key={c.id} style={{ marginBottom: 7 }}>
+                <MockField nombre={c.nombre} tipo={c.tipo} opciones={c.opciones} requerido={c.requerido} />
+              </div>
+            ))}
+          </div>
+        )}
+        {sistemaCamposVisibles.length === 0 && campos.length === 0 && (
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#d1d5db', textAlign: 'center', fontStyle: 'italic' }}>Solo campos básicos</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function CamposCategoria({ usuario }) {
   const esAdmin = usuario?.rol === 'admin'
 
@@ -357,6 +420,12 @@ export default function CamposCategoria({ usuario }) {
   const catObj  = categorias.find(c => c.id === catActiva)
   const tipoObj = TIPOS.find(t => t.value === nuevoTipo)
 
+  const _base   = catObj ? getCamposSistema(catObj) : []
+  const _sorted = camposOrden.length
+    ? [..._base].sort((a, b) => { const ia = camposOrden.indexOf(a.id), ib = camposOrden.indexOf(b.id); if (ia === -1 && ib === -1) return 0; if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib })
+    : _base
+  const sistemaCamposVisibles = _sorted.filter(c => !camposOcultos.includes(c.id))
+
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.5)', flexDirection: 'column', gap: 14 }}>
       <div style={{ width: 32, height: 32, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#d4a017', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
@@ -366,7 +435,7 @@ export default function CamposCategoria({ usuario }) {
   )
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* Cabecera */}
       <div style={{ background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
@@ -442,7 +511,8 @@ export default function CamposCategoria({ usuario }) {
 
         {/* ── Panel derecho ─────────────────────────────── */}
         {catObj && (
-          <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <>
+          <div style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {/* Header categoría activa */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -739,6 +809,17 @@ export default function CamposCategoria({ usuario }) {
               </button>
             </div>
           </div>
+
+          {/* ── Vista previa ─────────────────────────────── */}
+          <div style={{ width: 252, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
+            <PreviewFormulario
+              catObj={catObj}
+              sistemaCamposVisibles={sistemaCamposVisibles}
+              camposNombres={camposNombres}
+              campos={campos}
+            />
+          </div>
+          </>
         )}
       </div>
 
