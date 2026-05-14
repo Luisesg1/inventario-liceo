@@ -398,6 +398,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
   const [usuarioCreado, setUsuarioCreado] = useState(null) // { id, nombre, rol }
   const [passwordTemporal, setPasswordTemporal] = useState(null) // null = email OK, string = email falló
+  const [emailErrorDetalle, setEmailErrorDetalle] = useState(null)
 
   // Draft de permisos: se inicializa según el rol seleccionado
   const [draft, setDraft] = useState(() => {
@@ -438,6 +439,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         // Si el email falló, guardamos la contraseña temporal para mostrarla al admin
         if (!json.emailEnviado && json.passwordTemporal) {
           setPasswordTemporal(json.passwordTemporal)
+          setEmailErrorDetalle(json.emailError ?? null)
         }
         setPaso(2)
         setMensaje({ tipo: '', texto: '' })
@@ -577,6 +579,16 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                 <p style={{ margin: '6px 0 0', fontSize: 12, color: '#92400e' }}>
                   Email: <strong>{email}</strong> — el usuario deberá cambiarla al primer ingreso.
                 </p>
+                {emailErrorDetalle && (
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ fontSize: 11, color: '#92400e', cursor: 'pointer', fontWeight: 600 }}>
+                      Ver error de Brevo ▾
+                    </summary>
+                    <pre style={{ fontSize: 10, background: '#fef3c7', padding: 8, borderRadius: 6, marginTop: 4, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#78350f' }}>
+                      {emailErrorDetalle}
+                    </pre>
+                  </details>
+                )}
               </div>
             )}
 
