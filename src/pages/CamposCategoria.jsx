@@ -166,7 +166,10 @@ export default function CamposCategoria({ usuario }) {
   const [nuevoOpts,       setNuevoOpts]       = useState('')
   const [editandoCampoId, setEditandoCampoId] = useState(null)
 
-  const [camposOcultos,   setCamposOcultos]   = useState([])
+  const [camposOcultos,        setCamposOcultos]        = useState([])
+  const [sistemaCamposExpanded, setSistemaCamposExpanded] = useState(false)
+  const [editandoSistema,       setEditandoSistema]       = useState(null) // { id, nombre }
+  const [camposNombres,         setCamposNombres]         = useState({}) // { id: 'nombre override' }
 
   // Modales categoría
   const [modalCat,        setModalCat]        = useState(null) // null | 'nueva' | cat_obj (edición)
@@ -177,14 +180,15 @@ export default function CamposCategoria({ usuario }) {
 
   async function cargarCategorias() {
     setCargando(true)
-    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, fija').order('label')
+    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, campos_nombres, fija').order('label')
     if (data) {
       setCategorias(data)
       if (data.length > 0) {
         const target = (catActiva && data.find(c => c.id === catActiva)) || data[0]
         setCatActiva(target.id)
         setCampos(target.campos_personalizados || [])
-        setCamposOcultos(target.campos_ocultos || [])
+        setCamposOcultos(target.campos_ocultos  || [])
+        setCamposNombres(target.campos_nombres  || {})
       }
     }
     setCargando(false)
@@ -195,11 +199,14 @@ export default function CamposCategoria({ usuario }) {
     setError(''); setExito(false); resetForm()
     const { data } = await supabase
       .from('categorias')
-      .select('campos_personalizados, campos_ocultos')
+      .select('campos_personalizados, campos_ocultos, campos_nombres')
       .eq('id', cat.id)
       .single()
     setCampos(data?.campos_personalizados || [])
-    setCamposOcultos(data?.campos_ocultos || [])
+    setCamposOcultos(data?.campos_ocultos  || [])
+    setCamposNombres(data?.campos_nombres  || {})
+    setSistemaCamposExpanded(false)
+    setEditandoSistema(null)
   }
 
   function resetForm() {
@@ -248,16 +255,18 @@ export default function CamposCategoria({ usuario }) {
     if (!catActiva) return
     setGuardando(true); setError(''); setExito(false)
     const { error: err } = await supabase.from('categorias')
-      .update({ campos_personalizados: campos, campos_ocultos: camposOcultos })
+      .update({ campos_personalizados: campos, campos_ocultos: camposOcultos, campos_nombres: camposNombres })
       .eq('id', catActiva)
     if (err) { setError('Error al guardar: ' + err.message) }
     else {
-      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos').eq('id', catActiva).single()
+      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos, campos_nombres').eq('id', catActiva).single()
       const camposGuardados  = fresh?.campos_personalizados || []
       const ocultosGuardados = fresh?.campos_ocultos        || []
+      const nombresGuardados = fresh?.campos_nombres        || {}
       setCampos(camposGuardados)
       setCamposOcultos(ocultosGuardados)
-      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados } : c))
+      setCamposNombres(nombresGuardados)
+      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados, campos_nombres: nombresGuardados } : c))
       setExito(true); setTimeout(() => setExito(false), 3000)
     }
     setGuardando(false)
@@ -409,48 +418,103 @@ export default function CamposCategoria({ usuario }) {
             {(() => {
               const sistemaCampos = getCamposSistema(catObj)
               if (!sistemaCampos.length) return null
+              const nOcultos = camposOcultos.filter(id => sistemaCampos.some(c => c.id === id)).length
               return (
                 <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
-                  <div style={{ padding: '13px 18px 11px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Header colapsable */}
+                  <div
+                    onClick={() => setSistemaCamposExpanded(p => !p)}
+                    style={{ padding: '13px 18px 11px', borderBottom: sistemaCamposExpanded ? '1px solid #f3f4f6' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#64748b' }} />
                     <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos del sistema</p>
-                    <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9ca3af', fontStyle: 'italic' }}>
-                      Activa o desactiva cada campo
-                    </span>
+                    {!sistemaCamposExpanded && (
+                      <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 2 }}>
+                        {sistemaCampos.length} campo{sistemaCampos.length !== 1 ? 's' : ''}
+                        {nOcultos > 0 ? ` · ${nOcultos} desactivado${nOcultos !== 1 ? 's' : ''}` : ''}
+                      </span>
+                    )}
+                    <span style={{ marginLeft: 'auto', fontSize: 14, color: '#9ca3af', display: 'inline-block', transform: sistemaCamposExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1 }}>▾</span>
                   </div>
-                  <div>
-                    {sistemaCampos.map((campo, idx) => {
-                      const oculto = camposOcultos.includes(campo.id)
-                      const tc = TIPO_COLOR[campo.tipo] || '#6b7280'
-                      const ti = TIPOS.find(t => t.value === campo.tipo)
-                      return (
-                        <div key={campo.id}
-                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
-                            borderBottom: idx < sistemaCampos.length - 1 ? '1px solid #f3f4f6' : 'none',
-                            background: oculto ? '#f9fafb' : 'transparent',
-                            opacity: oculto ? 0.55 : 1,
-                            transition: 'all 0.15s' }}>
-                          <div style={{ width: 30, height: 30, borderRadius: 9, background: oculto ? '#f3f4f6' : `${tc}15`, border: `1.5px solid ${oculto ? '#e5e7eb' : tc+'33'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                            {ti?.icon || '📝'}
+
+                  {/* Lista (solo cuando expandido) */}
+                  {sistemaCamposExpanded && (
+                    <div>
+                      {sistemaCampos.map((campo, idx) => {
+                        const oculto         = camposOcultos.includes(campo.id)
+                        const tc             = TIPO_COLOR[campo.tipo] || '#6b7280'
+                        const ti             = TIPOS.find(t => t.value === campo.tipo)
+                        const nombreMostrado = camposNombres[campo.id] || campo.nombre
+                        const estaEditando   = editandoSistema?.id === campo.id
+
+                        function confirmarRenombre(val) {
+                          setCamposNombres(prev => {
+                            const next = { ...prev }
+                            if (val && val !== campo.nombre) next[campo.id] = val
+                            else delete next[campo.id]
+                            return next
+                          })
+                          setEditandoSistema(null)
+                        }
+
+                        return (
+                          <div key={campo.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
+                              borderBottom: idx < sistemaCampos.length - 1 ? '1px solid #f3f4f6' : 'none',
+                              background: oculto ? '#f9fafb' : 'transparent',
+                              opacity: oculto ? 0.55 : 1,
+                              transition: 'all 0.15s' }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 9, background: oculto ? '#f3f4f6' : `${tc}15`, border: `1.5px solid ${oculto ? '#e5e7eb' : tc+'33'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                              {ti?.icon || '📝'}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              {estaEditando ? (
+                                <input
+                                  autoFocus
+                                  defaultValue={nombreMostrado}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter')  confirmarRenombre(e.target.value.trim())
+                                    if (e.key === 'Escape') setEditandoSistema(null)
+                                  }}
+                                  onBlur={e => confirmarRenombre(e.target.value.trim())}
+                                  style={{ width: '100%', padding: '4px 8px', borderRadius: 6, border: '1.5px solid #6366f1', fontSize: 13, outline: 'none', color: '#111827', background: '#f8f9ff', boxSizing: 'border-box' }}
+                                />
+                              ) : (
+                                <>
+                                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: oculto ? '#9ca3af' : '#374151', textDecoration: oculto ? 'line-through' : 'none' }}>
+                                    {nombreMostrado}
+                                    {camposNombres[campo.id] && <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 5 }}>({campo.nombre})</span>}
+                                  </p>
+                                  <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: oculto ? '#f3f4f6' : `${tc}15`, color: oculto ? '#9ca3af' : tc }}>{ti?.label}</span>
+                                </>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                              {!oculto && (
+                                <button
+                                  onClick={e => { e.stopPropagation(); setEditandoSistema(estaEditando ? null : { id: campo.id }) }}
+                                  title="Renombrar campo"
+                                  style={{ background: estaEditando ? '#eef2ff' : 'none', border: estaEditando ? '1px solid #c7d2fe' : 'none', cursor: 'pointer', color: estaEditando ? '#6366f1' : '#d1d5db', fontSize: 13, padding: '4px 6px', borderRadius: 6, lineHeight: 1 }}
+                                  onMouseOver={e => { if (!estaEditando) { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' } }}
+                                  onMouseOut={e => { if (!estaEditando) { e.currentTarget.style.color = '#d1d5db'; e.currentTarget.style.background = 'none' } }}>
+                                  ✏️
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setCamposOcultos(prev =>
+                                  oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]
+                                )}
+                                title={oculto ? 'Activar campo' : 'Desactivar campo'}
+                                style={{ background: oculto ? '#f3f4f6' : '#f0fdf4', border: `1px solid ${oculto ? '#e5e7eb' : '#bbf7d0'}`, cursor: 'pointer', color: oculto ? '#9ca3af' : '#16a34a', fontSize: 14, padding: '5px 9px', borderRadius: 7, lineHeight: 1, flexShrink: 0, fontWeight: 700 }}
+                                onMouseOver={e => { e.currentTarget.style.opacity = '0.75' }}
+                                onMouseOut={e => { e.currentTarget.style.opacity = '1' }}>
+                                {oculto ? '🚫' : '👁'}
+                              </button>
+                            </div>
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: oculto ? '#9ca3af' : '#374151', textDecoration: oculto ? 'line-through' : 'none' }}>{campo.nombre}</p>
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: oculto ? '#f3f4f6' : `${tc}15`, color: oculto ? '#9ca3af' : tc }}>{ti?.label}</span>
-                          </div>
-                          <button
-                            onClick={() => setCamposOcultos(prev =>
-                              oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]
-                            )}
-                            title={oculto ? 'Activar campo' : 'Desactivar campo'}
-                            style={{ background: oculto ? '#f3f4f6' : '#f0fdf4', border: `1px solid ${oculto ? '#e5e7eb' : '#bbf7d0'}`, cursor: 'pointer', color: oculto ? '#9ca3af' : '#16a34a', fontSize: 14, padding: '5px 9px', borderRadius: 7, lineHeight: 1, flexShrink: 0, fontWeight: 700 }}
-                            onMouseOver={e => { e.currentTarget.style.opacity = '0.75' }}
-                            onMouseOut={e => { e.currentTarget.style.opacity = '1' }}>
-                            {oculto ? '🚫' : '👁'}
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )
             })()}
