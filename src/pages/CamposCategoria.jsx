@@ -168,8 +168,13 @@ export default function CamposCategoria({ usuario }) {
 
   const [camposOcultos,        setCamposOcultos]        = useState([])
   const [sistemaCamposExpanded, setSistemaCamposExpanded] = useState(false)
-  const [editandoSistema,       setEditandoSistema]       = useState(null) // { id, nombre }
-  const [camposNombres,         setCamposNombres]         = useState({}) // { id: 'nombre override' }
+  const [editandoSistema,       setEditandoSistema]       = useState(null)
+  const [camposNombres,         setCamposNombres]         = useState({})
+  const [camposOrden,           setCamposOrden]           = useState([])
+
+  // Drag & drop
+  const [dragInfo,   setDragInfo]   = useState(null) // { id, tipo: 'sistema'|'custom' }
+  const [dragOverId, setDragOverId] = useState(null)
 
   // Modales categoría
   const [modalCat,        setModalCat]        = useState(null) // null | 'nueva' | cat_obj (edición)
@@ -180,7 +185,7 @@ export default function CamposCategoria({ usuario }) {
 
   async function cargarCategorias() {
     setCargando(true)
-    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, campos_nombres, fija').order('label')
+    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, campos_nombres, campos_orden, fija').order('label')
     if (data) {
       setCategorias(data)
       if (data.length > 0) {
@@ -189,6 +194,7 @@ export default function CamposCategoria({ usuario }) {
         setCampos(target.campos_personalizados || [])
         setCamposOcultos(target.campos_ocultos  || [])
         setCamposNombres(target.campos_nombres  || {})
+        setCamposOrden(target.campos_orden      || [])
       }
     }
     setCargando(false)
@@ -199,12 +205,13 @@ export default function CamposCategoria({ usuario }) {
     setError(''); setExito(false); resetForm()
     const { data } = await supabase
       .from('categorias')
-      .select('campos_personalizados, campos_ocultos, campos_nombres')
+      .select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden')
       .eq('id', cat.id)
       .single()
     setCampos(data?.campos_personalizados || [])
     setCamposOcultos(data?.campos_ocultos  || [])
     setCamposNombres(data?.campos_nombres  || {})
+    setCamposOrden(data?.campos_orden      || [])
     setSistemaCamposExpanded(false)
     setEditandoSistema(null)
   }
@@ -255,18 +262,20 @@ export default function CamposCategoria({ usuario }) {
     if (!catActiva) return
     setGuardando(true); setError(''); setExito(false)
     const { error: err } = await supabase.from('categorias')
-      .update({ campos_personalizados: campos, campos_ocultos: camposOcultos, campos_nombres: camposNombres })
+      .update({ campos_personalizados: campos, campos_ocultos: camposOcultos, campos_nombres: camposNombres, campos_orden: camposOrden })
       .eq('id', catActiva)
     if (err) { setError('Error al guardar: ' + err.message) }
     else {
-      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos, campos_nombres').eq('id', catActiva).single()
+      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden').eq('id', catActiva).single()
       const camposGuardados  = fresh?.campos_personalizados || []
       const ocultosGuardados = fresh?.campos_ocultos        || []
       const nombresGuardados = fresh?.campos_nombres        || {}
+      const ordenGuardado    = fresh?.campos_orden          || []
       setCampos(camposGuardados)
       setCamposOcultos(ocultosGuardados)
       setCamposNombres(nombresGuardados)
-      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados, campos_nombres: nombresGuardados } : c))
+      setCamposOrden(ordenGuardado)
+      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados, campos_nombres: nombresGuardados, campos_orden: ordenGuardado } : c))
       setExito(true); setTimeout(() => setExito(false), 3000)
     }
     setGuardando(false)
@@ -275,6 +284,35 @@ export default function CamposCategoria({ usuario }) {
   async function guardarNombres(newNombres) {
     if (!catActiva) return
     await supabase.from('categorias').update({ campos_nombres: newNombres }).eq('id', catActiva)
+  }
+
+  async function guardarOrden(newOrden) {
+    if (!catActiva) return
+    await supabase.from('categorias').update({ campos_orden: newOrden }).eq('id', catActiva)
+  }
+
+  function moverItem(arr, fromId, toId) {
+    const from = arr.findIndex(x => (typeof x === 'string' ? x : x.id) === fromId)
+    const to   = arr.findIndex(x => (typeof x === 'string' ? x : x.id) === toId)
+    if (from === -1 || to === -1 || from === to) return arr
+    const next = [...arr]
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    return next
+  }
+
+  function handleDropSistema(targetId) {
+    if (!dragInfo || dragInfo.tipo !== 'sistema' || dragInfo.id === targetId) return
+    const base     = getCamposSistema(catObj).map(c => c.id)
+    const current  = camposOrden.length ? camposOrden : base
+    const newOrden = moverItem(current.filter(id => base.includes(id)), dragInfo.id, targetId)
+    setCamposOrden(newOrden)
+    guardarOrden(newOrden)
+  }
+
+  function handleDropCustom(targetId) {
+    if (!dragInfo || dragInfo.tipo !== 'custom' || dragInfo.id === targetId) return
+    setCampos(prev => moverItem(prev, dragInfo.id, targetId))
   }
 
   // ── Categorías ────────────────────────────────────────────
@@ -421,9 +459,17 @@ export default function CamposCategoria({ usuario }) {
 
             {/* ── Campos del sistema ────────────────────── */}
             {(() => {
-              const sistemaCampos = getCamposSistema(catObj)
-              if (!sistemaCampos.length) return null
-              const nOcultos = camposOcultos.filter(id => sistemaCampos.some(c => c.id === id)).length
+              const base = getCamposSistema(catObj)
+              if (!base.length) return null
+              const sistemaCampos = camposOrden.length
+                ? [...base].sort((a, b) => {
+                    const ia = camposOrden.indexOf(a.id), ib = camposOrden.indexOf(b.id)
+                    if (ia === -1 && ib === -1) return 0
+                    if (ia === -1) return 1; if (ib === -1) return -1
+                    return ia - ib
+                  })
+                : base
+              const nOcultos = camposOcultos.filter(id => base.some(c => c.id === id)).length
               return (
                 <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
                   {/* Header colapsable */}
@@ -434,7 +480,7 @@ export default function CamposCategoria({ usuario }) {
                     <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos del sistema</p>
                     {!sistemaCamposExpanded && (
                       <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 2 }}>
-                        {sistemaCampos.length} campo{sistemaCampos.length !== 1 ? 's' : ''}
+                        {base.length} campo{base.length !== 1 ? 's' : ''}
                         {nOcultos > 0 ? ` · ${nOcultos} desactivado${nOcultos !== 1 ? 's' : ''}` : ''}
                       </span>
                     )}
@@ -450,6 +496,7 @@ export default function CamposCategoria({ usuario }) {
                         const ti             = TIPOS.find(t => t.value === campo.tipo)
                         const nombreMostrado = camposNombres[campo.id] || campo.nombre
                         const estaEditando   = editandoSistema?.id === campo.id
+                        const isDragOver     = dragOverId === campo.id && dragInfo?.tipo === 'sistema'
 
                         function confirmarRenombre(val) {
                           setCamposNombres(prev => {
@@ -464,11 +511,18 @@ export default function CamposCategoria({ usuario }) {
 
                         return (
                           <div key={campo.id}
+                            draggable
+                            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'sistema' }) }}
+                            onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
+                            onDrop={e => { e.preventDefault(); handleDropSistema(campo.id); setDragOverId(null) }}
+                            onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
-                              borderBottom: idx < sistemaCampos.length - 1 ? '1px solid #f3f4f6' : 'none',
-                              background: oculto ? '#f9fafb' : 'transparent',
+                              borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
+                              background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#f9fafb' : 'transparent',
                               opacity: oculto ? 0.55 : 1,
-                              transition: 'all 0.15s' }}>
+                              transition: 'background 0.1s' }}>
+                            {/* Drag handle */}
+                            <span style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
                             <div style={{ width: 30, height: 30, borderRadius: 9, background: oculto ? '#f3f4f6' : `${tc}15`, border: `1.5px solid ${oculto ? '#e5e7eb' : tc+'33'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
                               {ti?.icon || '📝'}
                             </div>
@@ -506,9 +560,9 @@ export default function CamposCategoria({ usuario }) {
                                 </button>
                               )}
                               <button
-                                onClick={() => setCamposOcultos(prev =>
+                                onClick={e => { e.stopPropagation(); setCamposOcultos(prev =>
                                   oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]
-                                )}
+                                )}}
                                 title={oculto ? 'Activar campo' : 'Desactivar campo'}
                                 style={{ background: oculto ? '#f3f4f6' : '#f0fdf4', border: `1px solid ${oculto ? '#e5e7eb' : '#bbf7d0'}`, cursor: 'pointer', color: oculto ? '#9ca3af' : '#16a34a', fontSize: 14, padding: '5px 9px', borderRadius: 7, lineHeight: 1, flexShrink: 0, fontWeight: 700 }}
                                 onMouseOver={e => { e.currentTarget.style.opacity = '0.75' }}
@@ -535,15 +589,23 @@ export default function CamposCategoria({ usuario }) {
                 </div>
                 <div>
                   {campos.map((campo, idx) => {
-                    const tc = TIPO_COLOR[campo.tipo] || '#6b7280'
-                    const ti = TIPOS.find(t => t.value === campo.tipo)
-                    const editando = editandoCampoId === campo.id
+                    const tc         = TIPO_COLOR[campo.tipo] || '#6b7280'
+                    const ti         = TIPOS.find(t => t.value === campo.tipo)
+                    const editando   = editandoCampoId === campo.id
+                    const isDragOver = dragOverId === campo.id && dragInfo?.tipo === 'custom'
                     return (
                       <div key={campo.id}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px',
-                          borderBottom: idx < campos.length - 1 ? '1px solid #f3f4f6' : 'none',
-                          background: editando ? '#fffbeb' : 'transparent',
-                          transition: 'background 0.15s' }}>
+                        draggable
+                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'custom' }) }}
+                        onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
+                        onDrop={e => { e.preventDefault(); handleDropCustom(campo.id); setDragOverId(null) }}
+                        onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px',
+                          borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
+                          background: dragInfo?.id === campo.id ? '#f0f4ff' : editando ? '#fffbeb' : 'transparent',
+                          transition: 'background 0.1s' }}>
+                        {/* Drag handle */}
+                        <span style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
                         <div style={{ width: 34, height: 34, borderRadius: 10, background: `${tc}18`, border: `1.5px solid ${tc}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
                           {ti?.icon || '📝'}
                         </div>
@@ -556,14 +618,14 @@ export default function CamposCategoria({ usuario }) {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button onClick={() => iniciarEditarCampo(campo)}
+                          <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }}
                             title="Editar campo"
                             style={{ background: editando ? '#fef9c3' : 'none', border: editando ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: editando ? '#d97706' : '#9ca3af', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
                             onMouseOver={e => { if (!editando) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
                             onMouseOut={e => { if (!editando) { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.background = 'none' } }}>
                             ✏️
                           </button>
-                          <button onClick={() => eliminarCampo(campo.id)}
+                          <button onClick={e => { e.stopPropagation(); eliminarCampo(campo.id) }}
                             title="Eliminar campo"
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1d5db', fontSize: 14, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
                             onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
