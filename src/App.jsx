@@ -176,7 +176,7 @@ export default function App() {
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
-      {paginaSegura === 'campos'     && <CamposCategoria />}
+      {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
     </Layout>
   )
 }
