@@ -2636,11 +2636,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <div className="acciones">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
-                      {!b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
+                      {esAdmin && !b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
                         <button className="btn-ver" title="Incidencias" style={{ fontSize: 14 }}
                           onClick={() => setModalIncidencias(b)}>🔧</button>
                       )}
-                      {!b._pendiente && (
+                      {esAdmin && !b._pendiente && (
                         <button
                           className="btn-ver"
                           title={bienesConPrestamo.has(b.id) ? 'Ver préstamo activo' : 'Registrar préstamo'}
@@ -2684,7 +2684,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
 <button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR">▦ QR</button>
 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
-                {(esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
+                {esAdmin && (esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
                   <button className="btn-descargar-pdf" onClick={() => { setVerDetalle(null); setModalIncidencias(verDetalle) }} title="Incidencias">🔧 Incidencias</button>
                 )}
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
