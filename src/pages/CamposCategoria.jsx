@@ -119,17 +119,24 @@ export default function CamposCategoria({ usuario }) {
     const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, fija').order('label')
     if (data) {
       setCategorias(data)
-      if (data.length > 0 && !catActiva) {
-        setCatActiva(data[0].id)
-        setCampos(data[0].campos_personalizados || [])
+      if (data.length > 0) {
+        const target = (catActiva && data.find(c => c.id === catActiva)) || data[0]
+        setCatActiva(target.id)
+        setCampos(target.campos_personalizados || [])
       }
     }
     setCargando(false)
   }
 
-  function seleccionarCat(cat) {
-    setCatActiva(cat.id); setCampos(cat.campos_personalizados || [])
+  async function seleccionarCat(cat) {
+    setCatActiva(cat.id)
     setError(''); setExito(false); resetForm()
+    const { data } = await supabase
+      .from('categorias')
+      .select('campos_personalizados')
+      .eq('id', cat.id)
+      .single()
+    setCampos(data?.campos_personalizados || [])
   }
 
   function resetForm() {
@@ -180,7 +187,11 @@ export default function CamposCategoria({ usuario }) {
     const { error: err } = await supabase.from('categorias').update({ campos_personalizados: campos }).eq('id', catActiva)
     if (err) { setError('Error al guardar: ' + err.message) }
     else {
-      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: campos } : c))
+      // Recargar desde BD para confirmar persistencia
+      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados').eq('id', catActiva).single()
+      const camposGuardados = fresh?.campos_personalizados || []
+      setCampos(camposGuardados)
+      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados } : c))
       setExito(true); setTimeout(() => setExito(false), 3000)
     }
     setGuardando(false)
