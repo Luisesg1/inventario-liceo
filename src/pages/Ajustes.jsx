@@ -254,10 +254,13 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
         {logoFile && <p style={{ margin: '10px 0 0', fontSize: 12, color: '#059669' }}>✓ {logoFile.name} seleccionado — guarda para aplicar</p>}
       </div>
 
-      {/* ── Paletas predefinidas ────────────────────────────── */}
+      {/* ── Paletas + colores personalizados ───────────────── */}
       <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Paletas predefinidas</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Colores del tema</p>
+
+        {/* Paletas predefinidas */}
+        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paletas predefinidas</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
           {PALETAS.map(p => {
             const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
             return (
@@ -273,20 +276,19 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
             )
           })}
         </div>
-      </div>
 
-      {/* ── Colores del tema ────────────────────────────────── */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 16px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Colores del tema</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Colores personalizados */}
+        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personalizado</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
-            { label: 'Color primario', desc: 'Sidebar, fondo y botón de ingreso',     key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
-            { label: 'Color acento',   desc: 'Bordes y elementos activos',            key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
-            { label: 'Color botones',  desc: 'Botones de acción en el inventario',    key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
+            { label: 'Color primario', desc: 'Sidebar y fondo de login',             key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
+            { label: 'Color acento',   desc: 'Bordes dorados y elementos activos',   key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
+            { label: 'Color botones',  desc: 'Botones de acción en el inventario',   key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
           ].map(({ label, desc, key, value, setter }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 12px', borderRadius: 10, background: '#f9fafb', border: '1px solid #f3f4f6' }}>
-              <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative' }}>
-                {swatch(value)}
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: '#f9fafb', border: '1px solid #f3f4f6' }}>
+              {/* Swatch + color picker nativo */}
+              <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: value, border: '2px solid rgba(0,0,0,0.1)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
                 <input id={key} type="color" value={value}
                   onChange={e => handleColorChange(setter, key, e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
@@ -295,7 +297,22 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</p>
                 <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{desc}</p>
               </div>
-              <code style={{ fontSize: 11, color: '#6b7280', background: '#f3f4f6', padding: '3px 7px', borderRadius: 5 }}>{value}</code>
+              {/* Hex input editable */}
+              <input
+                type="text"
+                value={value}
+                maxLength={7}
+                onChange={e => {
+                  const v = e.target.value
+                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v)
+                }}
+                onBlur={e => {
+                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value)
+                }}
+                style={{ width: 76, padding: '5px 8px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: 12, fontFamily: 'monospace', color: '#374151', textAlign: 'center', outline: 'none', background: '#fff' }}
+                onFocus={e => e.target.style.borderColor = '#6366f1'}
+                onBlurCapture={e => e.target.style.borderColor = '#e5e7eb'}
+              />
             </div>
           ))}
         </div>
