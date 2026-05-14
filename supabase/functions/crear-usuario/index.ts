@@ -99,20 +99,24 @@ Deno.serve(async (req: Request) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     const resendKey = Deno.env.get("RESEND_API_KEY");
     let emailEnviado = false;
+    let emailError: string | undefined;
 
     if (brevoKey) {
-      emailEnviado = await enviarEmailBrevo({ brevoKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+      const result = await enviarEmailBrevo({ brevoKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+      emailEnviado = result.ok;
+      emailError = result.error;
     } else if (resendKey) {
       emailEnviado = await enviarEmailResend({ resendKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
     } else {
       emailEnviado = await enviarEmailSMTP({ para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
     }
 
-    console.log("Email enviado:", emailEnviado);
+    console.log("Email enviado:", emailEnviado, "Error:", emailError);
 
     return json({
       usuario: usuarioInsertado,
       emailEnviado,
+      emailError: emailError ?? null,
       passwordTemporal, // siempre incluida por si falla el email
       mensaje: emailEnviado
         ? `Usuario creado y email enviado a ${email.trim()}`
@@ -128,7 +132,7 @@ Deno.serve(async (req: Request) => {
 // ── Email via Brevo API ──────────────────────────────────────────────────────
 async function enviarEmailBrevo({
   brevoKey, para, nombreDestinatario, passwordTemporal, siteUrl
-}: { brevoKey: string; para: string; nombreDestinatario: string; passwordTemporal: string; siteUrl: string }): Promise<boolean> {
+}: { brevoKey: string; para: string; nombreDestinatario: string; passwordTemporal: string; siteUrl: string }): Promise<{ ok: boolean; error?: string }> {
   try {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
@@ -138,7 +142,7 @@ async function enviarEmailBrevo({
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "Inventario Liceo JHJ", email: "noreply@inventario-liceo.vercel.app" },
+        sender: { name: "Liceo JHJ", email: "luiseduardosotoguti@gmail.com" },
         to: [{ email: para, name: nombreDestinatario }],
         subject: "Tu acceso al Sistema de Inventario Liceo",
         htmlContent: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
@@ -146,10 +150,11 @@ async function enviarEmailBrevo({
     });
     const data = await res.json();
     console.log("Brevo response:", JSON.stringify(data));
-    return res.ok;
+    if (res.ok) return { ok: true };
+    return { ok: false, error: JSON.stringify(data) };
   } catch (err) {
     console.error("Error Brevo:", String(err));
-    return false;
+    return { ok: false, error: String(err) };
   }
 }
 
