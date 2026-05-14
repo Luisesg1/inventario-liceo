@@ -94,16 +94,17 @@ Deno.serve(async (req: Request) => {
     });
     if (permisosError) console.warn("Permisos no insertados:", permisosError.message);
 
-    // 9. Enviar email via Resend (gratis, sin configuración extra)
-    const siteUrl = Deno.env.get("SITE_URL") ?? "http://localhost:5173";
+    // 9. Enviar email via Brevo
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://inventario-liceo.vercel.app";
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
     const resendKey = Deno.env.get("RESEND_API_KEY");
     let emailEnviado = false;
 
-    if (resendKey) {
-      // Opción A: Resend
+    if (brevoKey) {
+      emailEnviado = await enviarEmailBrevo({ brevoKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+    } else if (resendKey) {
       emailEnviado = await enviarEmailResend({ resendKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
     } else {
-      // Opción B: SMTP via fetch a un relay HTTP
       emailEnviado = await enviarEmailSMTP({ para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
     }
 
@@ -123,6 +124,34 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Error interno del servidor." }, 500);
   }
 });
+
+// ── Email via Brevo API ──────────────────────────────────────────────────────
+async function enviarEmailBrevo({
+  brevoKey, para, nombreDestinatario, passwordTemporal, siteUrl
+}: { brevoKey: string; para: string; nombreDestinatario: string; passwordTemporal: string; siteUrl: string }): Promise<boolean> {
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": brevoKey,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: "Inventario Liceo JHJ", email: "noreply@inventario-liceo.vercel.app" },
+        to: [{ email: para, name: nombreDestinatario }],
+        subject: "Tu acceso al Sistema de Inventario Liceo",
+        htmlContent: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
+      }),
+    });
+    const data = await res.json();
+    console.log("Brevo response:", JSON.stringify(data));
+    return res.ok;
+  } catch (err) {
+    console.error("Error Brevo:", String(err));
+    return false;
+  }
+}
 
 // ── Email via Resend API ─────────────────────────────────────────────────────
 async function enviarEmailResend({
@@ -254,10 +283,11 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
     ver_inventario: false, agregar_bien: false, editar_bien: false,
     eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
     importar_csv: false, gestionar_usuarios: false, exportar: false,
+    registrar_prestamo: false, registrar_incidencia: false,
   };
   switch (rol) {
     case "admin":  return Object.fromEntries(Object.keys(base).map(k => [k, true]));
-    case "editor": return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true };
+    case "editor": return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true };
     default:       return { ...base, ver_inventario: true, exportar: true };
   }
 }
