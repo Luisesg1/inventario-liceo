@@ -105,6 +105,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [guardando,         setGuardando]         = useState(false)
   const [exito,             setExito]             = useState(false)
   const [error,             setError]             = useState('')
+  const [confirm,           setConfirm]           = useState(null) // { titulo, mensaje, icono, onOk }
   const fileRef = useRef()
 
   useEffect(() => { cargar() }, []) // eslint-disable-line
@@ -132,9 +133,16 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     })
   }
 
-  function aplicarPaleta({ primario, acento, boton }) {
-    setColorPrimario(primario); setColorAcento(acento); setColorBoton(boton)
-    aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton })
+  function aplicarPaleta({ primario, acento, boton, nombre }) {
+    setConfirm({
+      titulo: `¿Aplicar paleta "${nombre}"?`,
+      mensaje: 'Se cambiarán los colores del tema en toda la aplicación. Recuerda guardar para que el cambio sea permanente.',
+      icono: '🎨',
+      onOk: () => {
+        setColorPrimario(primario); setColorAcento(acento); setColorBoton(boton)
+        aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton })
+      },
+    })
   }
 
   async function handleLogoFile(e) {
@@ -192,10 +200,17 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   }
 
   function restaurar() {
-    setColorPrimario(DEFAULTS.colorPrimario)
-    setColorAcento(DEFAULTS.colorAcento)
-    setColorBoton(DEFAULTS.colorBoton)
-    aplicarTema(DEFAULTS)
+    setConfirm({
+      titulo: '¿Restaurar colores por defecto?',
+      mensaje: 'Se revertirán los colores del tema al estado original (azul marino). Recuerda guardar para que el cambio sea permanente.',
+      icono: '↺',
+      onOk: () => {
+        setColorPrimario(DEFAULTS.colorPrimario)
+        setColorAcento(DEFAULTS.colorAcento)
+        setColorBoton(DEFAULTS.colorBoton)
+        aplicarTema(DEFAULTS)
+      },
+    })
   }
 
   const swatch = (c) => (
@@ -264,7 +279,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
           {PALETAS.map(p => {
             const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
             return (
-              <button key={p.nombre} onClick={() => aplicarPaleta(p)}
+              <button key={p.nombre} onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 10, border: `2px solid ${activa ? p.primario : '#e5e7eb'}`, background: activa ? '#f8f9ff' : '#fff', cursor: 'pointer', transition: 'all 0.15s', minWidth: 88 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <div style={{ width: 16, height: 16, borderRadius: '50%', background: p.primario }} />
@@ -347,6 +362,33 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
           {guardando ? 'Guardando…' : 'Guardar cambios'}
         </button>
       </div>
+
+      {/* ── Modal confirmación ──────────────────────────────── */}
+      {confirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+          onClick={() => setConfirm(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '28px 28px 22px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 14 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+              <div style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{confirm.icono}</div>
+              <div>
+                <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>{confirm.titulo}</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.55 }}>{confirm.mensaje}</p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              <button onClick={() => setConfirm(null)}
+                style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { confirm.onOk(); setConfirm(null) }}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
