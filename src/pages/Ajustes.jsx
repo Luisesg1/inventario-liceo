@@ -52,7 +52,7 @@ function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSi
   const md = `rgb(${Math.round(r*.62)},${Math.round(g*.62)},${Math.round(b*.62)})`
 
   return (
-    <div style={{ border: '2px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', height: 190, display: 'flex', userSelect: 'none', pointerEvents: 'none' }}>
+    <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 210, display: 'flex', userSelect: 'none', pointerEvents: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       {/* Sidebar mini */}
       <div style={{ width: 130, background: `linear-gradient(180deg,${dk} 0%,${md} 100%)`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44` }}>
@@ -213,176 +213,214 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     })
   }
 
-  const swatch = (c) => (
-    <div style={{ width: 28, height: 28, borderRadius: 6, background: c, border: '2px solid rgba(0,0,0,0.1)', flexShrink: 0 }} />
+  const [r1, g1, b1] = hexToRgb(colorPrimario)
+  const primDark = `rgb(${Math.round(r1*.45)},${Math.round(g1*.45)},${Math.round(b1*.45)})`
+
+  const card = { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }
+  const sectionHeader = (icon, title, badge) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 22px 14px', borderBottom: '1px solid #f3f4f6' }}>
+      <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg,${colorPrimario},${primDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{icon}</div>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#111827', flex: 1 }}>{title}</p>
+      {badge && <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#22c55e', padding: '2px 8px', borderRadius: 20 }}>{badge}</span>}
+    </div>
   )
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 0, paddingBottom: 90 }}>
 
-      {/* ── Nombre del sistema ─────────────────────────────── */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 16px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Nombre del sistema</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            { label: 'Nombre corto', placeholder: 'Ej: Inventario', value: nombreSistema,     setter: setNombreSistema,     desc: 'Aparece en el sidebar junto al logo' },
-            { label: 'Institución',  placeholder: 'Ej: Liceo JHJ',  value: nombreInstitucion, setter: setNombreInstitucion, desc: 'Aparece en el login y bajo el nombre corto' },
-          ].map(({ label, placeholder, value, setter, desc }) => (
-            <div key={label}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</label>
-              <input value={value} onChange={e => setter(e.target.value)} placeholder={placeholder} maxLength={60}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
-                onFocus={e => e.target.style.borderColor = '#6366f1'}
-                onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-              />
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Logo ───────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 16px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Logo del sistema</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', border: '3px solid #e5e7eb', overflow: 'hidden', flexShrink: 0,
-            backgroundImage: 'linear-gradient(45deg,#ccc 25%,transparent 25%),linear-gradient(-45deg,#ccc 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ccc 75%),linear-gradient(-45deg,transparent 75%,#ccc 75%)',
-            backgroundSize: '12px 12px', backgroundPosition: '0 0,0 6px,6px -6px,-6px 0' }}>
-            <img src={logoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { e.target.src = '/logo-liceo.png' }} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button onClick={() => fileRef.current.click()}
-              style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #6366f1', background: '#f5f3ff', color: '#6366f1', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              Cambiar logo
-            </button>
-            <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>PNG, JPG o SVG · máx. 2 MB</p>
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoFile} />
-        </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, background: sinFondo ? '#f0fdf4' : '#f9fafb', border: `1px solid ${sinFondo ? '#86efac' : '#f3f4f6'}`, transition: 'all 0.15s' }}>
-          <input type="checkbox" checked={sinFondo} onChange={e => handleSinFondoChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#22c55e', cursor: 'pointer' }} />
+      {/* ── Cabecera ──────────────────────────────────────── */}
+      <div style={{ background: `linear-gradient(135deg,${colorPrimario} 0%,${primDark} 100%)`, borderRadius: 16, padding: '24px 28px 22px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -20, right: 60, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>⚙️</div>
           <div>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>Remover fondo blanco/negro</p>
-            <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>Hace transparente el fondo del logo automáticamente</p>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Ajustes del sistema</h2>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Personaliza logo, nombre e identidad visual</p>
           </div>
-        </label>
-        {logoFile && <p style={{ margin: '10px 0 0', fontSize: 12, color: '#059669' }}>✓ {logoFile.name} seleccionado — guarda para aplicar</p>}
+        </div>
       </div>
 
-      {/* ── Paletas + colores personalizados ───────────────── */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Colores del tema</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Paletas predefinidas */}
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Paletas predefinidas</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-          {PALETAS.map(p => {
-            const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
-            return (
-              <button key={p.nombre} onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 14px', borderRadius: 10, border: `2px solid ${activa ? p.primario : '#e5e7eb'}`, background: activa ? '#f8f9ff' : '#fff', cursor: 'pointer', transition: 'all 0.15s', minWidth: 88 }}>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: p.primario }} />
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: p.acento   }} />
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', background: p.boton    }} />
-                </div>
-                <span style={{ fontSize: 10.5, fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#6b7280', textAlign: 'center' }}>{p.nombre}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Colores personalizados */}
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Personalizado</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            { label: 'Color primario', desc: 'Sidebar y fondo de login',             key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
-            { label: 'Color acento',   desc: 'Bordes dorados y elementos activos',   key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
-            { label: 'Color botones',  desc: 'Botones de acción en el inventario',   key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
-          ].map(({ label, desc, key, value, setter }) => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: '#f9fafb', border: '1px solid #f3f4f6' }}>
-              {/* Swatch + color picker nativo */}
-              <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: value, border: '2px solid rgba(0,0,0,0.1)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
-                <input id={key} type="color" value={value}
-                  onChange={e => handleColorChange(setter, key, e.target.value)}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
-              </label>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</p>
-                <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{desc}</p>
+        {/* ── Identidad ─────────────────────────────────────── */}
+        <div style={card}>
+          {sectionHeader('🏢', 'Identidad del sistema')}
+          <div style={{ padding: '18px 22px', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Nombre corto', placeholder: 'Ej: Inventario', value: nombreSistema,     setter: setNombreSistema,     desc: 'Sidebar junto al logo' },
+              { label: 'Institución',  placeholder: 'Ej: Liceo JHJ',  value: nombreInstitucion, setter: setNombreInstitucion, desc: 'Panel de login' },
+            ].map(({ label, placeholder, value, setter, desc }) => (
+              <div key={label} style={{ flex: '1 1 200px', minWidth: 0 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+                <input value={value} onChange={e => setter(e.target.value)} placeholder={placeholder} maxLength={60}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+                  onFocus={e => e.target.style.borderColor = colorPrimario}
+                  onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                />
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>{desc}</p>
               </div>
-              {/* Hex input editable */}
-              <input
-                type="text"
-                value={value}
-                maxLength={7}
-                onChange={e => {
-                  const v = e.target.value
-                  if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v)
-                }}
-                onBlur={e => {
-                  if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value)
-                }}
-                style={{ width: 76, padding: '5px 8px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: 12, fontFamily: 'monospace', color: '#374151', textAlign: 'center', outline: 'none', background: '#fff' }}
-                onFocus={e => e.target.style.borderColor = '#6366f1'}
-                onBlurCapture={e => e.target.style.borderColor = '#e5e7eb'}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+
+        {/* ── Logo ─────────────────────────────────────────── */}
+        <div style={card}>
+          {sectionHeader('🖼️', 'Logo del sistema', logoFile ? 'Pendiente' : null)}
+          <div style={{ padding: '18px 22px' }}>
+            <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Preview circular con damero */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 88, height: 88, borderRadius: '50%', border: `3px solid ${colorAcento}66`, overflow: 'hidden',
+                  backgroundImage: 'linear-gradient(45deg,#d1d5db 25%,transparent 25%),linear-gradient(-45deg,#d1d5db 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d1d5db 75%),linear-gradient(-45deg,transparent 75%,#d1d5db 75%)',
+                  backgroundSize: '14px 14px', backgroundPosition: '0 0,0 7px,7px -7px,-7px 0',
+                  boxShadow: `0 0 0 4px ${colorAcento}22, 0 4px 16px rgba(0,0,0,0.12)` }}>
+                  <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { e.target.src = '/logo-liceo.png' }} />
+                </div>
+                {logoFile && (
+                  <div style={{ position: 'absolute', bottom: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: '#22c55e', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>✓</div>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <button onClick={() => fileRef.current.click()}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 9, border: `1.5px solid ${colorPrimario}`, background: `${colorPrimario}0f`, color: colorPrimario, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+                  onMouseOver={e => { e.currentTarget.style.background = `${colorPrimario}1a` }}
+                  onMouseOut={e => { e.currentTarget.style.background = `${colorPrimario}0f` }}>
+                  <span style={{ fontSize: 16 }}>📁</span> Seleccionar imagen
+                </button>
+                <p style={{ margin: '6px 0 0', fontSize: 11, color: '#9ca3af' }}>PNG, JPG o SVG · máx. 2 MB</p>
+                {logoFile && <p style={{ margin: '6px 0 0', fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ {logoFile.name}</p>}
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoFile} />
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, cursor: 'pointer', padding: '12px 14px', borderRadius: 10, background: sinFondo ? '#f0fdf4' : '#f9fafb', border: `1.5px solid ${sinFondo ? '#86efac' : '#f0f0f0'}`, transition: 'all 0.15s' }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <input type="checkbox" checked={sinFondo} onChange={e => handleSinFondoChange(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#22c55e', cursor: 'pointer' }} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>Remover fondo blanco / negro</p>
+                <p style={{ margin: 0, fontSize: 11, color: '#6b7280' }}>Hace el fondo del logo transparente automáticamente al subir</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* ── Colores ───────────────────────────────────────── */}
+        <div style={card}>
+          {sectionHeader('🎨', 'Colores del tema')}
+          <div style={{ padding: '18px 22px' }}>
+
+            {/* Paletas */}
+            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paletas predefinidas</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 22 }}>
+              {PALETAS.map(p => {
+                const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
+                return (
+                  <button key={p.nombre} onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0 0 10px', borderRadius: 12, border: `2px solid ${activa ? p.primario : '#e5e7eb'}`, background: activa ? `${p.primario}0d` : '#fff', cursor: 'pointer', transition: 'all 0.18s', minWidth: 80, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: 28, background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)`, marginBottom: 2 }} />
+                    <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+                      {[p.primario, p.acento, p.boton].map((c, i) => (
+                        <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#6b7280', textAlign: 'center', lineHeight: 1.2, paddingInline: 6 }}>{p.nombre}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Personalizado */}
+            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Personalizado</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { label: 'Primario',  desc: 'Sidebar y login',              key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
+                { label: 'Acento',    desc: 'Elementos activos y bordes',   key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
+                { label: 'Botones',   desc: 'Acciones en el inventario',    key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
+              ].map(({ label, desc, key, value, setter }) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: '#f9fafb', border: '1px solid #f0f0f2' }}>
+                  <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: value, boxShadow: `0 2px 8px ${value}66, inset 0 0 0 1.5px rgba(0,0,0,0.1)` }} />
+                    <input id={key} type="color" value={value} onChange={e => handleColorChange(setter, key, e.target.value)}
+                      style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+                  </label>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{desc}</p>
+                  </div>
+                  <input type="text" value={value} maxLength={7}
+                    onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v) }}
+                    onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value) }}
+                    style={{ width: 78, padding: '6px 8px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: 12, fontFamily: 'monospace', color: '#374151', textAlign: 'center', outline: 'none', background: '#fff', transition: 'border-color 0.15s' }}
+                    onFocus={e => e.target.style.borderColor = colorPrimario}
+                    onBlurCapture={e => e.target.style.borderColor = '#e5e7eb'}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Vista previa ──────────────────────────────────── */}
+        <div style={card}>
+          {sectionHeader('👁️', 'Vista previa en vivo', 'En tiempo real')}
+          <div style={{ padding: '18px 22px' }}>
+            <Preview
+              colorPrimario={colorPrimario}
+              colorAcento={colorAcento}
+              colorBoton={colorBoton}
+              logoPreview={logoPreview}
+              nombreSistema={nombreSistema}
+              nombreInstitucion={nombreInstitucion}
+            />
+            <p style={{ margin: '10px 0 0', fontSize: 11, color: '#9ca3af', textAlign: 'center' }}>
+              Los colores y nombres se reflejan aquí antes de guardar
+            </p>
+          </div>
+        </div>
+
       </div>
 
-      {/* ── Vista previa ────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderRadius: 14, padding: '22px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-        <p style={{ margin: '0 0 14px', fontWeight: 800, fontSize: 14, color: '#111827' }}>Vista previa</p>
-        <Preview
-          colorPrimario={colorPrimario}
-          colorAcento={colorAcento}
-          colorBoton={colorBoton}
-          logoPreview={logoPreview}
-          nombreSistema={nombreSistema}
-          nombreInstitucion={nombreInstitucion}
-        />
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: '#9ca3af', textAlign: 'center' }}>Los cambios se aplican en tiempo real — guarda para que sean permanentes</p>
-      </div>
-
-      {/* ── Mensajes ────────────────────────────────────────── */}
-      {error && <p style={{ margin: 0, fontSize: 13, color: '#dc2626', background: '#fef2f2', padding: '10px 14px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {error}</p>}
-      {exito && <p style={{ margin: 0, fontSize: 13, color: '#059669', background: '#f0fdf4', padding: '10px 14px', borderRadius: 8, border: '1px solid #bbf7d0' }}>✓ Cambios guardados correctamente</p>}
-
-      {/* ── Acciones ────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-        <button onClick={restaurar}
-          style={{ padding: '9px 18px', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Restaurar defaults
-        </button>
-        <button onClick={guardar} disabled={guardando}
-          style={{ padding: '9px 22px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.7 : 1 }}>
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
-        </button>
+      {/* ── Barra de guardado fija ─────────────────────────── */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, pointerEvents: 'none' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px 20px', pointerEvents: 'auto' }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '14px 18px', boxShadow: '0 -2px 0 #f1f1f3, 0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {error && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 6 }}>⚠️ {error}</p>}
+            {exito && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#059669', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>✓ Cambios guardados correctamente</p>}
+            {!error && !exito && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#9ca3af' }}>Guarda para que los cambios sean permanentes</p>}
+            <button onClick={restaurar}
+              style={{ padding: '9px 16px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              Restaurar defaults
+            </button>
+            <button onClick={guardar} disabled={guardando}
+              style={{ padding: '10px 22px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, color: '#fff', fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.75 : 1, whiteSpace: 'nowrap', flexShrink: 0, boxShadow: `0 4px 14px ${colorPrimario}55` }}>
+              {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* ── Modal confirmación ──────────────────────────────── */}
       {confirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
           onClick={() => setConfirm(null)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '28px 28px 22px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 14 }}
+          <div style={{ background: '#fff', borderRadius: 18, padding: '28px 28px 22px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 14 }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div style={{ fontSize: 32, lineHeight: 1, flexShrink: 0 }}>{confirm.icono}</div>
+              <div style={{ width: 46, height: 46, borderRadius: 12, background: `${colorPrimario}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{confirm.icono}</div>
               <div>
                 <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>{confirm.titulo}</p>
-                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.55 }}>{confirm.mensaje}</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{confirm.mensaje}</p>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
               <button onClick={() => setConfirm(null)}
-                style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 Cancelar
               </button>
               <button onClick={() => { confirm.onOk(); setConfirm(null) }}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 12px ${colorPrimario}44` }}>
                 Confirmar
               </button>
             </div>
