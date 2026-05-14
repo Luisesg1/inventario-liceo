@@ -131,6 +131,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [verTodosTodos, setVerTodosTodos] = useState(false)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm]               = useState(formVacio)
+  const [camposExtra, setCamposExtra] = useState({})
   const [errores, setErrores]         = useState({})
   const [editandoId, setEditandoId]   = useState(null)
   const [guardando, setGuardando]     = useState(false)
@@ -825,6 +826,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     while (codigos.has(codigo)) { num++; codigo = `INV-${String(num).padStart(4, '0')}` }
     base.codigo = codigo
     setForm(base)
+    setCamposExtra({})
     setErrores({})
     setMostrarForm(true)
   }
@@ -851,13 +853,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       }
     }
     setForm(base)
+    setCamposExtra(bien.campos_extra || {})
     setErrores({})
     setMostrarForm(true)
     setModalEditar(true)
     setVerDetalle(null)
   }
 
-  const cancelarForm = () => { setMostrarForm(false); setEditandoId(null); setErrores({}); setModalEditar(false) }
+  const cancelarForm = () => { setMostrarForm(false); setEditandoId(null); setErrores({}); setModalEditar(false); setCamposExtra({}) }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -871,6 +874,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       else if (cambiaATecno && !camiaDeTecno)                                   setForm({ ...formVacioTecno, ...comun })
       else if (!cambiaAComp && !cambiaATecno && (cambiaDeComp || camiaDeTecno)) setForm({ ...formVacio, ...comun })
       else                                                                       setForm(prev => ({ ...prev, categoria: value }))
+      setCamposExtra({})
     } else {
       setForm(prev => {
         const updated = { ...prev, [name]: value }
@@ -916,6 +920,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const errs = {}
     if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre?.trim()) errs.nombre = true
     if (!form.codigo.trim()) errs.codigo = true
+    const camposCatVal = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
+    camposCatVal.filter(c => c.requerido).forEach(c => { if (!camposExtra[c.id]) errs[`extra_${c.id}`] = true })
     if (Object.keys(errs).length) { setErrores(errs); return }
 
     setGuardando(true)
@@ -925,7 +931,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       : esTecno(form.categoria)
         ? ([form.tipo, form.marca, form.modelo].filter(Boolean).join(' ') || 'Artículo tecnológico')
         : (form.nombre?.trim() || '')) || 'Sin nombre'
-    const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1 }
+    const payload = { ...form, nombre: nombreFinal, cantidad: parseInt(form.cantidad) || 1, campos_extra: camposExtra }
     if (!payload.fecha_adquisicion) payload.fecha_adquisicion = null
     if (!payload.win_fecha_factura) payload.win_fecha_factura = null
     if (!payload.off_fecha_factura) payload.off_fecha_factura = null
@@ -2005,6 +2011,26 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </>
           )}
 
+          {(() => {
+            const camposCat = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
+            if (!camposCat.length) return null
+            return (<>
+              <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
+              <div className="form-row triple">
+                {camposCat.map(campo => (
+                  <div key={campo.id} className="field">
+                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
+                  </div>
+                ))}
+              </div>
+            </>)
+          })()}
+
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
@@ -2467,6 +2493,26 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </>
           )}
 
+          {(() => {
+            const camposCat = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
+            if (!camposCat.length) return null
+            return (<>
+              <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
+              <div className="form-row triple">
+                {camposCat.map(campo => (
+                  <div key={campo.id} className="field">
+                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
+                  </div>
+                ))}
+              </div>
+            </>)
+          })()}
+
           <div className="form-row single">
             <div className="field">
               <label>Observaciones</label>
@@ -2726,6 +2772,26 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <p className="detalle-obs-texto">{verDetalle.obs}</p>
               </div>
             )}
+
+            {(() => {
+              const camposCat = categorias.find(c => c.id === verDetalle.categoria)?.campos_personalizados ?? []
+              const extra = verDetalle.campos_extra || {}
+              const conValor = camposCat.filter(c => extra[c.id] !== undefined && extra[c.id] !== '')
+              if (!conValor.length) return null
+              return (
+                <div className="detalle-seccion">
+                  <p className="detalle-titulo">✨ Campos adicionales</p>
+                  <div className="detalle-grid-3">
+                    {conValor.map(campo => (
+                      <div key={campo.id} className="detalle-campo">
+                        <span>{campo.nombre}</span>
+                        <strong>{campo.tipo === 'booleano' ? (extra[campo.id] === 'si' ? 'Sí' : 'No') : extra[campo.id]}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
 
             {esTecno(verDetalle.categoria) && (
               <>
