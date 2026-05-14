@@ -14,7 +14,7 @@ const REQUISITOS_PASS = [
 const STRENGTH_INFO = [null,
   { label: 'Muy débil',  color: '#dc2626' },
   { label: 'Débil',      color: '#f97316' },
-  { label: 'Regular',    color: '#eab308' },
+  { label: 'Regular',    color: '#f97316' },
   { label: 'Fuerte',     color: '#16a34a' },
   { label: 'Muy fuerte', color: '#15803d' },
 ]

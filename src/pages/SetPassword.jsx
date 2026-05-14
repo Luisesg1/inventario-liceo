@@ -166,10 +166,10 @@ export default function SetPassword({ onComplete, usuario }) {
                 style={{
                   ...s.input,
                   borderColor: confirm.length > 0
-                    ? (match ? '#d4a017' : '#ef4444')
+                    ? (match ? '#22c55e' : '#ef4444')
                     : 'rgba(255,255,255,0.2)',
                   boxShadow: confirm.length > 0
-                    ? (match ? '0 0 0 3px rgba(212,160,23,0.2)' : '0 0 0 3px rgba(239,68,68,0.2)')
+                    ? (match ? '0 0 0 3px rgba(34,197,94,0.2)' : '0 0 0 3px rgba(239,68,68,0.2)')
                     : undefined,
                 }}
                 autoComplete="new-password"
