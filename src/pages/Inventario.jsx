@@ -3167,9 +3167,15 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
   async function confirmarEliminar() {
     const id = confirmDelete.id
     setConfirmDelete(null)
+    if (editandoId === id) cancelarEdicion()
     setEliminandoId(id)
-    await supabase.from('incidencias').delete().eq('id', id)
-    setIncidencias(prev => prev.filter(i => i.id !== id))
+    const { error: err } = await supabase.from('incidencias').delete().eq('id', id)
+    if (!err) {
+      setIncidencias(prev => prev.filter(i => i.id !== id))
+    } else {
+      setError('Error al eliminar la incidencia')
+      cargar()
+    }
     setEliminandoId(null)
   }
 
@@ -3244,7 +3250,7 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
                         <button onClick={() => iniciarEdicion(inc)} disabled={!!editandoId}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', fontSize: 13, lineHeight: 1, padding: 4 }}
                           title="Editar incidencia">✏️</button>
-                        <button onClick={() => setConfirmDelete({ id: inc.id, titulo: inc.titulo })} disabled={eliminandoId === inc.id}
+                        <button onClick={() => setConfirmDelete({ id: inc.id, titulo: inc.titulo })} disabled={eliminandoId === inc.id || editandoId === inc.id}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, lineHeight: 1, padding: 4 }}
                           title="Eliminar incidencia">
                           {eliminandoId === inc.id ? '…' : '✕'}
