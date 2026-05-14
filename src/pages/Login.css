@@ -10,7 +10,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #0b1545 0%, #1a237e 50%, #0f1e6a 100%);
+  background: linear-gradient(160deg,
+    rgb(var(--primary-dark-rgb)) 0%,
+    rgb(var(--primary-rgb))      50%,
+    rgb(var(--primary-mid-rgb))  100%);
   padding: 20px;
 }
 
@@ -29,8 +32,11 @@ body {
 .login-side {
   width: 320px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #1a2a6c 0%, #0d1b5e 85%, #0f1840 100%);
-  border-right: 1px solid rgba(212,160,23,0.15);
+  background: linear-gradient(180deg,
+    rgba(var(--primary-rgb),      0.92) 0%,
+    rgba(var(--primary-dark-rgb), 0.98) 85%,
+    rgba(var(--primary-dark-rgb), 1)    100%);
+  border-right: 1px solid rgba(var(--acento-rgb), 0.15);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -65,10 +71,10 @@ body {
   height: 130px;
   object-fit: contain;
   border-radius: 50%;
-  border: 3px solid rgba(212,160,23,0.65);
+  border: 3px solid rgba(var(--acento-rgb), 0.65);
   padding: 4px;
   background: rgba(255,255,255,0.06);
-  box-shadow: 0 0 48px rgba(212,160,23,0.3), 0 0 0 6px rgba(212,160,23,0.08);
+  box-shadow: 0 0 48px rgba(var(--acento-rgb), 0.3), 0 0 0 6px rgba(var(--acento-rgb), 0.08);
   position: relative;
   z-index: 1;
 }
@@ -76,7 +82,7 @@ body {
 .login-side-title {
   font-size: 16px;
   font-weight: 700;
-  color: #f0d060;
+  color: var(--acento-bright);
   line-height: 1.4;
   letter-spacing: 0.01em;
   position: relative;
@@ -100,7 +106,7 @@ body {
   padding: 48px 40px;
 }
 
-/* ── Variante recovery: mismo fondo blanco que el login normal ───── */
+/* ── Variante recovery ───────────────────────────────────────────── */
 .login-form-wrap--recovery {
   background: #ffffff;
 }
@@ -134,14 +140,8 @@ body {
   color: #6b7280;
 }
 
-/* Recovery header text — mismo estilo que el login normal */
-.login-form-header--recovery h2 {
-  color: #111827;
-}
-
-.login-form-header--recovery p {
-  color: #6b7280;
-}
+.login-form-header--recovery h2 { color: #111827; }
+.login-form-header--recovery p  { color: #6b7280; }
 
 /* ── Campos ──────────────────────────────────────────────────────── */
 .login-field {
@@ -171,52 +171,26 @@ body {
 }
 
 .login-field input:focus {
-  border-color: #1a237e;
+  border-color: rgb(var(--primary-rgb));
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(26,35,126,0.12);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
 }
 
-/* Recovery field overrides — fondo blanco */
-.login-field--recovery label {
-  color: #374151;
-}
+.login-field--recovery label            { color: #374151; }
+.login-field--recovery input            { background: #f9fafb; border-color: #e5e7eb; color: #111827; }
+.login-field--recovery input::placeholder { color: #9ca3af; }
+.login-field--recovery input:focus      { border-color: rgb(var(--primary-rgb)); background: #fff; box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12); }
 
-.login-field--recovery input {
-  background: #f9fafb;
-  border-color: #e5e7eb;
-  color: #111827;
-}
-
-.login-field--recovery input::placeholder {
-  color: #9ca3af;
-}
-
-.login-field--recovery input:focus {
-  border-color: #1a237e;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(26,35,126,0.12);
-}
-
-.login-pass-wrap {
-  position: relative;
-}
-
-.login-pass-wrap input {
-  padding-right: 44px;
-}
+.login-pass-wrap        { position: relative; }
+.login-pass-wrap input  { padding-right: 44px; }
 
 .login-eye {
   position: absolute;
-  right: 12px;
-  top: 50%;
+  right: 12px; top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  color: #9ca3af;
-  padding: 0;
-  line-height: 1;
+  background: none; border: none;
+  cursor: pointer; font-size: 15px;
+  color: #9ca3af; padding: 0; line-height: 1;
 }
 
 /* ── Error ───────────────────────────────────────────────────────── */
@@ -229,18 +203,13 @@ body {
   border-radius: 8px;
   margin-bottom: 16px;
 }
-
-.login-error--recovery {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
-}
+.login-error--recovery { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
 
 /* ── Botón ───────────────────────────────────────────────────────── */
 .login-btn {
   width: 100%;
   padding: 13px;
-  background: linear-gradient(135deg, #1a237e, #2563eb);
+  background: rgb(var(--primary-rgb));
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -254,41 +223,32 @@ body {
   gap: 8px;
   margin-top: 8px;
   letter-spacing: 0.02em;
-  box-shadow: 0 4px 16px rgba(26,35,126,0.35);
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.35);
 }
-
 .login-btn:hover:not(:disabled) {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(26,35,126,0.45);
+  box-shadow: 0 6px 22px rgba(var(--primary-rgb), 0.45);
 }
+.login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
 
-.login-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-/* Recovery button: mismo azul que el login normal */
 .login-btn--recovery {
-  background: linear-gradient(135deg, #1a237e, #2563eb);
+  background: rgb(var(--primary-rgb));
   color: #fff;
-  box-shadow: 0 4px 16px rgba(26,35,126,0.35);
+  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.35);
 }
-
 .login-btn--recovery:hover:not(:disabled) {
-  box-shadow: 0 6px 22px rgba(26,35,126,0.45);
+  box-shadow: 0 6px 22px rgba(var(--primary-rgb), 0.45);
 }
 
 .login-spinner {
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   border: 2px solid rgba(255,255,255,0.4);
   border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   flex-shrink: 0;
 }
-
 @keyframes spin { to { transform: rotate(360deg) } }
 
 /* ── Olvidé contraseña ───────────────────────────────────────────── */
@@ -296,53 +256,33 @@ body {
   display: block;
   width: 100%;
   margin-top: 14px;
-  background: none;
-  border: none;
-  color: #1a237e;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
+  background: none; border: none;
+  color: rgb(var(--primary-rgb));
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: center;
   padding: 4px 0;
   text-decoration: underline;
   opacity: 0.75;
   transition: opacity 0.15s;
 }
 .login-link:hover { opacity: 1; }
+.login-link--recovery       { color: rgb(var(--primary-rgb)); }
+.login-link--recovery:hover { color: rgb(var(--primary-dark-rgb)); }
 
-.login-link--recovery {
-  color: #1a237e;
-}
-
-.login-link--recovery:hover {
-  color: #0d1b5e;
-}
-
+/* ── OK ──────────────────────────────────────────────────────────── */
 .login-ok {
-  background: #f0fdf4;
-  border: 1px solid #86efac;
-  color: #166534;
-  font-size: 13px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  line-height: 1.5;
+  background: #f0fdf4; border: 1px solid #86efac;
+  color: #166534; font-size: 13px;
+  padding: 14px 16px; border-radius: 10px; line-height: 1.5;
 }
-
-.login-ok--recovery {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #166534;
-}
-
-.login-ok--recovery strong {
-  color: #15803d;
-}
+.login-ok--recovery          { background: #f0fdf4; border-color: #86efac; color: #166534; }
+.login-ok--recovery strong   { color: #15803d; }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .login-panel { flex-direction: column; max-width: 400px; min-height: auto; }
-  .login-side  { width: 100%; padding: 32px 24px; flex-direction: row; gap: 16px; text-align: left; }
-  .login-side-logo { width: 72px; height: 72px; flex-shrink: 0; }
+  .login-panel      { flex-direction: column; max-width: 400px; min-height: auto; }
+  .login-side       { width: 100%; padding: 32px 24px; flex-direction: row; gap: 16px; text-align: left; }
+  .login-side-logo  { width: 72px; height: 72px; flex-shrink: 0; }
   .login-side-title { font-size: 13px; }
   .login-form-wrap  { padding: 32px 24px; }
 }

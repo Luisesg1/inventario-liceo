@@ -154,7 +154,7 @@ export default function App() {
   )
 
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
-  if (!usuario) return <Login onLogin={setUsuario} />
+  if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} />
 
   const esDocente  = usuario.rol === 'docente'
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes'
