@@ -8,10 +8,13 @@ import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
 import Auditoria from './pages/Auditoria'
 import Tickets   from './pages/Tickets'
+import Ajustes   from './pages/Ajustes'
+import { aplicarTema } from './utils/tema'
 
 export default function App() {
   const [usuario,            setUsuario]            = useState(null)
   const [cargando,           setCargando]           = useState(true)
+  const [logoUrl,            setLogoUrl]            = useState(null)
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [pagina,             setPagina]             = useState(() => {
     const params = new URLSearchParams(window.location.search)
@@ -74,6 +77,21 @@ export default function App() {
     }
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    async function cargarConfig() {
+      const { data } = await supabase.from('configuracion').select('clave, valor')
+      if (!data) return
+      const cfg = Object.fromEntries(data.map(r => [r.clave, r.valor]))
+      if (cfg.logo_url)       setLogoUrl(cfg.logo_url)
+      aplicarTema({
+        colorPrimario: cfg.color_primario || '#1a237e',
+        colorAcento:   cfg.color_acento   || '#d4a017',
+        colorBoton:    cfg.color_boton    || '#6366f1',
+      })
+    }
+    cargarConfig()
   }, [])
 
   useEffect(() => {
@@ -146,12 +164,13 @@ export default function App() {
     : pagina
 
   return (
-    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }}>
+    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }} logoUrl={logoUrl}>
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
+      {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} />}
     </Layout>
   )
 }

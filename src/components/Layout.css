@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════
    Layout — Liceo Bicentenario JHJ
-   Paleta: Azul marino #1a237e · Oro #d4a017 · Blanco
+   Colores controlados por CSS variables (ver index.css y tema.js)
    ══════════════════════════════════════════════════════ */
 
 /* ── Fondo global ─────────────────────────────────────── */
@@ -9,7 +9,10 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(160deg, #0b1545 0%, #1a237e 45%, #0f1e6a 100%);
+  background: linear-gradient(160deg,
+    rgb(var(--primary-dark-rgb)) 0%,
+    rgb(var(--primary-rgb))      45%,
+    rgb(var(--primary-mid-rgb))  100%);
 }
 
 /* ── Sidebar ──────────────────────────────────────────── */
@@ -18,7 +21,9 @@
   top: 0; left: 0;
   height: 100vh;
   width: 248px;
-  background: linear-gradient(180deg, rgba(8,15,55,0.97) 0%, rgba(14,24,80,0.97) 100%);
+  background: linear-gradient(180deg,
+    rgba(var(--primary-dark-rgb), 0.97) 0%,
+    rgba(var(--primary-mid-rgb),  0.97) 100%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   color: #f0ede6;
@@ -29,7 +34,7 @@
   transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
   z-index: 300;
   box-shadow: 8px 0 48px rgba(0,0,0,0.55);
-  border-right: 1px solid rgba(212,160,23,0.18);
+  border-right: 1px solid rgba(var(--acento-rgb), 0.18);
 }
 .sidebar-open { transform: translateX(0); }
 
@@ -39,16 +44,16 @@
   align-items: center;
   gap: 11px;
   padding: 20px 16px 18px;
-  border-bottom: 1px solid rgba(212,160,23,0.2);
-  background: rgba(212,160,23,0.04);
+  border-bottom: 1px solid rgba(var(--acento-rgb), 0.2);
+  background: rgba(var(--acento-rgb), 0.04);
 }
 .sidebar-logo-img {
   width: 40px; height: 40px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
-  border: 2px solid rgba(212,160,23,0.55);
-  box-shadow: 0 0 12px rgba(212,160,23,0.2);
+  border: 2px solid rgba(var(--acento-rgb), 0.55);
+  box-shadow: 0 0 12px rgba(var(--acento-rgb), 0.2);
 }
 .sidebar-title { font-size: 13px; font-weight: 700; color: #f5e9c0; margin: 0; letter-spacing: 0.01em; }
 .sidebar-sub   { font-size: 10px; color: rgba(255,255,255,.3); margin: 0; }
@@ -98,9 +103,9 @@
   background: rgba(255,255,255,.05);
 }
 .nav-item.active {
-  color: #f0d060;
-  background: rgba(212,160,23,0.1);
-  border-left-color: #d4a017;
+  color: var(--acento-bright);
+  background: rgba(var(--acento-rgb), 0.1);
+  border-left-color: rgb(var(--acento-rgb));
   font-weight: 600;
 }
 
@@ -124,16 +129,16 @@
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
-  border-top: 1px solid rgba(212,160,23,0.15);
-  background: rgba(212,160,23,0.03);
+  border-top: 1px solid rgba(var(--acento-rgb), 0.15);
+  background: rgba(var(--acento-rgb), 0.03);
 }
 .avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1a3a8f, #2563eb);
+  background: linear-gradient(135deg, rgb(var(--primary-mid-rgb)), rgb(var(--primary-rgb)));
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
-  border: 2px solid rgba(212,160,23,0.35);
+  border: 2px solid rgba(var(--acento-rgb), 0.35);
 }
 .user-info p    { font-size: 12px; color: #f0ede6; margin: 0; font-weight: 500; }
 .user-info span { font-size: 10px; color: rgba(255,255,255,.35); }
@@ -162,10 +167,10 @@
 
 /* ── Topbar ───────────────────────────────────────────── */
 .topbar {
-  background: rgba(10,20,70,0.55);
+  background: rgba(var(--primary-dark-rgb), 0.55);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(212,160,23,0.22);
+  border-bottom: 1px solid rgba(var(--acento-rgb), 0.22);
   padding: 0 20px;
   height: 54px;
   display: flex;
@@ -214,9 +219,9 @@
 /* Botón cerrar sesión */
 .btn-logout {
   padding: 7px 16px;
-  border: 1px solid rgba(212,160,23,0.35);
+  border: 1px solid rgba(var(--acento-rgb), 0.35);
   border-radius: 8px;
-  background: rgba(212,160,23,0.1);
+  background: rgba(var(--acento-rgb), 0.1);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -226,9 +231,9 @@
   transition: all .18s;
 }
 .btn-logout:hover {
-  background: rgba(212,160,23,0.22);
-  border-color: rgba(212,160,23,0.6);
-  color: #f5e04a;
+  background: rgba(var(--acento-rgb), 0.22);
+  border-color: rgba(var(--acento-rgb), 0.6);
+  color: var(--acento-bright);
 }
 
 /* ── Contenido ───────────────────────────────────────── */

@@ -12,7 +12,7 @@ const COLS_BACKUP = [
   'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
 ]
 
-export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge }) {
+export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge, logoUrl }) {
   const esAdmin = usuario.rol === 'admin'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -367,6 +367,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     ...(esAdmin    ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
     ...(esAdmin    ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
     { id: 'tickets', icon: '🎫', label: 'Tickets' },
+    ...(esAdmin    ? [{ id: 'ajustes',   icon: '⚙️', label: 'Ajustes'    }] : []),
   ]
 
   const titulos = {
@@ -375,6 +376,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
     tickets:    'Tickets',
+    ajustes:    'Ajustes',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -386,7 +388,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
 
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
-          <img src="/logo-liceo.png" alt="Logo" className="sidebar-logo-img" />
+          <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
           <div style={{ minWidth: 0 }}>
             <p className="sidebar-title">Inventario</p>
             <p className="sidebar-sub">Liceo JHJ</p>
