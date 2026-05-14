@@ -581,18 +581,18 @@ export default function CamposCategoria({ usuario }) {
 
                         return (
                           <div key={campo.id}
-                            draggable
-                            onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'sistema' }) }}
                             onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
                             onDrop={e => { e.preventDefault(); handleDropSistema(campo.id); setDragOverId(null) }}
-                            onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
                               borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
                               background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#f9fafb' : 'transparent',
                               opacity: oculto ? 0.55 : 1,
                               transition: 'background 0.1s' }}>
-                            {/* Drag handle */}
-                            <span style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
+                            {/* Drag handle — único elemento arrastrable */}
+                            <span draggable
+                              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'sistema' }) }}
+                              onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
+                              style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
                             <div style={{ width: 30, height: 30, borderRadius: 9, background: oculto ? '#f3f4f6' : `${tc}15`, border: `1.5px solid ${oculto ? '#e5e7eb' : tc+'33'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
                               {ti?.icon || '📝'}
                             </div>
@@ -665,17 +665,17 @@ export default function CamposCategoria({ usuario }) {
                     const isDragOver = dragOverId === campo.id && dragInfo?.tipo === 'custom'
                     return (
                       <div key={campo.id}
-                        draggable
-                        onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'custom' }) }}
                         onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
                         onDrop={e => { e.preventDefault(); handleDropCustom(campo.id); setDragOverId(null) }}
-                        onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 18px',
                           borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
                           background: dragInfo?.id === campo.id ? '#f0f4ff' : editando ? '#fffbeb' : 'transparent',
                           transition: 'background 0.1s' }}>
-                        {/* Drag handle */}
-                        <span style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
+                        {/* Drag handle — único elemento arrastrable */}
+                        <span draggable
+                          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'custom' }) }}
+                          onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
+                          style={{ color: '#d1d5db', fontSize: 15, cursor: 'grab', flexShrink: 0, lineHeight: 1, userSelect: 'none' }}>⠿</span>
                         <div style={{ width: 34, height: 34, borderRadius: 10, background: `${tc}18`, border: `1.5px solid ${tc}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
                           {ti?.icon || '📝'}
                         </div>
