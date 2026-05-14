@@ -272,6 +272,11 @@ export default function CamposCategoria({ usuario }) {
     setGuardando(false)
   }
 
+  async function guardarNombres(newNombres) {
+    if (!catActiva) return
+    await supabase.from('categorias').update({ campos_nombres: newNombres }).eq('id', catActiva)
+  }
+
   // ── Categorías ────────────────────────────────────────────
 
   async function handleGuardarCat({ label, icon }) {
@@ -451,6 +456,7 @@ export default function CamposCategoria({ usuario }) {
                             const next = { ...prev }
                             if (val && val !== campo.nombre) next[campo.id] = val
                             else delete next[campo.id]
+                            guardarNombres(next)
                             return next
                           })
                           setEditandoSistema(null)
