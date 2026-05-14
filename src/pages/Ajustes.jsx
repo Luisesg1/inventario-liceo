@@ -47,31 +47,23 @@ function removerFondo(file) {
   })
 }
 
+const NAV_ITEMS = [
+  { id: 'login',      label: 'Login'      },
+  { id: 'dashboard',  label: 'Inicio'     },
+  { id: 'inventario', label: 'Inventario' },
+  { id: 'usuarios',   label: 'Usuarios'   },
+  { id: 'tickets',    label: 'Tickets'    },
+  { id: 'ajustes',    label: '⚙️ Ajustes' },
+]
+
 function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSistema, nombreInstitucion }) {
+  const [seccion, setSeccion] = useState('login')
   const [r, g, b] = hexToRgb(colorPrimario)
   const dk = `rgb(${Math.round(r*.45)},${Math.round(g*.45)},${Math.round(b*.45)})`
   const md = `rgb(${Math.round(r*.62)},${Math.round(g*.62)},${Math.round(b*.62)})`
 
-  return (
-    <div className="ajustes-preview" style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 210, display: 'flex', userSelect: 'none', pointerEvents: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-      {/* Sidebar mini */}
-      <div style={{ width: 130, background: `linear-gradient(180deg,${dk} 0%,${md} 100%)`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44` }}>
-          <img src={logoPreview} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${colorAcento}99`, flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 7, fontWeight: 700, color: '#f5e9c0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreSistema || 'Inventario'}</div>
-            <div style={{ fontSize: 6, color: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreInstitucion || 'Liceo JHJ'}</div>
-          </div>
-        </div>
-        <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {['Inicio','Inventario','Usuarios','Tickets','⚙️ Ajustes'].map((item, i) => (
-            <div key={item} style={{ padding: '4px 8px', fontSize: 7.5, color: i === 1 ? colorAcento : 'rgba(255,255,255,.5)', background: i === 1 ? `${colorAcento}22` : 'transparent', borderLeft: `2px solid ${i === 1 ? colorAcento : 'transparent'}` }}>
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Login mini */}
+  const renderContenido = () => {
+    if (seccion === 'login') return (
       <div style={{ flex: 1, background: `linear-gradient(160deg,${dk} 0%,${colorPrimario} 50%,${md} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
         <div style={{ background: '#fff', borderRadius: 8, padding: '12px 14px', width: 140, boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
           <div style={{ textAlign: 'center', marginBottom: 10 }}>
@@ -90,6 +82,116 @@ function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSi
           </div>
         </div>
       </div>
+    )
+
+    const titulo = NAV_ITEMS.find(n => n.id === seccion)?.label || seccion
+    return (
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f9fafb', overflow: 'hidden' }}>
+        {/* Topbar mini */}
+        <div style={{ height: 26, background: `rgba(${r},${g},${b},0.55)`, backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', padding: '0 10px', borderBottom: `1px solid ${colorAcento}33`, flexShrink: 0 }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>{titulo}</span>
+        </div>
+        {/* Contenido */}
+        <div style={{ flex: 1, padding: 8, display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden' }}>
+          {seccion === 'dashboard' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 4 }}>
+                {[colorPrimario, colorBoton, '#10b981', '#f59e0b'].map((c, i) => (
+                  <div key={i} style={{ background: `${c}18`, border: `1px solid ${c}33`, borderRadius: 6, padding: '5px 7px' }}>
+                    <div style={{ height: 5, width: 14, background: c, borderRadius: 2, marginBottom: 3, opacity: 0.7 }} />
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#111827' }}>{[42,18,7,3][i]}</div>
+                    <div style={{ height: 4, width: '60%', background: '#e5e7eb', borderRadius: 2, marginTop: 2 }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ background: '#fff', borderRadius: 6, padding: '5px 7px', border: '1px solid #f0f0f0' }}>
+                {[80,55,40].map((w, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: i < 2 ? 3 : 0 }}>
+                    <div style={{ width: `${w}%`, height: 5, background: `${colorBoton}${['cc','88','44'][i]}`, borderRadius: 2 }} />
+                    <div style={{ fontSize: 7, color: '#9ca3af' }}>{[42,18,7][i]}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {seccion === 'inventario' && (
+            <>
+              <div style={{ display: 'flex', gap: 4, marginBottom: 3 }}>
+                <div style={{ height: 16, background: colorBoton, borderRadius: 4, padding: '0 8px', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: 7, color: '#fff', fontWeight: 700 }}>+ Agregar</span>
+                </div>
+                <div style={{ flex: 1, height: 16, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 4 }} />
+              </div>
+              {[['Silla madera','Muebles','Bueno'],['Laptop HP','Computadores','Regular'],['Atlas Geografía','Biblioteca','Bueno']].map(([n, c, e], i) => (
+                <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '3px 5px', background: '#fff', borderRadius: 4, border: '1px solid #f0f0f0' }}>
+                  <div style={{ flex: 2, fontSize: 7, color: '#111827', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</div>
+                  <div style={{ fontSize: 6, color: '#6b7280', flex: 1 }}>{c}</div>
+                  <div style={{ fontSize: 6, fontWeight: 700, padding: '1px 4px', borderRadius: 4, background: e === 'Bueno' ? '#dcfce7' : '#fef9c3', color: e === 'Bueno' ? '#166534' : '#92400e' }}>{e}</div>
+                </div>
+              ))}
+            </>
+          )}
+          {seccion === 'usuarios' && (
+            ['Admin Principal','Editor Bodega','Docente Sala 3'].map((n, i) => (
+              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '4px 6px', background: '#fff', borderRadius: 5, border: '1px solid #f0f0f0' }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', background: `${colorBoton}33`, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 7 }}>{['A','E','D'][i]}</span>
+                </div>
+                <div style={{ flex: 1, fontSize: 7.5, color: '#111827', fontWeight: 500 }}>{n}</div>
+                <div style={{ fontSize: 6, color: '#6b7280' }}>{['admin','editor','docente'][i]}</div>
+              </div>
+            ))
+          )}
+          {seccion === 'tickets' && (
+            [['Silla rota sala 5','Abierto'],['PC sin audio','Resuelto'],['Proyector falla','En curso']].map(([t, e], i) => (
+              <div key={i} style={{ display: 'flex', gap: 5, alignItems: 'center', padding: '4px 6px', background: '#fff', borderRadius: 5, border: '1px solid #f0f0f0' }}>
+                <div style={{ flex: 1, fontSize: 7.5, color: '#111827', fontWeight: 500 }}>{t}</div>
+                <div style={{ fontSize: 6, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
+                  background: e === 'Abierto' ? '#fee2e2' : e === 'Resuelto' ? '#dcfce7' : '#fef9c3',
+                  color:      e === 'Abierto' ? '#dc2626' : e === 'Resuelto' ? '#166534' : '#92400e' }}>{e}</div>
+              </div>
+            ))
+          )}
+          {seccion === 'ajustes' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {['Identidad del sistema','Logo del sistema','Colores del tema'].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', padding: '5px 7px', background: '#fff', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+                  <div style={{ width: 14, height: 14, borderRadius: 4, background: colorPrimario, flexShrink: 0, opacity: 0.8 }} />
+                  <div style={{ flex: 1, fontSize: 7.5, color: '#111827', fontWeight: 500 }}>{s}</div>
+                  <div style={{ width: 20, height: 8, background: '#f3f4f6', borderRadius: 3 }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="ajustes-preview" style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 210, display: 'flex', userSelect: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+      {/* Sidebar mini — interactivo */}
+      <div style={{ width: 115, background: `linear-gradient(180deg,${dk} 0%,${md} 100%)`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div onClick={() => setSeccion('login')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44`, cursor: 'pointer' }}>
+          <img src={logoPreview} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${colorAcento}99`, flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 7, fontWeight: 700, color: '#f5e9c0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreSistema || 'Inventario'}</div>
+            <div style={{ fontSize: 6, color: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreInstitucion || 'Liceo JHJ'}</div>
+          </div>
+        </div>
+        <div style={{ padding: '4px 0', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {NAV_ITEMS.filter(n => n.id !== 'login').map(item => (
+            <div key={item.id} onClick={() => setSeccion(item.id)}
+              style={{ padding: '5px 8px', fontSize: 7.5, cursor: 'pointer', transition: 'all 0.12s',
+                color:      seccion === item.id ? colorAcento       : 'rgba(255,255,255,.5)',
+                background: seccion === item.id ? `${colorAcento}22` : 'transparent',
+                borderLeft: `2px solid ${seccion === item.id ? colorAcento : 'transparent'}` }}>
+              {item.label}
+            </div>
+          ))}
+        </div>
+      </div>
+      {renderContenido()}
     </div>
   )
 }
@@ -106,7 +208,6 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [guardando,         setGuardando]         = useState(false)
   const [exito,             setExito]             = useState(false)
   const [error,             setError]             = useState('')
-  const [confirm,           setConfirm]           = useState(null) // { titulo, mensaje, icono, onOk }
   const fileRef = useRef()
 
   useEffect(() => { cargar() }, []) // eslint-disable-line
@@ -134,16 +235,9 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     })
   }
 
-  function aplicarPaleta({ primario, acento, boton, nombre }) {
-    setConfirm({
-      titulo: `¿Aplicar paleta "${nombre}"?`,
-      mensaje: 'Se cambiarán los colores del tema en toda la aplicación. Recuerda guardar para que el cambio sea permanente.',
-      icono: '🎨',
-      onOk: () => {
-        setColorPrimario(primario); setColorAcento(acento); setColorBoton(boton)
-        aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton })
-      },
-    })
+  function aplicarPaleta({ primario, acento, boton }) {
+    setColorPrimario(primario); setColorAcento(acento); setColorBoton(boton)
+    aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton })
   }
 
   async function handleLogoFile(e) {
@@ -201,17 +295,10 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   }
 
   function restaurar() {
-    setConfirm({
-      titulo: '¿Restaurar colores por defecto?',
-      mensaje: 'Se revertirán los colores del tema al estado original (azul marino). Recuerda guardar para que el cambio sea permanente.',
-      icono: '↺',
-      onOk: () => {
-        setColorPrimario(DEFAULTS.colorPrimario)
-        setColorAcento(DEFAULTS.colorAcento)
-        setColorBoton(DEFAULTS.colorBoton)
-        aplicarTema(DEFAULTS)
-      },
-    })
+    setColorPrimario(DEFAULTS.colorPrimario)
+    setColorAcento(DEFAULTS.colorAcento)
+    setColorBoton(DEFAULTS.colorBoton)
+    aplicarTema(DEFAULTS)
   }
 
   const [r1, g1, b1] = hexToRgb(colorPrimario)
@@ -317,7 +404,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                   return (
                     <button key={p.nombre} className="ajustes-paleta-card"
-                      onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
+                      onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton })}
                       style={{ borderColor: activa ? p.primario : '#e5e7eb', background: activa ? `${p.primario}0d` : '#fff' }}>
                       <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
                       <div className="ajustes-paleta-dots">
@@ -388,7 +475,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
                 </button>
                 <button className="ajustes-btn-rest" onClick={restaurar} style={{ width: '100%', textAlign: 'center' }}>
-                  ↺ Restaurar defaults
+                  ↺ Restaurar por defecto
                 </button>
               </div>
             </div>
@@ -404,7 +491,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
             {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', flex: 1 }}>⚠️ {error}</p>}
             {exito && <p style={{ margin: 0, fontSize: 12, color: '#059669', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
             {!error && !exito && <p className="ajustes-bar-hint">Guarda para que los cambios sean permanentes</p>}
-            <button className="ajustes-btn-rest" onClick={restaurar}>Restaurar defaults</button>
+            <button className="ajustes-btn-rest" onClick={restaurar}>Restaurar por defecto</button>
             <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
               style={{ background: `linear-gradient(135deg,${colorPrimario},${primDark})`, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${colorPrimario}55` }}>
               {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
@@ -413,32 +500,6 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
         </div>
       </div>
 
-      {/* ── Modal confirmación ──────────────────────────────── */}
-      {confirm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
-          onClick={() => setConfirm(null)}>
-          <div style={{ background: '#fff', borderRadius: 18, padding: '28px 28px 22px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 14 }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 12, background: `${colorPrimario}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>{confirm.icono}</div>
-              <div>
-                <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>{confirm.titulo}</p>
-                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{confirm.mensaje}</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-              <button onClick={() => setConfirm(null)}
-                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-              <button onClick={() => { confirm.onOk(); setConfirm(null) }}
-                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: `0 4px 12px ${colorPrimario}44` }}>
-                Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
