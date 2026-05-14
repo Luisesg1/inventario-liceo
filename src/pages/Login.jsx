@@ -9,7 +9,7 @@ const REQUISITOS_PASS = [
   { id: 'number', label: 'Un número',             test: (p) => /[0-9]/.test(p) },
   { id: 'symbol', label: 'Un símbolo (!@#...)',   test: (p) => /[^A-Za-z0-9]/.test(p) },
 ]
-const STRENGTH_COLORS = [null, '#dc2626', '#f97316', '#eab308', '#16a34a', '#15803d']
+const STRENGTH_COLORS = [null, '#dc2626', '#ef4444', '#f97316', '#22c55e', '#16a34a']
 
 export default function Login({ onLogin }) {
   const [email,    setEmail]    = useState('')
