@@ -30,6 +30,8 @@ const ACCIONES = [
   { key: 'importar_csv',         label: 'Importar CSV',         labelCorto: 'CSV' },
   { key: 'gestionar_usuarios',   label: 'Gestionar usuarios',   labelCorto: 'Usuarios' },
   { key: 'exportar',             label: 'Exportar',             labelCorto: 'Exportar' },
+  { key: 'registrar_prestamo',   label: 'Registrar préstamo',   labelCorto: 'Préstamo' },
+  { key: 'registrar_incidencia', label: 'Registrar incidencia', labelCorto: 'Incidencia' },
 ]
 
 const CATEGORIAS = [
@@ -51,6 +53,7 @@ const ACCIONES_POR_CATEGORIA = [
 // Acciones globales (no dependen de categoría)
 const ACCIONES_GLOBALES = [
   'gestionar_categorias', 'gestionar_usuarios',
+  'registrar_prestamo', 'registrar_incidencia',
 ]
 
 const PERMISOS_POR_ROL = {
@@ -63,6 +66,7 @@ const PERMISOS_POR_ROL = {
       ver_inventario: true, agregar_bien: true, editar_bien: true,
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
       importar_csv: false, gestionar_usuarios: false, exportar: true,
+      registrar_prestamo: true, registrar_incidencia: true,
     },
     categorias: ['todos'],
   },
@@ -71,6 +75,7 @@ const PERMISOS_POR_ROL = {
       ver_inventario: true, agregar_bien: false, editar_bien: false,
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
       importar_csv: false, gestionar_usuarios: false, exportar: false,
+      registrar_prestamo: false, registrar_incidencia: false,
     },
     categorias: ['todos'],
   },

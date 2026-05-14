@@ -104,21 +104,25 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     usuario?.rol === 'admin'
       ? { ver_inventario: true, agregar_bien: true, editar_bien: true,
           eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
-          importar_csv: true, gestionar_usuarios: true, exportar: true }
+          importar_csv: true, gestionar_usuarios: true, exportar: true,
+          registrar_prestamo: true, registrar_incidencia: true }
       : { ver_inventario: true, agregar_bien: false, editar_bien: false,
           eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-          importar_csv: false, gestionar_usuarios: false, exportar: false }
+          importar_csv: false, gestionar_usuarios: false, exportar: false,
+          registrar_prestamo: false, registrar_incidencia: false }
   )
   // ['todos'] = acceso a todas las categorías; si no, lista de keys permitidas
   const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
 
   // Variables derivadas (reemplazan las de rol)
-  const puedeAgregar       = permisos.agregar_bien
-  const puedeEliminar      = permisos.eliminar_bien
-  const puedeEliminarLote  = permisos.eliminar_lote
-  const puedeExportar      = permisos.exportar
-  const puedeImportar      = permisos.importar_csv
-  const puedeGestionarCats = permisos.gestionar_categorias
+  const puedeAgregar        = permisos.agregar_bien
+  const puedeEliminar       = permisos.eliminar_bien
+  const puedeEliminarLote   = permisos.eliminar_lote
+  const puedeExportar       = permisos.exportar
+  const puedeImportar       = permisos.importar_csv
+  const puedeGestionarCats  = permisos.gestionar_categorias
+  const puedePrestamo       = permisos.registrar_prestamo
+  const puedeIncidencias    = permisos.registrar_incidencia
 
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
@@ -208,16 +212,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         ver_inventario: true, agregar_bien: true, editar_bien: true,
         eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
         importar_csv: true, gestionar_usuarios: true, exportar: true,
+        registrar_prestamo: true, registrar_incidencia: true,
       },
       editor: {
         ver_inventario: true, agregar_bien: true, editar_bien: true,
         eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
         importar_csv: false, gestionar_usuarios: false, exportar: true,
+        registrar_prestamo: true, registrar_incidencia: true,
       },
       encargado: {
         ver_inventario: true, agregar_bien: false, editar_bien: false,
         eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
         importar_csv: false, gestionar_usuarios: false, exportar: true,
+        registrar_prestamo: false, registrar_incidencia: false,
       },
     }
 
@@ -2636,11 +2643,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <div className="acciones">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
-                      {esAdmin && !b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
+                      {puedeIncidencias && !b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
                         <button className="btn-ver" title="Incidencias" style={{ fontSize: 14 }}
                           onClick={() => setModalIncidencias(b)}>🔧</button>
                       )}
-                      {esAdmin && !b._pendiente && (
+                      {puedePrestamo && !b._pendiente && (
                         <button
                           className="btn-ver"
                           title={bienesConPrestamo.has(b.id) ? 'Ver préstamo activo' : 'Registrar préstamo'}
@@ -2684,7 +2691,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
 <button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR">▦ QR</button>
 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
-                {esAdmin && (esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
+                {puedeIncidencias && (esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
                   <button className="btn-descargar-pdf" onClick={() => { setVerDetalle(null); setModalIncidencias(verDetalle) }} title="Incidencias">🔧 Incidencias</button>
                 )}
                 <button className="btn-cerrar-detalle" onClick={() => setVerDetalle(null)}>✕</button>
