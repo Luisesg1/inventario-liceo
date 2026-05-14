@@ -21,6 +21,65 @@ const ICONOS = ['📦','🪑','📚','📖','🖨️','💻','🖥️','🖱️'
 
 const TIPO_COLOR = { texto: '#6366f1', numero: '#0ea5e9', fecha: '#8b5cf6', booleano: '#10b981', select: '#f59e0b' }
 
+// Campos predeterminados por tipo de categoría
+const CAMPOS_PREDET = {
+  computadores: [
+    { id: 'numero_serie',       nombre: 'Número de serie',          tipo: 'texto'  },
+    { id: 'tipo',               nombre: 'Tipo de equipo',           tipo: 'select' },
+    { id: 'marca',              nombre: 'Marca',                    tipo: 'texto'  },
+    { id: 'modelo',             nombre: 'Modelo',                   tipo: 'texto'  },
+    { id: 'pantalla',           nombre: 'Pantalla',                 tipo: 'texto'  },
+    { id: 'cpu_marca',          nombre: 'Marca CPU',                tipo: 'select' },
+    { id: 'cpu_modelo',         nombre: 'Modelo CPU',               tipo: 'texto'  },
+    { id: 'cpu_generacion',     nombre: 'Versión / generación CPU', tipo: 'texto'  },
+    { id: 'ram',                nombre: 'RAM (capacidad)',          tipo: 'texto'  },
+    { id: 'ram_tipo',           nombre: 'Tipo RAM',                 tipo: 'select' },
+    { id: 'ram_slots',          nombre: 'Slots RAM',                tipo: 'texto'  },
+    { id: 'memoria',            nombre: 'Almacenamiento',           tipo: 'texto'  },
+    { id: 'tipo_almacenamiento',nombre: 'Tecnología almacenamiento',tipo: 'select' },
+    { id: 'sistema_operativo',  nombre: 'Sistema operativo',        tipo: 'texto'  },
+    { id: 'fecha_adquisicion',  nombre: 'Fecha adquisición',        tipo: 'fecha'  },
+    { id: 'proveedor',          nombre: 'Proveedor',                tipo: 'texto'  },
+    { id: 'numero_factura',     nombre: 'N° factura',               tipo: 'texto'  },
+    { id: 'garantia',           nombre: 'Garantía',                 tipo: 'texto'  },
+  ],
+  tecno: [
+    { id: 'tipo',              nombre: 'Tipo',              tipo: 'texto' },
+    { id: 'marca',             nombre: 'Marca',             tipo: 'texto' },
+    { id: 'modelo',            nombre: 'Modelo',            tipo: 'texto' },
+    { id: 'numero_serie',      nombre: 'N° de serie',       tipo: 'texto' },
+    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
+    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
+    { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
+    { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
+  ],
+  biblio: [
+    { id: 'isbn',              nombre: 'ISBN',              tipo: 'texto' },
+    { id: 'autor',             nombre: 'Autor',             tipo: 'texto' },
+    { id: 'genero',            nombre: 'Género',            tipo: 'texto' },
+    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
+    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
+    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
+  ],
+  generico: [
+    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
+    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
+    { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
+    { id: 'numero_orden',      nombre: 'N° orden',          tipo: 'texto' },
+    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
+    { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
+  ],
+}
+
+function getCamposSistema(cat) {
+  if (!cat) return []
+  if (cat.id === 'computadores') return CAMPOS_PREDET.computadores
+  const lbl = (cat.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (lbl.includes('tecnol')) return CAMPOS_PREDET.tecno
+  if (lbl.includes('biblio') || lbl.includes('libreri')) return CAMPOS_PREDET.biblio
+  return CAMPOS_PREDET.generico
+}
+
 function ModalCategoria({ cat, onClose, onSave }) {
   const esEdicion = !!cat
   const [label, setLabel] = useState(cat?.label || '')
@@ -107,6 +166,8 @@ export default function CamposCategoria({ usuario }) {
   const [nuevoOpts,       setNuevoOpts]       = useState('')
   const [editandoCampoId, setEditandoCampoId] = useState(null)
 
+  const [camposOcultos,   setCamposOcultos]   = useState([])
+
   // Modales categoría
   const [modalCat,        setModalCat]        = useState(null) // null | 'nueva' | cat_obj (edición)
   const [confirmBorrar,   setConfirmBorrar]   = useState(null) // cat obj
@@ -116,13 +177,14 @@ export default function CamposCategoria({ usuario }) {
 
   async function cargarCategorias() {
     setCargando(true)
-    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, fija').order('label')
+    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, fija').order('label')
     if (data) {
       setCategorias(data)
       if (data.length > 0) {
         const target = (catActiva && data.find(c => c.id === catActiva)) || data[0]
         setCatActiva(target.id)
         setCampos(target.campos_personalizados || [])
+        setCamposOcultos(target.campos_ocultos || [])
       }
     }
     setCargando(false)
@@ -133,10 +195,11 @@ export default function CamposCategoria({ usuario }) {
     setError(''); setExito(false); resetForm()
     const { data } = await supabase
       .from('categorias')
-      .select('campos_personalizados')
+      .select('campos_personalizados, campos_ocultos')
       .eq('id', cat.id)
       .single()
     setCampos(data?.campos_personalizados || [])
+    setCamposOcultos(data?.campos_ocultos || [])
   }
 
   function resetForm() {
@@ -184,14 +247,17 @@ export default function CamposCategoria({ usuario }) {
   async function guardar() {
     if (!catActiva) return
     setGuardando(true); setError(''); setExito(false)
-    const { error: err } = await supabase.from('categorias').update({ campos_personalizados: campos }).eq('id', catActiva)
+    const { error: err } = await supabase.from('categorias')
+      .update({ campos_personalizados: campos, campos_ocultos: camposOcultos })
+      .eq('id', catActiva)
     if (err) { setError('Error al guardar: ' + err.message) }
     else {
-      // Recargar desde BD para confirmar persistencia
-      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados').eq('id', catActiva).single()
-      const camposGuardados = fresh?.campos_personalizados || []
+      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos').eq('id', catActiva).single()
+      const camposGuardados  = fresh?.campos_personalizados || []
+      const ocultosGuardados = fresh?.campos_ocultos        || []
       setCampos(camposGuardados)
-      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados } : c))
+      setCamposOcultos(ocultosGuardados)
+      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados } : c))
       setExito(true); setTimeout(() => setExito(false), 3000)
     }
     setGuardando(false)
@@ -339,12 +405,62 @@ export default function CamposCategoria({ usuario }) {
               </div>
             </div>
 
-            {/* Campos existentes */}
+            {/* ── Campos del sistema ────────────────────── */}
+            {(() => {
+              const sistemaCampos = getCamposSistema(catObj)
+              if (!sistemaCampos.length) return null
+              return (
+                <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
+                  <div style={{ padding: '13px 18px 11px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#64748b' }} />
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos del sistema</p>
+                    <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9ca3af', fontStyle: 'italic' }}>
+                      Activa o desactiva cada campo
+                    </span>
+                  </div>
+                  <div>
+                    {sistemaCampos.map((campo, idx) => {
+                      const oculto = camposOcultos.includes(campo.id)
+                      const tc = TIPO_COLOR[campo.tipo] || '#6b7280'
+                      const ti = TIPOS.find(t => t.value === campo.tipo)
+                      return (
+                        <div key={campo.id}
+                          style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px',
+                            borderBottom: idx < sistemaCampos.length - 1 ? '1px solid #f3f4f6' : 'none',
+                            background: oculto ? '#f9fafb' : 'transparent',
+                            opacity: oculto ? 0.55 : 1,
+                            transition: 'all 0.15s' }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 9, background: oculto ? '#f3f4f6' : `${tc}15`, border: `1.5px solid ${oculto ? '#e5e7eb' : tc+'33'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                            {ti?.icon || '📝'}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: oculto ? '#9ca3af' : '#374151', textDecoration: oculto ? 'line-through' : 'none' }}>{campo.nombre}</p>
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: oculto ? '#f3f4f6' : `${tc}15`, color: oculto ? '#9ca3af' : tc }}>{ti?.label}</span>
+                          </div>
+                          <button
+                            onClick={() => setCamposOcultos(prev =>
+                              oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]
+                            )}
+                            title={oculto ? 'Activar campo' : 'Desactivar campo'}
+                            style={{ background: oculto ? '#f3f4f6' : '#f0fdf4', border: `1px solid ${oculto ? '#e5e7eb' : '#bbf7d0'}`, cursor: 'pointer', color: oculto ? '#9ca3af' : '#16a34a', fontSize: 14, padding: '5px 9px', borderRadius: 7, lineHeight: 1, flexShrink: 0, fontWeight: 700 }}
+                            onMouseOver={e => { e.currentTarget.style.opacity = '0.75' }}
+                            onMouseOut={e => { e.currentTarget.style.opacity = '1' }}>
+                            {oculto ? '🚫' : '👁'}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Campos personalizados existentes */}
             {campos.length > 0 && (
               <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
                 <div style={{ padding: '13px 18px 11px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1' }} />
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos configurados</p>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos personalizados</p>
                   <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, background: '#f0f4ff', color: '#6366f1', borderRadius: 8, padding: '2px 8px' }}>{campos.length}</span>
                 </div>
                 <div>

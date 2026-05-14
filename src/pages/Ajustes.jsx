@@ -396,7 +396,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
             {sectionHeader('🎨', 'Colores del tema')}
             <div style={{ padding: '14px 16px' }}>
               <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paletas predefinidas</p>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14, justifyContent: 'center' }}>
                 {PALETAS.map(p => {
                   const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                   return (
