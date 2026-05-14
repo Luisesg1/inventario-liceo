@@ -157,7 +157,7 @@ export default function App() {
   if (!usuario) return <Login onLogin={setUsuario} />
 
   const esDocente  = usuario.rol === 'docente'
-  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria'
+  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes'
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
   const paginaSegura = esDocente && soloStaff ? 'tickets'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
