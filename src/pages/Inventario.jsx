@@ -3096,14 +3096,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 // Modal de Incidencias
 // ══════════════════════════════════════════════════════════════════════════
 function ModalIncidencias({ bien, usuario, onCerrar }) {
-  const [incidencias,   setIncidencias]   = useState([])
-  const [cargando,      setCargando]      = useState(true)
-  const [titulo,        setTitulo]        = useState('')
-  const [descripcion,   setDescripcion]   = useState('')
-  const [fecha,         setFecha]         = useState(() => new Date().toISOString().slice(0, 10))
-  const [guardando,     setGuardando]     = useState(false)
-  const [error,         setError]         = useState('')
-  const [eliminandoId,  setEliminandoId]  = useState(null)
+  const [incidencias,    setIncidencias]    = useState([])
+  const [cargando,       setCargando]       = useState(true)
+  const [titulo,         setTitulo]         = useState('')
+  const [descripcion,    setDescripcion]    = useState('')
+  const [fecha,          setFecha]          = useState(() => new Date().toISOString().slice(0, 10))
+  const [guardando,      setGuardando]      = useState(false)
+  const [error,          setError]          = useState('')
+  const [eliminandoId,   setEliminandoId]   = useState(null)
+  const [confirmDelete,  setConfirmDelete]  = useState(null) // { id, titulo }
+  const [editandoId,     setEditandoId]     = useState(null)
 
   const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'editor'
 
@@ -3125,20 +3127,46 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
     e.preventDefault()
     if (!titulo.trim()) { setError('El título es obligatorio'); return }
     setGuardando(true); setError('')
-    const { error: err } = await supabase.from('incidencias').insert({
-      bien_id:     bien.id,
-      titulo:      titulo.trim(),
-      descripcion: descripcion.trim() || null,
-      fecha,
-      creado_por:  usuario?.id,
-    })
-    setGuardando(false)
-    if (err) { setError('Error al guardar: ' + err.message); return }
-    setTitulo(''); setDescripcion(''); setFecha(new Date().toISOString().slice(0, 10))
+    if (editandoId) {
+      const { error: err } = await supabase.from('incidencias').update({
+        titulo:      titulo.trim(),
+        descripcion: descripcion.trim() || null,
+        fecha,
+      }).eq('id', editandoId)
+      setGuardando(false)
+      if (err) { setError('Error al actualizar: ' + err.message); return }
+    } else {
+      const { error: err } = await supabase.from('incidencias').insert({
+        bien_id:     bien.id,
+        titulo:      titulo.trim(),
+        descripcion: descripcion.trim() || null,
+        fecha,
+        creado_por:  usuario?.id,
+      })
+      setGuardando(false)
+      if (err) { setError('Error al guardar: ' + err.message); return }
+    }
+    cancelarEdicion()
     cargar()
   }
 
-  async function eliminar(id) {
+  function iniciarEdicion(inc) {
+    setEditandoId(inc.id)
+    setTitulo(inc.titulo)
+    setDescripcion(inc.descripcion || '')
+    setFecha(inc.fecha)
+    setError('')
+  }
+
+  function cancelarEdicion() {
+    setEditandoId(null)
+    setTitulo(''); setDescripcion(''); setFecha(new Date().toISOString().slice(0, 10))
+    setError('')
+  }
+
+  async function confirmarEliminar() {
+    const id = confirmDelete.id
+    setConfirmDelete(null)
     setEliminandoId(id)
     await supabase.from('incidencias').delete().eq('id', id)
     setIncidencias(prev => prev.filter(i => i.id !== id))
@@ -3161,22 +3189,32 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
           <button onClick={onCerrar} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#6b7280', lineHeight: 1, flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* Formulario nueva incidencia */}
-        <form onSubmit={guardar} style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Nueva incidencia</p>
+        {/* Formulario nueva / editar incidencia */}
+        <form onSubmit={guardar} style={{ background: editandoId ? '#fffbeb' : '#f0f4ff', border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: editandoId ? '#d97706' : '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            {editandoId ? '✏️ Editando incidencia' : 'Nueva incidencia'}
+          </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Título de la incidencia *"
-              style={{ flex: '1 1 200px', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, outline: 'none', minWidth: 0 }} />
+              style={{ flex: '1 1 200px', padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, outline: 'none', minWidth: 0 }} />
             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, outline: 'none' }} />
+              style={{ padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, outline: 'none' }} />
           </div>
           <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción opcional (qué se hizo, qué se encontró...)" rows={2}
-            style={{ padding: '8px 12px', borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
+            style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
           {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626' }}>⚠️ {error}</p>}
-          <button type="submit" disabled={guardando}
-            style={{ alignSelf: 'flex-end', padding: '8px 20px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-            {guardando ? 'Guardando…' : '+ Registrar'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            {editandoId && (
+              <button type="button" onClick={cancelarEdicion}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            )}
+            <button type="submit" disabled={guardando}
+              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: editandoId ? '#d97706' : '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              {guardando ? 'Guardando…' : editandoId ? 'Actualizar' : '+ Registrar'}
+            </button>
+          </div>
         </form>
 
         {/* Lista de incidencias */}
@@ -3202,11 +3240,16 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
                       {inc.descripcion && <p style={{ margin: 0, fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{inc.descripcion}</p>}
                     </div>
                     {esAdmin && (
-                      <button onClick={() => eliminar(inc.id)} disabled={eliminandoId === inc.id}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, flexShrink: 0, lineHeight: 1, padding: 4 }}
-                        title="Eliminar incidencia">
-                        {eliminandoId === inc.id ? '…' : '✕'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <button onClick={() => iniciarEdicion(inc)} disabled={!!editandoId}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a3a3a3', fontSize: 13, lineHeight: 1, padding: 4 }}
+                          title="Editar incidencia">✏️</button>
+                        <button onClick={() => setConfirmDelete({ id: inc.id, titulo: inc.titulo })} disabled={eliminandoId === inc.id}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fca5a5', fontSize: 14, lineHeight: 1, padding: 4 }}
+                          title="Eliminar incidencia">
+                          {eliminandoId === inc.id ? '…' : '✕'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -3215,6 +3258,32 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
           )}
         </div>
       </div>
+
+      {/* Modal confirmación borrar */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.5)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+          onClick={() => setConfirmDelete(null)}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '24px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div>
+              <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Eliminar incidencia?</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+                Se eliminará "<strong>{confirmDelete.titulo}</strong>" de forma permanente. Esta acción no se puede deshacer.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmDelete(null)}
+                style={{ padding: '8px 18px', borderRadius: 8, border: '1.5px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarEliminar}
+                style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
