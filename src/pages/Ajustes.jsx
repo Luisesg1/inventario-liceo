@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 import { aplicarTema } from '../utils/tema'
+import './Ajustes.css'
 
 const DEFAULTS = {
   colorPrimario:    '#1a237e',
@@ -52,7 +53,7 @@ function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSi
   const md = `rgb(${Math.round(r*.62)},${Math.round(g*.62)},${Math.round(b*.62)})`
 
   return (
-    <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 210, display: 'flex', userSelect: 'none', pointerEvents: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+    <div className="ajustes-preview" style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 210, display: 'flex', userSelect: 'none', pointerEvents: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
       {/* Sidebar mini */}
       <div style={{ width: 130, background: `linear-gradient(180deg,${dk} 0%,${md} 100%)`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44` }}>
@@ -317,15 +318,16 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
               {PALETAS.map(p => {
                 const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                 return (
-                  <button key={p.nombre} onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: '0 0 10px', borderRadius: 12, border: `2px solid ${activa ? p.primario : '#e5e7eb'}`, background: activa ? `${p.primario}0d` : '#fff', cursor: 'pointer', transition: 'all 0.18s', minWidth: 80, overflow: 'hidden' }}>
-                    <div style={{ width: '100%', height: 28, background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)`, marginBottom: 2 }} />
-                    <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+                  <button key={p.nombre} className="ajustes-paleta-card"
+                    onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, nombre: p.nombre })}
+                    style={{ borderColor: activa ? p.primario : '#e5e7eb', background: activa ? `${p.primario}0d` : '#fff' }}>
+                    <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
+                    <div className="ajustes-paleta-dots">
                       {[p.primario, p.acento, p.boton].map((c, i) => (
-                        <div key={i} style={{ width: 12, height: 12, borderRadius: '50%', background: c, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        <div key={i} className="ajustes-paleta-dot" style={{ background: c }} />
                       ))}
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#6b7280', textAlign: 'center', lineHeight: 1.2, paddingInline: 6 }}>{p.nombre}</span>
+                    <span className="ajustes-paleta-label" style={{ fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#6b7280' }}>{p.nombre}</span>
                   </button>
                 )
               })}
@@ -350,11 +352,10 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                     <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{desc}</p>
                   </div>
                   <input type="text" value={value} maxLength={7}
+                    className="ajustes-hex-input"
                     onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v) }}
-                    onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value) }}
-                    style={{ width: 78, padding: '6px 8px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: 12, fontFamily: 'monospace', color: '#374151', textAlign: 'center', outline: 'none', background: '#fff', transition: 'border-color 0.15s' }}
+                    onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value); e.target.style.borderColor = '#e5e7eb' }}
                     onFocus={e => e.target.style.borderColor = colorPrimario}
-                    onBlurCapture={e => e.target.style.borderColor = '#e5e7eb'}
                   />
                 </div>
               ))}
@@ -384,17 +385,14 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
 
       {/* ── Barra de guardado fija ─────────────────────────── */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, pointerEvents: 'none' }}>
-        <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 24px 20px', pointerEvents: 'auto' }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '14px 18px', boxShadow: '0 -2px 0 #f1f1f3, 0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 12 }}>
-            {error && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', gap: 6 }}>⚠️ {error}</p>}
-            {exito && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#059669', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}>✓ Cambios guardados correctamente</p>}
-            {!error && !exito && <p style={{ margin: 0, flex: 1, fontSize: 12, color: '#9ca3af' }}>Guarda para que los cambios sean permanentes</p>}
-            <button onClick={restaurar}
-              style={{ padding: '9px 16px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              Restaurar defaults
-            </button>
-            <button onClick={guardar} disabled={guardando}
-              style={{ padding: '10px 22px', borderRadius: 9, border: 'none', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, color: '#fff', fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.75 : 1, whiteSpace: 'nowrap', flexShrink: 0, boxShadow: `0 4px 14px ${colorPrimario}55` }}>
+        <div className="ajustes-bar-wrap">
+          <div className="ajustes-bar-inner">
+            {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', flex: 1 }}>⚠️ {error}</p>}
+            {exito && <p style={{ margin: 0, fontSize: 12, color: '#059669', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
+            {!error && !exito && <p className="ajustes-bar-hint">Guarda para que los cambios sean permanentes</p>}
+            <button className="ajustes-btn-rest" onClick={restaurar}>Restaurar defaults</button>
+            <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
+              style={{ background: `linear-gradient(135deg,${colorPrimario},${primDark})`, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${colorPrimario}55` }}>
               {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
             </button>
           </div>

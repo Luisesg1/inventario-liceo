@@ -281,8 +281,16 @@ body {
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .login-panel      { flex-direction: column; max-width: 400px; min-height: auto; }
-  .login-side       { width: 100%; padding: 32px 24px; flex-direction: row; gap: 16px; text-align: left; }
-  .login-side-logo  { width: 72px; height: 72px; flex-shrink: 0; }
+  .login-side       { width: 100%; padding: 24px 20px; flex-direction: row; gap: 14px; text-align: left; }
+  .login-side-logo  { width: 64px; height: 64px; flex-shrink: 0; }
   .login-side-title { font-size: 13px; }
-  .login-form-wrap  { padding: 32px 24px; }
+  .login-form-wrap  { padding: 28px 20px; }
+}
+
+@media (max-width: 400px) {
+  .login-side       { padding: 18px 16px; gap: 12px; }
+  .login-side-logo  { width: 52px; height: 52px; }
+  .login-side-title { font-size: 12px; }
+  .login-side-sub   { display: none; }
+  .login-form-wrap  { padding: 24px 16px; }
 }
