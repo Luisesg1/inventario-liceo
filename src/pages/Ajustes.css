@@ -1,6 +1,59 @@
-/* ── Ajustes — responsive helpers ──────────────────────── */
+/* ── Ajustes — layout y helpers ─────────────────────────── */
 
-/* Barra de guardado fija */
+/* Contenedor raíz */
+.ajustes-root {
+  max-width: 1060px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 24px;
+}
+
+/* Cabecera */
+.ajustes-header {
+  border-radius: 16px;
+  padding: 24px 28px 22px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.ajustes-header-bubble {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.ajustes-header-bubble--1 { top: -30px; right: -30px; width: 140px; height: 140px; background: rgba(255,255,255,0.06); }
+.ajustes-header-bubble--2 { bottom: -20px; right: 60px;  width: 90px;  height: 90px;  background: rgba(255,255,255,0.04); }
+
+/* Cuerpo: dos columnas */
+.ajustes-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+/* Columna izquierda */
+.ajustes-col-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Columna derecha: sticky */
+.ajustes-col-right {
+  width: 320px;
+  flex-shrink: 0;
+}
+.ajustes-preview-sticky {
+  position: sticky;
+  top: 16px;
+}
+
+/* Barra de guardado fija (desktop: oculta, se usa el panel derecho) */
+.ajustes-bar-mobile { display: none; }
 .ajustes-bar-wrap   { max-width: 680px; margin: 0 auto; padding: 0 24px 20px; pointer-events: auto; }
 .ajustes-bar-inner  { background: #fff; border-radius: 14px; padding: 12px 16px;
                       box-shadow: 0 -2px 0 #f1f1f3, 0 8px 32px rgba(0,0,0,0.12);
@@ -14,7 +67,7 @@
                       font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
                       flex-shrink: 0; }
 
-/* Paleta gradient strip */
+/* Paleta */
 .ajustes-paleta-card  { display: flex; flex-direction: column; align-items: center; gap: 7px;
                         padding: 0 0 10px; border-radius: 12px; border: 2px solid #e5e7eb;
                         background: #fff; cursor: pointer; transition: all 0.18s;
@@ -26,23 +79,32 @@
 .ajustes-paleta-label { font-size: 10px; font-weight: 500; color: #6b7280;
                         text-align: center; line-height: 1.2; padding: 0 6px; }
 
-/* Color picker row */
-.ajustes-color-row  { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
-                      border-radius: 10px; background: #f9fafb; border: 1px solid #f0f0f2; }
+/* Color picker */
 .ajustes-hex-input  { width: 78px; padding: 6px 8px; border-radius: 7px;
                       border: 1.5px solid #e5e7eb; font-size: 12px; font-family: monospace;
                       color: #374151; text-align: center; outline: none; background: #fff;
                       transition: border-color 0.15s; flex-shrink: 0; }
 
-/* ── Tablet ─────────────────────────────────────────────── */
+/* ── Tablet (columna derecha se mueve abajo) ──────────────── */
+@media (max-width: 860px) {
+  .ajustes-body        { flex-direction: column; }
+  .ajustes-col-right   { width: 100%; }
+  .ajustes-preview-sticky { position: static; }
+  .ajustes-bar-mobile  { display: block; }
+  /* ocultar botones dentro del panel derecho en móvil */
+  .ajustes-col-right .ajustes-btn-save,
+  .ajustes-col-right .ajustes-btn-rest { display: none; }
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
 @media (max-width: 640px) {
+  .ajustes-header { padding: 18px 20px 16px; border-radius: 12px; }
   .ajustes-bar-wrap { padding: 0 12px 16px; }
   .ajustes-bar-hint { display: none; }
   .ajustes-btn-rest,
-  .ajustes-btn-save { flex: 1; text-align: center; justify-content: center; }
+  .ajustes-btn-save { flex: 1; text-align: center; }
 }
 
-/* ── Mobile ─────────────────────────────────────────────── */
 @media (max-width: 480px) {
   .ajustes-bar-wrap  { padding: 0 8px 12px; }
   .ajustes-bar-inner { gap: 8px; padding: 10px 12px; }
@@ -51,7 +113,6 @@
   .ajustes-hex-input { width: 66px; font-size: 11px; padding: 5px 6px; }
 }
 
-/* ── Vista previa — altura responsive ───────────────────── */
 @media (max-width: 400px) {
   .ajustes-preview { height: 170px !important; }
   .ajustes-hex-input { display: none; }
