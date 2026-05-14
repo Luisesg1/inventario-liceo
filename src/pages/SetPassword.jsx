@@ -26,11 +26,11 @@ export default function SetPassword({ onComplete, usuario }) {
 
   const strengthInfo = [
     null,
-    { label: 'Muy débil',  color: '#ef4444' },
-    { label: 'Débil',      color: '#f97316' },
-    { label: 'Regular',    color: '#eab308' },
-    { label: 'Fuerte',     color: '#d4a017' },
-    { label: 'Muy fuerte', color: '#f0c830' },
+    { label: 'Muy débil',  color: '#dc2626' },
+    { label: 'Débil',      color: '#ef4444' },
+    { label: 'Regular',    color: '#f97316' },
+    { label: 'Fuerte',     color: '#22c55e' },
+    { label: 'Muy fuerte', color: '#16a34a' },
   ]
   const si = strengthInfo[strength]
 
@@ -142,8 +142,8 @@ export default function SetPassword({ onComplete, usuario }) {
               <div key={c.id} style={s.requisitoRow}>
                 <span style={{
                   ...s.checkIcon,
-                  backgroundColor: c.ok ? 'rgba(212,160,23,0.25)' : 'rgba(255,255,255,0.08)',
-                  color: c.ok ? '#f0c830' : 'rgba(255,255,255,0.35)',
+                  backgroundColor: c.ok ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.08)',
+                  color: c.ok ? '#4ade80' : 'rgba(255,255,255,0.35)',
                 }}>
                   {c.ok ? '✓' : '○'}
                 </span>
@@ -179,7 +179,7 @@ export default function SetPassword({ onComplete, usuario }) {
               </button>
             </div>
             {confirm.length > 0 && (
-              <p style={{ fontSize: 12, margin: '4px 0 0', color: match ? '#d4a017' : '#ef4444', fontWeight: 600 }}>
+              <p style={{ fontSize: 12, margin: '4px 0 0', color: match ? '#4ade80' : '#ef4444', fontWeight: 600 }}>
                 {match ? 'Las contraseñas coinciden ✓' : 'Las contraseñas no coinciden'}
               </p>
             )}
