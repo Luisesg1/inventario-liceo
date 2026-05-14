@@ -367,8 +367,10 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     ...(esAdmin    ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
     ...(esAdmin    ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
     { id: 'tickets', icon: '🎫', label: 'Tickets' },
-    ...(esAdmin    ? [{ id: 'ajustes',   icon: '⚙️', label: 'Ajustes'    }] : []),
   ]
+
+  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos'
+  const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
 
   const titulos = {
     dashboard:  'Inicio',
@@ -376,7 +378,8 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
     tickets:    'Tickets',
-    ajustes:    'Ajustes',
+    ajustes:    'Personalizar',
+    campos:     'Campos por categoría',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -407,6 +410,30 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
               )}
             </div>
           ))}
+
+          {esAdmin && <>
+            {/* Ajustes con submenú */}
+            <div className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
+              onClick={() => setAjustesAbierto(o => !o)}>
+              <span className="nav-icon">⚙️</span>
+              Ajustes
+              <span className={`nav-chevron ${ajustesAbierto ? 'nav-chevron--open' : ''}`}>›</span>
+            </div>
+            {ajustesAbierto && (
+              <div className="nav-submenu">
+                <div className={`nav-subitem ${paginaActual === 'ajustes' ? 'active' : ''}`}
+                  onClick={() => handleNav('ajustes')}>
+                  <span className="nav-subitem-dot" />
+                  Personalizar
+                </div>
+                <div className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
+                  onClick={() => handleNav('campos')}>
+                  <span className="nav-subitem-dot" />
+                  Campos por categoría
+                </div>
+              </div>
+            )}
+          </>}
         </nav>
 
         {esAdmin && <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>

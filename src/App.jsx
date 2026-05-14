@@ -8,7 +8,8 @@ import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
 import Auditoria from './pages/Auditoria'
 import Tickets   from './pages/Tickets'
-import Ajustes   from './pages/Ajustes'
+import Ajustes          from './pages/Ajustes'
+import CamposCategoria  from './pages/CamposCategoria'
 import { aplicarTema } from './utils/tema'
 
 export default function App() {
@@ -161,7 +162,7 @@ export default function App() {
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
 
   const esDocente  = usuario.rol === 'docente'
-  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes'
+  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
   const paginaSegura = esDocente && soloStaff ? 'tickets'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
@@ -175,6 +176,7 @@ export default function App() {
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
+      {paginaSegura === 'campos'     && <CamposCategoria />}
     </Layout>
   )
 }
