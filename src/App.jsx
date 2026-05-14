@@ -15,6 +15,8 @@ export default function App() {
   const [usuario,            setUsuario]            = useState(null)
   const [cargando,           setCargando]           = useState(true)
   const [logoUrl,            setLogoUrl]            = useState(null)
+  const [nombreSistema,      setNombreSistema]      = useState('Inventario')
+  const [nombreInstitucion,  setNombreInstitucion]  = useState('Liceo JHJ')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [pagina,             setPagina]             = useState(() => {
     const params = new URLSearchParams(window.location.search)
@@ -84,7 +86,9 @@ export default function App() {
       const { data } = await supabase.from('configuracion').select('clave, valor')
       if (!data) return
       const cfg = Object.fromEntries(data.map(r => [r.clave, r.valor]))
-      if (cfg.logo_url)       setLogoUrl(cfg.logo_url)
+      if (cfg.logo_url)          setLogoUrl(cfg.logo_url)
+      if (cfg.nombre_sistema)    setNombreSistema(cfg.nombre_sistema)
+      if (cfg.nombre_institucion) setNombreInstitucion(cfg.nombre_institucion)
       aplicarTema({
         colorPrimario: cfg.color_primario || '#1a237e',
         colorAcento:   cfg.color_acento   || '#d4a017',
@@ -154,7 +158,7 @@ export default function App() {
   )
 
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
-  if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} />
+  if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
 
   const esDocente  = usuario.rol === 'docente'
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes'
@@ -164,13 +168,13 @@ export default function App() {
     : pagina
 
   return (
-    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }} logoUrl={logoUrl}>
+    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }} logoUrl={logoUrl} nombreSistema={nombreSistema} nombreInstitucion={nombreInstitucion}>
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
-      {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} />}
+      {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
     </Layout>
   )
 }

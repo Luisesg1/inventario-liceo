@@ -12,7 +12,7 @@ const COLS_BACKUP = [
   'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
 ]
 
-export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge, logoUrl }) {
+export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge, logoUrl, nombreSistema = 'Inventario', nombreInstitucion = 'Liceo JHJ' }) {
   const esAdmin = usuario.rol === 'admin'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -390,8 +390,8 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         <div className="sidebar-logo">
           <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
           <div style={{ minWidth: 0 }}>
-            <p className="sidebar-title">Inventario</p>
-            <p className="sidebar-sub">Liceo JHJ</p>
+            <p className="sidebar-title">{nombreSistema}</p>
+            <p className="sidebar-sub">{nombreInstitucion}</p>
           </div>
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>

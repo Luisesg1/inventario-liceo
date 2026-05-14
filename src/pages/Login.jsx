@@ -11,7 +11,7 @@ const REQUISITOS_PASS = [
 ]
 const STRENGTH_COLORS = [null, '#dc2626', '#ef4444', '#f97316', '#22c55e', '#16a34a']
 
-export default function Login({ onLogin, logoUrl }) {
+export default function Login({ onLogin, logoUrl, nombreInstitucion = 'Liceo Bicentenario Polivalente Juvenal Hernández Jaque', nombreSistema = 'Sistema de Inventario' }) {
   const [email,    setEmail]    = useState('')
   const [pass,     setPass]     = useState('')
   const [error,    setError]    = useState('')
@@ -110,8 +110,8 @@ export default function Login({ onLogin, logoUrl }) {
   const ladoIzq = (
     <div className="login-side">
       <img src={logoUrl || '/logo-liceo.png'} alt="Logo Liceo" className="login-side-logo" onError={e => { e.target.src = '/logo-liceo.png' }} />
-      <h1 className="login-side-title">Liceo Bicentenario<br/>Polivalente Juvenal Hernández Jaque</h1>
-      <p className="login-side-sub">El Carmen · Sistema de Inventario</p>
+      <h1 className="login-side-title">{nombreInstitucion}</h1>
+      <p className="login-side-sub">El Carmen · {nombreSistema}</p>
     </div>
   )
 
