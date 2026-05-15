@@ -1938,6 +1938,32 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </>
           )}
 
+          {esComp(form.categoria) && (() => {
+            const _catData  = categorias.find(c => c.id === form.categoria)
+            const camposCat = _catData?.campos_personalizados ?? []
+            if (!camposCat.length) return null
+            const _orden    = _catData?.campos_orden ?? []
+            const compSysIds = ['numero_serie','tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo','fecha_adquisicion','proveedor','numero_factura','garantia']
+            const allIds     = [...compSysIds, ...camposCat.map(c => c.id)]
+            const fullOrder  = _orden.length ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds) : allIds
+            const posOf      = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
+            const camposOrdenados = [...camposCat].sort((a, b) => posOf(a.id) - posOf(b.id))
+            return (
+              <div className="form-row triple">
+                {camposOrdenados.map(campo => (
+                  <div key={campo.id} className="field">
+                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
+
           {esTecno(form.categoria) && (() => {
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
@@ -2429,6 +2455,32 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
             </>
           )}
+
+          {esComp(form.categoria) && (() => {
+            const _catData  = categorias.find(c => c.id === form.categoria)
+            const camposCat = _catData?.campos_personalizados ?? []
+            if (!camposCat.length) return null
+            const _orden    = _catData?.campos_orden ?? []
+            const compSysIds = ['numero_serie','tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo','fecha_adquisicion','proveedor','numero_factura','garantia']
+            const allIds     = [...compSysIds, ...camposCat.map(c => c.id)]
+            const fullOrder  = _orden.length ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds) : allIds
+            const posOf      = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
+            const camposOrdenados = [...camposCat].sort((a, b) => posOf(a.id) - posOf(b.id))
+            return (
+              <div className="form-row triple">
+                {camposOrdenados.map(campo => (
+                  <div key={campo.id} className="field">
+                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {esTecno(form.categoria) && (() => {
             const _catData  = categorias.find(c => c.id === form.categoria)

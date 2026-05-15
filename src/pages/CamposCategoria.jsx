@@ -24,7 +24,11 @@ const TIPO_COLOR = { texto: '#6366f1', numero: '#0ea5e9', fecha: '#8b5cf6', bool
 // Campos predeterminados por tipo de categoría
 const CAMPOS_PREDET = {
   computadores: [
-    { id: 'numero_serie',       nombre: 'Número de serie',          tipo: 'texto'  },
+    { id: 'numero_serie',       nombre: 'Número de serie',          tipo: 'texto',  _global: true },
+    { id: 'codigo',             nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
+    { id: 'estado',             nombre: 'Estado',                   tipo: 'select', _global: true },
+    { id: 'ubicacion',          nombre: 'Ubicación',                tipo: 'texto',  _global: true },
+    { id: 'responsable',        nombre: 'Responsable',              tipo: 'texto',  _global: true },
     { id: 'tipo',               nombre: 'Tipo de equipo',           tipo: 'select' },
     { id: 'marca',              nombre: 'Marca',                    tipo: 'texto'  },
     { id: 'modelo',             nombre: 'Modelo',                   tipo: 'texto'  },
@@ -42,6 +46,7 @@ const CAMPOS_PREDET = {
     { id: 'proveedor',          nombre: 'Proveedor',                tipo: 'texto'  },
     { id: 'numero_factura',     nombre: 'N° factura',               tipo: 'texto'  },
     { id: 'garantia',           nombre: 'Garantía',                 tipo: 'texto'  },
+    { id: 'obs',                nombre: 'Observaciones',            tipo: 'texto',  _global: true },
   ],
   tecno: [
     { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
@@ -204,8 +209,10 @@ const PREVIEW_SECTIONS = {
     { label: null, ids: ['obs'], _footer: true },
   ],
   comp: [
+    { label: null, ids: ['numero_serie', 'codigo', 'estado', 'ubicacion', 'responsable'], _header: true },
     { label: '💻 Especificaciones',  ids: ['tipo', 'marca', 'modelo', 'pantalla', 'cpu_marca', 'cpu_modelo', 'cpu_generacion', 'ram', 'ram_tipo', 'ram_slots', 'memoria', 'tipo_almacenamiento', 'sistema_operativo'] },
     { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia'] },
+    { label: null, ids: ['obs'], _footer: true },
   ],
   biblio: [
     { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
