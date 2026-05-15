@@ -152,6 +152,31 @@ function ModalCategoria({ cat, onClose, onSave }) {
   )
 }
 
+// Inserta campos faltantes en su posición natural (basada en naturalOrder), no al final
+function smartMergeOrder(savedOrder, naturalOrder) {
+  const result = [...savedOrder]
+  const missing = naturalOrder.filter(id => !savedOrder.includes(id))
+  for (const id of missing) {
+    const natIdx = naturalOrder.indexOf(id)
+    let insertAfter = -1
+    for (let i = natIdx - 1; i >= 0; i--) {
+      const predIdx = result.indexOf(naturalOrder[i])
+      if (predIdx !== -1) { insertAfter = predIdx; break }
+    }
+    if (insertAfter >= 0) {
+      result.splice(insertAfter + 1, 0, id)
+    } else {
+      let insertBefore = result.length
+      for (let i = natIdx + 1; i < naturalOrder.length; i++) {
+        const succIdx = result.indexOf(naturalOrder[i])
+        if (succIdx !== -1) { insertBefore = succIdx; break }
+      }
+      result.splice(insertBefore, 0, id)
+    }
+  }
+  return result
+}
+
 // Secciones del formulario real de agregar bien, por tipo de categoría
 const PREVIEW_SECTIONS = {
   tecno: [
@@ -499,7 +524,7 @@ export default function CamposCategoria({ usuario }) {
   ] : []
   const _allIds    = _allFields.map(f => f.id)
   const _fullOrder = camposOrden.length
-    ? [...camposOrden.filter(id => _allIds.includes(id)), ..._allIds.filter(id => !camposOrden.includes(id))]
+    ? smartMergeOrder(camposOrden.filter(id => _allIds.includes(id)), _allIds)
     : _allIds
   const unifiedSortedFields  = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
   const unifiedVisibleFields = unifiedSortedFields.filter(c => c._tipo !== 'sistema' || !camposOcultos.includes(c.id))

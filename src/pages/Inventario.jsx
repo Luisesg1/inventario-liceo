@@ -9,6 +9,31 @@ import {
   obtenerPendientes, agregarPendiente, eliminarPendiente,
 } from '../offline'
 
+// Inserta campos faltantes en su posición natural, no al final
+function smartMergeOrder(savedOrder, naturalOrder) {
+  const result = [...savedOrder]
+  const missing = naturalOrder.filter(id => !savedOrder.includes(id))
+  for (const id of missing) {
+    const natIdx = naturalOrder.indexOf(id)
+    let insertAfter = -1
+    for (let i = natIdx - 1; i >= 0; i--) {
+      const predIdx = result.indexOf(naturalOrder[i])
+      if (predIdx !== -1) { insertAfter = predIdx; break }
+    }
+    if (insertAfter >= 0) {
+      result.splice(insertAfter + 1, 0, id)
+    } else {
+      let insertBefore = result.length
+      for (let i = natIdx + 1; i < naturalOrder.length; i++) {
+        const succIdx = result.indexOf(naturalOrder[i])
+        if (succIdx !== -1) { insertBefore = succIdx; break }
+      }
+      result.splice(insertBefore, 0, id)
+    }
+  }
+  return result
+}
+
 function logActividad(usuario, accion, bienNombre, bienId = null) {
   supabase.from('actividades').insert({
     usuario_nombre: usuario?.nombre || 'Sistema',
@@ -1921,7 +1946,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const ADQUI_IDS  = ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia']
             const allIds     = [...EQUIPO_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length
-              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
             const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
@@ -1984,7 +2009,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const ADQUI_IDS = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
             const allIds    = [...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder = _orden.length
-              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf1 = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
             const adquiFields1 = [
@@ -2395,7 +2420,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const ADQUI_IDS  = ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia']
             const allIds     = [...EQUIPO_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length
-              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
             const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
@@ -2459,7 +2484,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const ADQUI_IDS = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
             const allIds    = [...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder = _orden.length
-              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
             // Unified sorted: sistema + custom juntos
