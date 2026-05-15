@@ -373,7 +373,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
 
   const titulos = {
-    dashboard:  'Inicio',
+    dashboard:  `${nombreSistema} — ${nombreInstitucion}`,
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
