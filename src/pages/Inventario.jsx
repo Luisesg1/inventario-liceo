@@ -2404,130 +2404,150 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </>
           )}
 
-          {esTecno(form.categoria) && (
-            <>
-              <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Tipo</label>
-                  <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
-                </div>
-                <div className="field">
-                  <label>Tecnología</label>
-                  <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
-                </div>
-                <div className="field">
-                  <label>Marca</label>
-                  <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
-                </div>
+          {esTecno(form.categoria) && (() => {
+            const _catData  = categorias.find(c => c.id === form.categoria)
+            const camposCat = _catData?.campos_personalizados ?? []
+            const _orden    = _catData?.campos_orden ?? []
+            const EQUIPO_IDS = ['tipo', 'marca', 'modelo', 'numero_serie']
+            const ADQUI_IDS  = ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia']
+            const allIds    = [...EQUIPO_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const fullOrder = _orden.length
+              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              : allIds
+            const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
+            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
+            const camposEquipo  = camposCat.filter(c => posOf(c.id) < firstAdquiPos)
+            const camposAdqui   = camposCat.filter(c => posOf(c.id) >= firstAdquiPos)
+            const renderCampo = campo => (
+              <div key={campo.id} className="field">
+                <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
               </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Modelo</label>
-                  <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
-                </div>
-                <div className="field">
-                  <label>N° de serie</label>
-                  <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Consumible</label>
-                  <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
-                </div>
-              </div>
-
-              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Proveedor</label>
-                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
-                </div>
-                <div className="field">
-                  <label>Nº Factura</label>
-                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>Fecha Factura</label>
-                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Orden de Compra</label>
-                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
-                </div>
-                <div className="field">
-                  <label>Fondo</label>
-                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
-                </div>
-                <div className="field">
-                  <label>Garantía</label>
-                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
-                </div>
-              </div>
-            </>
-          )}
-
-          {!esComp(form.categoria) && !esTecno(form.categoria) && (
-            <>
-              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Fecha de adquisición</label>
-                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
-                </div>
-                <div className="field">
-                  <label>Fondo</label>
-                  <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° de factura</label>
-                  <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>N° de orden de compra</label>
-                  <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
-                </div>
-                <div className="field">
-                  <label>Garantía</label>
-                  <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
-                </div>
-              </div>
-            </>
-          )}
-
-          {(() => {
-            const _catData      = categorias.find(c => c.id === form.categoria)
-            const camposCat     = _catData?.campos_personalizados ?? []
-            if (!camposCat.length) return null
-            const _orden        = _catData?.campos_orden ?? []
-            const camposOrdenados = _orden.length
-              ? [...camposCat].sort((a, b) => {
-                  const ia = _orden.indexOf(a.id), ib = _orden.indexOf(b.id)
-                  if (ia === -1 && ib === -1) return 0
-                  if (ia === -1) return 1; if (ib === -1) return -1
-                  return ia - ib
-                })
-              : camposCat
+            )
             return (
-              <div className="form-row triple">
-                {camposOrdenados.map(campo => (
-                  <div key={campo.id} className="field">
-                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
-                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
-                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
+              <>
+                <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Tipo</label>
+                    <ComboField name="tipo" value={form.tipo ?? ''} onChange={handleChange} placeholder="ej: Impresora" maxLength={60} opciones={opsBD.tipo} />
                   </div>
-                ))}
+                  <div className="field">
+                    <label>Tecnología</label>
+                    <ComboField name="tecnologia" value={form.tecnologia ?? ''} onChange={handleChange} placeholder="ej: Láser, Inkjet" maxLength={60} opciones={opsBD.tecnologia} />
+                  </div>
+                  <div className="field">
+                    <label>Marca</label>
+                    <ComboField name="marca" value={form.marca ?? ''} onChange={handleChange} placeholder="ej: HP, Epson, Canon" maxLength={50} opciones={opsBD.marca} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Modelo</label>
+                    <input name="modelo" value={form.modelo ?? ''} onChange={handleChange} placeholder="ej: LaserJet Pro M15w" maxLength={80} />
+                  </div>
+                  <div className="field">
+                    <label>N° de serie</label>
+                    <input name="numero_serie" value={form.numero_serie ?? ''} onChange={handleChange} placeholder="ej: SN-ABC123" maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Consumible</label>
+                    <ComboField name="consumible" value={form.consumible ?? ''} onChange={handleChange} placeholder="ej: Tóner HP 26A" maxLength={100} opciones={opsBD.consumible} />
+                  </div>
+                </div>
+                {camposEquipo.length > 0 && <div className="form-row triple">{camposEquipo.map(renderCampo)}</div>}
+
+                <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                  </div>
+                  <div className="field">
+                    <label>Nº Factura</label>
+                    <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>Fecha Factura</label>
+                    <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Orden de Compra</label>
+                    <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                  </div>
+                  <div className="field">
+                    <label>Fondo</label>
+                    <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
+                  </div>
+                  <div className="field">
+                    <label>Garantía</label>
+                    <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                  </div>
+                </div>
+                {camposAdqui.length > 0 && <div className="form-row triple">{camposAdqui.map(renderCampo)}</div>}
+              </>
+            )
+          })()}
+
+          {!esComp(form.categoria) && !esTecno(form.categoria) && (() => {
+            const _catData  = categorias.find(c => c.id === form.categoria)
+            const camposCat = _catData?.campos_personalizados ?? []
+            const _orden    = _catData?.campos_orden ?? []
+            const ADQUI_IDS = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
+            const allIds    = [...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const fullOrder = _orden.length
+              ? [..._orden.filter(id => allIds.includes(id)), ...allIds.filter(id => !_orden.includes(id))]
+              : allIds
+            const camposOrdenados = [...camposCat].sort((a, b) => fullOrder.indexOf(a.id) - fullOrder.indexOf(b.id))
+            const renderCampo = campo => (
+              <div key={campo.id} className="field">
+                <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
               </div>
+            )
+            return (
+              <>
+                <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Fecha de adquisición</label>
+                    <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <ComboField name="proveedor" value={form.proveedor ?? ''} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} opciones={opsBD.proveedor} />
+                  </div>
+                  <div className="field">
+                    <label>Fondo</label>
+                    <ComboField name="fondo" value={form.fondo ?? ''} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} opciones={opsBD.fondo} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° de factura</label>
+                    <input name="numero_factura" value={form.numero_factura ?? ''} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>N° de orden de compra</label>
+                    <ComboField name="numero_orden" value={form.numero_orden ?? ''} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} opciones={opsBD.numero_orden} />
+                  </div>
+                  <div className="field">
+                    <label>Garantía</label>
+                    <input name="garantia" value={form.garantia ?? ''} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                  </div>
+                </div>
+                {camposOrdenados.length > 0 && <div className="form-row triple">{camposOrdenados.map(renderCampo)}</div>}
+              </>
             )
           })()}
 

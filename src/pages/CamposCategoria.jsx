@@ -768,12 +768,6 @@ export default function CamposCategoria({ usuario }) {
               )
             })()}
 
-            {_allFields.length > 0 && (
-              <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, padding: '2px 2px 0' }}>
-                En el formulario de inventario, los campos <strong style={{ color: 'rgba(255,255,255,0.75)' }}>personalizados</strong> se muestran juntos en la sección «Campos adicionales» (después de equipo y adquisición). El orden de esta lista define cómo se ordenan entre sí ahí y en la vista previa; no se insertan entre filas fijas como Tipo o Marca.
-              </p>
-            )}
-
             {/* Formulario agregar / editar campo */}
             <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: `1.5px solid ${editandoCampoId ? '#fcd34d' : '#f1f1f3'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
               <div style={{ padding: '13px 18px 11px', borderBottom: `1px solid ${editandoCampoId ? '#fde68a' : '#f3f4f6'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
