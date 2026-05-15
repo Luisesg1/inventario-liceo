@@ -135,7 +135,7 @@ export default function App() {
     }
 
     setUsuario(data)
-    if (data.rol === 'docente') { setPagina('tickets'); localStorage.setItem('app_pagina', 'tickets') }
+    if (data.rol === 'docente' || data.rol === 'soporte') { setPagina('tickets'); localStorage.setItem('app_pagina', 'tickets') }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
@@ -161,10 +161,12 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
 
-  const esDocente  = usuario.rol === 'docente'
+  const esDocente     = usuario.rol === 'docente'
+  const esSoporte     = usuario.rol === 'soporte'
+  const esSoloTickets = esDocente || esSoporte
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
-  const paginaSegura = esDocente && soloStaff ? 'tickets'
+  const paginaSegura = esSoloTickets && soloStaff ? 'tickets'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
     : pagina
 

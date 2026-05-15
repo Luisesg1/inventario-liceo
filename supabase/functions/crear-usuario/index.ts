@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
 
-    const rolesValidos = ["admin", "editor", "encargado"];
+    const rolesValidos = ["admin", "editor", "encargado", "soporte"];
     const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "encargado";
 
     // 5. Cliente admin
@@ -291,9 +291,10 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
     registrar_prestamo: false, registrar_incidencia: false,
   };
   switch (rol) {
-    case "admin":  return Object.fromEntries(Object.keys(base).map(k => [k, true]));
-    case "editor": return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true };
-    default:       return { ...base, ver_inventario: true, exportar: true };
+    case "admin":   return Object.fromEntries(Object.keys(base).map(k => [k, true]));
+    case "editor":  return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true };
+    case "soporte": return base;
+    default:        return { ...base, ver_inventario: true, exportar: true };
   }
 }
 

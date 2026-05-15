@@ -86,6 +86,7 @@ const ROL_COLORES = {
   editor:    { bg: '#dcfce7', color: '#15803d' },
   encargado: { bg: '#f3f4f6', color: '#374151' },
   docente:   { bg: '#fef3c7', color: '#92400e' },
+  soporte:   { bg: '#e0f2fe', color: '#0369a1' },
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -532,6 +533,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                   <option value="encargado">Encargado</option>
                   <option value="editor">Editor</option>
                   <option value="admin">Administrador</option>
+                  <option value="soporte">Soporte</option>
                 </select>
               </label>
             </div>
@@ -977,6 +979,7 @@ export default function Usuarios({ usuario }) {
           <option value="editor">Editor</option>
           <option value="encargado">Encargado</option>
           <option value="docente">Docente</option>
+          <option value="soporte">Soporte</option>
         </select>
       </div>
       {busqueda && (
@@ -1030,6 +1033,7 @@ export default function Usuarios({ usuario }) {
                     <option value="editor">Editor</option>
                     <option value="admin">Admin</option>
                     <option value="docente">Docente</option>
+                    <option value="soporte">Soporte</option>
                   </select>
                 ) : (
                   <span className="rol-select"
@@ -1098,6 +1102,7 @@ export default function Usuarios({ usuario }) {
                           <option value="editor">Editor</option>
                           <option value="admin">Administrador</option>
                           <option value="docente">Docente</option>
+                          <option value="soporte">Soporte</option>
                         </select>
                       </label>
                     </div>

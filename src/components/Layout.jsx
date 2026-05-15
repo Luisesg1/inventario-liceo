@@ -13,14 +13,15 @@ const COLS_BACKUP = [
 ]
 
 export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge, logoUrl, nombreSistema = 'Inventario', nombreInstitucion = 'Liceo JHJ' }) {
-  const esAdmin = usuario.rol === 'admin'
+  const esAdmin   = usuario.rol === 'admin'
+  const esSoporte = usuario.rol === 'soporte'
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
 
   useEffect(() => {
-    if (!esAdmin) return
+    if (!esAdmin && !esSoporte) return
     const cargar = async () => {
       const { count } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
       setTicketsAbiertos(count ?? 0)
@@ -32,7 +33,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargar)
       .subscribe()
     return () => supabase.removeChannel(sub)
-  }, [esAdmin])
+  }, [esAdmin, esSoporte])
 
   const fetchBackupData = async () => {
     const [{ data: bienes }, { data: cats }] = await Promise.all([
@@ -360,12 +361,13 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     }
   }
 
-  const esDocente = usuario.rol === 'docente'
+  const esDocente     = usuario.rol === 'docente'
+  const esSoloTickets = esDocente || esSoporte
   const navItems = [
-    ...(!esDocente ? [{ id: 'dashboard',  icon: '◉', label: 'Inicio'      }] : []),
-    ...(!esDocente ? [{ id: 'inventario', icon: '▤', label: 'Inventario'  }] : []),
-    ...(esAdmin    ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
-    ...(esAdmin    ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
+    ...(!esSoloTickets ? [{ id: 'dashboard',  icon: '◉', label: 'Inicio'      }] : []),
+    ...(!esSoloTickets ? [{ id: 'inventario', icon: '▤', label: 'Inventario'  }] : []),
+    ...(esAdmin        ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
+    ...(esAdmin        ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
     { id: 'tickets', icon: '🎫', label: 'Tickets' },
   ]
 

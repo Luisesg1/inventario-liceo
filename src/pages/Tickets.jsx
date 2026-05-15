@@ -25,7 +25,9 @@ const FORM_VACIO = {
 }
 
 export default function Tickets({ usuario, onTicketActualizado }) {
-  const esAdmin = usuario.rol === 'admin'
+  const esAdmin   = usuario.rol === 'admin'
+  const esSoporte = usuario.rol === 'soporte'
+  const esGestor  = esAdmin || esSoporte
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState('')
@@ -50,7 +52,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const cargar = async () => {
     setCargando(true)
     let q = supabase.from('tickets').select('*').order('creado_en', { ascending: false })
-    if (!esAdmin) q = q.eq('creado_por', usuario.id)
+    if (!esGestor) q = q.eq('creado_por', usuario.id)
     const { data } = await q
     setTickets(data ?? [])
     setCargando(false)
@@ -91,6 +93,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     const titulo = form.area_reporte === 'Otro' && form.area_otro
       ? `Otro — ${form.area_otro}`
       : form.area_reporte
+    const creado_por_nombre = `${form.nombre.trim()} ${form.apellidos.trim()}`.trim() || usuario.nombre
     const { error } = await supabase.from('tickets').insert({
       titulo,
       descripcion:        form.descripcion.trim(),
@@ -103,9 +106,27 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       correo_contacto:    form.correo_contacto.trim() || null,
       prioridad:          null,
       creado_por:         usuario.id,
-      creado_por_nombre:  `${form.nombre.trim()} ${form.apellidos.trim()}`.trim() || usuario.nombre,
+      creado_por_nombre,
     })
-    if (!error) { await cargar(); cerrarNuevo() }
+    if (!error) {
+      // Notificar a usuarios con rol soporte
+      const { data: soporteUsers } = await supabase
+        .from('usuarios').select('email, nombre').eq('rol', 'soporte')
+      if (soporteUsers?.length) {
+        supabase.functions.invoke('notify-new-ticket', {
+          body: {
+            destinatarios:      soporteUsers,
+            titulo,
+            descripcion:        form.descripcion.trim(),
+            lugar_falla:        form.lugar_falla.trim(),
+            creado_por_nombre,
+            correo_solicitante: form.correo_contacto.trim() || null,
+          },
+        }).catch(e => console.error('[notify-new-ticket]', e))
+      }
+      await cargar()
+      cerrarNuevo()
+    }
     setGuardando(false)
   }
 
@@ -181,11 +202,11 @@ export default function Tickets({ usuario, onTicketActualizado }) {
 
       <div className="tickets-page-header">
         <p className="tickets-page-title">🎫 Tickets de soporte</p>
-        <p className="tickets-page-sub">{esAdmin ? 'Gestiona y resuelve los reportes del equipo' : 'Reporta fallas o incidencias del establecimiento'}</p>
+        <p className="tickets-page-sub">{esGestor ? 'Gestiona y resuelve los reportes del equipo' : 'Reporta fallas o incidencias del establecimiento'}</p>
       </div>
 
-      {/* KPIs — solo admin */}
-      {esAdmin && <div className="tickets-kpis">
+      {/* KPIs — gestores (admin y soporte) */}
+      {esGestor && <div className="tickets-kpis">
         {['Abierto', 'En proceso', 'Resuelto'].map(e => {
           const n = tickets.filter(t => t.estado === e).length
           const est = ESTADO[e]
@@ -218,7 +239,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       </div>
 
       {/* Filtros */}
-      {esAdmin && (
+      {esGestor && (
         <div className="tickets-filtros" style={{ marginBottom: '1.1rem' }}>
           <select className={filtroEstado ? 'activo' : ''} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
             <option value="">Todos los estados</option>
@@ -250,7 +271,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       )}
 
       {/* Barra selección — solo visible cuando hay algo seleccionado */}
-      {esAdmin && seleccionados.size > 0 && filtrados.length > 0 && (
+      {esGestor && seleccionados.size > 0 && filtrados.length > 0 && (
         <div className={`tickets-sel-bar ${seleccionados.size > 0 ? 'tickets-sel-bar--activa' : ''}`}>
           <label className="tickets-sel-label">
             <input
@@ -308,7 +329,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
               <div key={t.id} className={`ticket-card ${seleccionados.has(t.id) ? 'ticket-card-sel' : ''}`}
                 onClick={() => abrirDetalle(t)}>
                 <div className="ticket-card-body">
-                  {esAdmin && (
+                  {esGestor && (
                     <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
                       onClick={e => e.stopPropagation()}
                       style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', alignSelf: 'center', accentColor: '#1a237e' }} />
@@ -448,7 +469,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
               </div>
             )}
 
-            {esAdmin ? (
+            {esGestor ? (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
