@@ -56,6 +56,8 @@ const ACCIONES_GLOBALES = [
   'registrar_prestamo', 'registrar_incidencia',
 ]
 
+const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
+
 const PERMISOS_POR_ROL = {
   admin: {
     permisos:   Object.fromEntries(ACCIONES.map((a) => [a.key, true])),
@@ -77,6 +79,14 @@ const PERMISOS_POR_ROL = {
       importar_csv: false, gestionar_usuarios: false, exportar: false,
       registrar_prestamo: false, registrar_incidencia: false,
     },
+    categorias: ['todos'],
+  },
+  soporte: {
+    permisos:   { ...PERMISOS_VACIO },
+    categorias: ['todos'],
+  },
+  docente: {
+    permisos:   { ...PERMISOS_VACIO },
     categorias: ['todos'],
   },
 }
@@ -631,6 +641,10 @@ export default function Usuarios({ usuario }) {
   const [confirmandoId, setConfirmandoId] = useState(null)
   const [eliminandoId, setEliminandoId]   = useState(null)
 
+  // Confirmación de cambio de rol
+  const [confirmCambioRol, setConfirmCambioRol] = useState(null) // { userId, nombreUsuario, rolActual, nuevoRol }
+  const [aplicandoRol,     setAplicandoRol]     = useState(false)
+
   // Panel activo: null | { id, modo: 'editar'|'permisos' }
   const [panelActivo, setPanelActivo] = useState(null)
 
@@ -719,9 +733,21 @@ export default function Usuarios({ usuario }) {
     }
   }
 
-  async function cambiarRol(userId, nuevoRolVal) {
-    await supabase.from('usuarios').update({ rol: nuevoRolVal }).eq('id', userId)
-    setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, rol: nuevoRolVal } : u))
+  async function confirmarCambioRol() {
+    if (!confirmCambioRol) return
+    const { userId, nuevoRol } = confirmCambioRol
+    setAplicandoRol(true)
+    const perfilNuevo = PERMISOS_POR_ROL[nuevoRol] ?? { permisos: { ...PERMISOS_VACIO }, categorias: ['todos'] }
+    await Promise.all([
+      supabase.from('usuarios').update({ rol: nuevoRol }).eq('id', userId),
+      supabase.from('permisos_usuario').update({
+        permisos:   perfilNuevo.permisos,
+        categorias: perfilNuevo.categorias,
+      }).eq('usuario_id', userId),
+    ])
+    setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, rol: nuevoRol } : u))
+    setConfirmCambioRol(null)
+    setAplicandoRol(false)
   }
 
   async function eliminarUsuario(userId) {
@@ -1027,7 +1053,10 @@ export default function Usuarios({ usuario }) {
                   <select className="rol-select"
                     style={{ backgroundColor: colores.bg, color: colores.color }}
                     value={u.rol}
-                    onChange={(e) => cambiarRol(u.id, e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value !== u.rol)
+                        setConfirmCambioRol({ userId: u.id, nombreUsuario: u.nombre, rolActual: u.rol, nuevoRol: e.target.value })
+                    }}
                     disabled={eliminando}>
                     <option value="encargado">Encargado</option>
                     <option value="editor">Editor</option>
@@ -1254,6 +1283,56 @@ export default function Usuarios({ usuario }) {
           onCreado={cargarUsuarios}
         />
       )}
+
+      {/* ── Modal confirmación cambio de rol ── */}
+      {confirmCambioRol && (() => {
+        const ROL_LABEL = { admin: 'Administrador', editor: 'Editor', encargado: 'Encargado', docente: 'Docente', soporte: 'Soporte' }
+        const colActual = ROL_COLORES[confirmCambioRol.rolActual] ?? { bg: '#f3f4f6', color: '#374151' }
+        const colNuevo  = ROL_COLORES[confirmCambioRol.nuevoRol]  ?? { bg: '#f3f4f6', color: '#374151' }
+        return (
+          <div style={ps.modalOverlay} onClick={() => !aplicandoRol && setConfirmCambioRol(null)}>
+            <div style={{ ...ps.modal, maxWidth: 420, width: '95%' }} onClick={e => e.stopPropagation()}>
+              <div style={{ marginBottom: 18 }}>
+                <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
+                  Cambiar rol de usuario
+                </p>
+                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
+                  {confirmCambioRol.nombreUsuario}
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <span style={{ background: colActual.bg, color: colActual.color, borderRadius: 8, padding: '5px 14px', fontWeight: 700, fontSize: 13 }}>
+                  {ROL_LABEL[confirmCambioRol.rolActual] ?? confirmCambioRol.rolActual}
+                </span>
+                <span style={{ color: '#9ca3af', fontSize: 18 }}>→</span>
+                <span style={{ background: colNuevo.bg, color: colNuevo.color, borderRadius: 8, padding: '5px 14px', fontWeight: 700, fontSize: 13 }}>
+                  {ROL_LABEL[confirmCambioRol.nuevoRol] ?? confirmCambioRol.nuevoRol}
+                </span>
+              </div>
+
+              <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#713f12' }}>
+                ⚠️ Los permisos se resetearán al perfil por defecto del rol <strong>{ROL_LABEL[confirmCambioRol.nuevoRol]}</strong>.
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setConfirmCambioRol(null)}
+                  disabled={aplicandoRol}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarCambioRol}
+                  disabled={aplicandoRol}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#1a237e', color: '#fff', fontSize: 13, fontWeight: 700, cursor: aplicandoRol ? 'default' : 'pointer', opacity: aplicandoRol ? 0.6 : 1 }}>
+                  {aplicandoRol ? 'Aplicando…' : 'Confirmar cambio'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
