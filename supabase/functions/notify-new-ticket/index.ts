@@ -1,7 +1,10 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { serve }        from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
 const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
+const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -9,23 +12,30 @@ const cors = {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: cors })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
-    const { destinatarios, titulo, descripcion, lugar_falla, creado_por_nombre, correo_solicitante } =
+    const { titulo, descripcion, lugar_falla, creado_por_nombre, correo_solicitante } =
       await req.json() as {
-        destinatarios:      { email: string; nombre: string }[]
-        titulo:             string
-        descripcion?:       string
-        lugar_falla?:       string
-        creado_por_nombre?: string
+        titulo:              string
+        descripcion?:        string
+        lugar_falla?:        string
+        creado_por_nombre?:  string
         correo_solicitante?: string
       }
 
-    if (!destinatarios?.length) {
-      return new Response('No destinatarios', { status: 400, headers: cors })
+    // Buscar todos los usuarios con rol soporte usando service role (sin restricciones RLS)
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data: soporteUsers } = await admin
+      .from('usuarios')
+      .select('email, nombre')
+      .eq('rol', 'soporte')
+
+    if (!soporteUsers?.length) {
+      console.log('No hay usuarios con rol soporte, omitiendo notificación')
+      return new Response('OK (sin destinatarios)', { status: 200, headers: cors })
     }
 
     const htmlContent = `
@@ -35,7 +45,7 @@ serve(async (req) => {
         </div>
         <div style="padding:24px">
           <div style="background:#dbeafe;border-radius:8px;padding:10px 18px;margin-bottom:20px;display:inline-block">
-            <span style="font-size:14px;font-weight:700;color:#1d4ed8">🔵 Abierto</span>
+            <span style="font-size:14px;font-weight:700;color:#1d4ed8">🔵 Abierto — requiere atención</span>
           </div>
 
           <table style="width:100%;border-collapse:collapse;font-size:14px;color:#374151;margin-bottom:20px">
@@ -72,14 +82,11 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const to = destinatarios.map(d => ({ email: d.email, name: d.nombre }))
+    const to = soporteUsers.map(u => ({ email: u.email, name: u.nombre }))
 
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
-      headers: {
-        'api-key': BREVO_API_KEY,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sender:      { name: 'Inventario JHJ', email: ADMIN_EMAIL },
         to,

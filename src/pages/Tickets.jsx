@@ -109,21 +109,16 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       creado_por_nombre,
     })
     if (!error) {
-      // Notificar a usuarios con rol soporte
-      const { data: soporteUsers } = await supabase
-        .from('usuarios').select('email, nombre').eq('rol', 'soporte')
-      if (soporteUsers?.length) {
-        supabase.functions.invoke('notify-new-ticket', {
-          body: {
-            destinatarios:      soporteUsers,
-            titulo,
-            descripcion:        form.descripcion.trim(),
-            lugar_falla:        form.lugar_falla.trim(),
-            creado_por_nombre,
-            correo_solicitante: form.correo_contacto.trim() || null,
-          },
-        }).catch(e => console.error('[notify-new-ticket]', e))
-      }
+      // Notificar a usuarios soporte (la función busca los destinatarios internamente)
+      supabase.functions.invoke('notify-new-ticket', {
+        body: {
+          titulo,
+          descripcion:        form.descripcion.trim(),
+          lugar_falla:        form.lugar_falla.trim(),
+          creado_por_nombre,
+          correo_solicitante: form.correo_contacto.trim() || null,
+        },
+      }).catch(e => console.error('[notify-new-ticket]', e))
       await cargar()
       cerrarNuevo()
     }
