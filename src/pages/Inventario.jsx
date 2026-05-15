@@ -1692,275 +1692,285 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
 
 
-          {esComp(form.categoria) && (
-            <>
-              <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Tipo</label>
-                  <select name="tipo" value={form.tipo} onChange={handleChange}>
-                    <option>Desktop</option><option>Laptop</option><option>All-in-One</option><option>Servidor</option><option>Tablet</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Marca</label>
-                  <input name="marca" value={form.marca} onChange={handleChange} placeholder="ej: HP, Dell, Lenovo" maxLength={50} />
-                </div>
-                <div className="field">
-                  <label>Modelo</label>
-                  <input name="modelo" value={form.modelo} onChange={handleChange} placeholder="ej: ProBook 440 G9" maxLength={80} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Pantalla</label>
-                  <input name="pantalla" value={form.pantalla ?? ''} onChange={handleChange} placeholder='ej: 15.6" FHD IPS' maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Marca CPU</label>
-                  <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>Intel</option>
-                    <option>AMD</option>
-                    <option>Apple</option>
-                    <option>Qualcomm</option>
-                    <option>ARM</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Modelo CPU</label>
-                  <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Generación / Versión CPU</label>
-                  <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
-                </div>
-                <div className="field">
-                  <label>Procesador completo (generado)</label>
-                  <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>RAM (capacidad)</label>
-                  <input name="ram" value={form.ram} onChange={handleChange} placeholder="ej: 8 GB, 16 GB" maxLength={20} />
-                </div>
-                <div className="field">
-                  <label>Tipo RAM</label>
-                  <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>DDR3</option>
-                    <option>DDR4</option>
-                    <option>DDR5</option>
-                    <option>LPDDR4</option>
-                    <option>LPDDR5</option>
-                    <option>SO-DIMM DDR4</option>
-                    <option>SO-DIMM DDR5</option>
-                    <option>Unificada (Apple)</option>
-                    <option>Otro</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Slots disponibles</label>
-                  <input name="ram_slots" value={form.ram_slots ?? ''} onChange={handleChange} placeholder="ej: 0, 1, 2" maxLength={10} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Almacenamiento (capacidad)</label>
-                  <select name="memoria" value={form.memoria} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>32 GB</option>
-                    <option>64 GB</option>
-                    <option>128 GB</option>
-                    <option>256 GB</option>
-                    <option>512 GB</option>
-                    <option>1 TB</option>
-                    <option>2 TB</option>
-                    <option>4 TB</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Tipo tecnología</label>
-                  <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>SSD</option>
-                    <option>HDD</option>
-                    <option>SSD + HDD</option>
-                    <option>NVMe</option>
-                    <option>eMMC</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Sistema operativo</label>
-                  <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
-                    <option>Windows 11 Pro</option><option>Windows 11 Home</option>
-                    <option>Windows 10 Pro</option><option>Windows 10 Home</option>
-                    <option>Ubuntu</option><option>macOS</option>
-                    <option>Sin sistema</option><option>Otro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="seccion-comp"><span className="seccion-label">🔑 Licencias</span></div>
-
-              {/* Windows */}
-              <div className="seccion-lic-sub">🪟 Windows</div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Tipo de licencia Windows</label>
-                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Clave Windows</label>
-                  {form.win_tipo_licencia === 'fabricante'
-                    ? <input value="De fabricante" readOnly className="input-readonly" />
-                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
-                  }
-                </div>
-                <div className="field">
-                  <label>Versión</label>
-                  <input name="win_version" value={form.win_version} onChange={handleChange} placeholder="ej: Windows 10 Home" maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-                <div className="field">
-                  <label>Fecha factura</label>
-                  {form.win_tipo_licencia === 'fabricante'
-                    ? <input value="N/A" readOnly className="input-readonly" />
-                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
-                  }
-                </div>
-                <div className="field">
-                  <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-
-              {/* Office */}
-              <div className="seccion-lic-sub">📊 Office</div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Tipo de licencia Office</label>
-                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Clave Office</label>
-                  {form.off_tipo_licencia === 'alternativa'
-                    ? <input value="Alternativa" readOnly className="input-readonly" />
-                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
-                  }
-                </div>
-                <div className="field">
-                  <label>Versión</label>
-                  <input name="off_version" value={form.off_version} onChange={handleChange} placeholder="ej: Office 2019, Microsoft 365" maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-                <div className="field">
-                  <label>Fecha factura</label>
-                  {form.off_tipo_licencia === 'alternativa'
-                    ? <input value="N/A" readOnly className="input-readonly" />
-                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
-                  }
-                </div>
-                <div className="field">
-                  <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-
-              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición del computador</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Fecha de adquisición</label>
-                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion} onChange={handleChange} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="proveedor" value={form.proveedor} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
-                </div>
-                <div className="field">
-                  <label>Fondo</label>
-                  <input name="fondo" value={form.fondo} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° de factura</label>
-                  <input name="numero_factura" value={form.numero_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>N° de orden de compra</label>
-                  <input name="numero_orden" value={form.numero_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>Garantía</label>
-                  <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
-                </div>
-              </div>
-            </>
-          )}
-
           {esComp(form.categoria) && (() => {
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
-            if (!camposCat.length) return null
             const _orden    = _catData?.campos_orden ?? []
-            const compSysIds = ['numero_serie','tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo','fecha_adquisicion','proveedor','numero_factura','garantia']
-            const allIds     = [...compSysIds, ...camposCat.map(c => c.id)]
+            const HEADER_IDS = ['numero_serie','codigo','estado','ubicacion','responsable']
+            const SPEC_IDS   = ['tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo']
+            const ADQUI_IDS  = ['fecha_adquisicion','proveedor','numero_factura','garantia']
+            const allIds     = [...HEADER_IDS, ...SPEC_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds) : allIds
             const posOf      = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
-            const camposOrdenados = [...camposCat].sort((a, b) => posOf(a.id) - posOf(b.id))
-            return (
-              <div className="form-row triple">
-                {camposOrdenados.map(campo => (
-                  <div key={campo.id} className="field">
-                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
-                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
-                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
-                  </div>
-                ))}
+            const firstSpecPos  = Math.min(...SPEC_IDS.map(posOf))
+            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
+            const headerCF = camposCat.filter(c => posOf(c.id) < firstSpecPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const specCF   = camposCat.filter(c => posOf(c.id) >= firstSpecPos && posOf(c.id) < firstAdquiPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const adquiCF  = camposCat.filter(c => posOf(c.id) >= firstAdquiPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const renderCC = campo => (
+              <div key={campo.id} className="field">
+                <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
               </div>
+            )
+            const rows3c = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
+            return (
+              <>
+                {headerCF.length > 0 && rows3c(headerCF).map((row, i) => (
+                  <div key={`hdr-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+                <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Tipo</label>
+                    <select name="tipo" value={form.tipo} onChange={handleChange}>
+                      <option>Desktop</option><option>Laptop</option><option>All-in-One</option><option>Servidor</option><option>Tablet</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Marca</label>
+                    <input name="marca" value={form.marca} onChange={handleChange} placeholder="ej: HP, Dell, Lenovo" maxLength={50} />
+                  </div>
+                  <div className="field">
+                    <label>Modelo</label>
+                    <input name="modelo" value={form.modelo} onChange={handleChange} placeholder="ej: ProBook 440 G9" maxLength={80} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Pantalla</label>
+                    <input name="pantalla" value={form.pantalla ?? ''} onChange={handleChange} placeholder='ej: 15.6" FHD IPS' maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Marca CPU</label>
+                    <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>Intel</option>
+                      <option>AMD</option>
+                      <option>Apple</option>
+                      <option>Qualcomm</option>
+                      <option>ARM</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Modelo CPU</label>
+                    <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Generación / Versión CPU</label>
+                    <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
+                  </div>
+                  <div className="field">
+                    <label>Procesador completo (generado)</label>
+                    <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>RAM (capacidad)</label>
+                    <input name="ram" value={form.ram} onChange={handleChange} placeholder="ej: 8 GB, 16 GB" maxLength={20} />
+                  </div>
+                  <div className="field">
+                    <label>Tipo RAM</label>
+                    <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>DDR3</option>
+                      <option>DDR4</option>
+                      <option>DDR5</option>
+                      <option>LPDDR4</option>
+                      <option>LPDDR5</option>
+                      <option>SO-DIMM DDR4</option>
+                      <option>SO-DIMM DDR5</option>
+                      <option>Unificada (Apple)</option>
+                      <option>Otro</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Slots disponibles</label>
+                    <input name="ram_slots" value={form.ram_slots ?? ''} onChange={handleChange} placeholder="ej: 0, 1, 2" maxLength={10} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Almacenamiento (capacidad)</label>
+                    <select name="memoria" value={form.memoria} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>32 GB</option>
+                      <option>64 GB</option>
+                      <option>128 GB</option>
+                      <option>256 GB</option>
+                      <option>512 GB</option>
+                      <option>1 TB</option>
+                      <option>2 TB</option>
+                      <option>4 TB</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Tipo tecnología</label>
+                    <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>SSD</option>
+                      <option>HDD</option>
+                      <option>SSD + HDD</option>
+                      <option>NVMe</option>
+                      <option>eMMC</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Sistema operativo</label>
+                    <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
+                      <option>Windows 11 Pro</option><option>Windows 11 Home</option>
+                      <option>Windows 10 Pro</option><option>Windows 10 Home</option>
+                      <option>Ubuntu</option><option>macOS</option>
+                      <option>Sin sistema</option><option>Otro</option>
+                    </select>
+                  </div>
+                </div>
+                {specCF.length > 0 && rows3c(specCF).map((row, i) => (
+                  <div key={`spc-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+
+                <div className="seccion-comp"><span className="seccion-label">🔑 Licencias</span></div>
+
+                {/* Windows */}
+                <div className="seccion-lic-sub">🪟 Windows</div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Tipo de licencia Windows</label>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Clave Windows</label>
+                    {form.win_tipo_licencia === 'fabricante'
+                      ? <input value="De fabricante" readOnly className="input-readonly" />
+                      : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>Versión</label>
+                    <input name="win_version" value={form.win_version} onChange={handleChange} placeholder="ej: Windows 10 Home" maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° Factura</label>
+                    <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                  <div className="field">
+                    <label>Fecha factura</label>
+                    {form.win_tipo_licencia === 'fabricante'
+                      ? <input value="N/A" readOnly className="input-readonly" />
+                      : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>N° Orden de compra</label>
+                    <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+
+                {/* Office */}
+                <div className="seccion-lic-sub">📊 Office</div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Tipo de licencia Office</label>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Clave Office</label>
+                    {form.off_tipo_licencia === 'alternativa'
+                      ? <input value="Alternativa" readOnly className="input-readonly" />
+                      : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>Versión</label>
+                    <input name="off_version" value={form.off_version} onChange={handleChange} placeholder="ej: Office 2019, Microsoft 365" maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° Factura</label>
+                    <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                  <div className="field">
+                    <label>Fecha factura</label>
+                    {form.off_tipo_licencia === 'alternativa'
+                      ? <input value="N/A" readOnly className="input-readonly" />
+                      : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>N° Orden de compra</label>
+                    <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+
+                <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición del computador</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Fecha de adquisición</label>
+                    <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion} onChange={handleChange} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="proveedor" value={form.proveedor} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                  </div>
+                  <div className="field">
+                    <label>Fondo</label>
+                    <input name="fondo" value={form.fondo} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° de factura</label>
+                    <input name="numero_factura" value={form.numero_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>N° de orden de compra</label>
+                    <input name="numero_orden" value={form.numero_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>Garantía</label>
+                    <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                  </div>
+                </div>
+                {adquiCF.length > 0 && rows3c(adquiCF).map((row, i) => (
+                  <div key={`adq-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+              </>
             )
           })()}
 
@@ -2210,275 +2220,285 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           )}
 
 
-          {esComp(form.categoria) && (
-            <>
-              <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Tipo</label>
-                  <select name="tipo" value={form.tipo} onChange={handleChange}>
-                    <option>Desktop</option><option>Laptop</option><option>All-in-One</option><option>Servidor</option><option>Tablet</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Marca</label>
-                  <input name="marca" value={form.marca} onChange={handleChange} placeholder="ej: HP, Dell, Lenovo" maxLength={50} />
-                </div>
-                <div className="field">
-                  <label>Modelo</label>
-                  <input name="modelo" value={form.modelo} onChange={handleChange} placeholder="ej: ProBook 440 G9" maxLength={80} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Pantalla</label>
-                  <input name="pantalla" value={form.pantalla ?? ''} onChange={handleChange} placeholder='ej: 15.6" FHD IPS' maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Marca CPU</label>
-                  <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>Intel</option>
-                    <option>AMD</option>
-                    <option>Apple</option>
-                    <option>Qualcomm</option>
-                    <option>ARM</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Modelo CPU</label>
-                  <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Generación / Versión CPU</label>
-                  <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
-                </div>
-                <div className="field">
-                  <label>Procesador completo (generado)</label>
-                  <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>RAM (capacidad)</label>
-                  <input name="ram" value={form.ram} onChange={handleChange} placeholder="ej: 8 GB, 16 GB" maxLength={20} />
-                </div>
-                <div className="field">
-                  <label>Tipo RAM</label>
-                  <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>DDR3</option>
-                    <option>DDR4</option>
-                    <option>DDR5</option>
-                    <option>LPDDR4</option>
-                    <option>LPDDR5</option>
-                    <option>SO-DIMM DDR4</option>
-                    <option>SO-DIMM DDR5</option>
-                    <option>Unificada (Apple)</option>
-                    <option>Otro</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Slots disponibles</label>
-                  <input name="ram_slots" value={form.ram_slots ?? ''} onChange={handleChange} placeholder="ej: 0, 1, 2" maxLength={10} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Almacenamiento (capacidad)</label>
-                  <select name="memoria" value={form.memoria} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>32 GB</option>
-                    <option>64 GB</option>
-                    <option>128 GB</option>
-                    <option>256 GB</option>
-                    <option>512 GB</option>
-                    <option>1 TB</option>
-                    <option>2 TB</option>
-                    <option>4 TB</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Tipo tecnología</label>
-                  <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
-                    <option value="">— Seleccionar —</option>
-                    <option>SSD</option>
-                    <option>HDD</option>
-                    <option>SSD + HDD</option>
-                    <option>NVMe</option>
-                    <option>eMMC</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Sistema operativo</label>
-                  <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
-                    <option>Windows 11 Pro</option><option>Windows 11 Home</option>
-                    <option>Windows 10 Pro</option><option>Windows 10 Home</option>
-                    <option>Ubuntu</option><option>macOS</option>
-                    <option>Sin sistema</option><option>Otro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="seccion-comp"><span className="seccion-label">🔑 Licencias</span></div>
-
-              {/* Windows */}
-              <div className="seccion-lic-sub">🪟 Windows</div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Tipo de licencia Windows</label>
-                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Clave Windows</label>
-                  {form.win_tipo_licencia === 'fabricante'
-                    ? <input value="De fabricante" readOnly className="input-readonly" />
-                    : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
-                  }
-                </div>
-                <div className="field">
-                  <label>Versión</label>
-                  <input name="win_version" value={form.win_version} onChange={handleChange} placeholder="ej: Windows 10 Home" maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° Factura</label>
-                  <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-                <div className="field">
-                  <label>Fecha factura</label>
-                  {form.win_tipo_licencia === 'fabricante'
-                    ? <input value="N/A" readOnly className="input-readonly" />
-                    : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
-                  }
-                </div>
-                <div className="field">
-                  <label>N° Orden de compra</label>
-                  <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-
-              {/* Office */}
-              <div className="seccion-lic-sub">📊 Office</div>
-              <div className="form-row">
-                <div className="field">
-                  <label>Tipo de licencia Office</label>
-                  <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
-                      <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Clave Office</label>
-                  {form.off_tipo_licencia === 'alternativa'
-                    ? <input value="Alternativa" readOnly className="input-readonly" />
-                    : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
-                  }
-                </div>
-                <div className="field">
-                  <label>Versión</label>
-                  <input name="off_version" value={form.off_version} onChange={handleChange} placeholder="ej: Office 2019, Microsoft 365" maxLength={60} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° Factura</label>
-                  <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-                <div className="field">
-                  <label>Fecha factura</label>
-                  {form.off_tipo_licencia === 'alternativa'
-                    ? <input value="N/A" readOnly className="input-readonly" />
-                    : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
-                  }
-                </div>
-                <div className="field">
-                  <label>N° Orden de compra</label>
-                  <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
-                </div>
-              </div>
-
-              <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición del computador</span></div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>Fecha de adquisición</label>
-                  <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion} onChange={handleChange} />
-                </div>
-                <div className="field">
-                  <label>Proveedor</label>
-                  <input name="proveedor" value={form.proveedor} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
-                </div>
-                <div className="field">
-                  <label>Fondo</label>
-                  <input name="fondo" value={form.fondo} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
-                </div>
-              </div>
-              <div className="form-row triple">
-                <div className="field">
-                  <label>N° de factura</label>
-                  <input name="numero_factura" value={form.numero_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>N° de orden de compra</label>
-                  <input name="numero_orden" value={form.numero_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
-                </div>
-                <div className="field">
-                  <label>Garantía</label>
-                  <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
-                </div>
-              </div>
-            </>
-          )}
-
           {esComp(form.categoria) && (() => {
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
-            if (!camposCat.length) return null
             const _orden    = _catData?.campos_orden ?? []
-            const compSysIds = ['numero_serie','tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo','fecha_adquisicion','proveedor','numero_factura','garantia']
-            const allIds     = [...compSysIds, ...camposCat.map(c => c.id)]
+            const HEADER_IDS = ['numero_serie','codigo','estado','ubicacion','responsable']
+            const SPEC_IDS   = ['tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo']
+            const ADQUI_IDS  = ['fecha_adquisicion','proveedor','numero_factura','garantia']
+            const allIds     = [...HEADER_IDS, ...SPEC_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds) : allIds
             const posOf      = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
-            const camposOrdenados = [...camposCat].sort((a, b) => posOf(a.id) - posOf(b.id))
-            return (
-              <div className="form-row triple">
-                {camposOrdenados.map(campo => (
-                  <div key={campo.id} className="field">
-                    <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
-                    {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
-                    {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
-                    {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
-                  </div>
-                ))}
+            const firstSpecPos  = Math.min(...SPEC_IDS.map(posOf))
+            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
+            const headerCF = camposCat.filter(c => posOf(c.id) < firstSpecPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const specCF   = camposCat.filter(c => posOf(c.id) >= firstSpecPos && posOf(c.id) < firstAdquiPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const adquiCF  = camposCat.filter(c => posOf(c.id) >= firstAdquiPos).sort((a,b) => posOf(a.id)-posOf(b.id))
+            const renderCC = campo => (
+              <div key={campo.id} className="field">
+                <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
+                {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'numero'   && <input type="number" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'fecha'    && <input type="date" value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
+                {campo.tipo === 'booleano' && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option><option value="si">Sí</option><option value="no">No</option></select>}
+                {campo.tipo === 'select'   && <select value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} className={errores[`extra_${campo.id}`] ? 'input-error' : ''}><option value="">— seleccionar —</option>{(campo.opciones || []).map(op => <option key={op} value={op}>{op}</option>)}</select>}
               </div>
+            )
+            const rows3c = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
+            return (
+              <>
+                {headerCF.length > 0 && rows3c(headerCF).map((row, i) => (
+                  <div key={`hdr-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+                <div className="seccion-comp"><span className="seccion-label">💻 Especificaciones del equipo</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Tipo</label>
+                    <select name="tipo" value={form.tipo} onChange={handleChange}>
+                      <option>Desktop</option><option>Laptop</option><option>All-in-One</option><option>Servidor</option><option>Tablet</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Marca</label>
+                    <input name="marca" value={form.marca} onChange={handleChange} placeholder="ej: HP, Dell, Lenovo" maxLength={50} />
+                  </div>
+                  <div className="field">
+                    <label>Modelo</label>
+                    <input name="modelo" value={form.modelo} onChange={handleChange} placeholder="ej: ProBook 440 G9" maxLength={80} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Pantalla</label>
+                    <input name="pantalla" value={form.pantalla ?? ''} onChange={handleChange} placeholder='ej: 15.6" FHD IPS' maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Marca CPU</label>
+                    <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>Intel</option>
+                      <option>AMD</option>
+                      <option>Apple</option>
+                      <option>Qualcomm</option>
+                      <option>ARM</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Modelo CPU</label>
+                    <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Generación / Versión CPU</label>
+                    <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
+                  </div>
+                  <div className="field">
+                    <label>Procesador completo (generado)</label>
+                    <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>RAM (capacidad)</label>
+                    <input name="ram" value={form.ram} onChange={handleChange} placeholder="ej: 8 GB, 16 GB" maxLength={20} />
+                  </div>
+                  <div className="field">
+                    <label>Tipo RAM</label>
+                    <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>DDR3</option>
+                      <option>DDR4</option>
+                      <option>DDR5</option>
+                      <option>LPDDR4</option>
+                      <option>LPDDR5</option>
+                      <option>SO-DIMM DDR4</option>
+                      <option>SO-DIMM DDR5</option>
+                      <option>Unificada (Apple)</option>
+                      <option>Otro</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Slots disponibles</label>
+                    <input name="ram_slots" value={form.ram_slots ?? ''} onChange={handleChange} placeholder="ej: 0, 1, 2" maxLength={10} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Almacenamiento (capacidad)</label>
+                    <select name="memoria" value={form.memoria} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>32 GB</option>
+                      <option>64 GB</option>
+                      <option>128 GB</option>
+                      <option>256 GB</option>
+                      <option>512 GB</option>
+                      <option>1 TB</option>
+                      <option>2 TB</option>
+                      <option>4 TB</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Tipo tecnología</label>
+                    <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
+                      <option value="">— Seleccionar —</option>
+                      <option>SSD</option>
+                      <option>HDD</option>
+                      <option>SSD + HDD</option>
+                      <option>NVMe</option>
+                      <option>eMMC</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Sistema operativo</label>
+                    <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
+                      <option>Windows 11 Pro</option><option>Windows 11 Home</option>
+                      <option>Windows 10 Pro</option><option>Windows 10 Home</option>
+                      <option>Ubuntu</option><option>macOS</option>
+                      <option>Sin sistema</option><option>Otro</option>
+                    </select>
+                  </div>
+                </div>
+                {specCF.length > 0 && rows3c(specCF).map((row, i) => (
+                  <div key={`spc-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+
+                <div className="seccion-comp"><span className="seccion-label">🔑 Licencias</span></div>
+
+                {/* Windows */}
+                <div className="seccion-lic-sub">🪟 Windows</div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Tipo de licencia Windows</label>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="win_tipo_licencia" value="key" checked={form.win_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="win_tipo_licencia" value="fabricante" checked={form.win_tipo_licencia === 'fabricante'} onChange={handleChange} /> De fabricante
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Clave Windows</label>
+                    {form.win_tipo_licencia === 'fabricante'
+                      ? <input value="De fabricante" readOnly className="input-readonly" />
+                      : <input name="licencia_windows" value={form.licencia_windows} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>Versión</label>
+                    <input name="win_version" value={form.win_version} onChange={handleChange} placeholder="ej: Windows 10 Home" maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="win_proveedor" value={form.win_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° Factura</label>
+                    <input name="win_factura" value={form.win_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                  <div className="field">
+                    <label>Fecha factura</label>
+                    {form.win_tipo_licencia === 'fabricante'
+                      ? <input value="N/A" readOnly className="input-readonly" />
+                      : <input name="win_fecha_factura" type="date" value={form.win_fecha_factura} onChange={handleChange} />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>N° Orden de compra</label>
+                    <input name="win_orden" value={form.win_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} readOnly={form.win_tipo_licencia === 'fabricante'} className={form.win_tipo_licencia === 'fabricante' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+
+                {/* Office */}
+                <div className="seccion-lic-sub">📊 Office</div>
+                <div className="form-row">
+                  <div className="field">
+                    <label>Tipo de licencia Office</label>
+                    <div style={{ display: 'flex', gap: 20, marginTop: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="off_tipo_licencia" value="key" checked={form.off_tipo_licencia === 'key'} onChange={handleChange} /> Key
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="radio" name="off_tipo_licencia" value="alternativa" checked={form.off_tipo_licencia === 'alternativa'} onChange={handleChange} /> Alternativa
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Clave Office</label>
+                    {form.off_tipo_licencia === 'alternativa'
+                      ? <input value="Alternativa" readOnly className="input-readonly" />
+                      : <input name="licencia_office" value={form.licencia_office} onChange={handleChange} placeholder="ej: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX" maxLength={29} className="input-mono" />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>Versión</label>
+                    <input name="off_version" value={form.off_version} onChange={handleChange} placeholder="ej: Office 2019, Microsoft 365" maxLength={60} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="off_proveedor" value={form.off_proveedor} onChange={handleChange} placeholder="ej: Microsoft Store" maxLength={100} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° Factura</label>
+                    <input name="off_factura" value={form.off_factura} onChange={handleChange} placeholder="ej: FAC-00124" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                  <div className="field">
+                    <label>Fecha factura</label>
+                    {form.off_tipo_licencia === 'alternativa'
+                      ? <input value="N/A" readOnly className="input-readonly" />
+                      : <input name="off_fecha_factura" type="date" value={form.off_fecha_factura} onChange={handleChange} />
+                    }
+                  </div>
+                  <div className="field">
+                    <label>N° Orden de compra</label>
+                    <input name="off_orden" value={form.off_orden} onChange={handleChange} placeholder="ej: OC-2024-002" maxLength={30} readOnly={form.off_tipo_licencia === 'alternativa'} className={form.off_tipo_licencia === 'alternativa' ? 'input-readonly' : ''} />
+                  </div>
+                </div>
+
+                <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición del computador</span></div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>Fecha de adquisición</label>
+                    <input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion} onChange={handleChange} />
+                  </div>
+                  <div className="field">
+                    <label>Proveedor</label>
+                    <input name="proveedor" value={form.proveedor} onChange={handleChange} placeholder="ej: TechStore Ltda." maxLength={100} />
+                  </div>
+                  <div className="field">
+                    <label>Fondo</label>
+                    <input name="fondo" value={form.fondo} onChange={handleChange} placeholder="ej: SEP, PIE, Municipal" maxLength={60} />
+                  </div>
+                </div>
+                <div className="form-row triple">
+                  <div className="field">
+                    <label>N° de factura</label>
+                    <input name="numero_factura" value={form.numero_factura} onChange={handleChange} placeholder="ej: FAC-00123" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>N° de orden de compra</label>
+                    <input name="numero_orden" value={form.numero_orden} onChange={handleChange} placeholder="ej: OC-2024-001" maxLength={30} />
+                  </div>
+                  <div className="field">
+                    <label>Garantía</label>
+                    <input name="garantia" value={form.garantia} onChange={handleChange} placeholder="ej: 1 año, hasta dic 2026" maxLength={60} />
+                  </div>
+                </div>
+                {adquiCF.length > 0 && rows3c(adquiCF).map((row, i) => (
+                  <div key={`adq-${i}`} className="form-row triple">{row.map(renderCC)}</div>
+                ))}
+              </>
             )
           })()}
 
