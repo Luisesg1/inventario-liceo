@@ -384,12 +384,19 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
 
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setSidebarOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen])
+
   return (
     <div className="layout">
 
       <div className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} onClick={() => setSidebarOpen(false)} />
 
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside id="app-sidebar" className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
           <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
           <div style={{ minWidth: 0 }}>
@@ -473,7 +480,14 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
 
       <div className="main">
         <header className="topbar">
-          <button className="btn-hamburger" onClick={() => setSidebarOpen(true)}>
+          <button
+            type="button"
+            className={`btn-hamburger ${sidebarOpen ? 'btn-hamburger--open' : ''}`}
+            onClick={() => setSidebarOpen((o) => !o)}
+            aria-expanded={sidebarOpen}
+            aria-controls="app-sidebar"
+            aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
+          >
             <span /><span /><span />
           </button>
           <h1>{titulos[paginaActual]}</h1>

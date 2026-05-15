@@ -181,8 +181,8 @@ function MockField({ nombre, tipo, requerido, opciones, fijo }) {
   )
 }
 
-function PreviewFormulario({ catObj, sistemaCamposVisibles, camposNombres, campos }) {
-  const total = CAMPOS_FIJOS_PREVIEW.length + sistemaCamposVisibles.length + campos.length
+function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
+  const total = CAMPOS_FIJOS_PREVIEW.length + unifiedVisibleFields.length
   return (
     <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
       {/* Header */}
@@ -206,39 +206,24 @@ function PreviewFormulario({ catObj, sistemaCamposVisibles, camposNombres, campo
           {CAMPOS_FIJOS_PREVIEW.map(c => <MockField key={c.id} {...c} fijo />)}
         </div>
 
-        {/* Campos del sistema */}
-        {sistemaCamposVisibles.length > 0 && (
+        {/* Todos los campos adicionales en el orden configurado */}
+        {unifiedVisibleFields.length > 0 && (
           <div style={{ paddingTop: 8, marginTop: 2, borderTop: '1px solid #f1f5f9' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,#c7d2fe,transparent)' }} />
-              <span style={{ fontSize: 8, fontWeight: 800, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Categoría</span>
+              <span style={{ fontSize: 8, fontWeight: 800, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Adicionales</span>
               <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,transparent,#c7d2fe)' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {sistemaCamposVisibles.map(c => (
-                <MockField key={c.id} nombre={camposNombres[c.id] || c.nombre} tipo={c.tipo} opciones={c.opciones} />
-              ))}
+              {unifiedVisibleFields.map(c => {
+                const nombre = c._tipo === 'sistema' ? (camposNombres[c.id] || c.nombre) : c.nombre
+                return <MockField key={c.id} nombre={nombre} tipo={c.tipo} opciones={c.opciones} requerido={c.requerido} />
+              })}
             </div>
           </div>
         )}
 
-        {/* Campos personalizados */}
-        {campos.length > 0 && (
-          <div style={{ paddingTop: 8, marginTop: 2, borderTop: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,#bbf7d0,transparent)' }} />
-              <span style={{ fontSize: 8, fontWeight: 800, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Personalizados</span>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,transparent,#bbf7d0)' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {campos.map(c => (
-                <MockField key={c.id} nombre={c.nombre} tipo={c.tipo} opciones={c.opciones} requerido={c.requerido} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {sistemaCamposVisibles.length === 0 && campos.length === 0 && (
+        {unifiedVisibleFields.length === 0 && (
           <p style={{ margin: '4px 0 0', fontSize: 10, color: '#d1d5db', textAlign: 'center', fontStyle: 'italic' }}>Solo campos básicos</p>
         )}
       </div>
@@ -386,7 +371,18 @@ export default function CamposCategoria({ usuario }) {
 
   async function guardarOrden(newOrden) {
     if (!catActiva) return
-    await supabase.from('categorias').update({ campos_orden: newOrden }).eq('id', catActiva)
+    const { error: err } = await supabase.from('categorias').update({ campos_orden: newOrden }).eq('id', catActiva)
+    if (err) {
+      setError('No se pudo guardar el orden: ' + err.message)
+      return false
+    }
+    setCategorias(prev => prev.map(c => (c.id === catActiva ? { ...c, campos_orden: newOrden } : c)))
+    return true
+  }
+
+  async function guardarCamposPersonalizados(newCampos) {
+    if (!catActiva) return
+    await supabase.from('categorias').update({ campos_personalizados: newCampos }).eq('id', catActiva)
   }
 
   function moverItem(arr, fromId, toId) {
@@ -397,20 +393,6 @@ export default function CamposCategoria({ usuario }) {
     const [item] = next.splice(from, 1)
     next.splice(to, 0, item)
     return next
-  }
-
-  function handleDropSistema(targetId) {
-    if (!dragInfo || dragInfo.tipo !== 'sistema' || dragInfo.id === targetId) return
-    const base     = getCamposSistema(catObj).map(c => c.id)
-    const current  = camposOrden.length ? camposOrden : base
-    const newOrden = moverItem(current.filter(id => base.includes(id)), dragInfo.id, targetId)
-    setCamposOrden(newOrden)
-    guardarOrden(newOrden)
-  }
-
-  function handleDropCustom(targetId) {
-    if (!dragInfo || dragInfo.tipo !== 'custom' || dragInfo.id === targetId) return
-    setCampos(prev => moverItem(prev, dragInfo.id, targetId))
   }
 
   // ── Categorías ────────────────────────────────────────────
@@ -455,11 +437,17 @@ export default function CamposCategoria({ usuario }) {
   const catObj  = categorias.find(c => c.id === catActiva)
   const tipoObj = TIPOS.find(t => t.value === nuevoTipo)
 
-  const _base   = catObj ? getCamposSistema(catObj) : []
-  const _sorted = camposOrden.length
-    ? [..._base].sort((a, b) => { const ia = camposOrden.indexOf(a.id), ib = camposOrden.indexOf(b.id); if (ia === -1 && ib === -1) return 0; if (ia === -1) return 1; if (ib === -1) return -1; return ia - ib })
-    : _base
-  const sistemaCamposVisibles = _sorted.filter(c => !camposOcultos.includes(c.id))
+  const _base      = catObj ? getCamposSistema(catObj) : []
+  const _allFields = catObj ? [
+    ..._base.map(c => ({ ...c, _tipo: 'sistema' })),
+    ...campos.map(c => ({ ...c, _tipo: 'custom' })),
+  ] : []
+  const _allIds    = _allFields.map(f => f.id)
+  const _fullOrder = camposOrden.length
+    ? [...camposOrden.filter(id => _allIds.includes(id)), ..._allIds.filter(id => !camposOrden.includes(id))]
+    : _allIds
+  const unifiedSortedFields  = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
+  const unifiedVisibleFields = unifiedSortedFields.filter(c => c._tipo !== 'sistema' || !camposOcultos.includes(c.id))
 
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.5)', flexDirection: 'column', gap: 14 }}>
@@ -562,213 +550,177 @@ export default function CamposCategoria({ usuario }) {
               </div>
             </div>
 
-            {/* ── Campos del sistema ────────────────────── */}
-            {(() => {
-              const base = getCamposSistema(catObj)
-              if (!base.length) return null
-              const sistemaCampos = camposOrden.length
-                ? [...base].sort((a, b) => {
-                    const ia = camposOrden.indexOf(a.id), ib = camposOrden.indexOf(b.id)
-                    if (ia === -1 && ib === -1) return 0
-                    if (ia === -1) return 1; if (ib === -1) return -1
-                    return ia - ib
-                  })
-                : base
-              const nOcultos = camposOcultos.filter(id => base.some(c => c.id === id)).length
+            {/* ── Lista unificada: sistema + personalizados ──── */}
+            {_allFields.length > 0 && (() => {
+              const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id)).length
+
+              async function handleDropUnified(targetId) {
+                if (!dragInfo || dragInfo.id === targetId) return
+                const prevOrder = [..._fullOrder]
+                const newOrder = moverItem(prevOrder, dragInfo.id, targetId)
+                if (newOrder === prevOrder) return
+                setCamposOrden(newOrder)
+                const ok = await guardarOrden(newOrder)
+                if (!ok && catObj) await seleccionarCat(catObj)
+              }
+
               return (
                 <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
-                  {/* Header colapsable */}
-                  <div
-                    onClick={() => setSistemaCamposExpanded(p => !p)}
-                    style={{ padding: '12px 16px 10px', borderBottom: sistemaCamposExpanded ? '1px solid #f3f4f6' : 'none', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }}>
+                  {/* Header */}
+                  <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 18, height: 18, borderRadius: 6, background: 'linear-gradient(135deg,#64748b,#475569)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
                     </div>
-                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos del sistema</p>
-                    {!sistemaCamposExpanded && (
-                      <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2 }}>
-                        {base.length} campos
-                        {nOcultos > 0 && <span style={{ marginLeft: 4, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '0 5px', fontSize: 9, fontWeight: 700 }}>{nOcultos} oculto{nOcultos !== 1 ? 's' : ''}</span>}
+                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos</p>
+                    <span style={{ fontSize: 9, color: '#a5b4fc', fontWeight: 500 }}>· arrastra ⠿ para reordenar (se guarda al soltar)</span>
+                    {nOcultos > 0 && (
+                      <span style={{ background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '1px 6px', fontSize: 9, fontWeight: 700 }}>
+                        {nOcultos} oculto{nOcultos !== 1 ? 's' : ''}
                       </span>
                     )}
-                    <span style={{ marginLeft: 'auto', fontSize: 13, color: '#94a3b8', display: 'inline-block', transform: sistemaCamposExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', lineHeight: 1 }}>▾</span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
+                      {campos.length > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', borderRadius: 10, padding: '2px 7px' }}>
+                          {campos.length} custom
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>{_allFields.length} total</span>
+                    </div>
                   </div>
 
-                  {/* Lista (solo cuando expandido) */}
-                  {sistemaCamposExpanded && (
-                    <div>
-                      {sistemaCampos.map((campo, idx) => {
-                        const oculto         = camposOcultos.includes(campo.id)
-                        const tc             = TIPO_COLOR[campo.tipo] || '#6b7280'
-                        const ti             = TIPOS.find(t => t.value === campo.tipo)
-                        const nombreMostrado = camposNombres[campo.id] || campo.nombre
-                        const estaEditando   = editandoSistema?.id === campo.id
-                        const isDragOver     = dragOverId === campo.id && dragInfo?.tipo === 'sistema'
+                  {/* Lista */}
+                  <div>
+                    {unifiedSortedFields.map((campo, idx) => {
+                      const isSistema      = campo._tipo === 'sistema'
+                      const oculto         = isSistema && camposOcultos.includes(campo.id)
+                      const tc             = TIPO_COLOR[campo.tipo] || '#6b7280'
+                      const ti             = TIPOS.find(t => t.value === campo.tipo)
+                      const nombreMostrado = isSistema ? (camposNombres[campo.id] || campo.nombre) : campo.nombre
+                      const estaEditandoS  = isSistema && editandoSistema?.id === campo.id
+                      const estaEditandoC  = !isSistema && editandoCampoId === campo.id
+                      const isDragOver     = dragOverId === campo.id
 
-                        function confirmarRenombre(val) {
-                          setCamposNombres(prev => {
-                            const next = { ...prev }
-                            if (val && val !== campo.nombre) next[campo.id] = val
-                            else delete next[campo.id]
-                            guardarNombres(next)
-                            return next
-                          })
-                          setEditandoSistema(null)
-                        }
+                      function confirmarRenombre(val) {
+                        setCamposNombres(prev => {
+                          const next = { ...prev }
+                          if (val && val !== campo.nombre) next[campo.id] = val
+                          else delete next[campo.id]
+                          guardarNombres(next)
+                          return next
+                        })
+                        setEditandoSistema(null)
+                      }
 
-                        return (
-                          <div key={campo.id}
-                            onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
-                            onDrop={e => { e.preventDefault(); handleDropSistema(campo.id); setDragOverId(null) }}
-                            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px 9px 0',
-                              borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
-                              borderLeft: `3px solid ${oculto ? '#e2e8f0' : tc}`,
-                              background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#fafafa' : '#fff',
-                              transition: 'all 0.15s' }}>
+                      return (
+                        <div key={campo.id}
+                          onDragOver={e => {
+                            e.preventDefault()
+                            try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }
+                            setDragOverId(campo.id)
+                          }}
+                          onDragLeave={e => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null)
+                          }}
+                          onDrop={e => {
+                            e.preventDefault()
+                            void handleDropUnified(campo.id)
+                            setDragOverId(null)
+                          }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px 9px 0',
+                            borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
+                            borderLeft: `3px solid ${oculto ? '#e2e8f0' : isSistema ? tc : '#6366f1'}`,
+                            background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#fafafa' : estaEditandoC ? '#fffbeb' : '#fff',
+                            transition: 'all 0.15s' }}>
 
-                            {/* Drag handle */}
-                            <div draggable
-                              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'sistema' }) }}
-                              onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
-                              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: 'grab', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
-                              {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: oculto ? '#e2e8f0' : '#d1d5db' }} />)}
-                            </div>
-
-                            {/* Ícono tipo */}
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: oculto ? '#f1f5f9' : `${tc}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                              {ti?.icon || '📝'}
-                            </div>
-
-                            {/* Nombre + tipo */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              {estaEditando ? (
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                  <input
-                                    autoFocus
-                                    defaultValue={nombreMostrado}
-                                    onKeyDown={e => {
-                                      if (e.key === 'Enter')  confirmarRenombre(e.target.value.trim())
-                                      if (e.key === 'Escape') setEditandoSistema(null)
-                                    }}
-                                    onBlur={e => confirmarRenombre(e.target.value.trim())}
-                                    style={{ flex: 1, padding: '4px 8px', borderRadius: 7, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', color: '#111827', background: '#f8f9ff', boxSizing: 'border-box' }}
-                                  />
-                                  <button onClick={() => setEditandoSistema(null)}
-                                    style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', fontSize: 11, color: '#6b7280', cursor: 'pointer', flexShrink: 0 }}>✕</button>
-                                </div>
-                              ) : (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: 13, fontWeight: 500, color: oculto ? '#94a3b8' : '#1e293b', textDecoration: oculto ? 'line-through' : 'none' }}>
-                                    {nombreMostrado}
-                                  </span>
-                                  {camposNombres[campo.id] && (
-                                    <span style={{ fontSize: 9, color: '#cbd5e1', fontStyle: 'italic' }}>{campo.nombre}</span>
-                                  )}
-                                  <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: oculto ? '#f1f5f9' : `${tc}15`, color: oculto ? '#94a3b8' : tc, letterSpacing: '0.02em' }}>{ti?.label}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Acciones */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                              {!oculto && !estaEditando && (
-                                <button
-                                  onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }}
-                                  title="Renombrar"
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: 12, padding: '4px', borderRadius: 6, lineHeight: 1 }}
-                                  onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
-                                  onMouseOut={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' }}>
-                                  ✏️
-                                </button>
-                              )}
-                              {/* Toggle switch */}
-                              <div
-                                onClick={e => { e.stopPropagation(); setCamposOcultos(prev => oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]) }}
-                                title={oculto ? 'Activar campo' : 'Desactivar campo'}
-                                style={{ width: 40, height: 22, borderRadius: 11, background: oculto ? '#e2e8f0' : '#bbf7d0', border: `1.5px solid ${oculto ? '#cbd5e1' : '#86efac'}`, cursor: 'pointer', transition: 'all 0.2s', position: 'relative', flexShrink: 0 }}>
-                                <div style={{ position: 'absolute', top: 2, left: oculto ? 2 : 18, width: 14, height: 14, borderRadius: '50%', background: oculto ? '#94a3b8' : '#16a34a', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
-                              </div>
-                            </div>
+                          {/* Drag handle */}
+                          <div
+                            draggable
+                            onDragStart={e => {
+                              try {
+                                e.dataTransfer.effectAllowed = 'move'
+                                e.dataTransfer.setData('text/plain', campo.id)
+                              } catch { /* noop */ }
+                              setDragInfo({ id: campo.id, tipo: campo._tipo })
+                            }}
+                            onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
+                            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: 'grab', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
+                            {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: oculto ? '#e2e8f0' : '#d1d5db' }} />)}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+
+                          {/* Ícono tipo */}
+                          <div style={{ width: 28, height: 28, borderRadius: 8, background: oculto ? '#f1f5f9' : `${isSistema ? tc : '#6366f1'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
+                            {ti?.icon || '📝'}
+                          </div>
+
+                          {/* Nombre + meta */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {estaEditandoS ? (
+                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <input autoFocus defaultValue={nombreMostrado}
+                                  onKeyDown={e => { if (e.key === 'Enter') confirmarRenombre(e.target.value.trim()); if (e.key === 'Escape') setEditandoSistema(null) }}
+                                  onBlur={e => confirmarRenombre(e.target.value.trim())}
+                                  style={{ flex: 1, padding: '4px 8px', borderRadius: 7, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', color: '#111827', background: '#f8f9ff', boxSizing: 'border-box' }} />
+                                <button onClick={() => setEditandoSistema(null)}
+                                  style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', fontSize: 11, color: '#6b7280', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13, fontWeight: isSistema ? 500 : 600, color: oculto ? '#94a3b8' : '#1e293b', textDecoration: oculto ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+                                  {nombreMostrado}
+                                </span>
+                                {isSistema && camposNombres[campo.id] && (
+                                  <span style={{ fontSize: 9, color: '#cbd5e1', fontStyle: 'italic' }}>{campo.nombre}</span>
+                                )}
+                                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: oculto ? '#f1f5f9' : `${isSistema ? tc : '#6366f1'}15`, color: oculto ? '#94a3b8' : isSistema ? tc : '#6366f1', letterSpacing: '0.02em', flexShrink: 0 }}>
+                                  {ti?.label}
+                                </span>
+                                {!isSistema && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: '#f0f9ff', color: '#0ea5e9', flexShrink: 0 }}>Custom</span>}
+                                {!isSistema && campo.requerido && <span style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', background: '#fef2f2', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>Req.</span>}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Acciones */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: isSistema ? 6 : 4, flexShrink: 0 }}>
+                            {isSistema ? (
+                              <>
+                                {!oculto && !estaEditandoS && (
+                                  <button onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }} title="Renombrar"
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: 12, padding: '4px', borderRadius: 6, lineHeight: 1 }}
+                                    onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
+                                    onMouseOut={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' }}>✏️</button>
+                                )}
+                                <div onClick={e => { e.stopPropagation(); setCamposOcultos(prev => oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]) }}
+                                  title={oculto ? 'Activar' : 'Desactivar'}
+                                  style={{ width: 40, height: 22, borderRadius: 11, background: oculto ? '#e2e8f0' : '#bbf7d0', border: `1.5px solid ${oculto ? '#cbd5e1' : '#86efac'}`, cursor: 'pointer', transition: 'all 0.2s', position: 'relative', flexShrink: 0 }}>
+                                  <div style={{ position: 'absolute', top: 2, left: oculto ? 2 : 18, width: 14, height: 14, borderRadius: '50%', background: oculto ? '#94a3b8' : '#16a34a', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }} title="Editar campo"
+                                  style={{ background: estaEditandoC ? '#fef9c3' : 'none', border: estaEditandoC ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: estaEditandoC ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
+                                  onMouseOver={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
+                                  onMouseOut={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>✏️</button>
+                                <button onClick={e => { e.stopPropagation(); eliminarCampo(campo.id) }} title="Eliminar campo"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
+                                  onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
+                                  onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>✕</button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )
             })()}
 
-            {/* Campos personalizados existentes */}
-            {campos.length > 0 && (
-              <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 6, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
-                  </div>
-                  <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos personalizados</p>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', borderRadius: 10, padding: '2px 8px' }}>{campos.length}</span>
-                </div>
-                <div>
-                  {campos.map((campo, idx) => {
-                    const tc         = TIPO_COLOR[campo.tipo] || '#6b7280'
-                    const ti         = TIPOS.find(t => t.value === campo.tipo)
-                    const editando   = editandoCampoId === campo.id
-                    const isDragOver = dragOverId === campo.id && dragInfo?.tipo === 'custom'
-                    return (
-                      <div key={campo.id}
-                        onDragOver={e => { e.preventDefault(); setDragOverId(campo.id) }}
-                        onDrop={e => { e.preventDefault(); handleDropCustom(campo.id); setDragOverId(null) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px 10px 0',
-                          borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
-                          borderLeft: `3px solid ${editando ? '#fcd34d' : tc}`,
-                          background: dragInfo?.id === campo.id ? '#f0f4ff' : editando ? '#fffbeb' : '#fff',
-                          transition: 'all 0.15s' }}>
-
-                        {/* Drag handle */}
-                        <div draggable
-                          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ id: campo.id, tipo: 'custom' }) }}
-                          onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: 'grab', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
-                          {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#d1d5db' }} />)}
-                        </div>
-
-                        {/* Ícono tipo */}
-                        <div style={{ width: 32, height: 32, borderRadius: 9, background: `${tc}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>
-                          {ti?.icon || '📝'}
-                        </div>
-
-                        {/* Nombre + meta */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{campo.nombre}</p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: `${tc}15`, color: tc, letterSpacing: '0.02em' }}>{ti?.label}</span>
-                            {campo.requerido && <span style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', background: '#fef2f2', padding: '1px 5px', borderRadius: 5 }}>Requerido</span>}
-                            {campo.opciones?.length > 0 && <span style={{ fontSize: 9, color: '#94a3b8' }}>{campo.opciones.slice(0,3).join(' · ')}{campo.opciones.length > 3 ? ' …' : ''}</span>}
-                          </div>
-                        </div>
-
-                        {/* Acciones */}
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }}
-                            title="Editar campo"
-                            style={{ background: editando ? '#fef9c3' : 'none', border: editando ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: editando ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                            onMouseOver={e => { if (!editando) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
-                            onMouseOut={e => { if (!editando) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>
-                            ✏️
-                          </button>
-                          <button onClick={e => { e.stopPropagation(); eliminarCampo(campo.id) }}
-                            title="Eliminar campo"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                            onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                            onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+            {_allFields.length > 0 && (
+              <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5, padding: '2px 2px 0' }}>
+                En el formulario de inventario, los campos <strong style={{ color: 'rgba(255,255,255,0.75)' }}>personalizados</strong> se muestran juntos en la sección «Campos adicionales» (después de equipo y adquisición). El orden de esta lista define cómo se ordenan entre sí ahí y en la vista previa; no se insertan entre filas fijas como Tipo o Marca.
+              </p>
             )}
 
             {/* Formulario agregar / editar campo */}
@@ -875,9 +827,8 @@ export default function CamposCategoria({ usuario }) {
           <div style={{ width: 252, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
             <PreviewFormulario
               catObj={catObj}
-              sistemaCamposVisibles={sistemaCamposVisibles}
+              unifiedVisibleFields={unifiedVisibleFields}
               camposNombres={camposNombres}
-              campos={campos}
             />
           </div>
           </>

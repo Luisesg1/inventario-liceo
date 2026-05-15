@@ -2012,12 +2012,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           )}
 
           {(() => {
-            const camposCat = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
+            const _catData      = categorias.find(c => c.id === form.categoria)
+            const camposCat     = _catData?.campos_personalizados ?? []
             if (!camposCat.length) return null
+            const _orden        = _catData?.campos_orden ?? []
+            const camposOrdenados = _orden.length
+              ? [...camposCat].sort((a, b) => {
+                  const ia = _orden.indexOf(a.id), ib = _orden.indexOf(b.id)
+                  if (ia === -1 && ib === -1) return 0
+                  if (ia === -1) return 1; if (ib === -1) return -1
+                  return ia - ib
+                })
+              : camposCat
             return (<>
               <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
               <div className="form-row triple">
-                {camposCat.map(campo => (
+                {camposOrdenados.map(campo => (
                   <div key={campo.id} className="field">
                     <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
                     {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
@@ -2494,12 +2504,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           )}
 
           {(() => {
-            const camposCat = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
+            const _catData      = categorias.find(c => c.id === form.categoria)
+            const camposCat     = _catData?.campos_personalizados ?? []
             if (!camposCat.length) return null
+            const _orden        = _catData?.campos_orden ?? []
+            const camposOrdenados = _orden.length
+              ? [...camposCat].sort((a, b) => {
+                  const ia = _orden.indexOf(a.id), ib = _orden.indexOf(b.id)
+                  if (ia === -1 && ib === -1) return 0
+                  if (ia === -1) return 1; if (ib === -1) return -1
+                  return ia - ib
+                })
+              : camposCat
             return (<>
               <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
               <div className="form-row triple">
-                {camposCat.map(campo => (
+                {camposOrdenados.map(campo => (
                   <div key={campo.id} className="field">
                     <label>{campo.nombre}{campo.requerido && <span style={{ color: '#ef4444', marginLeft: 3 }}>*</span>}</label>
                     {campo.tipo === 'texto'    && <input value={camposExtra[campo.id] ?? ''} onChange={e => setCamposExtra(p => ({ ...p, [campo.id]: e.target.value }))} placeholder={campo.nombre} maxLength={200} className={errores[`extra_${campo.id}`] ? 'input-error' : ''} />}
@@ -2774,9 +2794,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             )}
 
             {(() => {
-              const camposCat = categorias.find(c => c.id === verDetalle.categoria)?.campos_personalizados ?? []
-              const extra = verDetalle.campos_extra || {}
-              const conValor = camposCat.filter(c => extra[c.id] !== undefined && extra[c.id] !== '')
+              const _catData  = categorias.find(c => c.id === verDetalle.categoria)
+              const camposCat = _catData?.campos_personalizados ?? []
+              const extra     = verDetalle.campos_extra || {}
+              const _orden    = _catData?.campos_orden ?? []
+              const ordenados = _orden.length
+                ? [...camposCat].sort((a, b) => {
+                    const ia = _orden.indexOf(a.id), ib = _orden.indexOf(b.id)
+                    if (ia === -1 && ib === -1) return 0
+                    if (ia === -1) return 1; if (ib === -1) return -1
+                    return ia - ib
+                  })
+                : camposCat
+              const conValor = ordenados.filter(c => extra[c.id] !== undefined && extra[c.id] !== '')
               if (!conValor.length) return null
               return (
                 <div className="detalle-seccion">
