@@ -148,84 +148,135 @@ function ModalCategoria({ cat, onClose, onSave }) {
   )
 }
 
-const CAMPOS_FIJOS_PREVIEW = [
-  { id: 'nombre',      nombre: 'Nombre / descripción', tipo: 'texto',  requerido: true },
-  { id: 'cantidad',    nombre: 'Cantidad',             tipo: 'numero' },
-  { id: 'estado',      nombre: 'Estado',               tipo: 'select', opciones: ['Bueno', 'Regular', 'Malo'] },
-  { id: 'ubicacion',   nombre: 'Ubicación',            tipo: 'texto'  },
-  { id: 'responsable', nombre: 'Responsable',          tipo: 'texto'  },
-]
+// Secciones del formulario real de agregar bien, por tipo de categoría
+const PREVIEW_SECTIONS = {
+  tecno: [
+    { label: '🖨️ Datos del equipo', ids: ['tipo', 'marca', 'modelo', 'numero_serie'] },
+    { label: '🛒 Adquisición',      ids: ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia'] },
+  ],
+  comp: [
+    { label: '💻 Especificaciones',  ids: ['tipo', 'marca', 'modelo', 'pantalla', 'cpu_marca', 'cpu_modelo', 'cpu_generacion', 'ram', 'ram_tipo', 'ram_slots', 'memoria', 'tipo_almacenamiento', 'sistema_operativo'] },
+    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia'] },
+  ],
+  biblio: [
+    { label: '📚 Datos del libro',   ids: ['isbn', 'autor', 'genero'] },
+    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo'] },
+  ],
+  generico: [
+    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'numero_factura', 'numero_orden', 'fondo', 'garantia'] },
+  ],
+}
 
-function MockField({ nombre, tipo, requerido, opciones, fijo }) {
-  const tc   = TIPO_COLOR[tipo] || '#6b7280'
-  const base = { width: '100%', padding: '6px 10px', borderRadius: 7, border: '1.5px solid #e5e7eb', fontSize: 11, background: '#fff', color: '#374151', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }
+function getCatType(cat) {
+  if (!cat) return 'generico'
+  if (cat.id === 'computadores') return 'comp'
+  const lbl = (cat.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (lbl.includes('tecnol')) return 'tecno'
+  if (lbl.includes('biblio') || lbl.includes('libreri')) return 'biblio'
+  return 'generico'
+}
+
+function MockField({ nombre, tipo, requerido, opciones, custom }) {
+  const tc   = custom ? '#6366f1' : '#64748b'
+  const base = { width: '100%', padding: '5px 8px', borderRadius: 6, border: `1.5px solid ${custom ? '#c7d2fe' : '#e5e7eb'}`, fontSize: 10, background: custom ? '#f8f9ff' : '#fff', color: '#374151', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 700, color: fijo ? '#6b7280' : tc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {nombre}
-        {requerido && <span style={{ color: '#ef4444' }}>*</span>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 8, fontWeight: 700, color: tc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {nombre}{requerido && <span style={{ color: '#ef4444' }}>*</span>}
+        {custom && <span style={{ fontSize: 7, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 3px', fontWeight: 800 }}>C</span>}
       </label>
       {tipo === 'fecha'     ? <input type="date" readOnly style={base} />
-      : tipo === 'booleano' ? (
-        <select disabled style={base}>
-          <option>Sí</option><option>No</option>
-        </select>
-      ) : tipo === 'select' ? (
-        <select disabled style={base}>
-          {(opciones?.length ? opciones : ['Seleccionar…']).map(o => <option key={o}>{o}</option>)}
-        </select>
-      ) : (
-        <input readOnly type={tipo === 'numero' ? 'number' : 'text'} placeholder={`${nombre}…`} style={{ ...base, color: '#9ca3af' }} />
-      )}
+      : tipo === 'booleano' ? <select disabled style={base}><option>Sí</option><option>No</option></select>
+      : tipo === 'select'   ? <select disabled style={base}>{(opciones?.length ? opciones : ['Seleccionar…']).map(o => <option key={o}>{o}</option>)}</select>
+      : <input readOnly type={tipo === 'numero' ? 'number' : 'text'} placeholder={`${nombre}…`} style={{ ...base, color: '#9ca3af' }} />}
     </div>
   )
 }
 
 function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
-  const total = CAMPOS_FIJOS_PREVIEW.length + unifiedVisibleFields.length
+  const catType  = getCatType(catObj)
+  const sections = PREVIEW_SECTIONS[catType] || PREVIEW_SECTIONS.generico
+
+  // Asignar cada campo a una sección según su posición en el orden unificado
+  const sectionOf = {}
+  sections.forEach((sec, i) => sec.ids.forEach(id => { sectionOf[id] = i }))
+
+  const sectionFields = sections.map(() => [])
+  let curSection = 0
+  for (const f of unifiedVisibleFields) {
+    if (sectionOf[f.id] !== undefined) {
+      curSection = sectionOf[f.id]
+      sectionFields[curSection].push(f)
+    } else if (f._tipo === 'custom') {
+      sectionFields[curSection].push(f)
+    }
+    // campos fijos (nombre, cantidad, etc.) se omiten aquí — se muestran arriba
+  }
+
+  const total = 5 + unifiedVisibleFields.length // 5 campos fijos
+
   return (
-    <div style={{ background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #e5e7eb' }}>
-      {/* Header */}
-      <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -16, right: -16, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-            {catObj.icon || '📦'}
-          </div>
+    <div style={{ background: '#f8fafc', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontSize: 11 }}>
+      {/* Header igual al formulario real */}
+      <div style={{ padding: '11px 14px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -14, right: -14, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{catObj.icon || '📦'}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catObj.label}</p>
-            <p style={{ margin: 0, fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>Vista previa · {total} campo{total !== 1 ? 's' : ''}</p>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {catType === 'comp' ? 'Nuevo computador' : catType === 'tecno' ? `Nuevo artículo tecnológico` : `Nuevo bien · ${catObj.label}`}
+            </p>
+            <p style={{ margin: 0, fontSize: 8, color: 'rgba(255,255,255,0.55)' }}>Vista previa · {total} campos</p>
           </div>
         </div>
       </div>
 
-      {/* Form mock */}
-      <div style={{ padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 530, overflowY: 'auto' }}>
-        {/* Campos fijos */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {CAMPOS_FIJOS_PREVIEW.map(c => <MockField key={c.id} {...c} fijo />)}
+      {/* Contenido del formulario */}
+      <div style={{ padding: '10px 12px 14px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto' }}>
+
+        {/* Campos fijos siempre presentes */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <MockField nombre="Código / N° inventario" tipo="texto" requerido />
+          <MockField nombre="Estado" tipo="select" opciones={['Bueno','Regular','Malo']} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <MockField nombre="Ubicación" tipo="texto" />
+          <MockField nombre="Responsable" tipo="texto" />
         </div>
 
-        {/* Todos los campos adicionales en el orden configurado */}
-        {unifiedVisibleFields.length > 0 && (
-          <div style={{ paddingTop: 8, marginTop: 2, borderTop: '1px solid #f1f5f9' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,#c7d2fe,transparent)' }} />
-              <span style={{ fontSize: 8, fontWeight: 800, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Adicionales</span>
-              <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,transparent,#c7d2fe)' }} />
+        {/* Secciones dinámicas con campos configurados */}
+        {sections.map((sec, si) => {
+          const fields = sectionFields[si]
+          if (!fields.length) return null
+          return (
+            <div key={si}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 5px' }}>
+                <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{sec.label}</span>
+                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                {fields.map(f => {
+                  const nombre = f._tipo === 'sistema' ? (camposNombres[f.id] || f.nombre) : f.nombre
+                  return <MockField key={f.id} nombre={nombre} tipo={f.tipo} opciones={f.opciones} requerido={f.requerido} custom={f._tipo === 'custom'} />
+                })}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {unifiedVisibleFields.map(c => {
-                const nombre = c._tipo === 'sistema' ? (camposNombres[c.id] || c.nombre) : c.nombre
-                return <MockField key={c.id} nombre={nombre} tipo={c.tipo} opciones={c.opciones} requerido={c.requerido} />
-              })}
-            </div>
-          </div>
-        )}
+          )
+        })}
 
-        {unifiedVisibleFields.length === 0 && (
-          <p style={{ margin: '4px 0 0', fontSize: 10, color: '#d1d5db', textAlign: 'center', fontStyle: 'italic' }}>Solo campos básicos</p>
-        )}
+        {/* Observaciones — siempre al final */}
+        <div style={{ marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
+            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+          </div>
+          <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
+        </div>
+
+        {/* Botón guardar */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+          <div style={{ padding: '6px 14px', borderRadius: 7, background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 9, fontWeight: 700 }}>Guardar bien</div>
+        </div>
       </div>
     </div>
   )

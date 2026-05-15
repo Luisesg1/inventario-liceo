@@ -2024,8 +2024,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   return ia - ib
                 })
               : camposCat
-            return (<>
-              <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
+            return (
               <div className="form-row triple">
                 {camposOrdenados.map(campo => (
                   <div key={campo.id} className="field">
@@ -2038,7 +2037,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                 ))}
               </div>
-            </>)
+            )
           })()}
 
           <div className="form-row single">
@@ -2516,8 +2515,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   return ia - ib
                 })
               : camposCat
-            return (<>
-              <div className="seccion-comp"><span className="seccion-label">✨ Campos adicionales</span></div>
+            return (
               <div className="form-row triple">
                 {camposOrdenados.map(campo => (
                   <div key={campo.id} className="field">
@@ -2530,7 +2528,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                 ))}
               </div>
-            </>)
+            )
           })()}
 
           <div className="form-row single">
