@@ -45,12 +45,16 @@ const CAMPOS_PREDET = {
   ],
   tecno: [
     { id: 'tipo',              nombre: 'Tipo',              tipo: 'texto' },
+    { id: 'tecnologia',        nombre: 'Tecnología',        tipo: 'texto' },
     { id: 'marca',             nombre: 'Marca',             tipo: 'texto' },
     { id: 'modelo',            nombre: 'Modelo',            tipo: 'texto' },
     { id: 'numero_serie',      nombre: 'N° de serie',       tipo: 'texto' },
+    { id: 'consumible',        nombre: 'Consumible',        tipo: 'texto' },
     { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
     { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
     { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
+    { id: 'numero_orden',      nombre: 'N° orden compra',   tipo: 'texto' },
+    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
     { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
   ],
   biblio: [
@@ -151,7 +155,7 @@ function ModalCategoria({ cat, onClose, onSave }) {
 // Secciones del formulario real de agregar bien, por tipo de categoría
 const PREVIEW_SECTIONS = {
   tecno: [
-    { label: '🖨️ Datos del equipo', ids: ['tipo', 'marca', 'modelo', 'numero_serie'] },
+    { label: '🖨️ Datos del equipo', ids: ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible'] },
     { label: '🛒 Adquisición',      ids: ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia'] },
   ],
   comp: [
