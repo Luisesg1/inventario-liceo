@@ -18,6 +18,9 @@ const secTitle = {
   textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 14px',
 }
 
+const PRIORIDAD_COLOR = { alta: '#dc2626', media: '#d97706', baja: '#16a34a' }
+const PRIORIDAD_BG    = { alta: '#fee2e2', media: '#fef3c7', baja: '#dcfce7' }
+
 function tiempoRelativo(fecha) {
   const min = Math.floor((Date.now() - new Date(fecha)) / 60000)
   if (min < 1)  return 'ahora mismo'
@@ -172,6 +175,76 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   )
 }
 
+function TicketsAlerta({ tickets, onVerTodos }) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => { if (tickets?.length) { const t = setTimeout(() => setVisible(true), 60); return () => clearTimeout(t) } }, [tickets?.length])
+
+  if (!tickets || tickets.length === 0) return null
+
+  return (
+    <div className="dash-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #dc2626' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ ...secTitle, margin: 0, color: '#dc2626' }}>🎫 Tickets abiertos</p>
+          <span style={{
+            background: '#dc2626', color: '#fff', borderRadius: 20,
+            padding: '1px 9px', fontSize: 11, fontWeight: 700, lineHeight: '18px',
+          }}>
+            {tickets.length}
+          </span>
+        </div>
+        <button onClick={onVerTodos} style={{
+          fontSize: 12, color: '#1a237e', background: '#f0f2ff', border: 'none',
+          cursor: 'pointer', fontWeight: 600, padding: '5px 12px', borderRadius: 8,
+          transition: 'background 0.15s',
+        }}>
+          Ver todos →
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {tickets.slice(0, 5).map((t, i) => (
+          <div key={t.id} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '9px 12px', background: '#fafafa',
+            borderRadius: 9, border: '1px solid #f0f0f0',
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0)' : 'translateY(6px)',
+            transition: `opacity 0.3s ease ${i * 0.05}s, transform 0.3s ease ${i * 0.05}s`,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+              background: PRIORIDAD_BG[t.prioridad] || '#f3f4f6',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+            }}>
+              🎫
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {t.titulo}
+              </p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280' }}>
+                <strong>{t.creado_por_nombre}</strong>
+                {t.area_reporte ? ` · ${t.area_reporte}` : ''}
+                {t.lugar_falla  ? ` · ${t.lugar_falla}` : ''}
+                {' · '}{tiempoRelativo(t.creado_en)}
+              </p>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 9px', borderRadius: 20, flexShrink: 0,
+              background: PRIORIDAD_BG[t.prioridad] || '#f3f4f6',
+              color: PRIORIDAD_COLOR[t.prioridad] || '#6b7280',
+              textTransform: 'capitalize',
+            }}>
+              {t.prioridad}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Traduce claves de permisos a IDs reales de la tabla categorias (misma lógica que Inventario)
 function traducirClaves(claves, allCats) {
   if (!claves || claves.includes('todos')) return ['todos']
@@ -183,13 +256,14 @@ function traducirClaves(claves, allCats) {
   }).filter(Boolean)
 }
 
-export default function Dashboard({ usuario }) {
+export default function Dashboard({ usuario, onIrATickets }) {
   const esAdmin = usuario?.rol === 'admin'
 
   const [bienes,               setBienes]               = useState([])
   const [categorias,           setCategorias]           = useState([])
   const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
   const [actividades,          setActividades]          = useState(null)
+  const [ticketsAbiertos,      setTicketsAbiertos]      = useState([])
   const [cargando,             setCargando]             = useState(true)
   const [categoriaFiltro,      setCategoriaFiltro]      = useState(null)
   const [estadoFiltro,         setEstadoFiltro]         = useState(null)
@@ -220,6 +294,26 @@ export default function Dashboard({ usuario }) {
     }
     cargar()
   }, [])
+
+  useEffect(() => {
+    if (!esAdmin) return
+    const fetchTickets = async () => {
+      const { data } = await supabase
+        .from('tickets')
+        .select('id, titulo, prioridad, creado_por_nombre, area_reporte, lugar_falla, creado_en')
+        .eq('estado', 'Abierto')
+        .order('creado_en', { ascending: false })
+      setTicketsAbiertos(data ?? [])
+    }
+    fetchTickets()
+
+    const channel = supabase
+      .channel('tickets-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, fetchTickets)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [esAdmin])
 
   useEffect(() => {
     supabase.from('actividades').select('*').order('created_at', { ascending: false }).limit(3)
@@ -308,6 +402,8 @@ export default function Dashboard({ usuario }) {
           </div>
         ))}
       </div>
+
+      {esAdmin && <TicketsAlerta tickets={ticketsAbiertos} onVerTodos={onIrATickets} />}
 
       <div className="dash-charts">
         <div className="dash-card">
