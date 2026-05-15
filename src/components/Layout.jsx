@@ -373,7 +373,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
 
   const titulos = {
-    dashboard:  `${nombreSistema} — ${nombreInstitucion}`,
+    dashboard:  'Inicio',
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
@@ -398,10 +398,12 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
 
       <aside id="app-sidebar" className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-logo">
-          <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
-          <div style={{ minWidth: 0 }}>
-            <p className="sidebar-title">{nombreSistema}</p>
-            <p className="sidebar-sub">{nombreInstitucion}</p>
+          <div className="sidebar-logo-brand" onClick={() => handleNav('dashboard')}>
+            <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
+            <div style={{ minWidth: 0 }}>
+              <p className="sidebar-title">{nombreSistema}</p>
+              <p className="sidebar-sub">{nombreInstitucion}</p>
+            </div>
           </div>
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
@@ -490,13 +492,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
           >
             <span /><span /><span />
           </button>
-          <div className="topbar-brand">
-            <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="topbar-brand-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
-            <div>
-              <p className="topbar-brand-title">{nombreSistema}</p>
-              <p className="topbar-brand-sub">{nombreInstitucion}</p>
-            </div>
-          </div>
+          <h1>{titulos[paginaActual]}</h1>
           <button className="btn-logout" onClick={() => setConfirmLogout(true)}>Cerrar sesión</button>
         </header>
         <div className="content">
