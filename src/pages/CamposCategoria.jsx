@@ -44,6 +44,11 @@ const CAMPOS_PREDET = {
     { id: 'garantia',           nombre: 'Garantía',                 tipo: 'texto'  },
   ],
   tecno: [
+    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
+    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
+    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
+    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
+    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
     { id: 'tipo',              nombre: 'Tipo',              tipo: 'texto' },
     { id: 'tecnologia',        nombre: 'Tecnología',        tipo: 'texto' },
     { id: 'marca',             nombre: 'Marca',             tipo: 'texto' },
@@ -56,22 +61,35 @@ const CAMPOS_PREDET = {
     { id: 'numero_orden',      nombre: 'N° orden compra',   tipo: 'texto' },
     { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
     { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
+    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
   ],
   biblio: [
+    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
+    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
+    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
+    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
+    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
     { id: 'isbn',              nombre: 'ISBN',              tipo: 'texto' },
     { id: 'autor',             nombre: 'Autor',             tipo: 'texto' },
     { id: 'genero',            nombre: 'Género',            tipo: 'texto' },
     { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
     { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
     { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
+    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
   ],
   generico: [
+    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
+    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
+    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
+    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
+    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
     { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
     { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
     { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
     { id: 'numero_orden',      nombre: 'N° orden',          tipo: 'texto' },
     { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
     { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
+    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
   ],
 }
 
@@ -180,19 +198,25 @@ function smartMergeOrder(savedOrder, naturalOrder) {
 // Secciones del formulario real de agregar bien, por tipo de categoría
 const PREVIEW_SECTIONS = {
   tecno: [
+    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
     { label: '🖨️ Datos del equipo', ids: ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible'] },
     { label: '🛒 Adquisición',      ids: ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia'] },
+    { label: null, ids: ['obs'], _footer: true },
   ],
   comp: [
     { label: '💻 Especificaciones',  ids: ['tipo', 'marca', 'modelo', 'pantalla', 'cpu_marca', 'cpu_modelo', 'cpu_generacion', 'ram', 'ram_tipo', 'ram_slots', 'memoria', 'tipo_almacenamiento', 'sistema_operativo'] },
     { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia'] },
   ],
   biblio: [
+    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
     { label: '📚 Datos del libro',   ids: ['isbn', 'autor', 'genero'] },
     { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo'] },
+    { label: null, ids: ['obs'], _footer: true },
   ],
   generico: [
+    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
     { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'numero_factura', 'numero_orden', 'fondo', 'garantia'] },
+    { label: null, ids: ['obs'], _footer: true },
   ],
 }
 
@@ -226,7 +250,7 @@ function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
   const catType  = getCatType(catObj)
   const sections = PREVIEW_SECTIONS[catType] || PREVIEW_SECTIONS.generico
 
-  // Asignar cada campo a una sección según su posición en el orden unificado
+  // Assign each field to a section by ID
   const sectionOf = {}
   sections.forEach((sec, i) => sec.ids.forEach(id => { sectionOf[id] = i }))
 
@@ -239,44 +263,69 @@ function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
     } else if (f._tipo === 'custom') {
       sectionFields[curSection].push(f)
     }
-    // campos fijos (nombre, cantidad, etc.) se omiten aquí — se muestran arriba
   }
 
-  const total = 5 + unifiedVisibleFields.length // 5 campos fijos
+  const total = unifiedVisibleFields.length
 
   return (
     <div style={{ background: '#f8fafc', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontSize: 11 }}>
-      {/* Header igual al formulario real */}
+      {/* Header */}
       <div style={{ padding: '11px 14px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -14, right: -14, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
           <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{catObj.icon || '📦'}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {catType === 'comp' ? 'Nuevo computador' : catType === 'tecno' ? `Nuevo artículo tecnológico` : `Nuevo bien · ${catObj.label}`}
+              {catType === 'comp' ? 'Nuevo computador' : catType === 'tecno' ? 'Nuevo artículo tecnológico' : `Nuevo bien · ${catObj.label}`}
             </p>
             <p style={{ margin: 0, fontSize: 8, color: 'rgba(255,255,255,0.55)' }}>Vista previa · {total} campos</p>
           </div>
         </div>
       </div>
 
-      {/* Contenido del formulario */}
+      {/* Form content */}
       <div style={{ padding: '10px 12px 14px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto' }}>
-
-        {/* Campos fijos siempre presentes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <MockField nombre="Código / N° inventario" tipo="texto" requerido />
-          <MockField nombre="Estado" tipo="select" opciones={['Bueno','Regular','Malo']} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <MockField nombre="Ubicación" tipo="texto" />
-          <MockField nombre="Responsable" tipo="texto" />
-        </div>
-
-        {/* Secciones dinámicas con campos configurados */}
         {sections.map((sec, si) => {
           const fields = sectionFields[si]
           if (!fields.length) return null
+
+          if (sec._header) {
+            // Header section: render as two rows (codigo/cantidad/estado + ubicacion/responsable)
+            const extraH = fields.filter(f => !['codigo','cantidad','estado','ubicacion','responsable'].includes(f.id))
+            return (
+              <div key={si}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
+                  {fields.filter(f => ['codigo','cantidad','estado'].includes(f.id)).map(f => (
+                    <MockField key={f.id} nombre={camposNombres[f.id] || f.nombre} tipo={f.tipo} requerido={f.id === 'codigo'} custom={f._tipo === 'custom'} />
+                  ))}
+                  {extraH.map(f => <MockField key={f.id} nombre={f.nombre} tipo={f.tipo} requerido={f.requerido} custom />)}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginTop: 5 }}>
+                  {fields.filter(f => ['ubicacion','responsable'].includes(f.id)).map(f => (
+                    <MockField key={f.id} nombre={camposNombres[f.id] || f.nombre} tipo={f.tipo} custom={f._tipo === 'custom'} />
+                  ))}
+                </div>
+              </div>
+            )
+          }
+
+          if (sec._footer) {
+            // Footer (obs) section
+            return (
+              <div key={si} style={{ marginTop: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
+                  <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                </div>
+                <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
+                {fields.filter(f => f._tipo === 'custom').map(f => (
+                  <MockField key={f.id} nombre={f.nombre} tipo={f.tipo} requerido={f.requerido} custom />
+                ))}
+              </div>
+            )
+          }
+
+          // Regular section
           return (
             <div key={si}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 5px' }}>
@@ -293,16 +342,20 @@ function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
           )
         })}
 
-        {/* Observaciones — siempre al final */}
-        <div style={{ marginTop: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
-            <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-          </div>
-          <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
-        </div>
+        {/* Comp type: keep original footer (no sections for obs) */}
+        {catType === 'comp' && (
+          <>
+            <div style={{ marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
+                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+              </div>
+              <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
+            </div>
+          </>
+        )}
 
-        {/* Botón guardar */}
+        {/* Save button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
           <div style={{ padding: '6px 14px', borderRadius: 7, background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 9, fontWeight: 700 }}>Guardar bien</div>
         </div>
@@ -527,7 +580,7 @@ export default function CamposCategoria({ usuario }) {
     ? smartMergeOrder(camposOrden.filter(id => _allIds.includes(id)), _allIds)
     : _allIds
   const unifiedSortedFields  = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
-  const unifiedVisibleFields = unifiedSortedFields.filter(c => c._tipo !== 'sistema' || !camposOcultos.includes(c.id))
+  const unifiedVisibleFields = unifiedSortedFields.filter(c => c._tipo !== 'sistema' || c._global || !camposOcultos.includes(c.id))
 
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.5)', flexDirection: 'column', gap: 14 }}>
@@ -632,7 +685,7 @@ export default function CamposCategoria({ usuario }) {
 
             {/* ── Lista unificada: sistema + personalizados ──── */}
             {_allFields.length > 0 && (() => {
-              const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id)).length
+              const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id && !c._global)).length
 
               async function handleDropUnified(targetId) {
                 if (!dragInfo || dragInfo.id === targetId) return
@@ -672,7 +725,7 @@ export default function CamposCategoria({ usuario }) {
                   <div>
                     {unifiedSortedFields.map((campo, idx) => {
                       const isSistema      = campo._tipo === 'sistema'
-                      const oculto         = isSistema && camposOcultos.includes(campo.id)
+                      const oculto         = isSistema && !campo._global && camposOcultos.includes(campo.id)
                       const tc             = TIPO_COLOR[campo.tipo] || '#6b7280'
                       const ti             = TIPOS.find(t => t.value === campo.tipo)
                       const nombreMostrado = isSistema ? (camposNombres[campo.id] || campo.nombre) : campo.nombre
@@ -762,7 +815,9 @@ export default function CamposCategoria({ usuario }) {
 
                           {/* Acciones */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: isSistema ? 6 : 4, flexShrink: 0 }}>
-                            {isSistema ? (
+                            {campo._global ? (
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 5, background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0', flexShrink: 0 }}>🔒 base</span>
+                            ) : isSistema ? (
                               <>
                                 {!oculto && !estaEditandoS && (
                                   <button onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }} title="Renombrar"

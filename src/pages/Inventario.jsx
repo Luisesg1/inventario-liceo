@@ -1942,17 +1942,21 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
             const _orden    = _catData?.campos_orden ?? []
+            const HEADER_IDS = ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable']
+            const OBS_IDS    = ['obs']
             const EQUIPO_IDS = ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible']
             const ADQUI_IDS  = ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia']
-            const allIds     = [...EQUIPO_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const allIds     = [...HEADER_IDS, ...EQUIPO_IDS, ...ADQUI_IDS, ...OBS_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length
               ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
-            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
+            const firstEquipoPos = Math.min(...EQUIPO_IDS.map(posOf))
+            const firstAdquiPos  = Math.min(...ADQUI_IDS.map(posOf))
+            const headerCustomFields = camposCat.filter(c => posOf(c.id) < firstEquipoPos).sort((a, b) => posOf(a.id) - posOf(b.id))
             const equipoFields = [
               ...EQUIPO_IDS.map(id => ({ id, _sis: true })),
-              ...camposCat.filter(c => posOf(c.id) < firstAdquiPos).map(c => ({ ...c, _sis: false })),
+              ...camposCat.filter(c => posOf(c.id) >= firstEquipoPos && posOf(c.id) < firstAdquiPos).map(c => ({ ...c, _sis: false })),
             ].sort((a, b) => posOf(a.id) - posOf(b.id))
             const adquiFields = [
               ...ADQUI_IDS.map(id => ({ id, _sis: true })),
@@ -1986,6 +1990,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const rows3_1 = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
             return (
               <>
+                {headerCustomFields.length > 0 && rows3_1(headerCustomFields).map((row, i) => (
+                  <div key={`hdr-${i}`} className="form-row triple">
+                    {row.map(f => renderCampo1(f))}
+                  </div>
+                ))}
                 <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
                 {rows3_1(equipoFields).map((row, i) => (
                   <div key={i} className="form-row triple">
@@ -2006,15 +2015,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
             const _orden    = _catData?.campos_orden ?? []
-            const ADQUI_IDS = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
-            const allIds    = [...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const HEADER_IDS = ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable']
+            const OBS_IDS    = ['obs']
+            const ADQUI_IDS  = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
+            const allIds    = [...HEADER_IDS, ...ADQUI_IDS, ...OBS_IDS, ...camposCat.map(c => c.id)]
             const fullOrder = _orden.length
               ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf1 = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
+            const firstAdquiPos1 = Math.min(...ADQUI_IDS.map(posOf1))
+            const headerCustomFields1 = camposCat.filter(c => posOf1(c.id) < firstAdquiPos1).sort((a, b) => posOf1(a.id) - posOf1(b.id))
             const adquiFields1 = [
               ...ADQUI_IDS.map(id => ({ id, _sis: true })),
-              ...camposCat.map(c => ({ ...c, _sis: false })),
+              ...camposCat.filter(c => posOf1(c.id) >= firstAdquiPos1).map(c => ({ ...c, _sis: false })),
             ].sort((a, b) => posOf1(a.id) - posOf1(b.id))
             const renderSisG1 = id => {
               if (id === 'fecha_adquisicion') return <div key="fecha_adquisicion" className="field"><label>Fecha de adquisición</label><input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} /></div>
@@ -2038,6 +2051,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const rows3G1 = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
             return (
               <>
+                {headerCustomFields1.length > 0 && rows3G1(headerCustomFields1).map((row, i) => (
+                  <div key={`hdr1-${i}`} className="form-row triple">
+                    {row.map(f => renderCampoG1(f))}
+                  </div>
+                ))}
                 <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
                 {rows3G1(adquiFields1).map((row, i) => (
                   <div key={i} className="form-row triple">
@@ -2416,18 +2434,21 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
             const _orden    = _catData?.campos_orden ?? []
+            const HEADER_IDS = ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable']
+            const OBS_IDS    = ['obs']
             const EQUIPO_IDS = ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible']
             const ADQUI_IDS  = ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia']
-            const allIds     = [...EQUIPO_IDS, ...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const allIds     = [...HEADER_IDS, ...EQUIPO_IDS, ...ADQUI_IDS, ...OBS_IDS, ...camposCat.map(c => c.id)]
             const fullOrder  = _orden.length
               ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
-            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
-            // Unified sorted lists: sistema + custom mezclados por posición
+            const firstEquipoPos = Math.min(...EQUIPO_IDS.map(posOf))
+            const firstAdquiPos  = Math.min(...ADQUI_IDS.map(posOf))
+            const headerCustomFields = camposCat.filter(c => posOf(c.id) < firstEquipoPos).sort((a, b) => posOf(a.id) - posOf(b.id))
             const equipoFields = [
               ...EQUIPO_IDS.map(id => ({ id, _sis: true })),
-              ...camposCat.filter(c => posOf(c.id) < firstAdquiPos).map(c => ({ ...c, _sis: false })),
+              ...camposCat.filter(c => posOf(c.id) >= firstEquipoPos && posOf(c.id) < firstAdquiPos).map(c => ({ ...c, _sis: false })),
             ].sort((a, b) => posOf(a.id) - posOf(b.id))
             const adquiFields = [
               ...ADQUI_IDS.map(id => ({ id, _sis: true })),
@@ -2461,6 +2482,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const rows3 = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
             return (
               <>
+                {headerCustomFields.length > 0 && rows3(headerCustomFields).map((row, i) => (
+                  <div key={`hdr-${i}`} className="form-row triple">
+                    {row.map(f => renderCampo(f))}
+                  </div>
+                ))}
                 <div className="seccion-comp"><span className="seccion-label">🖨️ Datos del equipo</span></div>
                 {rows3(equipoFields).map((row, i) => (
                   <div key={i} className="form-row triple">
@@ -2481,16 +2507,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const _catData  = categorias.find(c => c.id === form.categoria)
             const camposCat = _catData?.campos_personalizados ?? []
             const _orden    = _catData?.campos_orden ?? []
-            const ADQUI_IDS = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
-            const allIds    = [...ADQUI_IDS, ...camposCat.map(c => c.id)]
+            const HEADER_IDS = ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable']
+            const OBS_IDS    = ['obs']
+            const ADQUI_IDS  = ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia']
+            const allIds    = [...HEADER_IDS, ...ADQUI_IDS, ...OBS_IDS, ...camposCat.map(c => c.id)]
             const fullOrder = _orden.length
               ? smartMergeOrder(_orden.filter(id => allIds.includes(id)), allIds)
               : allIds
             const posOf = id => { const p = fullOrder.indexOf(id); return p === -1 ? 9999 : p }
-            // Unified sorted: sistema + custom juntos
+            const firstAdquiPos = Math.min(...ADQUI_IDS.map(posOf))
+            const headerCustomFields = camposCat.filter(c => posOf(c.id) < firstAdquiPos).sort((a, b) => posOf(a.id) - posOf(b.id))
             const adquiFields = [
               ...ADQUI_IDS.map(id => ({ id, _sis: true })),
-              ...camposCat.map(c => ({ ...c, _sis: false })),
+              ...camposCat.filter(c => posOf(c.id) >= firstAdquiPos).map(c => ({ ...c, _sis: false })),
             ].sort((a, b) => posOf(a.id) - posOf(b.id))
             const renderSisG = id => {
               if (id === 'fecha_adquisicion') return <div key="fecha_adquisicion" className="field"><label>Fecha de adquisición</label><input name="fecha_adquisicion" type="date" value={form.fecha_adquisicion ?? ''} onChange={handleChange} /></div>
@@ -2514,6 +2543,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             const rows3G = arr => { const r = []; for (let i = 0; i < arr.length; i += 3) r.push(arr.slice(i, i+3)); return r }
             return (
               <>
+                {headerCustomFields.length > 0 && rows3G(headerCustomFields).map((row, i) => (
+                  <div key={`hdrg-${i}`} className="form-row triple">
+                    {row.map(f => renderCampoG(f))}
+                  </div>
+                ))}
                 <div className="seccion-comp"><span className="seccion-label">🛒 Adquisición</span></div>
                 {rows3G(adquiFields).map((row, i) => (
                   <div key={i} className="form-row triple">
