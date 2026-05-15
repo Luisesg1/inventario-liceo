@@ -876,7 +876,7 @@ export default function Usuarios({ usuario }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
               <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value.toUpperCase())}
                 style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, padding: '7px 12px', borderRadius: 8, border: '1.5px solid #6366f1', outline: 'none', width: 170, letterSpacing: '0.08em' }}
                 autoFocus onKeyDown={e => e.key === 'Enter' && nuevoCodigo.trim() && setConfirmarCodigo(true)} />
