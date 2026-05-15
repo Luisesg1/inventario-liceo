@@ -490,7 +490,13 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
           >
             <span /><span /><span />
           </button>
-          <h1>{titulos[paginaActual]}</h1>
+          <div className="topbar-brand">
+            <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="topbar-brand-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
+            <div>
+              <p className="topbar-brand-title">{nombreSistema}</p>
+              <p className="topbar-brand-sub">{nombreInstitucion}</p>
+            </div>
+          </div>
           <button className="btn-logout" onClick={() => setConfirmLogout(true)}>Cerrar sesión</button>
         </header>
         <div className="content">

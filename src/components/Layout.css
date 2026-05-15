@@ -202,6 +202,25 @@
   text-overflow: ellipsis; margin: 0; letter-spacing: -0.01em;
 }
 
+/* ── Topbar brand ─────────────────────────────────────── */
+.topbar-brand {
+  display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0;
+}
+.topbar-brand-img {
+  width: 32px; height: 32px; border-radius: 9px;
+  object-fit: cover; flex-shrink: 0;
+  border: 1.5px solid rgba(var(--acento-rgb), 0.45);
+  box-shadow: 0 0 12px rgba(var(--acento-rgb), 0.15);
+}
+.topbar-brand-title {
+  font-size: 13px; font-weight: 700; color: #fff;
+  margin: 0; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-brand-sub {
+  font-size: 10px; color: rgba(255,255,255,.35); margin: 0;
+}
+
 /* ── Hamburger ────────────────────────────────────────── */
 .btn-hamburger {
   display: flex; flex-direction: column;
