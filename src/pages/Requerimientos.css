@@ -374,6 +374,45 @@
 .req-stat--err span { color: #dc2626; }
 .req-errores-lista { font-size: 12px; color: #dc2626; text-align: left; max-height: 100px; overflow-y: auto; }
 
+/* ComboField (Fondo, Dimensión, Sub-Dimensión, Acción) */
+.req-modal-body .combo-wrap { position: relative; display: block; width: 100%; }
+.req-modal-body .combo-wrap input { padding-right: 28px; }
+.req-modal-body .combo-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 9px;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  user-select: none;
+}
+.req-modal-body .combo-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.req-modal-body .combo-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary, #374151);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border, #f3f4f6);
+}
+.req-modal-body .combo-option:last-child { border-bottom: none; }
+.req-modal-body .combo-option:hover {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--color-boton, #4f46e5);
+}
+
 @media (max-width: 640px) {
   .req-grid-2 { grid-template-columns: 1fr; }
   .req-grid-3 { grid-template-columns: 1fr; }

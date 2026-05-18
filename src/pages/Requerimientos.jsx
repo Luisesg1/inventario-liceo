@@ -35,6 +35,50 @@ const ESTADOS = [
 ]
 const EVIDENCIAS = ['No necesita', 'Entregada', 'Pendiente']
 
+function ComboField({ value, onChange, opciones = [], placeholder, disabled }) {
+  const [abierto, setAbierto] = useState(false)
+
+  const filtradas = opciones
+    .filter(o => o && o.toLowerCase().includes((value || '').toLowerCase()))
+    .slice(0, 20)
+
+  return (
+    <div className="combo-wrap">
+      <input
+        type="text"
+        value={value ?? ''}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => !disabled && setAbierto(true)}
+        onBlur={() => setTimeout(() => setAbierto(false), 160)}
+        placeholder={placeholder}
+        disabled={disabled}
+        autoComplete="off"
+      />
+      {opciones.length > 0 && !disabled && (
+        <span
+          className="combo-chevron"
+          onMouseDown={e => { e.preventDefault(); setAbierto(a => !a) }}
+        >
+          ▼
+        </span>
+      )}
+      {abierto && !disabled && filtradas.length > 0 && (
+        <div className="combo-dropdown">
+          {filtradas.map(o => (
+            <div
+              key={o}
+              className="combo-option"
+              onMouseDown={e => { e.preventDefault(); onChange(o); setAbierto(false) }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const COLUMNAS_EXPORT = [
   { key: 'id',               label: 'N° Req.' },
   { key: 'fecha',            label: 'Fecha' },
@@ -677,32 +721,44 @@ export default function Requerimientos({ usuario }) {
               <div className="req-grid-3">
                 <label>
                   <span>Fondo</span>
-                  <select value={form.fondo || ''} onChange={e => setF('fondo', e.target.value)} disabled={!puedeEditar}>
-                    <option value="">Seleccionar...</option>
-                    {FONDOS.map(f => <option key={f}>{f}</option>)}
-                  </select>
+                  <ComboField
+                    value={form.fondo || ''}
+                    onChange={v => setF('fondo', v)}
+                    opciones={FONDOS}
+                    placeholder="Seleccionar..."
+                    disabled={!puedeEditar}
+                  />
                 </label>
                 <label>
                   <span>Dimensión</span>
-                  <select value={form.dimension || ''} onChange={e => setF('dimension', e.target.value)} disabled={!puedeEditar}>
-                    <option value="">Seleccionar...</option>
-                    {DIMENSIONES.map(d => <option key={d}>{d}</option>)}
-                  </select>
+                  <ComboField
+                    value={form.dimension || ''}
+                    onChange={v => setF('dimension', v)}
+                    opciones={DIMENSIONES}
+                    placeholder="Seleccionar..."
+                    disabled={!puedeEditar}
+                  />
                 </label>
                 <label>
                   <span>Sub-Dimensión</span>
-                  <select value={form.sub_dimension || ''} onChange={e => setF('sub_dimension', e.target.value)} disabled={!puedeEditar}>
-                    <option value="">Seleccionar...</option>
-                    {SUB_DIMENSIONES.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  <ComboField
+                    value={form.sub_dimension || ''}
+                    onChange={v => setF('sub_dimension', v)}
+                    opciones={SUB_DIMENSIONES}
+                    placeholder="Seleccionar..."
+                    disabled={!puedeEditar}
+                  />
                 </label>
               </div>
               <label className="req-full">
                 <span>Acción</span>
-                <select value={form.accion || ''} onChange={e => setF('accion', e.target.value)} disabled={!puedeEditar}>
-                  <option value="">Seleccionar...</option>
-                  {ACCIONES.map(a => <option key={a}>{a}</option>)}
-                </select>
+                <ComboField
+                  value={form.accion || ''}
+                  onChange={v => setF('accion', v)}
+                  opciones={ACCIONES}
+                  placeholder="Seleccionar..."
+                  disabled={!puedeEditar}
+                />
               </label>
               <div className="req-grid-2">
                 <label>
