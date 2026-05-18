@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --primary-rgb:      26, 35, 126;
   --primary-dark-rgb: 11, 21,  69;
@@ -5,4 +7,12 @@
   --acento-rgb:       212, 160, 23;
   --acento-bright:    #f0d060;
   --color-boton:      #6366f1;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

@@ -1,4 +1,11 @@
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  LayoutDashboard, Package2, Users, ClipboardList,
+  Ticket, Settings2, Layers, FileSpreadsheet,
+  HardDrive, FileText, ChevronRight, X, LogOut,
+  Menu, Loader2,
+} from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
 
@@ -12,22 +19,47 @@ const COLS_BACKUP = [
   'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
 ]
 
-export default function Layout({ usuario, onLogout, children, paginaActual, setPagina, onRefreshTicketBadge, logoUrl, nombreSistema = 'Inventario', nombreInstitucion = 'Liceo JHJ' }) {
+const ROL_LABEL = {
+  admin:     'Administrador',
+  editor:    'Editor',
+  encargado: 'Encargado',
+  docente:   'Docente',
+  soporte:   'Soporte',
+}
+
+const sidebarVariants = {
+  open:   { x: 0,    transition: { type: 'spring', stiffness: 380, damping: 40, mass: 0.85 } },
+  closed: { x: -280, transition: { type: 'spring', stiffness: 380, damping: 40, mass: 0.85 } },
+}
+
+const submenuVariants = {
+  open:   { height: 'auto', opacity: 1, transition: { duration: 0.22, ease: [0.4,0,0.2,1] } },
+  closed: { height: 0,      opacity: 0, transition: { duration: 0.18, ease: [0.4,0,0.2,1] } },
+}
+
+export default function Layout({
+  usuario, onLogout, children, paginaActual, setPagina,
+  onRefreshTicketBadge, logoUrl,
+  nombreSistema = 'Inventario', nombreInstitucion = 'Liceo JHJ',
+}) {
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const esDocente     = usuario.rol === 'docente'
+  const esSoloTickets = esDocente || esSoporte
+
+  const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
-  const [exportando, setExportando] = useState(false)
+  const [exportando,    setExportando]    = useState(false)
   const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
 
   useEffect(() => {
     if (!esAdmin && !esSoporte) return
     const cargar = async () => {
-      const { count } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
+      const { count } = await supabase
+        .from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
       setTicketsAbiertos(count ?? 0)
     }
     cargar()
-    // Exponer cargar para que Tickets lo llame directamente al guardar
     if (onRefreshTicketBadge) onRefreshTicketBadge(cargar)
     const sub = supabase.channel('tickets-badge')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargar)
@@ -35,6 +67,7 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     return () => supabase.removeChannel(sub)
   }, [esAdmin, esSoporte])
 
+  // ── Backup / Export ───────────────────────────────────
   const fetchBackupData = async () => {
     const [{ data: bienes }, { data: cats }] = await Promise.all([
       supabase.from('bienes').select('*').order('categoria').order('nombre'),
@@ -52,7 +85,6 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     const cargar = () => {
       const XLSX = window.XLSX
       const wb = XLSX.utils.book_new()
-
       const grupos = {}
       bienes.forEach(b => {
         const cat = cats.find(c => c.id === b.categoria)
@@ -60,18 +92,12 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         if (!grupos[key]) grupos[key] = { label: cat?.label ?? b.categoria ?? 'Sin categoría', icon: cat?.icon ?? '📦', items: [] }
         grupos[key].items.push(b)
       })
-
-      // Columnas visibles en el listado completo del resumen
-      const COLS_LISTA = ['categoria_nombre', 'codigo', 'nombre', 'estado', 'cantidad', 'ubicacion', 'responsable', 'tipo', 'marca', 'modelo', 'numero_serie', 'obs']
-      const HDRS_LISTA = ['Categoría',        'Código', 'Nombre', 'Estado', 'Cantidad', 'Ubicación', 'Responsable', 'Tipo', 'Marca', 'Modelo', 'N° Serie',    'Observaciones']
-
-      // Bloque de resumen por categoría
+      const COLS_LISTA = ['categoria_nombre','codigo','nombre','estado','cantidad','ubicacion','responsable','tipo','marca','modelo','numero_serie','obs']
+      const HDRS_LISTA = ['Categoría','Código','Nombre','Estado','Cantidad','Ubicación','Responsable','Tipo','Marca','Modelo','N° Serie','Observaciones']
       const resumenRows = [
-        ['Categoría', 'Ícono', 'Total bienes'],
+        ['Categoría','Ícono','Total bienes'],
         ...Object.values(grupos).map(g => [g.label, g.icon, g.items.length]),
-        [],
-        ['TOTAL', '', bienes.length],
-        [],
+        [], ['TOTAL','',bienes.length], [],
         ['Datos completos (' + bienes.length + ' bienes)'],
         HDRS_LISTA,
         ...bienes.map(b => {
@@ -80,38 +106,32 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         }),
       ]
       const wsRes = XLSX.utils.aoa_to_sheet(resumenRows)
-      wsRes['!cols'] = HDRS_LISTA.map((h, i) => ({
-        wch: Math.max(h.length + 2, i === 0 ? 20 : i === 2 ? 28 : 14),
-      }))
+      wsRes['!cols'] = HDRS_LISTA.map((h, i) => ({ wch: Math.max(h.length + 2, i === 0 ? 20 : i === 2 ? 28 : 14) }))
       XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen')
-
       Object.values(grupos).forEach(({ label, items }) => {
         if (!items.length) return
         const cols = COLS_BACKUP.filter(c => items.some(b => b[c] != null && b[c] !== ''))
         const rows = [cols, ...items.map(b => cols.map(c => b[c] ?? ''))]
         const ws = XLSX.utils.aoa_to_sheet(rows)
         ws['!cols'] = cols.map(h => ({ wch: Math.max(h.length + 4, 14) }))
-        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }) }
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:0,c:cols.length-1} }) }
         ws['!tables'] = [{
-          name: label.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '').slice(0, 255) || 'Tabla',
-          ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: cols.length - 1 } }),
+          name: label.replace(/\s+/g,'_').replace(/[^A-Za-z0-9_]/g,'').slice(0,255) || 'Tabla',
+          ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:rows.length-1,c:cols.length-1} }),
           headerRow: true, totalsRow: false,
           style: { theme: 'TableStyleMedium2', showRowStripes: true },
           columns: cols.map(h => ({ name: h })),
         }]
         XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
       })
-
       XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`)
       setExportando(false)
     }
-
     if (window.XLSX) { cargar(); return }
     const s = document.getElementById('sheetjs-script') || document.createElement('script')
     s.id = 'sheetjs-script'
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    s.onload = cargar
-    s.onerror = () => setExportando(false)
+    s.onload = cargar; s.onerror = () => setExportando(false)
     document.head.appendChild(s)
   }
 
@@ -129,10 +149,8 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = `backup_inventario_${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    a.href = url; a.download = `backup_inventario_${new Date().toISOString().slice(0,10)}.json`
+    a.click(); URL.revokeObjectURL(url)
     setExportando(false)
   }
 
@@ -140,119 +158,70 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     setExportando(true)
     const { bienes, cats } = await fetchBackupData()
     if (!bienes.length) { setExportando(false); return }
-
     const cargarPDF = () => {
       const { jsPDF } = window.jspdf
       const fecha = new Date()
-      const fechaStr = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })
+      const fechaStr = fecha.toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' })
       const fechaArchivo = fecha.toISOString().slice(0, 10)
-
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' })
       const W = doc.internal.pageSize.getWidth()
-      const AZUL = [26, 35, 126]
-      const DORADO = [212, 160, 23]
-      const GRIS = [107, 114, 128]
-
+      const AZUL = [26,35,126]; const DORADO = [212,160,23]; const GRIS = [107,114,128]
       const addHeader = (pageNum) => {
-        // Franja azul superior
-        doc.setFillColor(...AZUL)
-        doc.rect(0, 0, W, 22, 'F')
-        // Línea dorada
-        doc.setFillColor(...DORADO)
-        doc.rect(0, 22, W, 1.5, 'F')
-
-        doc.setTextColor(255, 255, 255)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(13)
-        doc.text('Liceo Bicentenario Juvenal Hernández Jaque', W / 2, 9, { align: 'center' })
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8.5)
-        doc.text('Inventario de Bienes — Informe Oficial', W / 2, 15.5, { align: 'center' })
-
-        // Fecha y N° página en esquina
-        doc.setTextColor(...GRIS)
-        doc.setFontSize(7.5)
-        doc.text(fechaStr, W - 12, 28, { align: 'right' })
-        if (pageNum > 1) {
-          doc.text(`Página ${pageNum}`, 12, 28)
-        }
+        doc.setFillColor(...AZUL); doc.rect(0,0,W,22,'F')
+        doc.setFillColor(...DORADO); doc.rect(0,22,W,1.5,'F')
+        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13)
+        doc.text('Liceo Bicentenario Juvenal Hernández Jaque', W/2, 9, { align:'center' })
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5)
+        doc.text('Inventario de Bienes — Informe Oficial', W/2, 15.5, { align:'center' })
+        doc.setTextColor(...GRIS); doc.setFontSize(7.5)
+        doc.text(fechaStr, W-12, 28, { align:'right' })
+        if (pageNum > 1) doc.text(`Página ${pageNum}`, 12, 28)
       }
-
       const addFooter = () => {
         const pageCount = doc.internal.getNumberOfPages()
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i)
-          doc.setFillColor(245, 245, 250)
-          doc.rect(0, 284, W, 13, 'F')
-          doc.setDrawColor(220, 220, 235)
-          doc.setLineWidth(0.3)
-          doc.line(0, 284, W, 284)
-          doc.setTextColor(...GRIS)
-          doc.setFontSize(7.5)
-          doc.text('Liceo Bicentenario Juvenal Hernández Jaque — Sistema de Inventario', W / 2, 290, { align: 'center' })
-          doc.text(`${i} / ${pageCount}`, W - 12, 290, { align: 'right' })
+          doc.setFillColor(245,245,250); doc.rect(0,284,W,13,'F')
+          doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(0,284,W,284)
+          doc.setTextColor(...GRIS); doc.setFontSize(7.5)
+          doc.text('Liceo Bicentenario Juvenal Hernández Jaque — Sistema de Inventario', W/2, 290, { align:'center' })
+          doc.text(`${i} / ${pageCount}`, W-12, 290, { align:'right' })
         }
       }
-
-      // ── Página 1: portada + resumen ────────────────────────
       addHeader(1)
-
-      // Título principal
-      doc.setTextColor(...AZUL)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(18)
-      doc.text('Informe de Inventario', W / 2, 45, { align: 'center' })
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.setTextColor(...GRIS)
-      doc.text(`Generado el ${fechaStr}`, W / 2, 53, { align: 'center' })
-
-      // Línea separadora
-      doc.setDrawColor(...DORADO)
-      doc.setLineWidth(0.8)
-      doc.line(14, 58, W - 14, 58)
-
-      // KPIs en cajas
-      const estados = { bueno: 0, regular: 0, malo: 0, dado_de_baja: 0 }
+      doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(18)
+      doc.text('Informe de Inventario', W/2, 45, { align:'center' })
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...GRIS)
+      doc.text(`Generado el ${fechaStr}`, W/2, 53, { align:'center' })
+      doc.setDrawColor(...DORADO); doc.setLineWidth(0.8); doc.line(14,58,W-14,58)
+      const estados = { bueno:0, regular:0, malo:0, dado_de_baja:0 }
       bienes.forEach(b => { if (b.estado && estados[b.estado] !== undefined) estados[b.estado]++ })
       const kpis = [
-        { label: 'Total Bienes', value: bienes.length, color: AZUL },
-        { label: 'En Buen Estado', value: estados.bueno, color: [22, 163, 74] },
-        { label: 'Estado Regular', value: estados.regular, color: [217, 119, 6] },
-        { label: 'Mal Estado', value: estados.malo, color: [220, 38, 38] },
-        { label: 'Categorías', value: cats.length, color: [109, 40, 217] },
+        { label:'Total Bienes', value:bienes.length, color:AZUL },
+        { label:'En Buen Estado', value:estados.bueno, color:[22,163,74] },
+        { label:'Estado Regular', value:estados.regular, color:[217,119,6] },
+        { label:'Mal Estado', value:estados.malo, color:[220,38,38] },
+        { label:'Categorías', value:cats.length, color:[109,40,217] },
       ]
-      const boxW = (W - 28 - 8 * 4) / 5
-      kpis.forEach((k, i) => {
-        const x = 14 + i * (boxW + 8)
-        doc.setFillColor(248, 249, 255)
-        doc.setDrawColor(...k.color)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(x, 63, boxW, 22, 3, 3, 'FD')
-        doc.setTextColor(...k.color)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(16)
-        doc.text(String(k.value), x + boxW / 2, 75, { align: 'center' })
-        doc.setFontSize(6.5)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(...GRIS)
-        doc.text(k.label, x + boxW / 2, 80.5, { align: 'center' })
+      const boxW = (W-28-8*4)/5
+      kpis.forEach((k,i) => {
+        const x = 14+i*(boxW+8)
+        doc.setFillColor(248,249,255); doc.setDrawColor(...k.color); doc.setLineWidth(0.4)
+        doc.roundedRect(x,63,boxW,22,3,3,'FD')
+        doc.setTextColor(...k.color); doc.setFont('helvetica','bold'); doc.setFontSize(16)
+        doc.text(String(k.value), x+boxW/2, 75, { align:'center' })
+        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...GRIS)
+        doc.text(k.label, x+boxW/2, 80.5, { align:'center' })
       })
-
-      // Tabla resumen por categoría
-      doc.setTextColor(...AZUL)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
+      doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(11)
       doc.text('Resumen por Categoría', 14, 95)
-
       const grupos = {}
       bienes.forEach(b => {
         const cat = cats.find(c => c.id === b.categoria)
         const key = b.categoria || 'sin_categoria'
-        if (!grupos[key]) grupos[key] = { label: cat?.label ?? 'Sin categoría', icon: cat?.icon ?? '📦', items: [] }
+        if (!grupos[key]) grupos[key] = { label: cat?.label ?? 'Sin categoría', icon: cat?.icon ?? '📦', items:[] }
         grupos[key].items.push(b)
       })
-
       const resumenBody = Object.values(grupos).map(g => {
         const bs = g.items.filter(b => b.estado === 'bueno').length
         const rs = g.items.filter(b => b.estado === 'regular').length
@@ -260,115 +229,87 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
         return [g.label, g.items.length, bs, rs, ms]
       })
       resumenBody.push(['TOTAL', bienes.length, estados.bueno, estados.regular, estados.malo])
-
       doc.autoTable({
-        startY: 99,
-        head: [['Categoría', 'Total', 'Bueno', 'Regular', 'Malo']],
-        body: resumenBody,
-        styles: { fontSize: 9, cellPadding: 3.5 },
-        headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold', halign: 'center' },
-        columnStyles: {
-          0: { halign: 'left', cellWidth: 80 },
-          1: { halign: 'center', fontStyle: 'bold' },
-          2: { halign: 'center', textColor: [22, 163, 74] },
-          3: { halign: 'center', textColor: [217, 119, 6] },
-          4: { halign: 'center', textColor: [220, 38, 38] },
+        startY:99,
+        head:[['Categoría','Total','Bueno','Regular','Malo']],
+        body:resumenBody,
+        styles:{ fontSize:9, cellPadding:3.5 },
+        headStyles:{ fillColor:AZUL, textColor:255, fontStyle:'bold', halign:'center' },
+        columnStyles:{
+          0:{ halign:'left', cellWidth:80 }, 1:{ halign:'center', fontStyle:'bold' },
+          2:{ halign:'center', textColor:[22,163,74] }, 3:{ halign:'center', textColor:[217,119,6] },
+          4:{ halign:'center', textColor:[220,38,38] },
         },
-        alternateRowStyles: { fillColor: [248, 249, 255] },
-        footStyles: { fillColor: [230, 232, 245], fontStyle: 'bold', textColor: AZUL },
-        didParseCell: (data) => {
-          if (data.row.index === resumenBody.length - 1) {
-            data.cell.styles.fontStyle = 'bold'
-            data.cell.styles.fillColor = [230, 232, 245]
+        alternateRowStyles:{ fillColor:[248,249,255] },
+        footStyles:{ fillColor:[230,232,245], fontStyle:'bold', textColor:AZUL },
+        didParseCell:(data) => {
+          if (data.row.index === resumenBody.length-1) {
+            data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230,232,245]
           }
         },
-        margin: { left: 14, right: 14 },
+        margin:{ left:14, right:14 },
       })
-
-      // ── Páginas siguientes: detalle por categoría ──────────
       let pageNum = 2
       Object.values(grupos).forEach(({ label, items }) => {
         if (!items.length) return
-        doc.addPage()
-        addHeader(pageNum++)
-
-        doc.setTextColor(...AZUL)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(12)
+        doc.addPage(); addHeader(pageNum++)
+        doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(12)
         doc.text(label, 14, 35)
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(8.5)
-        doc.setTextColor(...GRIS)
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GRIS)
         doc.text(`${items.length} bien${items.length !== 1 ? 'es' : ''}`, 14, 41)
-
-        // Columnas dinámicas: siempre nombre/codigo/estado/cantidad/ubicacion/responsable + específicas no vacías
         const extras = ['tipo','marca','modelo','numero_serie','isbn','autor'].filter(c =>
-          items.some(b => b[c] != null && b[c] !== '')
-        )
-        const cols = ['nombre', 'codigo', 'estado', 'cantidad', 'ubicacion', ...extras]
+          items.some(b => b[c] != null && b[c] !== ''))
+        const cols = ['nombre','codigo','estado','cantidad','ubicacion',...extras]
         const hdrs = {
-          nombre: 'Nombre', codigo: 'Código', estado: 'Estado', cantidad: 'Cant.',
-          ubicacion: 'Ubicación', responsable: 'Responsable',
-          tipo: 'Tipo', marca: 'Marca', modelo: 'Modelo', numero_serie: 'N° Serie',
-          isbn: 'ISBN', autor: 'Autor',
+          nombre:'Nombre', codigo:'Código', estado:'Estado', cantidad:'Cant.',
+          ubicacion:'Ubicación', responsable:'Responsable', tipo:'Tipo',
+          marca:'Marca', modelo:'Modelo', numero_serie:'N° Serie', isbn:'ISBN', autor:'Autor',
         }
-
-        const ESTADO_COLOR = {
-          bueno: [22, 163, 74], regular: [217, 119, 6], malo: [220, 38, 38], dado_de_baja: [107, 114, 128]
-        }
-
+        const ESTADO_COLOR = { bueno:[22,163,74], regular:[217,119,6], malo:[220,38,38], dado_de_baja:[107,114,128] }
         doc.autoTable({
-          startY: 45,
-          head: [cols.map(c => hdrs[c] ?? c)],
-          body: items.map(b => cols.map(c => b[c] ?? '')),
-          styles: { fontSize: 8, cellPadding: 2.8, overflow: 'ellipsize' },
-          headStyles: { fillColor: AZUL, textColor: 255, fontStyle: 'bold' },
-          alternateRowStyles: { fillColor: [248, 249, 255] },
-          didParseCell: (data) => {
+          startY:45,
+          head:[cols.map(c => hdrs[c] ?? c)],
+          body:items.map(b => cols.map(c => b[c] ?? '')),
+          styles:{ fontSize:8, cellPadding:2.8, overflow:'ellipsize' },
+          headStyles:{ fillColor:AZUL, textColor:255, fontStyle:'bold' },
+          alternateRowStyles:{ fillColor:[248,249,255] },
+          didParseCell:(data) => {
             if (data.section === 'body') {
               const estadoIdx = cols.indexOf('estado')
               if (data.column.index === estadoIdx) {
-                const v = data.cell.raw
-                const color = ESTADO_COLOR[v]
+                const color = ESTADO_COLOR[data.cell.raw]
                 if (color) data.cell.styles.textColor = color
                 data.cell.styles.fontStyle = 'bold'
               }
             }
           },
-          margin: { left: 14, right: 14 },
+          margin:{ left:14, right:14 },
         })
       })
-
       addFooter()
       doc.save(`informe_inventario_${fechaArchivo}.pdf`)
       setExportando(false)
     }
-
     const loadScript = (src, id) => new Promise((resolve, reject) => {
       if (document.getElementById(id)) { resolve(); return }
       const s = document.createElement('script')
-      s.id = id; s.src = src
-      s.onload = resolve; s.onerror = reject
+      s.id = id; s.src = src; s.onload = resolve; s.onerror = reject
       document.head.appendChild(s)
     })
-
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf-script')
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'jspdf-autotable-script')
       cargarPDF()
-    } catch {
-      setExportando(false)
-    }
+    } catch { setExportando(false) }
   }
 
-  const esDocente     = usuario.rol === 'docente'
-  const esSoloTickets = esDocente || esSoporte
+  // ── Nav items ─────────────────────────────────────────
   const navItems = [
-    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard',  icon: '◉', label: 'Inicio'      }] : []),
-    ...(!esSoloTickets              ? [{ id: 'inventario', icon: '▤', label: 'Inventario'  }] : []),
-    ...(esAdmin        ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
-    ...(esAdmin        ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
-    { id: 'tickets', icon: '🎫', label: 'Tickets' },
+    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard',  Icon: LayoutDashboard, label: 'Inicio'      }] : []),
+    ...(!esSoloTickets              ? [{ id: 'inventario', Icon: Package2,        label: 'Inventario'  }] : []),
+    ...(esAdmin                     ? [{ id: 'usuarios',   Icon: Users,           label: 'Usuarios'    }] : []),
+    ...(esAdmin                     ? [{ id: 'auditoria',  Icon: ClipboardList,   label: 'Auditoría'   }] : []),
+    { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos'
@@ -393,181 +334,282 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
     return () => window.removeEventListener('keydown', onKey)
   }, [sidebarOpen])
 
+  const toolButtons = [
+    { Icon: FileSpreadsheet, label: 'Backup Excel', fn: exportarBackupExcel },
+    { Icon: HardDrive,       label: 'Backup JSON',  fn: exportarBackupJSON  },
+    { Icon: FileText,        label: 'Informe PDF',   fn: exportarInformePDF  },
+  ]
+
   return (
     <div className="layout">
 
-      <div className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} onClick={() => setSidebarOpen(false)} />
+      {/* ── Overlay ── */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            className="sidebar-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      <aside id="app-sidebar" className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      {/* ── Sidebar ── */}
+      <motion.aside
+        id="app-sidebar"
+        className="sidebar"
+        initial={false}
+        animate={sidebarOpen ? 'open' : 'closed'}
+        variants={sidebarVariants}
+      >
+        {/* Logo */}
         <div className="sidebar-logo">
           <div className="sidebar-logo-brand" onClick={() => handleNav('dashboard')}>
-            <img src={logoUrl || '/logo-liceo.png'} alt="Logo" className="sidebar-logo-img" onError={e => { e.target.src = '/logo-liceo.png' }} />
+            <img
+              src={logoUrl || '/logo-liceo.png'}
+              alt="Logo"
+              className="sidebar-logo-img"
+              onError={e => { e.target.src = '/logo-liceo.png' }}
+            />
             <div style={{ minWidth: 0 }}>
               <p className="sidebar-title">{nombreSistema}</p>
               <p className="sidebar-sub">{nombreInstitucion}</p>
             </div>
           </div>
-          <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
+          <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Cerrar menú">
+            <X size={14} />
+          </button>
         </div>
 
+        {/* Nav */}
         <nav className="sidebar-nav">
           <p className="nav-section">Principal</p>
-          {navItems.map(item => (
-            <div key={item.id} className={`nav-item ${paginaActual === item.id ? 'active' : ''}`} onClick={() => handleNav(item.id)}>
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-              {item.id === 'tickets' && esAdmin && ticketsAbiertos > 0 && (
-                <span className="nav-ticket-badge">{ticketsAbiertos}</span>
+
+          {navItems.map(({ id, Icon, label }) => (
+            <motion.div
+              key={id}
+              className={`nav-item ${paginaActual === id ? 'active' : ''}`}
+              onClick={() => handleNav(id)}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <Icon size={15} strokeWidth={paginaActual === id ? 2.5 : 2} />
+              </span>
+              {label}
+
+              {id === 'tickets' && (esAdmin || esSoporte) && (
+                <AnimatePresence>
+                  {ticketsAbiertos > 0 && (
+                    <motion.span
+                      className="nav-ticket-badge"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    >
+                      {ticketsAbiertos}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               )}
-            </div>
+            </motion.div>
           ))}
 
-          {esAdmin && <>
-            {/* Ajustes con submenú */}
-            <div className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
-              onClick={() => setAjustesAbierto(o => !o)}>
-              <span className="nav-icon">⚙️</span>
-              Ajustes
-              <span className={`nav-chevron ${ajustesAbierto ? 'nav-chevron--open' : ''}`}>›</span>
-            </div>
-            {ajustesAbierto && (
-              <div className="nav-submenu">
-                <div className={`nav-subitem ${paginaActual === 'ajustes' ? 'active' : ''}`}
-                  onClick={() => handleNav('ajustes')}>
-                  <span className="nav-subitem-dot" />
-                  Personalizar
-                </div>
-                <div className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
-                  onClick={() => handleNav('campos')}>
-                  <span className="nav-subitem-dot" />
-                  Campos por categoría
-                </div>
-              </div>
-            )}
-          </>}
+          {/* Ajustes con submenú */}
+          {esAdmin && (
+            <>
+              <motion.div
+                className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
+                onClick={() => setAjustesAbierto(o => !o)}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
+                <span className="nav-icon">
+                  <Settings2 size={15} strokeWidth={2} />
+                </span>
+                Ajustes
+                <span className={`nav-chevron ${ajustesAbierto ? 'nav-chevron--open' : ''}`}>
+                  <ChevronRight size={13} strokeWidth={2.5} />
+                </span>
+              </motion.div>
+
+              <AnimatePresence initial={false}>
+                {ajustesAbierto && (
+                  <motion.div
+                    className="nav-submenu"
+                    variants={submenuVariants}
+                    initial="closed"
+                    animate="open"
+                    exit="closed"
+                    style={{ overflow: 'hidden' }}
+                  >
+                    {[
+                      { id: 'ajustes', label: 'Personalizar' },
+                      { id: 'campos',  label: 'Campos por categoría' },
+                    ].map(sub => (
+                      <div
+                        key={sub.id}
+                        className={`nav-subitem ${paginaActual === sub.id ? 'active' : ''}`}
+                        onClick={() => handleNav(sub.id)}
+                      >
+                        <span className="nav-subitem-dot" />
+                        {sub.label}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
         </nav>
 
-        {esAdmin && <div style={{ borderTop: '1px solid rgba(212,160,23,0.12)', paddingBottom: 4 }}>
-          <p className="nav-section">Herramientas</p>
-          {[
-            { icon: '🗂️', label: 'Backup Excel',   fn: exportarBackupExcel },
-            { icon: '💾', label: 'Backup JSON',    fn: exportarBackupJSON  },
-            { icon: '📄', label: 'Informe PDF',    fn: exportarInformePDF  },
-          ].map(({ icon, label, fn }) => (
-            <button key={label} onClick={fn} disabled={exportando} style={{
-              display: 'flex', alignItems: 'center', gap: 11, width: '100%',
-              padding: '11px 18px', background: 'none', border: 'none',
-              cursor: exportando ? 'wait' : 'pointer',
-              color: exportando ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)',
-              fontSize: 13.5, fontWeight: 500, textAlign: 'left',
-              borderLeft: '3px solid transparent', transition: 'all .18s',
-            }}
-            onMouseEnter={e => { if (!exportando) { e.currentTarget.style.color = 'rgba(255,255,255,.88)'; e.currentTarget.style.background = 'rgba(255,255,255,.05)' } }}
-            onMouseLeave={e => { e.currentTarget.style.color = exportando ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.5)'; e.currentTarget.style.background = 'none' }}
-            >
-              <span style={{ width: 20, textAlign: 'center', fontSize: 16, flexShrink: 0 }}>
-                {exportando ? '⏳' : icon}
-              </span>
-              {exportando ? 'Generando…' : label}
-            </button>
-          ))}
-        </div>}
+        {/* Herramientas */}
+        {esAdmin && (
+          <div className="tools-section">
+            <p className="nav-section">Herramientas</p>
+            {toolButtons.map(({ Icon, label, fn }) => (
+              <button key={label} className="tool-btn" onClick={fn} disabled={exportando}>
+                <span className="tool-btn-icon">
+                  {exportando ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+                </span>
+                {exportando ? 'Generando…' : label}
+              </button>
+            ))}
+          </div>
+        )}
 
+        {/* Usuario */}
         <div className="sidebar-user">
           <div className="avatar">{usuario.nombre[0]}</div>
           <div className="user-info">
             <p>{usuario.nombre}</p>
-            <span>{{
-              admin:     'Administrador',
-              editor:    'Editor',
-              encargado: 'Encargado',
-              docente:   'Docente',
-              soporte:   'Soporte',
-            }[usuario.rol] ?? usuario.rol}</span>
+            <span>{ROL_LABEL[usuario.rol] ?? usuario.rol}</span>
           </div>
         </div>
-      </aside>
+      </motion.aside>
 
+      {/* ── Main ── */}
       <div className="main">
         <header className="topbar">
           <button
             type="button"
             className={`btn-hamburger ${sidebarOpen ? 'btn-hamburger--open' : ''}`}
-            onClick={() => setSidebarOpen((o) => !o)}
+            onClick={() => setSidebarOpen(o => !o)}
             aria-expanded={sidebarOpen}
             aria-controls="app-sidebar"
             aria-label={sidebarOpen ? 'Cerrar menú' : 'Abrir menú'}
           >
             <span /><span /><span />
           </button>
-          <h1>{titulos[paginaActual]}</h1>
-          <button className="btn-logout" onClick={() => setConfirmLogout(true)}>Cerrar sesión</button>
+
+          <div className="topbar-title-wrap">
+            <AnimatePresence mode="wait">
+              <motion.h1
+                key={paginaActual}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+              >
+                {titulos[paginaActual]}
+              </motion.h1>
+            </AnimatePresence>
+          </div>
+
+          <button className="btn-logout" onClick={() => setConfirmLogout(true)}>
+            <LogOut size={13} />
+            <span>Cerrar sesión</span>
+          </button>
         </header>
+
         <div className="content">
           {children}
         </div>
       </div>
 
-      {confirmLogout && (
-        <div style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(5,12,55,0.7)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 500, animation: 'fadeInOverlay 0.15s ease',
-        }}>
-          <style>{`@keyframes fadeInOverlay { from { opacity: 0 } to { opacity: 1 } }
-            @keyframes slideUpModal { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }`}
-          </style>
-          <div style={{
-            background: '#fff', borderRadius: 18,
-            padding: '32px 32px 28px', maxWidth: 340, width: '90%',
-            textAlign: 'center',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
-            border: '1px solid rgba(212,160,23,0.15)',
-            animation: 'slideUpModal 0.18s ease',
-          }}>
-            <div style={{ fontSize: 44, marginBottom: 14 }}>👋</div>
-            <h3 style={{ margin: '0 0 8px', color: '#1a237e', fontWeight: 700, fontSize: 18 }}>
-              ¿Cerrar sesión?
-            </h3>
-            <p style={{ margin: '0 0 24px', color: '#6b7280', fontSize: 14, lineHeight: 1.5 }}>
-              Se cerrará tu sesión y volverás al inicio de sesión.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button
-                onClick={() => setConfirmLogout(false)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10,
-                  border: '1.5px solid #e5e7eb', background: '#f9fafb',
-                  color: '#374151', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseOver={e => e.target.style.background = '#f3f4f6'}
-                onMouseOut={e => e.target.style.background = '#f9fafb'}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={onLogout}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10,
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #1a237e, #2563eb)',
-                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(26,35,126,0.35)',
-                  transition: 'opacity 0.15s',
-                }}
-                onMouseOver={e => e.target.style.opacity = '0.88'}
-                onMouseOut={e => e.target.style.opacity = '1'}
-              >
-                Sí, cerrar sesión
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Modal logout ── */}
+      <AnimatePresence>
+        {confirmLogout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(5,12,55,0.72)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 500,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 8 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              style={{
+                background: '#fff', borderRadius: 20,
+                padding: '32px 32px 28px', maxWidth: 340, width: '90%',
+                textAlign: 'center',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.32), 0 0 0 1px rgba(212,160,23,0.12)',
+              }}
+            >
+              <div style={{
+                width: 52, height: 52, borderRadius: 16, margin: '0 auto 18px',
+                background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <LogOut size={22} style={{ color: '#1a237e' }} />
+              </div>
+              <h3 style={{ margin: '0 0 8px', color: '#0f172a', fontWeight: 700, fontSize: 18, letterSpacing: '-0.025em' }}>
+                ¿Cerrar sesión?
+              </h3>
+              <p style={{ margin: '0 0 26px', color: '#64748b', fontSize: 14, lineHeight: 1.6 }}>
+                Se cerrará tu sesión y volverás al inicio de sesión.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setConfirmLogout(false)}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 11,
+                    border: '1.5px solid #e2e8f0', background: '#f8fafc',
+                    color: '#475569', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'inherit', transition: 'all 0.15s ease',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1' }}
+                  onMouseOut={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0' }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={onLogout}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 11,
+                    border: 'none',
+                    background: 'linear-gradient(135deg, rgb(var(--primary-rgb)), #2563eb)',
+                    color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    boxShadow: '0 4px 18px rgba(26,35,126,0.38)',
+                    transition: 'opacity 0.15s, transform 0.15s',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseOut={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' }}
+                >
+                  Sí, cerrar sesión
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
