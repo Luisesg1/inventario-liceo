@@ -136,6 +136,75 @@
 }
 .req-btn-nuevo:hover { opacity: 0.88; }
 
+/* ── FiltroSelect ── */
+.fsel-wrap {
+  position: relative;
+}
+.fsel-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  min-width: 140px;
+  justify-content: space-between;
+}
+.fsel-trigger--active {
+  border-color: var(--color-boton, #6366f1);
+  color: var(--color-boton, #4f46e5);
+  background: rgba(99, 102, 241, 0.06);
+}
+.fsel-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fsel-chevron {
+  font-size: 9px;
+  color: var(--text-secondary, #9ca3af);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.fsel-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 200;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.13);
+  min-width: 100%;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.fsel-option {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary, #374151);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
+  transition: background 0.1s, color 0.1s;
+}
+.fsel-option:last-child {
+  border-bottom: none;
+}
+.fsel-option:hover {
+  background: rgba(99, 102, 241, 0.07);
+  color: var(--color-boton, #4f46e5);
+}
+.fsel-option--sel {
+  font-weight: 600;
+  color: var(--color-boton, #4f46e5);
+  background: rgba(99, 102, 241, 0.06);
+}
+
 /* ── DateRangePicker compacto ── */
 .drp-wrap {
   position: relative;

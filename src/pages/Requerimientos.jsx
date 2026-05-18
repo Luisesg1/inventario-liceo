@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
 import './Requerimientos.css'
 
-const FONDOS = ['S.E.P.', 'P.I.E.', 'Sub. General', 'Mantenimiento', 'F.A.E.P.', 'Otro', 'Complementario TP', 'Aporte Municipal']
+const FONDOS = ['S.E.P.', 'P.I.E.', 'Sub. General', 'Mantenimiento', 'F.A.E.P.', 'Complementario TP', 'Aporte Municipal', 'Otro']
 const DIMENSIONES = ['Gestión Pedagógica', 'Liderazgo', 'Convivencia Escolar', 'Recursos']
 const SUB_DIMENSIONES = [
   'Enseñanza y aprendizaje en el aula',
@@ -590,6 +590,50 @@ function ImportarReq({ onImportado, onCerrar }) {
   )
 }
 
+// ── FiltroSelect ─────────────────────────────────────────────────────────
+function FiltroSelect({ value, onChange, opciones, placeholder }) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useRef()
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setAbierto(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="fsel-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`fsel-trigger req-filter ${value ? 'fsel-trigger--active' : ''}`}
+        onClick={() => setAbierto(a => !a)}
+      >
+        <span className="fsel-label">{value || placeholder}</span>
+        <span className="fsel-chevron">▼</span>
+      </button>
+      {abierto && (
+        <div className="fsel-dropdown">
+          <div
+            className={`fsel-option ${!value ? 'fsel-option--sel' : ''}`}
+            onMouseDown={() => { onChange(''); setAbierto(false) }}
+          >
+            {placeholder}
+          </div>
+          {opciones.map(o => (
+            <div
+              key={o}
+              className={`fsel-option ${value === o ? 'fsel-option--sel' : ''}`}
+              onMouseDown={() => { onChange(o); setAbierto(false) }}
+            >
+              {o}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── DateRangePicker compacto ──────────────────────────────────────────────
 function DateRangePicker({ desde, hasta, onDesde, onHasta, onLimpiar }) {
   const [abierto, setAbierto] = useState(false)
@@ -1030,14 +1074,18 @@ export default function Requerimientos({ usuario }) {
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
         />
-        <select className="req-filter" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {ESTADOS.map(e => <option key={e}>{e}</option>)}
-        </select>
-        <select className="req-filter" value={filtroFondo} onChange={e => setFiltroFondo(e.target.value)}>
-          <option value="">Todos los fondos</option>
-          {FONDOS.map(f => <option key={f}>{f}</option>)}
-        </select>
+        <FiltroSelect
+          value={filtroEstado}
+          onChange={setFiltroEstado}
+          opciones={ESTADOS}
+          placeholder="Todos los estados"
+        />
+        <FiltroSelect
+          value={filtroFondo}
+          onChange={setFiltroFondo}
+          opciones={FONDOS}
+          placeholder="Todos los fondos"
+        />
         <DateRangePicker
           desde={filtroFechaDesde}
           hasta={filtroFechaHasta}

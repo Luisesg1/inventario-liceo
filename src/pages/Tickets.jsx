@@ -46,6 +46,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
   const [seleccionados,   setSeleccionados]   = useState(new Set())
   const [confirmandoBulk, setConfirmandoBulk] = useState(false)
   const [busqueda,        setBusqueda]        = useState('')
+  const [exito,           setExito]           = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -80,7 +81,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
     setForm({ ...FORM_VACIO, nombre, apellidos: rest.join(' '), correo_contacto: usuario.email || '' })
     setModalNuevo(true)
   }
-  const cerrarNuevo = () => setModalNuevo(false)
+  const cerrarNuevo = () => { setModalNuevo(false); setExito(false) }
   const setF = (campo, val) => setForm(f => ({ ...f, [campo]: val }))
 
   const areaLabel = (t) => t.area_reporte === 'Otro' && t.area_otro ? `Otro — ${t.area_otro}` : (t.area_reporte || t.titulo || '—')
@@ -109,7 +110,6 @@ export default function Tickets({ usuario, onTicketActualizado }) {
       creado_por_nombre,
     })
     if (!error) {
-      // Notificar a usuarios soporte (la función busca los destinatarios internamente)
       supabase.functions.invoke('notify-new-ticket', {
         body: {
           titulo,
@@ -120,7 +120,8 @@ export default function Tickets({ usuario, onTicketActualizado }) {
         },
       }).catch(e => console.error('[notify-new-ticket]', e))
       await cargar()
-      cerrarNuevo()
+      setExito(true)
+      setTimeout(() => cerrarNuevo(), 5000)
     }
     setGuardando(false)
   }
@@ -348,15 +349,28 @@ export default function Tickets({ usuario, onTicketActualizado }) {
 
       {/* ── Modal: Nuevo ticket ── */}
       {modalNuevo && (
-        <div className="modal-tickets-overlay" onClick={cerrarNuevo}>
+        <div className="modal-tickets-overlay" onClick={!exito ? cerrarNuevo : undefined}>
           <div className="modal-tickets" onClick={e => e.stopPropagation()}>
             <div className="modal-tickets-header">
               <h2 className="modal-tickets-title">🎫 Nuevo ticket</h2>
               <button className="modal-tickets-close" onClick={cerrarNuevo}>✕</button>
             </div>
 
-            {/* ── Sección 1: Contacto ── */}
-            <p className="modal-seccion-label">Información de contacto</p>
+            {/* ── Pantalla de éxito ── */}
+            {exito && (
+              <div className="ticket-exito">
+                <button className="ticket-exito-cerrar" onClick={cerrarNuevo} aria-label="Cerrar">✕</button>
+                <div className="ticket-exito-icono">✅</div>
+                <p className="ticket-exito-titulo">¡Ticket creado con éxito!</p>
+                <p className="ticket-exito-sub">Tu solicitud fue registrada correctamente.</p>
+                <div className="ticket-exito-barra">
+                  <div className="ticket-exito-barra-fill" />
+                </div>
+              </div>
+            )}
+
+            {/* ── Formulario (oculto durante éxito) ── */}
+            {!exito && <><p className="modal-seccion-label">Información de contacto</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div className="modal-field">
@@ -419,6 +433,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
                 {guardando ? 'Guardando…' : 'Crear ticket'}
               </button>
             </div>
+            </>}
           </div>
         </div>
       )}
