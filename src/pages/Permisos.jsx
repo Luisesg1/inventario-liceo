@@ -84,6 +84,19 @@ function normStr(s = '') {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
+function formatRut(raw = '') {
+  const clean = raw.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length < 2) return clean
+  const verif = clean.slice(-1)
+  const body  = clean.slice(0, -1)
+  const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${formatted}-${verif}`
+}
+
+function normRut(r = '') {
+  return r.replace(/[^0-9kK]/g, '').toUpperCase()
+}
+
 // ── Animations ─────────────────────────────────────────────────────────────
 
 const overlayV = {
@@ -215,7 +228,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   useEffect(() => {
     const rut = rutNuevo.trim()
     if (!rut) { setUsuarioEncontrado(null); setNombresNuevo(''); setApellidosNuevo(''); return }
-    const encontrado = usuarios.find(u => normStr(u.rut ?? '') === normStr(rut))
+    const encontrado = usuarios.find(u => normRut(u.rut ?? '') === normRut(rut))
     if (encontrado) {
       setUsuarioEncontrado(encontrado)
       const partes = (encontrado.nombre ?? '').trim().split(/\s+/)
@@ -353,7 +366,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           <div className="mp-new-user-form">
                             <p className="mp-new-user-title">Nuevo usuario</p>
                             <input type="text" className="mp-input mp-input--sm" placeholder="RUT (ej: 12.345.678-9)"
-                              value={rutNuevo} onChange={e => setRutNuevo(e.target.value)} />
+                              value={rutNuevo}
+                              onChange={e => setRutNuevo(formatRut(e.target.value))} />
 
                             {/* Usuario encontrado por RUT */}
                             <AnimatePresence>
@@ -648,10 +662,13 @@ export default function Permisos({ usuario }) {
   }
 
   async function handleCrearUsuario({ rut, nombres, apellidos }) {
-    const nombre = `${nombres} ${apellidos}`.trim()
-    const email  = `${rut.replace(/\./g, '').replace('-', '')}@sin-email.local`
+    const nombre  = `${nombres} ${apellidos}`.trim()
+    const rutNorm = normRut(rut)
+    const email   = `${rutNorm.toLowerCase()}@externo.local`
     const { data, error } = await supabase
-      .from('usuarios').insert({ nombre, email, rol: 'docente', rut }).select().single()
+      .from('usuarios')
+      .insert({ id: crypto.randomUUID(), nombre, email, rol: 'docente', rut: formatRut(rut) })
+      .select().single()
     if (error) throw error
     setUsuarios(prev => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
     return data
