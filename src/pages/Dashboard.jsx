@@ -429,7 +429,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           <div className="dash-stat-pills">
             <div
               className="dash-stat-pill dash-stat-pill--total dash-stat-pill--link"
-              onClick={onIrATickets}
+              onClick={() => onIrATickets?.('')}
               title="Ver todos los tickets"
             >
               <span className="dsp-num">{tTotal}</span>
@@ -443,7 +443,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
                   key={estado}
                   className="dash-stat-pill dash-stat-pill--link"
                   style={{ background: cfg.bg }}
-                  onClick={onIrATickets}
+                  onClick={() => onIrATickets?.(estado)}
                   title={`Ver tickets ${estado.toLowerCase()}`}
                 >
                   <cfg.Icon size={14} style={{ color: cfg.color, flexShrink: 0 }} strokeWidth={2.5} />
@@ -515,7 +515,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           <div className="dash-stat-pills">
             <div
               className="dash-stat-pill dash-stat-pill--total dash-stat-pill--link"
-              onClick={onIrARequerimientos}
+              onClick={() => onIrARequerimientos?.(null)}
               title="Ver todos los requerimientos"
             >
               <span className="dsp-num">{rTotal}</span>
@@ -524,7 +524,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             <div
               className="dash-stat-pill dash-stat-pill--link"
               style={{ background: '#fef9c3' }}
-              onClick={onIrARequerimientos}
+              onClick={() => onIrARequerimientos?.('proceso')}
               title="Ver requerimientos en proceso"
             >
               <CircleDot size={14} style={{ color: '#854d0e', flexShrink: 0 }} strokeWidth={2.5} />
@@ -534,7 +534,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             <div
               className="dash-stat-pill dash-stat-pill--link"
               style={{ background: '#dcfce7' }}
-              onClick={onIrARequerimientos}
+              onClick={() => onIrARequerimientos?.('comprados')}
               title="Ver requerimientos comprados"
             >
               <CheckCircle2 size={14} style={{ color: '#16a34a', flexShrink: 0 }} strokeWidth={2.5} />
@@ -544,7 +544,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             <div
               className="dash-stat-pill dash-stat-pill--link"
               style={{ background: '#fee2e2' }}
-              onClick={onIrARequerimientos}
+              onClick={() => onIrARequerimientos?.('rechazados')}
               title="Ver requerimientos rechazados"
             >
               <XCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} strokeWidth={2.5} />

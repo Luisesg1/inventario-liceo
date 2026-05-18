@@ -31,10 +31,14 @@ export default function App() {
     if (id) window.history.replaceState(null, '', window.location.pathname)
     return id ? Number(id) : null
   })
-  const [abrirCatId,         setAbrirCatId]         = useState(null)
+  const [abrirCatId,           setAbrirCatId]           = useState(null)
+  const [filtroInicialTickets, setFiltroInicialTickets] = useState('')
+  const [filtroInicialReqs,    setFiltroInicialReqs]    = useState(null)
   const refreshTicketBadge = useRef(null)
 
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
+  const irATickets       = (filtro = '') => { setFiltroInicialTickets(filtro); cambiarPagina('tickets') }
+  const irAReqs          = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
   const procesandoCambio = useRef(false)
   const modoRecovery     = useRef(esRecuperacion)
 
@@ -186,9 +190,9 @@ export default function App() {
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={() => cambiarPagina('tickets')} onIrARequerimientos={() => cambiarPagina('requerimientos')} />}
-      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} />}
-      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} />}
+      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} />}
+      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
     </Layout>

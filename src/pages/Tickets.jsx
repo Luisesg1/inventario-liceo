@@ -24,13 +24,13 @@ const FORM_VACIO = {
   lugar_falla: '', descripcion: '',
 }
 
-export default function Tickets({ usuario, onTicketActualizado }) {
+export default function Tickets({ usuario, onTicketActualizado, filtroInicial = '' }) {
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
   const esGestor  = esAdmin || esSoporte
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
-  const [filtroEstado,    setFiltroEstado]    = useState('')
+  const [filtroEstado,    setFiltroEstado]    = useState(filtroInicial)
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
   const [filtroArea,      setFiltroArea]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')

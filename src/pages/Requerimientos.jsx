@@ -709,7 +709,7 @@ function DateRangePicker({ desde, hasta, onDesde, onHasta, onLimpiar }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-export default function Requerimientos({ usuario }) {
+export default function Requerimientos({ usuario, filtroInicial = null }) {
   const esAdmin     = usuario.rol === 'admin'
   const esVisorReq  = usuario.rol === 'visor_requerimientos'
   const puedeEditar = !esVisorReq && (esAdmin || usuario.rol === 'editor' || usuario.rol === 'encargado')
@@ -725,7 +725,7 @@ export default function Requerimientos({ usuario }) {
   const [busqueda,          setBusqueda]          = useState('')
   const [filtroEstado,      setFiltroEstado]      = useState('')
   const [filtroFondo,       setFiltroFondo]       = useState('')
-  const [filtroKpi,         setFiltroKpi]         = useState(null)
+  const [filtroKpi,         setFiltroKpi]         = useState(filtroInicial)
   const [filtroFechaDesde,  setFiltroFechaDesde]  = useState('')
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
