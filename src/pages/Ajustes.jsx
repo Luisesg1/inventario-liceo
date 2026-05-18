@@ -8,7 +8,7 @@ const DEFAULTS = {
   colorAcento:      '#d4a017',
   colorBoton:       '#6366f1',
   nombreSistema:    'Inventario',
-  nombreInstitucion:'Liceo JHJ',
+  nombreInstitucion:'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
 }
 
 const PALETAS = [

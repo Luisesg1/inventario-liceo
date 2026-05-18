@@ -83,7 +83,7 @@ function ErrorMsg({ msg }) {
 export default function Login({
   onLogin,
   logoUrl,
-  nombreInstitucion = 'Liceo Bicentenario Polivalente Juvenal Hernández Jaque',
+  nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   nombreSistema     = 'Sistema de Inventario',
 }) {
   /* ── Estado login ── */
@@ -183,7 +183,7 @@ export default function Login({
       </div>
       <h1 className="login-side-title">{nombreInstitucion}</h1>
       <div className="login-side-sep" />
-      <p className="login-side-sub">El Carmen · Región de O'Higgins</p>
+      <p className="login-side-sub">El Carmen · Región de Ñuble</p>
     </div>
   )
 

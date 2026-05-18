@@ -40,7 +40,7 @@ const submenuVariants = {
 export default function Layout({
   usuario, onLogout, children, paginaActual, setPagina,
   onRefreshTicketBadge, logoUrl,
-  nombreSistema = 'Inventario', nombreInstitucion = 'Liceo JHJ',
+  nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
@@ -170,7 +170,7 @@ export default function Layout({
         doc.setFillColor(...AZUL); doc.rect(0,0,W,22,'F')
         doc.setFillColor(...DORADO); doc.rect(0,22,W,1.5,'F')
         doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13)
-        doc.text('Liceo Bicentenario Juvenal Hernández Jaque', W/2, 9, { align:'center' })
+        doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque', W/2, 9, { align:'center' })
         doc.setFont('helvetica','normal'); doc.setFontSize(8.5)
         doc.text('Inventario de Bienes — Informe Oficial', W/2, 15.5, { align:'center' })
         doc.setTextColor(...GRIS); doc.setFontSize(7.5)
@@ -184,7 +184,7 @@ export default function Layout({
           doc.setFillColor(245,245,250); doc.rect(0,284,W,13,'F')
           doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(0,284,W,284)
           doc.setTextColor(...GRIS); doc.setFontSize(7.5)
-          doc.text('Liceo Bicentenario Juvenal Hernández Jaque — Sistema de Inventario', W/2, 290, { align:'center' })
+          doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Sistema de Inventario', W/2, 290, { align:'center' })
           doc.text(`${i} / ${pageCount}`, W-12, 290, { align:'right' })
         }
       }
