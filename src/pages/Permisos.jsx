@@ -789,10 +789,9 @@ export default function Permisos({ usuario }) {
       ;({ data: us } = await supabase
         .from('usuarios').select('id, nombre, email, rol').order('nombre'))
     }
-    // Join sin rut para que no falle si la columna no existe en usuarios
     const { data: ps } = await supabase
       .from('ausencias')
-      .select('*, usuario:usuario_id(id, nombre, email, rol)')
+      .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
       .order('fecha_inicio', { ascending: false })
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
