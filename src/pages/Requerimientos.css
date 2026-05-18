@@ -731,6 +731,57 @@
   color: var(--color-boton, #4f46e5);
 }
 
+/* ── Banner filtros activos ── */
+.req-filtro-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 10px 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: var(--text-secondary, #6b7280);
+  animation: req-banner-in 0.18s ease;
+}
+@keyframes req-banner-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.req-filtro-banner__label {
+  font-weight: 700;
+  color: #6366f1;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+.req-filtro-banner__sep { opacity: 0.35; }
+.req-filtro-banner__item { color: var(--text-secondary, #6b7280); }
+.req-filtro-banner__item strong { color: var(--text-primary, #111827); font-weight: 700; }
+.req-filtro-banner__item em {
+  opacity: 0.6;
+  font-style: normal;
+  font-size: 0.78rem;
+}
+.req-filtro-banner__limpiar {
+  margin-left: auto;
+  background: none;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #6366f1;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.req-filtro-banner__limpiar:hover {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+
 @media (max-width: 640px) {
   .req-grid-2 { grid-template-columns: 1fr; }
   .req-grid-3 { grid-template-columns: 1fr; }

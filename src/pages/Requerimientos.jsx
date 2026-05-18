@@ -938,6 +938,20 @@ export default function Requerimientos({ usuario }) {
     }
   }, [items])
 
+  const kpiFiltrados = useMemo(() => {
+    const hayFiltro = filtroEstado || filtroFondo || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim()
+    if (!hayFiltro) return null
+    const conMonto     = filtrados.filter(r => Number(r.monto_solicitado) > 0)
+    const conMontoReal = filtrados.filter(r => Number(r.monto_real) > 0)
+    return {
+      total:          filtrados.length,
+      montoTotal:     conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
+      montoRealTotal: conMontoReal.reduce((acc, r) => acc + Number(r.monto_real), 0),
+      conMonto:       conMonto.length,
+      conMontoReal:   conMontoReal.length,
+    }
+  }, [filtrados, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+
   return (
     <div className="req-page">
 
@@ -988,6 +1002,34 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
         </div>
       </div>
+
+      {/* Banner filtros activos */}
+      {kpiFiltrados && (
+        <div className="req-filtro-banner">
+          <span className="req-filtro-banner__label">Filtro activo</span>
+          <span className="req-filtro-banner__sep">—</span>
+          <span className="req-filtro-banner__item">
+            <strong>{kpiFiltrados.total}</strong> resultado{kpiFiltrados.total !== 1 ? 's' : ''}
+          </span>
+          <span className="req-filtro-banner__sep">·</span>
+          <span className="req-filtro-banner__item">
+            Monto solicitado: <strong>{formatMontoKpi(kpiFiltrados.montoTotal)}</strong>
+            <em> ({kpiFiltrados.conMonto} con monto)</em>
+          </span>
+          <span className="req-filtro-banner__sep">·</span>
+          <span className="req-filtro-banner__item">
+            Monto real: <strong>{formatMontoKpi(kpiFiltrados.montoRealTotal)}</strong>
+            <em> ({kpiFiltrados.conMontoReal} con monto)</em>
+          </span>
+          <button
+            className="req-filtro-banner__limpiar"
+            onClick={() => {
+              setBusqueda(''); setFiltroEstado(''); setFiltroFondo('');
+              setFiltroKpi(null); setFiltroFechaDesde(''); setFiltroFechaHasta('')
+            }}
+          >✕ Limpiar filtros</button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div className="req-toolbar">
