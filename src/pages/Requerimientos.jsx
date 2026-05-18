@@ -962,6 +962,7 @@ export default function Requerimientos({ usuario }) {
           onClick={() => setFiltroKpi(null)}
         >
           <span className="req-kpi-num">{kpis.total}</span>
+          {kpiFiltrados && <span className="req-kpi-sub">{kpiFiltrados.total} filtrados</span>}
           <span className="req-kpi-label">Total</span>
         </div>
         <div
@@ -969,6 +970,7 @@ export default function Requerimientos({ usuario }) {
           onClick={() => toggleKpi('proceso')}
         >
           <span className="req-kpi-num">{kpis.enProceso}</span>
+          {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length} filtrados</span>}
           <span className="req-kpi-label">En proceso</span>
         </div>
         <div
@@ -976,6 +978,7 @@ export default function Requerimientos({ usuario }) {
           onClick={() => toggleKpi('comprados')}
         >
           <span className="req-kpi-num">{kpis.comprados}</span>
+          {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length} filtrados</span>}
           <span className="req-kpi-label">Comprados</span>
         </div>
         <div
@@ -983,6 +986,7 @@ export default function Requerimientos({ usuario }) {
           onClick={() => toggleKpi('rechazados')}
         >
           <span className="req-kpi-num">{kpis.rechazados}</span>
+          {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length} filtrados</span>}
           <span className="req-kpi-label">Rechazados</span>
         </div>
         <div
@@ -990,6 +994,7 @@ export default function Requerimientos({ usuario }) {
           title="Suma de todos los montos solicitados registrados (no filtra la tabla)"
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
+          {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto solicitado (total)</span>
           <span className="req-kpi-hint">{kpis.conMonto} con monto · {kpis.total - kpis.conMonto} sin monto</span>
         </div>
@@ -998,29 +1003,16 @@ export default function Requerimientos({ usuario }) {
           title="Suma de todos los montos reales registrados (no filtra la tabla)"
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
+          {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto real (total)</span>
           <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
         </div>
       </div>
 
-      {/* Banner filtros activos */}
+      {/* Botón limpiar filtros */}
       {kpiFiltrados && (
         <div className="req-filtro-banner">
-          <span className="req-filtro-banner__label">Filtro activo</span>
-          <span className="req-filtro-banner__sep">—</span>
-          <span className="req-filtro-banner__item">
-            <strong>{kpiFiltrados.total}</strong> resultado{kpiFiltrados.total !== 1 ? 's' : ''}
-          </span>
-          <span className="req-filtro-banner__sep">·</span>
-          <span className="req-filtro-banner__item">
-            Monto solicitado: <strong>{formatMontoKpi(kpiFiltrados.montoTotal)}</strong>
-            <em> ({kpiFiltrados.conMonto} con monto)</em>
-          </span>
-          <span className="req-filtro-banner__sep">·</span>
-          <span className="req-filtro-banner__item">
-            Monto real: <strong>{formatMontoKpi(kpiFiltrados.montoRealTotal)}</strong>
-            <em> ({kpiFiltrados.conMontoReal} con monto)</em>
-          </span>
+          <span className="req-filtro-banner__label">🔍 Filtro activo — mostrando {kpiFiltrados.total} de {kpis.total} requerimientos</span>
           <button
             className="req-filtro-banner__limpiar"
             onClick={() => {
