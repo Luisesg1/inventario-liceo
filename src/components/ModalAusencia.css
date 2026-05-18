@@ -580,6 +580,191 @@
 .maus-form-col::-webkit-scrollbar-thumb:hover,
 .maus-summary-col::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
+/* ── Search inside dropdown ─────────────────────────── */
+.maus-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid #f0f4ff;
+}
+.maus-search-icon { color: #94a3b8; flex-shrink: 0; }
+.maus-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1e2d6e;
+  background: transparent;
+}
+.maus-search-input::placeholder { color: #cbd5e1; }
+
+.maus-dropdown-list { max-height: 180px; overflow-y: auto; }
+
+.maus-dropdown-empty {
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* ── Dropdown footer (crear usuario) ────────────────── */
+.maus-dropdown-footer {
+  border-top: 1px solid #f0f4ff;
+  padding: 7px 10px;
+}
+.maus-create-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1a237e;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.maus-create-user-btn:hover { background: rgba(26,35,126,0.06); }
+
+/* ── Inline new-user form ────────────────────────────── */
+.maus-new-user-form {
+  border-top: 1px solid #f0f4ff;
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.maus-new-user-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 2px;
+}
+.maus-new-user-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.maus-new-user-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+.maus-input--sm { padding: 7px 10px; font-size: 12.5px; }
+.maus-btn-cancel--sm {
+  padding: 6px 12px; font-size: 12px;
+}
+.maus-btn-save--sm {
+  padding: 6px 13px; font-size: 12px;
+}
+
+/* ── Permit counter ─────────────────────────────────── */
+.maus-permisos-counter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #fafbff;
+  border: 1.5px solid #e8edf8;
+}
+.maus-permisos-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.maus-dot {
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.maus-dot--used  { background: #1a237e; }
+.maus-dot--free  { background: #e2e8f0; }
+.maus-dot--over  { background: #ef4444; }
+
+.maus-permisos-label { display: flex; align-items: center; gap: 6px; }
+.maus-permisos-text  { font-size: 12px; font-weight: 600; color: #64748b; }
+.maus-permisos-text--warn  { color: #d97706; }
+.maus-permisos-text--error { color: #dc2626; }
+.maus-permisos-extra { font-weight: 700; }
+
+.maus-permisos-loading {
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 4px 0;
+}
+
+/* ── Inline alerts ──────────────────────────────────── */
+.maus-alert {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+  overflow: hidden;
+}
+.maus-alert--warn {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.22);
+  color: #b45309;
+}
+.maus-alert--error {
+  background: rgba(239,68,68,0.07);
+  border: 1px solid rgba(239,68,68,0.20);
+  color: #dc2626;
+}
+
+/* ── Summary badges ─────────────────────────────────── */
+.maus-value--warn  { color: #d97706 !important; }
+.maus-value--error { color: #dc2626 !important; }
+
+.maus-summary-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.maus-summary-alert--warn {
+  background: rgba(245,158,11,0.08);
+  color: #b45309;
+}
+.maus-summary-alert--error {
+  background: rgba(239,68,68,0.07);
+  color: #dc2626;
+}
+
+/* ── Footer warning ─────────────────────────────────── */
+.maus-footer-warn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-right: auto;
+}
+
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 700px) {
   .maus-body {
