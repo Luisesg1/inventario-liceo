@@ -734,7 +734,8 @@ export default function Usuarios({ usuario }) {
   const usuariosFiltrados = usuarios
     .filter((u) =>
       u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      u.email?.toLowerCase().includes(busqueda.toLowerCase())
+      u.email?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      (u.rut && u.rut.replace(/[^0-9kK]/gi, '').includes(busqueda.replace(/[^0-9kK]/gi, '')))
     )
     .filter((u) => (filtroRol === 'todos' ? true : u.rol === filtroRol))
     .sort((a, b) => {
@@ -1083,6 +1084,7 @@ export default function Usuarios({ usuario }) {
                     {u.nombre}
                     {esYo && <span className="badge-yo">Tú</span>}
                   </div>
+                  {u.rut && <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>{u.rut}</div>}
                   <div className="usuario-email">{u.email}</div>
                 </div>
 
