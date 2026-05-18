@@ -257,7 +257,9 @@ function traducirClaves(claves, allCats) {
 }
 
 export default function Dashboard({ usuario, onIrATickets }) {
-  const esAdmin = usuario?.rol === 'admin'
+  const esAdmin   = usuario?.rol === 'admin'
+  const esSoporte = usuario?.rol === 'soporte'
+  const esGestor  = esAdmin || esSoporte
 
   const [bienes,               setBienes]               = useState([])
   const [categorias,           setCategorias]           = useState([])
@@ -296,7 +298,7 @@ export default function Dashboard({ usuario, onIrATickets }) {
   }, [])
 
   useEffect(() => {
-    if (!esAdmin) return
+    if (!esGestor) return
     const fetchTickets = async () => {
       const { data } = await supabase
         .from('tickets')
@@ -313,7 +315,7 @@ export default function Dashboard({ usuario, onIrATickets }) {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [esAdmin])
+  }, [esGestor])
 
   useEffect(() => {
     supabase.from('actividades').select('*').order('created_at', { ascending: false }).limit(3)
@@ -403,7 +405,7 @@ export default function Dashboard({ usuario, onIrATickets }) {
         ))}
       </div>
 
-      {esAdmin && <TicketsAlerta tickets={ticketsAbiertos} onVerTodos={onIrATickets} />}
+      {esGestor && <TicketsAlerta tickets={ticketsAbiertos} onVerTodos={onIrATickets} />}
 
       <div className="dash-charts">
         <div className="dash-card">
