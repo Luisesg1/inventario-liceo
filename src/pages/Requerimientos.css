@@ -150,8 +150,154 @@
   color: var(--text-primary, #111827);
   vertical-align: middle;
 }
-.req-row { cursor: pointer; transition: background 0.12s; }
+.req-row { transition: background 0.12s; }
 .req-row:hover td { background: var(--row-hover, #f9fafb); }
+.req-th-acciones,
+.req-td-acciones { width: 1%; white-space: nowrap; text-align: center; }
+.req-acciones { display: flex; gap: 2px; align-items: center; justify-content: center; }
+.req-acciones .btn-ver,
+.req-acciones .btn-edit,
+.req-acciones .btn-del {
+  background: transparent;
+  border: none;
+  padding: 5px 6px;
+  cursor: pointer;
+  border-radius: 7px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.13s ease, opacity 0.13s ease;
+  opacity: 0.45;
+}
+.req-acciones .btn-ver:hover  { opacity: 1; background: #dbeafe; color: #1d4ed8; }
+.req-acciones .btn-edit:hover { opacity: 1; background: #fef9c3; color: #92700a; }
+.req-acciones .btn-del        { color: #ef4444; }
+.req-acciones .btn-del:hover  { opacity: 1; background: #fee2e2; color: #dc2626; }
+
+.req-modal-detalle {
+  max-width: 860px;
+  width: 92vw;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.req-detalle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+  flex-wrap: wrap;
+}
+.req-detalle-header-titulo h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary, #111827);
+}
+.req-detalle-header-titulo p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+.req-detalle-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.req-btn-pdf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: linear-gradient(135deg, #1a237e, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.req-btn-pdf:hover { opacity: 0.9; }
+.req-btn-editar-detalle {
+  padding: 7px 12px;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.req-btn-editar-detalle:hover { background: #f9fafb; }
+.req-detalle-body { padding: 16px 24px 24px; }
+.req-detalle-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.req-detalle-seccion {
+  background: var(--input-bg, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.req-detalle-full { margin-bottom: 12px; }
+.req-detalle-titulo {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+.req-detalle-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border, #f3f4f6);
+  font-size: 13px;
+}
+.req-detalle-fila:last-child { border-bottom: none; }
+.req-detalle-fila span { color: var(--text-secondary, #6b7280); flex-shrink: 0; }
+.req-detalle-fila strong { color: var(--text-primary, #111827); text-align: right; word-break: break-word; }
+.req-detalle-texto {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary, #374151);
+  white-space: pre-wrap;
+}
+.req-detalle-imgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.req-detalle-img-link {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border, #e5e7eb);
+}
+.req-detalle-img-link img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .req-detalle-grid-2 { grid-template-columns: 1fr; }
+  .req-detalle-header { flex-direction: column; }
+}
 .req-num      { font-weight: 600; color: var(--color-acento, #d4a017); white-space: nowrap; }
 .req-nowrap   { white-space: nowrap; }
 .req-contenido { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

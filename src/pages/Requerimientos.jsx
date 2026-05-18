@@ -191,6 +191,84 @@ async function borrarImagenesStorage(urls) {
   await supabase.storage.from(BUCKET_REQ_IMGS).remove(paths)
 }
 
+function cargarHtml2pdf() {
+  return new Promise((resolve, reject) => {
+    if (window.html2pdf) { resolve(); return }
+    const prev = document.getElementById('html2pdf-script')
+    if (prev) {
+      prev.addEventListener('load', () => resolve(), { once: true })
+      prev.addEventListener('error', reject, { once: true })
+      return
+    }
+    const script = document.createElement('script')
+    script.id = 'html2pdf-script'
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+    script.onload = () => resolve()
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+}
+
+function DetalleReqContenido({ r }) {
+  const imgs = parseObsImagenes(r.observacion_imagenes)
+  const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
+  return (
+    <>
+      <div className="req-detalle-grid-2">
+        <div className="req-detalle-seccion">
+          <p className="req-detalle-titulo">General</p>
+          <div className="req-detalle-fila"><span>Fecha</span><strong>{formatFecha(r.fecha)}</strong></div>
+          <div className="req-detalle-fila"><span>Solicitante</span><strong>{r.solicitante || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>Estado</span>
+            <span className="req-badge" style={{ background: st.bg, color: st.color }}>{r.estado || '—'}</span>
+          </div>
+          <div className="req-detalle-fila"><span>Evidencia</span><strong>{r.evidencia || '—'}</strong></div>
+        </div>
+        <div className="req-detalle-seccion">
+          <p className="req-detalle-titulo">Clasificación</p>
+          <div className="req-detalle-fila"><span>Fondo</span><strong>{r.fondo || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>Dimensión</span><strong>{r.dimension || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>Sub-Dimensión</span><strong>{r.sub_dimension || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>Acción</span><strong>{r.accion || '—'}</strong></div>
+        </div>
+      </div>
+      <div className="req-detalle-seccion req-detalle-full">
+        <p className="req-detalle-titulo">Contenido</p>
+        <p className="req-detalle-texto">{r.contenido || '—'}</p>
+      </div>
+      <div className="req-detalle-grid-2">
+        <div className="req-detalle-seccion">
+          <p className="req-detalle-titulo">Montos</p>
+          <div className="req-detalle-fila"><span>Monto solicitado</span><strong>{formatMonto(r.monto_solicitado)}</strong></div>
+          <div className="req-detalle-fila"><span>Monto real</span><strong>{formatMonto(r.monto_real)}</strong></div>
+        </div>
+        <div className="req-detalle-seccion">
+          <p className="req-detalle-titulo">Adquisición</p>
+          <div className="req-detalle-fila"><span>Fecha recepción</span><strong>{formatFecha(r.fecha_recepcion)}</strong></div>
+          <div className="req-detalle-fila"><span>Orden de compra</span><strong>{r.orden_compra || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>RUT proveedor</span><strong>{r.rut_proveedor || '—'}</strong></div>
+          <div className="req-detalle-fila"><span>N° factura</span><strong>{r.numero_factura || '—'}</strong></div>
+        </div>
+      </div>
+      {(r.observacion || imgs.length > 0) && (
+        <div className="req-detalle-seccion req-detalle-full">
+          <p className="req-detalle-titulo">Observación</p>
+          {r.observacion && <p className="req-detalle-texto">{r.observacion}</p>}
+          {imgs.length > 0 && (
+            <div className="req-detalle-imgs">
+              {imgs.map(url => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="req-detalle-img-link">
+                  <img src={url} alt="Adjunto" />
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
 function formatMonto(v) {
   if (v === null || v === undefined || v === '') return '—'
   return '$' + Number(v).toLocaleString('es-CL')
@@ -515,6 +593,7 @@ export default function Requerimientos({ usuario }) {
   const [items,             setItems]             = useState([])
   const [cargando,          setCargando]          = useState(true)
   const [modal,             setModal]             = useState(false)
+  const [verDetalle,        setVerDetalle]        = useState(null)
   const [form,              setForm]              = useState(FORM_VACIO)
   const [guardando,         setGuardando]         = useState(false)
   const [exportando,        setExportando]        = useState(false)
@@ -581,12 +660,20 @@ export default function Requerimientos({ usuario }) {
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const abrirNuevo = () => {
+    setVerDetalle(null)
     resetImagenes()
     setErrorGuardar('')
     setForm(FORM_VACIO)
     setModal('nuevo')
   }
-  const abrirDetalle = (item) => {
+  const abrirVer = (item) => {
+    setVerDetalle(item)
+    setModal(false)
+    setConfirmarEliminar(false)
+  }
+
+  const abrirEditar = (item) => {
+    setVerDetalle(null)
     resetImagenes(parseObsImagenes(item.observacion_imagenes))
     setErrorGuardar('')
     setForm({ ...item })
@@ -700,13 +787,53 @@ export default function Requerimientos({ usuario }) {
     }
   }
 
+  const eliminarRegistro = async (r) => {
+    const urls = parseObsImagenes(r.observacion_imagenes)
+    await borrarImagenesStorage(urls)
+    const { error } = await supabase.from('requerimientos').delete().eq('id', r.id)
+    if (error) throw error
+    if (verDetalle?.id === r.id) setVerDetalle(null)
+    if (modal?.id === r.id) cerrar()
+    cargar()
+  }
+
   const eliminar = async () => {
     if (!modal?.id) return
-    const urls = parseObsImagenes(modal.observacion_imagenes)
-    await borrarImagenesStorage(urls)
-    await supabase.from('requerimientos').delete().eq('id', modal.id)
-    cerrar()
-    cargar()
+    try {
+      await eliminarRegistro(modal)
+    } catch (err) {
+      setErrorGuardar(err?.message || 'No se pudo eliminar.')
+    }
+  }
+
+  const eliminarDesdeTabla = (r) => {
+    if (!window.confirm(`¿Eliminar el requerimiento #${r.id}?`)) return
+    eliminarRegistro(r).catch(err => {
+      window.alert(err?.message || 'No se pudo eliminar.')
+    })
+  }
+
+  const descargarPDFDetalle = async () => {
+    const el = document.getElementById('req-detalle-pdf-content')
+    if (!el || !verDetalle) return
+    try {
+      await cargarHtml2pdf()
+    } catch {
+      setErrorGuardar('No se pudo cargar la librería de PDF.')
+      return
+    }
+    const btns = el.querySelectorAll('button')
+    btns.forEach(b => { b.style.visibility = 'hidden' })
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `requerimiento_${verDetalle.id}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    }
+    window.html2pdf().set(opt).from(el).save().then(() => {
+      btns.forEach(b => { b.style.visibility = '' })
+    })
   }
 
   const handleExportar = async () => {
@@ -814,13 +941,14 @@ export default function Requerimientos({ usuario }) {
                 <th>Monto Real</th>
                 <th>Estado</th>
                 <th>Evidencia</th>
+                <th className="req-th-acciones">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtrados.map(r => {
                 const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
                 return (
-                  <tr key={r.id} onClick={() => abrirDetalle(r)} className="req-row">
+                  <tr key={r.id} className="req-row">
                     <td className="req-num">#{r.id}</td>
                     <td className="req-nowrap">{formatFecha(r.fecha)}</td>
                     <td className="req-contenido">{r.contenido}</td>
@@ -835,6 +963,17 @@ export default function Requerimientos({ usuario }) {
                       </span>
                     </td>
                     <td>{r.evidencia || '—'}</td>
+                    <td className="req-td-acciones">
+                      <div className="req-acciones">
+                        <button type="button" className="btn-ver" onClick={() => abrirVer(r)} title="Ver detalle">👁</button>
+                        {puedeEditar && (
+                          <button type="button" className="btn-edit" onClick={() => abrirEditar(r)} title="Editar">✏️</button>
+                        )}
+                        {esAdmin && (
+                          <button type="button" className="btn-del" onClick={() => eliminarDesdeTabla(r)} title="Eliminar">✕</button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
@@ -843,12 +982,42 @@ export default function Requerimientos({ usuario }) {
         </div>
       )}
 
+      {/* Modal ver detalle */}
+      {verDetalle && (
+        <div className="req-modal-overlay" onClick={e => e.target === e.currentTarget && setVerDetalle(null)}>
+          <div className="req-modal req-modal-detalle" onClick={e => e.stopPropagation()}>
+            <div id="req-detalle-pdf-content" style={{ background: '#ffffff' }}>
+              <div className="req-detalle-header">
+                <div className="req-detalle-header-titulo">
+                  <h2>Requerimiento #{verDetalle.id}</h2>
+                  <p>{formatFecha(verDetalle.fecha)} · {verDetalle.solicitante || 'Sin solicitante'}</p>
+                </div>
+                <div className="req-detalle-header-actions">
+                  <button type="button" className="req-btn-pdf" onClick={descargarPDFDetalle}>
+                    ⬇ Descargar PDF
+                  </button>
+                  {puedeEditar && (
+                    <button type="button" className="req-btn-editar-detalle" onClick={() => abrirEditar(verDetalle)}>
+                      ✏️ Editar
+                    </button>
+                  )}
+                  <button type="button" className="req-modal-close" onClick={() => setVerDetalle(null)}>✕</button>
+                </div>
+              </div>
+              <div className="req-detalle-body">
+                <DetalleReqContenido r={verDetalle} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal edición/nuevo */}
       {modal && (
         <div className="req-modal-overlay" onClick={e => e.target === e.currentTarget && cerrar()}>
           <div className="req-modal">
             <div className="req-modal-header">
-              <h2>{modal === 'nuevo' ? 'Nuevo requerimiento' : `Requerimiento #${modal.id}`}</h2>
+              <h2>{modal === 'nuevo' ? 'Nuevo requerimiento' : `Editar requerimiento #${modal.id}`}</h2>
               <button className="req-modal-close" onClick={cerrar}>✕</button>
             </div>
             <div className="req-modal-body">
