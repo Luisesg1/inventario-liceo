@@ -153,6 +153,44 @@ const FORM_VACIO = {
   numero_factura: '', evidencia: 'Pendiente', observacion: '',
 }
 
+const BUCKET_REQ_IMGS = 'requerimientos'
+const MAX_OBS_IMAGENES = 6
+const MAX_OBS_IMG_BYTES = 5 * 1024 * 1024
+
+function parseObsImagenes(val) {
+  if (!val) return []
+  if (Array.isArray(val)) return val.filter(u => typeof u === 'string' && u)
+  return []
+}
+
+function pathDesdeUrlPublica(url) {
+  try {
+    const u = new URL(url)
+    const mark = '/object/public/requerimientos/'
+    const i = u.pathname.indexOf(mark)
+    if (i >= 0) return decodeURIComponent(u.pathname.slice(i + mark.length).split('?')[0])
+  } catch { /* ignore */ }
+  return null
+}
+
+async function subirImagenRequerimiento(reqId, file) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+  const path = `${reqId}/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from(BUCKET_REQ_IMGS).upload(path, file, {
+    contentType: file.type || 'image/jpeg',
+    upsert: false,
+  })
+  if (error) throw error
+  const { data: { publicUrl } } = supabase.storage.from(BUCKET_REQ_IMGS).getPublicUrl(path)
+  return publicUrl
+}
+
+async function borrarImagenesStorage(urls) {
+  const paths = urls.map(pathDesdeUrlPublica).filter(Boolean)
+  if (!paths.length) return
+  await supabase.storage.from(BUCKET_REQ_IMGS).remove(paths)
+}
+
 function formatMonto(v) {
   if (v === null || v === undefined || v === '') return '—'
   return '$' + Number(v).toLocaleString('es-CL')
@@ -486,8 +524,28 @@ export default function Requerimientos({ usuario }) {
   const [filtroFondo,       setFiltroFondo]       = useState('')
   const [filtroKpi,         setFiltroKpi]         = useState(null)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const [imagenesExistentes, setImagenesExistentes] = useState([])
+  const [imagenesNuevas,     setImagenesNuevas]     = useState([])
+  const [errorGuardar,       setErrorGuardar]       = useState('')
 
   useEffect(() => { cargar() }, [])
+
+  const revocarPreviewsNuevas = () => {
+    setImagenesNuevas(prev => {
+      prev.forEach(i => URL.revokeObjectURL(i.preview))
+      return []
+    })
+  }
+
+  const limpiarImagenesPendientes = () => {
+    revocarPreviewsNuevas()
+    setImagenesExistentes([])
+  }
+
+  const resetImagenes = (urls = []) => {
+    revocarPreviewsNuevas()
+    setImagenesExistentes(urls)
+  }
 
   const cargar = async () => {
     setCargando(true)
@@ -522,13 +580,65 @@ export default function Requerimientos({ usuario }) {
   const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const abrirNuevo    = () => { setForm(FORM_VACIO); setModal('nuevo') }
-  const abrirDetalle  = (item) => { setForm({ ...item }); setModal(item) }
-  const cerrar        = () => { setModal(false); setConfirmarEliminar(false) }
+  const abrirNuevo = () => {
+    resetImagenes()
+    setErrorGuardar('')
+    setForm(FORM_VACIO)
+    setModal('nuevo')
+  }
+  const abrirDetalle = (item) => {
+    resetImagenes(parseObsImagenes(item.observacion_imagenes))
+    setErrorGuardar('')
+    setForm({ ...item })
+    setModal(item)
+  }
+  const cerrar = () => {
+    limpiarImagenesPendientes()
+    setModal(false)
+    setConfirmarEliminar(false)
+    setErrorGuardar('')
+  }
+
+  const totalImagenes = imagenesExistentes.length + imagenesNuevas.length
+
+  const onSeleccionarImagenes = (e) => {
+    const files = [...(e.target.files || [])]
+    e.target.value = ''
+    if (!files.length) return
+    const espacio = MAX_OBS_IMAGENES - totalImagenes
+    if (espacio <= 0) {
+      setErrorGuardar(`Máximo ${MAX_OBS_IMAGENES} imágenes por observación.`)
+      return
+    }
+    const validas = []
+    for (const f of files.slice(0, espacio)) {
+      if (!f.type.startsWith('image/')) continue
+      if (f.size > MAX_OBS_IMG_BYTES) {
+        setErrorGuardar('Cada imagen debe pesar menos de 5 MB.')
+        continue
+      }
+      validas.push({ file: f, preview: URL.createObjectURL(f) })
+    }
+    if (validas.length) {
+      setImagenesNuevas(prev => [...prev, ...validas])
+      setErrorGuardar('')
+    }
+  }
+
+  const quitarImagenExistente = (url) => setImagenesExistentes(prev => prev.filter(u => u !== url))
+  const quitarImagenNueva = (idx) => {
+    setImagenesNuevas(prev => {
+      const next = [...prev]
+      const [removed] = next.splice(idx, 1)
+      if (removed) URL.revokeObjectURL(removed.preview)
+      return next
+    })
+  }
 
   const guardar = async () => {
     if (!form.contenido?.trim()) return
     setGuardando(true)
+    setErrorGuardar('')
     const payload = {
       fecha:            form.fecha            || null,
       contenido:        form.contenido.trim(),
@@ -547,18 +657,56 @@ export default function Requerimientos({ usuario }) {
       evidencia:        form.evidencia,
       observacion:      form.observacion,
     }
-    if (modal === 'nuevo') {
-      await supabase.from('requerimientos').insert(payload)
-    } else {
-      await supabase.from('requerimientos').update({ ...payload, actualizado_en: new Date().toISOString() }).eq('id', modal.id)
+    try {
+      let reqId = modal === 'nuevo' ? null : modal.id
+      const prevUrls = modal !== 'nuevo' ? parseObsImagenes(modal.observacion_imagenes) : []
+      const urlsEliminadas = prevUrls.filter(u => !imagenesExistentes.includes(u))
+
+      if (modal === 'nuevo') {
+        const { data, error } = await supabase.from('requerimientos')
+          .insert({ ...payload, observacion_imagenes: [] })
+          .select('id')
+          .single()
+        if (error) throw error
+        reqId = data.id
+      }
+
+      const nuevasUrls = []
+      for (const img of imagenesNuevas) {
+        nuevasUrls.push(await subirImagenRequerimiento(reqId, img.file))
+      }
+      const todasUrls = [...imagenesExistentes, ...nuevasUrls]
+
+      if (modal === 'nuevo') {
+        const { error } = await supabase.from('requerimientos')
+          .update({ observacion_imagenes: todasUrls })
+          .eq('id', reqId)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('requerimientos')
+          .update({ ...payload, observacion_imagenes: todasUrls, actualizado_en: new Date().toISOString() })
+          .eq('id', reqId)
+        if (error) throw error
+        if (urlsEliminadas.length) await borrarImagenesStorage(urlsEliminadas)
+      }
+
+      limpiarImagenesPendientes()
+      setGuardando(false)
+      cerrar()
+      cargar()
+    } catch (err) {
+      setErrorGuardar(err?.message || 'No se pudo guardar. Revisa que ejecutaste el SQL en Supabase.')
+      setGuardando(false)
     }
-    setGuardando(false); cerrar(); cargar()
   }
 
   const eliminar = async () => {
     if (!modal?.id) return
+    const urls = parseObsImagenes(modal.observacion_imagenes)
+    await borrarImagenesStorage(urls)
     await supabase.from('requerimientos').delete().eq('id', modal.id)
-    cerrar(); cargar()
+    cerrar()
+    cargar()
   }
 
   const handleExportar = async () => {
@@ -808,7 +956,47 @@ export default function Requerimientos({ usuario }) {
               <label className="req-full">
                 <span>Observación</span>
                 <textarea rows={2} value={form.observacion || ''} onChange={e => setF('observacion', e.target.value)} disabled={!puedeEditar} />
+                {(totalImagenes > 0 || puedeEditar) && (
+                  <div className="req-obs-imgs">
+                    {totalImagenes > 0 && (
+                      <div className="req-imgs-grid">
+                        {imagenesExistentes.map(url => (
+                          <div key={url} className="req-img-thumb">
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt="Adjunto" />
+                            </a>
+                            {puedeEditar && (
+                              <button type="button" className="req-img-quitar" onClick={() => quitarImagenExistente(url)} aria-label="Quitar imagen">×</button>
+                            )}
+                          </div>
+                        ))}
+                        {imagenesNuevas.map((img, i) => (
+                          <div key={img.preview} className="req-img-thumb req-img-thumb--nueva">
+                            <img src={img.preview} alt="Nueva" />
+                            {puedeEditar && (
+                              <button type="button" className="req-img-quitar" onClick={() => quitarImagenNueva(i)} aria-label="Quitar imagen">×</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {puedeEditar && totalImagenes < MAX_OBS_IMAGENES && (
+                      <label className="req-img-add">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          hidden
+                          onChange={onSeleccionarImagenes}
+                          disabled={guardando}
+                        />
+                        📷 Adjuntar imágenes ({totalImagenes}/{MAX_OBS_IMAGENES})
+                      </label>
+                    )}
+                  </div>
+                )}
               </label>
+              {errorGuardar && <p className="req-error-guardar">{errorGuardar}</p>}
             </div>
             <div className="req-modal-footer">
               {puedeEditar && modal !== 'nuevo' && esAdmin && (
