@@ -183,7 +183,7 @@ export default function Login({
       </div>
       <h1 className="login-side-title">{nombreInstitucion}</h1>
       <div className="login-side-sep" />
-      <p className="login-side-sub">El Carmen · Región de O'Higgins</p>
+      <p className="login-side-sub">El Carmen · Región de Ñuble</p>
     </div>
   )
 
