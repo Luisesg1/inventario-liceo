@@ -155,7 +155,7 @@ function PermisoDots({ usados }) {
 
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onCrearUsuario }) {
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados }) {
   const [usuarioSel,       setUsuarioSel]       = useState(null)
   const [dropdownOpen,     setDropdownOpen]     = useState(false)
   const [busqueda,         setBusqueda]         = useState('')
@@ -244,13 +244,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
     setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setUsuarioEncontrado(null)
   }
 
-  async function handleCrearUsuario() {
+  function handleCrearUsuario() {
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim()) return
-    setCreandoUser(true)
-    try {
-      const u = await onCrearUsuario?.({ rut: rutNuevo.trim(), nombres: nombresNuevo.trim(), apellidos: apellidosNuevo.trim() })
-      if (u) seleccionar(u)
-    } finally { setCreandoUser(false) }
+    const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
+    // Externo: no se inserta en usuarios, se guarda en ausencias directamente
+    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), rol: null, isExterno: true })
   }
 
   async function handleGuardar() {
@@ -661,32 +659,21 @@ export default function Permisos({ usuario }) {
     return count ?? 0
   }
 
-  async function handleCrearUsuario({ rut, nombres, apellidos }) {
-    const nombre  = `${nombres} ${apellidos}`.trim()
-    const rutNorm = normRut(rut)
-    const id      = crypto.randomUUID()
-    const email   = `${rutNorm.toLowerCase()}_${id.slice(0, 8)}@externo.local`
-    const { data, error } = await supabase
-      .from('usuarios')
-      .insert({ id, nombre, email, rol: 'docente', rut: formatRut(rut) })
-      .select().single()
-    if (error) throw error
-    setUsuarios(prev => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-    return data
-  }
-
   async function handleGuardar(datos) {
+    const u = datos.usuario
     const { error } = await supabase.from('ausencias').insert({
-      usuario_id:   datos.usuario.id,
-      fecha_inicio: datos.fechaInicio,
-      fecha_fin:    datos.fechaFin,
-      jornada:      datos.jornada,
-      periodo:      datos.periodo,
-      hora_inicio:  datos.horaInicio,
-      hora_fin:     datos.horaFin,
-      tipo:         datos.tipoPermiso,
-      notas:        datos.motivoOtro || datos.notas || null,
-      recordatorio: datos.recordatorio,
+      usuario_id:      u?.isExterno ? null : (u?.id ?? null),
+      externo_nombre:  u?.isExterno ? u.nombre : null,
+      externo_rut:     u?.isExterno ? u.rut    : null,
+      fecha_inicio:    datos.fechaInicio,
+      fecha_fin:       datos.fechaFin,
+      jornada:         datos.jornada,
+      periodo:         datos.periodo,
+      hora_inicio:     datos.horaInicio,
+      hora_fin:        datos.horaFin,
+      tipo:            datos.tipoPermiso,
+      notas:           datos.motivoOtro || datos.notas || null,
+      recordatorio:    datos.recordatorio,
     })
     if (error) throw error
     await cargarDatos()
@@ -770,7 +757,6 @@ export default function Permisos({ usuario }) {
           onClose={() => setModalAbierto(false)}
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
-          onCrearUsuario={handleCrearUsuario}
         />
       )}
 
