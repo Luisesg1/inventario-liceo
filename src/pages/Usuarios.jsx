@@ -1286,21 +1286,20 @@ export default function Usuarios({ usuario }) {
 
       {/* ── Modal confirmación cambio de rol ── */}
       {confirmCambioRol && (() => {
-        const ROL_LABEL = { admin: 'Administrador', editor: 'Editor', encargado: 'Encargado', docente: 'Docente', soporte: 'Soporte' }
-        const colActual = ROL_COLORES[confirmCambioRol.rolActual] ?? { bg: '#f3f4f6', color: '#374151' }
-        const colNuevo  = ROL_COLORES[confirmCambioRol.nuevoRol]  ?? { bg: '#f3f4f6', color: '#374151' }
+        const ROL_LABEL  = { admin: 'Administrador', editor: 'Editor', encargado: 'Encargado', docente: 'Docente', soporte: 'Soporte' }
+        const colActual  = ROL_COLORES[confirmCambioRol.rolActual] ?? { bg: '#f3f4f6', color: '#374151' }
+        const colNuevo   = ROL_COLORES[confirmCambioRol.nuevoRol]  ?? { bg: '#f3f4f6', color: '#374151' }
+        const perfilNuevo = PERMISOS_POR_ROL[confirmCambioRol.nuevoRol] ?? { permisos: { ...PERMISOS_VACIO } }
+        const tieneAlguno = Object.values(perfilNuevo.permisos).some(Boolean)
         return (
           <div style={ps.modalOverlay} onClick={() => !aplicandoRol && setConfirmCambioRol(null)}>
-            <div style={{ ...ps.modal, maxWidth: 420, width: '95%' }} onClick={e => e.stopPropagation()}>
-              <div style={{ marginBottom: 18 }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>
-                  Cambiar rol de usuario
-                </p>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
-                  {confirmCambioRol.nombreUsuario}
-                </p>
-              </div>
+            <div style={{ ...ps.modal, maxWidth: 460, width: '95%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
 
+              {/* Encabezado */}
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '0 0 4px' }}>Cambiar rol de usuario</p>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 18px' }}>{confirmCambioRol.nombreUsuario}</p>
+
+              {/* Flecha de cambio */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                 <span style={{ background: colActual.bg, color: colActual.color, borderRadius: 8, padding: '5px 14px', fontWeight: 700, fontSize: 13 }}>
                   {ROL_LABEL[confirmCambioRol.rolActual] ?? confirmCambioRol.rolActual}
@@ -1311,20 +1310,41 @@ export default function Usuarios({ usuario }) {
                 </span>
               </div>
 
-              <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#713f12' }}>
-                ⚠️ Los permisos se resetearán al perfil por defecto del rol <strong>{ROL_LABEL[confirmCambioRol.nuevoRol]}</strong>.
+              {/* Permisos del nuevo rol */}
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>
+                Permisos que tendrá este rol
+              </p>
+              {tieneAlguno ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 12px', marginBottom: 18 }}>
+                  {ACCIONES.map(a => {
+                    const activo = !!perfilNuevo.permisos[a.key]
+                    return (
+                      <div key={a.key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5,
+                        color: activo ? '#166534' : '#9ca3af' }}>
+                        <span style={{ fontSize: 13, flexShrink: 0 }}>{activo ? '✅' : '⬜'}</span>
+                        {a.label}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>
+                  Sin permisos de inventario — solo accede a Tickets
+                </div>
+              )}
+
+              {/* Aviso */}
+              <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '9px 13px', marginBottom: 20, fontSize: 12.5, color: '#713f12' }}>
+                ⚠️ Los permisos actuales del usuario serán reemplazados por los del rol <strong>{ROL_LABEL[confirmCambioRol.nuevoRol]}</strong>.
               </div>
 
+              {/* Botones */}
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => setConfirmCambioRol(null)}
-                  disabled={aplicandoRol}
+                <button onClick={() => setConfirmCambioRol(null)} disabled={aplicandoRol}
                   style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   Cancelar
                 </button>
-                <button
-                  onClick={confirmarCambioRol}
-                  disabled={aplicandoRol}
+                <button onClick={confirmarCambioRol} disabled={aplicandoRol}
                   style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#1a237e', color: '#fff', fontSize: 13, fontWeight: 700, cursor: aplicandoRol ? 'default' : 'pointer', opacity: aplicandoRol ? 0.6 : 1 }}>
                   {aplicandoRol ? 'Aplicando…' : 'Confirmar cambio'}
                 </button>
