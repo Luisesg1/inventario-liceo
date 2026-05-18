@@ -34,16 +34,6 @@ const ACCIONES = [
   { key: 'registrar_incidencia', label: 'Registrar incidencia', labelCorto: 'Incidencia' },
 ]
 
-const CATEGORIAS = [
-  { key: 'todos',                label: 'Todos' },
-  { key: 'computadores',         label: 'Computadores' },
-  { key: 'art_tecnologicos',     label: 'Art. Tecnológicos' },
-  { key: 'otros',                label: 'Otros' },
-  { key: 'muebles',              label: 'Muebles' },
-  { key: 'biblioteca',           label: 'Biblioteca' },
-  { key: 'libreria',             label: 'Librería' },
-  { key: 'articulos_deportivos', label: 'Art. Deportivos' },
-]
 
 // Acciones que aplican por categoría (las demás son globales)
 const ACCIONES_POR_CATEGORIA = [
@@ -106,10 +96,20 @@ const ROL_COLORES = {
 // y los checks de acción solo se activan si la categoría tiene acceso.
 // ══════════════════════════════════════════════════════════════════════════
 function TablaPermisos({ draft, onChange }) {
+  const [catsBD, setCatsBD] = useState([])
+
+  useEffect(() => {
+    supabase.from('categorias').select('id, label').order('label')
+      .then(({ data }) => setCatsBD(data ?? []))
+  }, [])
+
   if (!draft) return <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando…</p>
 
   const accCat    = ACCIONES.filter((a) => ACCIONES_POR_CATEGORIA.includes(a.key))
   const accGlobal = ACCIONES.filter((a) => ACCIONES_GLOBALES.includes(a.key))
+
+  // Categorías específicas desde la BD
+  const catsSinTodos = catsBD.map((c) => ({ key: c.id, label: c.label }))
 
   // ¿Tiene acceso a una categoría específica?
   const tieneAccesoCat = (catKey) =>
@@ -124,8 +124,7 @@ function TablaPermisos({ draft, onChange }) {
     } else {
       const sinTodos    = cats.filter((c) => c !== 'todos')
       nuevas            = [...sinTodos, catKey]
-      const especificas = CATEGORIAS.filter((c) => c.key !== 'todos').map((c) => c.key)
-      if (especificas.every((c) => nuevas.includes(c))) nuevas = ['todos']
+      if (catsSinTodos.every((c) => nuevas.includes(c.key))) nuevas = ['todos']
     }
     onChange({ ...draft, categorias: nuevas })
   }
@@ -146,9 +145,6 @@ function TablaPermisos({ draft, onChange }) {
 
   // ¿Todas las categorías tienen acceso?
   const todasActivas = draft.categorias?.includes('todos')
-
-  // Categorías específicas (sin "Todos")
-  const catsSinTodos = CATEGORIAS.filter((c) => c.key !== 'todos')
 
   return (
     <div>
