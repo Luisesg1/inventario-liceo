@@ -11,6 +11,7 @@ import Tickets   from './pages/Tickets'
 import Ajustes          from './pages/Ajustes'
 import CamposCategoria  from './pages/CamposCategoria'
 import Requerimientos   from './pages/Requerimientos'
+import Permisos         from './pages/Permisos'
 import { aplicarTema } from './utils/tema'
 
 export default function App() {
@@ -177,7 +178,7 @@ export default function App() {
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
   const esSoloTickets = esDocente || esSoporte
   const paginasVisorReq = ['requerimientos', 'tickets']
-  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos' || pagina === 'permisos'
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard' || pagina === 'requerimientos'
   const paginaSegura = (esDocente && soloStaff) ? 'tickets'
     : (esSoporte && pagina === 'inventario') ? 'tickets'
@@ -195,6 +196,7 @@ export default function App() {
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
+      {paginaSegura === 'permisos'   && <Permisos        usuario={usuario} />}
     </Layout>
   )
 }
