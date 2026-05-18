@@ -305,14 +305,14 @@ export default function Layout({
 
   // ── Nav items ─────────────────────────────────────────
   const navItems = [
-    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard',  Icon: LayoutDashboard, label: 'Inicio'      }] : []),
-    ...(!esSoloTickets              ? [{ id: 'inventario', Icon: Package2,        label: 'Inventario'  }] : []),
-    ...(esAdmin                     ? [{ id: 'usuarios',   Icon: Users,           label: 'Usuarios'    }] : []),
-    ...(esAdmin                     ? [{ id: 'auditoria',  Icon: ClipboardList,   label: 'Auditoría'   }] : []),
+    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard', Icon: LayoutDashboard, label: 'Inicio' }] : []),
     { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
-  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos'
+  const inventarioActivo = paginaActual === 'inventario' || paginaActual === 'auditoria'
+  const [inventarioAbierto, setInventarioAbierto] = useState(inventarioActivo)
+
+  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos' || paginaActual === 'usuarios'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
 
   const titulos = {
@@ -388,6 +388,57 @@ export default function Layout({
         <nav className="sidebar-nav">
           <p className="nav-section">Principal</p>
 
+          {/* Inventario con submenú (solo si no es soloTickets) */}
+          {!esSoloTickets && (
+            <>
+              <motion.div
+                className={`nav-item nav-item--parent ${inventarioActivo ? 'active' : ''}`}
+                onClick={() => setInventarioAbierto(o => !o)}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
+                <span className="nav-icon">
+                  <Package2 size={15} strokeWidth={2} />
+                </span>
+                Inventario
+                <span className={`nav-chevron ${inventarioAbierto ? 'nav-chevron--open' : ''}`}>
+                  <ChevronRight size={13} strokeWidth={2.5} />
+                </span>
+              </motion.div>
+
+              <AnimatePresence initial={false}>
+                {inventarioAbierto && (
+                  <motion.div
+                    className="nav-submenu"
+                    variants={submenuVariants}
+                    initial="closed"
+                    animate="open"
+                    exit="closed"
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div
+                      className={`nav-subitem ${paginaActual === 'inventario' ? 'active' : ''}`}
+                      onClick={() => handleNav('inventario')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Ver inventario
+                    </div>
+                    {esAdmin && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'auditoria' ? 'active' : ''}`}
+                        onClick={() => handleNav('auditoria')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Auditoría
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
+
           {navItems.map(({ id, Icon, label }) => (
             <motion.div
               key={id}
@@ -450,8 +501,9 @@ export default function Layout({
                     style={{ overflow: 'hidden' }}
                   >
                     {[
-                      { id: 'ajustes', label: 'Personalizar' },
-                      { id: 'campos',  label: 'Campos por categoría' },
+                      { id: 'ajustes',  label: 'Personalizar' },
+                      { id: 'campos',   label: 'Campos por categoría' },
+                      { id: 'usuarios', label: 'Usuarios' },
                     ].map(sub => (
                       <div
                         key={sub.id}
