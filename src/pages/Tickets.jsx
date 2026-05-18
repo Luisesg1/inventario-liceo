@@ -353,7 +353,7 @@ export default function Tickets({ usuario, onTicketActualizado }) {
           <div className="modal-tickets" onClick={e => e.stopPropagation()}>
             <div className="modal-tickets-header">
               <h2 className="modal-tickets-title">🎫 Nuevo ticket</h2>
-              <button className="modal-tickets-close" onClick={cerrarNuevo}>✕</button>
+              {!exito && <button className="modal-tickets-close" onClick={cerrarNuevo}>✕</button>}
             </div>
 
             {/* ── Pantalla de éxito ── */}
