@@ -789,17 +789,19 @@ export default function Permisos({ usuario }) {
 
   async function cargarDatos() {
     setCargando(true)
-    // Intentar con rut; si el campo no existe en la tabla, reintentar sin él
     let { data: us, error: usErr } = await supabase
       .from('usuarios').select('id, nombre, email, rol, rut').order('nombre')
     if (usErr) {
+      console.warn('[Permisos] Error cargando usuarios con rut:', usErr)
       ;({ data: us } = await supabase
         .from('usuarios').select('id, nombre, email, rol').order('nombre'))
     }
-    const { data: ps } = await supabase
+    console.log('[Permisos] Usuarios cargados:', us)
+    const { data: ps, error: psErr } = await supabase
       .from('ausencias')
       .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
       .order('fecha_inicio', { ascending: false })
+    console.log('[Permisos] Ausencias cargadas:', ps, 'error:', psErr)
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
     setCargando(false)
@@ -821,6 +823,8 @@ export default function Permisos({ usuario }) {
 
   async function handleGuardar(datos) {
     const u = datos.usuario
+    console.log('[Permisos] handleGuardar datos:', datos)
+    console.log('[Permisos] usuario seleccionado:', u)
 
     // Validar duplicados por solapamiento de fechas
     if (u?.id && !u.isExterno) {
@@ -859,13 +863,16 @@ export default function Permisos({ usuario }) {
       recordatorio:   datos.recordatorio,
     }
 
+    console.log('[Permisos] payload a guardar:', payload)
     let error
     if (datos.id) {
       ;({ error } = await supabase.from('ausencias').update(payload).eq('id', datos.id))
     } else {
-      ;({ error } = await supabase.from('ausencias').insert(payload))
+      const res = await supabase.from('ausencias').insert(payload)
+      error = res.error
+      console.log('[Permisos] resultado insert:', res)
     }
-    if (error) throw error
+    if (error) { console.error('[Permisos] error al guardar:', error); throw error }
     await cargarDatos()
   }
 
