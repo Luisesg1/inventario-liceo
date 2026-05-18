@@ -1105,7 +1105,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     </head><body>
       <div class="card">
         <div class="logo-row">
-          <span>Liceo JHJ — Inventario</span>
+          <span>Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Inventario</span>
         </div>
         <img class="qr" src="${qr}" alt="QR" />
         <p class="nombre">${bien.nombre}</p>
@@ -1172,7 +1172,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     </head><body>
       <div class="no-print">
         <div class="header">
-          <h1>Liceo JHJ — Inventario</h1>
+          <h1>Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Inventario</h1>
           <p>${bienesSel.length} código${bienesSel.length !== 1 ? 's' : ''} QR</p>
         </div>
         <button class="btn" onclick="window.print()">🖨 Imprimir todos</button>

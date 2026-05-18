@@ -83,7 +83,7 @@ function ErrorMsg({ msg }) {
 export default function Login({
   onLogin,
   logoUrl,
-  nombreInstitucion = 'Liceo Bicentenario Polivalente Juvenal Hernández Jaque',
+  nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   nombreSistema     = 'Sistema de Inventario',
 }) {
   /* ── Estado login ── */

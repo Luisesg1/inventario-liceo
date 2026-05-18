@@ -17,7 +17,7 @@ export default function App() {
   const [cargando,           setCargando]           = useState(true)
   const [logoUrl,            setLogoUrl]            = useState(null)
   const [nombreSistema,      setNombreSistema]      = useState('Inventario')
-  const [nombreInstitucion,  setNombreInstitucion]  = useState('Liceo JHJ')
+  const [nombreInstitucion,  setNombreInstitucion]  = useState('Liceo Polivalente de Excelencia Juvenal Hernández Jaque')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [pagina,             setPagina]             = useState(() => {
     const params = new URLSearchParams(window.location.search)
