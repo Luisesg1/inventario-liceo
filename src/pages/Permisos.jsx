@@ -23,11 +23,10 @@ const ROL_LABEL = {
 }
 
 const TIPOS_PERMISO = [
-  { value: 'vacaciones',             label: 'Vacaciones' },
-  { value: 'licencia_medica',        label: 'Licencia médica' },
-  { value: 'permiso_administrativo', label: 'Permiso administrativo' },
-  { value: 'permiso_personal',       label: 'Permiso personal' },
-  { value: 'otro',                   label: 'Otro' },
+  { value: 'personal', label: 'Personales' },
+  { value: 'ausencia', label: 'Ausencia' },
+  { value: 'medico',   label: 'Médico' },
+  { value: 'otro',     label: 'Otro' },
 ]
 
 const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label]))
@@ -147,7 +146,7 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
   const [usuarioSel,       setUsuarioSel]       = useState(null)
   const [dropdownOpen,     setDropdownOpen]     = useState(false)
   const [busqueda,         setBusqueda]         = useState('')
-  const [modoCrear,        setModoCrear]        = useState(false)
+  const [modoCrear,        setModoCrear]        = useState(true)
   const [rutNuevo,         setRutNuevo]         = useState('')
   const [nombresNuevo,     setNombresNuevo]     = useState('')
   const [apellidosNuevo,   setApellidosNuevo]   = useState('')
@@ -272,7 +271,7 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
                   <button
                     type="button"
                     className={`mp-user-trigger ${dropdownOpen ? 'open' : ''}`}
-                    onClick={() => { setDropdownOpen(o => !o); setModoCrear(false) }}
+                    onClick={() => setDropdownOpen(o => !o)}
                   >
                     {usuarioSel ? (
                       <>
@@ -301,7 +300,7 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
                           <Search size={13} className="mp-search-icon" strokeWidth={2.5} />
                           <input ref={searchRef} type="text" className="mp-search-input"
                             placeholder="Buscar por nombre o RUT…"
-                            value={busqueda} onChange={e => { setBusqueda(e.target.value); setModoCrear(false) }} />
+                            value={busqueda} onChange={e => setBusqueda(e.target.value)} />
                         </div>
                         {/* Lista */}
                         <div className="mp-dropdown-list">
@@ -398,7 +397,7 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
                   </div>
                   <div className="mp-field-group">
                     <label className="mp-field-label">Fecha fin</label>
-                    <input type="date" className="mp-input" value={fechaFin} min={fechaInicio || undefined} onChange={e => setFechaFin(e.target.value)} />
+                    <input type="date" className="mp-input" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
                   </div>
                 </div>
                 <div className="mp-jornada-pills">
