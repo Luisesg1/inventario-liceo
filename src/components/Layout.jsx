@@ -364,8 +364,8 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
   const esDocente     = usuario.rol === 'docente'
   const esSoloTickets = esDocente || esSoporte
   const navItems = [
-    ...(!esSoloTickets ? [{ id: 'dashboard',  icon: '◉', label: 'Inicio'      }] : []),
-    ...(!esSoloTickets ? [{ id: 'inventario', icon: '▤', label: 'Inventario'  }] : []),
+    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard',  icon: '◉', label: 'Inicio'      }] : []),
+    ...(!esSoloTickets              ? [{ id: 'inventario', icon: '▤', label: 'Inventario'  }] : []),
     ...(esAdmin        ? [{ id: 'usuarios',   icon: '◎', label: 'Usuarios'    }] : []),
     ...(esAdmin        ? [{ id: 'auditoria',  icon: '🔍', label: 'Auditoría'  }] : []),
     { id: 'tickets', icon: '🎫', label: 'Tickets' },

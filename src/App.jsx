@@ -135,7 +135,7 @@ export default function App() {
     }
 
     setUsuario(data)
-    if (data.rol === 'docente' || data.rol === 'soporte') { setPagina('tickets'); localStorage.setItem('app_pagina', 'tickets') }
+    if (data.rol === 'docente') { setPagina('tickets'); localStorage.setItem('app_pagina', 'tickets') }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
   }
@@ -166,7 +166,8 @@ export default function App() {
   const esSoloTickets = esDocente || esSoporte
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
-  const paginaSegura = esSoloTickets && soloStaff ? 'tickets'
+  const paginaSegura = (esDocente && soloStaff) ? 'tickets'
+    : (esSoporte && pagina === 'inventario') ? 'tickets'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
     : pagina
 
