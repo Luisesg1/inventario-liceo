@@ -996,7 +996,7 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto solicitado (total)</span>
-          <span className="req-kpi-hint">{kpis.conMonto} con monto · {kpis.total - kpis.conMonto} sin monto</span>
+          
         </div>
         <div
           className="req-kpi req-kpi--monto-real req-kpi--resumen"
@@ -1005,7 +1005,7 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto real (total)</span>
-          <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
+          
         </div>
       </div>
 
