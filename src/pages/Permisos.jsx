@@ -24,8 +24,12 @@ const TIPOS_PERMISO = [
   { value: 'personal', label: 'Personales' },
   { value: 'ausencia', label: 'Ausencia' },
   { value: 'medico',   label: 'Médico' },
+  { value: 'licencia', label: 'Licencia' },
   { value: 'otro',     label: 'Otro' },
 ]
+
+const MAX_NOTAS   = 400
+const MAX_MOTIVO  = 300
 
 const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label]))
 
@@ -247,7 +251,7 @@ function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar }) {
 
 // ── ModalConfirmarEliminar ─────────────────────────────────────────────────
 
-function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando }) {
+function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando, errorEliminar }) {
   return (
     <AnimatePresence>
       <motion.div className="mp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
@@ -261,6 +265,9 @@ function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando }) {
           </div>
 
           <div className="mp-footer">
+            {errorEliminar && (
+              <span className="mp-footer-warn"><AlertCircle size={13} strokeWidth={2} />{errorEliminar}</span>
+            )}
             <button className="mp-btn-cancel" onClick={onClose}>Cancelar</button>
             <button className="mp-btn-danger" disabled={eliminando} onClick={onConfirmar}>
               {eliminando
@@ -289,6 +296,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [rutNuevo,          setRutNuevo]          = useState('')
   const [nombresNuevo,      setNombresNuevo]      = useState('')
   const [apellidosNuevo,    setApellidosNuevo]    = useState('')
+  const [emailNuevo,        setEmailNuevo]        = useState('')
   const [creandoUser,       setCreandoUser]       = useState(false)
   const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
@@ -365,13 +373,13 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   function seleccionar(u) {
     setUsuarioSel(u); setDropdownOpen(false); setBusqueda(''); setModoCrear(false)
-    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setUsuarioEncontrado(null)
+    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setEmailNuevo(''); setUsuarioEncontrado(null)
   }
 
   function handleCrearUsuario() {
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim()) return
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
-    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), rol: null, isExterno: true })
+    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), email: emailNuevo.trim() || null, rol: null, isExterno: true })
   }
 
   async function handleGuardar() {
@@ -522,6 +530,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                   <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
                                     value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
                                 </div>
+                                <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico (opcional)"
+                                  value={emailNuevo} onChange={e => setEmailNuevo(e.target.value)} />
                                 <div className="mp-new-user-actions">
                                   <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
                                   <button type="button" className="mp-btn-save mp-btn--sm"
@@ -565,7 +575,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                   {tipoPermiso === 'otro' && (
                     <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
                       <textarea className="mp-textarea" placeholder="Escriba el motivo del permiso…"
+                        maxLength={MAX_MOTIVO}
                         value={motivoOtro} onChange={e => setMotivoOtro(e.target.value)} />
+                      <span className={`mp-char-count ${motivoOtro.length > MAX_MOTIVO * 0.9 ? 'mp-char-count--warn' : ''}`}>
+                        {motivoOtro.length}/{MAX_MOTIVO}
+                      </span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -623,7 +637,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
               <section>
                 <p className="mp-section-label">Notas <span style={{ color: '#cbd5e1', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(opcional)</span></p>
                 <textarea className="mp-textarea" placeholder="Información adicional sobre el permiso…"
+                  maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />
+                <span className={`mp-char-count ${notas.length > MAX_NOTAS * 0.9 ? 'mp-char-count--warn' : ''}`}>
+                  {notas.length}/{MAX_NOTAS}
+                </span>
               </section>
 
               {/* Recordatorio */}
@@ -752,6 +770,7 @@ export default function Permisos({ usuario }) {
   const [permisoEditar,   setPermisoEditar]   = useState(null)
   const [permisoEliminar, setPermisoEliminar] = useState(null)
   const [eliminando,      setEliminando]      = useState(false)
+  const [errorEliminar,   setErrorEliminar]   = useState('')
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -797,9 +816,10 @@ export default function Permisos({ usuario }) {
     }
 
     const payload = {
-      usuario_id:     u?.isExterno ? null : (u?.id ?? null),
-      externo_nombre: u?.isExterno ? u.nombre : null,
-      externo_rut:    u?.isExterno ? u.rut    : null,
+      usuario_id:      u?.isExterno ? null    : (u?.id ?? null),
+      externo_nombre:  u?.isExterno ? u.nombre : null,
+      externo_rut:     u?.isExterno ? u.rut    : null,
+      externo_email:   u?.isExterno ? (u.email ?? null) : null,
       fecha_inicio:   datos.fechaInicio,
       fecha_fin:      datos.fechaFin,
       jornada:        datos.jornada,
@@ -823,6 +843,7 @@ export default function Permisos({ usuario }) {
 
   async function handleEliminar() {
     if (!permisoEliminar || eliminando) return
+    setErrorEliminar('')
     setEliminando(true)
     try {
       const { error } = await supabase.from('ausencias').delete().eq('id', permisoEliminar.id)
@@ -830,6 +851,8 @@ export default function Permisos({ usuario }) {
       setPermisoEliminar(null)
       setPermisoVer(null)
       await cargarDatos()
+    } catch {
+      setErrorEliminar('No se pudo eliminar. Agrega la política DELETE en Supabase.')
     } finally { setEliminando(false) }
   }
 
@@ -839,6 +862,7 @@ export default function Permisos({ usuario }) {
   }
 
   function abrirEliminar(p) {
+    setErrorEliminar('')
     setPermisoVer(null)
     setPermisoEliminar(p)
   }
@@ -960,7 +984,8 @@ export default function Permisos({ usuario }) {
       {permisoEliminar && (
         <ModalConfirmarEliminar
           eliminando={eliminando}
-          onClose={() => setPermisoEliminar(null)}
+          errorEliminar={errorEliminar}
+          onClose={() => { setPermisoEliminar(null); setErrorEliminar('') }}
           onConfirmar={handleEliminar}
         />
       )}
