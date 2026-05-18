@@ -37,6 +37,7 @@ const JORNADAS = [
   { value: 'medio_dia',     label: 'Medio día' },
   { value: 'dia_completo',  label: 'Día completo' },
   { value: 'personalizado', label: 'Personalizado' },
+  { value: 'reposo',        label: 'Reposo' },
 ]
 
 const JORNADA_LABEL = Object.fromEntries(JORNADAS.map(j => [j.value, j.label]))
