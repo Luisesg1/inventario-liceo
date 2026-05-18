@@ -151,6 +151,7 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
   const [nombresNuevo,     setNombresNuevo]     = useState('')
   const [apellidosNuevo,   setApellidosNuevo]   = useState('')
   const [creandoUser,      setCreandoUser]      = useState(false)
+  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
   const [permisosUsados,   setPermisosUsados]   = useState(0)
   const [cargandoPermisos, setCargandoPermisos] = useState(false)
 
@@ -210,8 +211,24 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
   const formValido = !!usuarioSel && !!fechaInicio && !!fechaFin && !!tipoPermiso
     && (tipoPermiso !== 'otro' || motivoOtro.trim().length > 0)
 
+  // Autocompletar al escribir RUT
+  useEffect(() => {
+    const rut = rutNuevo.trim()
+    if (!rut) { setUsuarioEncontrado(null); setNombresNuevo(''); setApellidosNuevo(''); return }
+    const encontrado = usuarios.find(u => normStr(u.rut ?? '') === normStr(rut))
+    if (encontrado) {
+      setUsuarioEncontrado(encontrado)
+      const partes = (encontrado.nombre ?? '').trim().split(/\s+/)
+      setNombresNuevo(partes.slice(0, 2).join(' '))
+      setApellidosNuevo(partes.slice(2).join(' '))
+    } else {
+      setUsuarioEncontrado(null)
+    }
+  }, [rutNuevo, usuarios])
+
   function seleccionar(u) {
     setUsuarioSel(u); setDropdownOpen(false); setBusqueda(''); setModoCrear(false)
+    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setUsuarioEncontrado(null)
   }
 
   async function handleCrearUsuario() {
@@ -333,20 +350,47 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
                             <p className="mp-new-user-title">Nuevo usuario</p>
                             <input type="text" className="mp-input mp-input--sm" placeholder="RUT (ej: 12.345.678-9)"
                               value={rutNuevo} onChange={e => setRutNuevo(e.target.value)} />
-                            <div className="mp-date-row">
-                              <input type="text" className="mp-input mp-input--sm" placeholder="Nombres"
-                                value={nombresNuevo} onChange={e => setNombresNuevo(e.target.value)} />
-                              <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
-                                value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
-                            </div>
-                            <div className="mp-new-user-actions">
-                              <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
-                              <button type="button" className="mp-btn-save mp-btn--sm"
-                                disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || creandoUser}
-                                onClick={handleCrearUsuario}>
-                                {creandoUser ? 'Creando…' : 'Crear usuario'}
-                              </button>
-                            </div>
+
+                            {/* Usuario encontrado por RUT */}
+                            <AnimatePresence>
+                              {usuarioEncontrado && (
+                                <motion.div className="mp-rut-found"
+                                  variants={slideV} initial="hidden" animate="visible" exit="exit">
+                                  <div className="mp-rut-found-info">
+                                    <div className="mp-avatar" style={{ background: getAvatarColor(usuarioEncontrado.nombre), width: 26, height: 26, fontSize: 10 }}>
+                                      {getInitials(usuarioEncontrado.nombre)}
+                                    </div>
+                                    <div>
+                                      <div className="mp-rut-found-name">{usuarioEncontrado.nombre}</div>
+                                      <div className="mp-rut-found-sub">Usuario ya registrado</div>
+                                    </div>
+                                  </div>
+                                  <button type="button" className="mp-btn-save mp-btn--sm"
+                                    onClick={() => seleccionar(usuarioEncontrado)}>
+                                    Seleccionar
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
+                            {!usuarioEncontrado && (
+                              <>
+                                <div className="mp-date-row">
+                                  <input type="text" className="mp-input mp-input--sm" placeholder="Nombres"
+                                    value={nombresNuevo} onChange={e => setNombresNuevo(e.target.value)} />
+                                  <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
+                                    value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
+                                </div>
+                                <div className="mp-new-user-actions">
+                                  <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
+                                  <button type="button" className="mp-btn-save mp-btn--sm"
+                                    disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || creandoUser}
+                                    onClick={handleCrearUsuario}>
+                                    {creandoUser ? 'Creando…' : 'Crear usuario'}
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </motion.div>
