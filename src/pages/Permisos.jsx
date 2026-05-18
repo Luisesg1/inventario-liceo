@@ -4,14 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
-  AlertTriangle, AlertCircle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Permisos.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────
-
-const MAX_PERMISOS = 6
 
 const ROL_LABEL = {
   admin:                'Administrador',
@@ -118,37 +115,16 @@ const slideV = {
 // ── PermisoDots ────────────────────────────────────────────────────────────
 
 function PermisoDots({ usados }) {
-  const restantes  = MAX_PERMISOS - usados
-  const excedido   = restantes < 0
-  const advertencia = restantes === 1
-
   return (
     <div className="mp-counter">
       <div className="mp-dots">
-        {Array.from({ length: MAX_PERMISOS }).map((_, i) => (
-          <span key={i} className={`mp-dot ${i < Math.min(usados, MAX_PERMISOS) ? 'mp-dot--used' : 'mp-dot--free'}`} />
-        ))}
-        {excedido && Array.from({ length: Math.abs(restantes) }).map((_, i) => (
-          <span key={`x${i}`} className="mp-dot mp-dot--over" />
+        {Array.from({ length: Math.max(usados, 1) }).map((_, i) => (
+          <span key={i} className="mp-dot mp-dot--used" />
         ))}
       </div>
-      <span className={`mp-counter-label ${excedido ? 'mp-counter-label--error' : advertencia ? 'mp-counter-label--warn' : ''}`}>
-        {excedido
-          ? `${usados} de ${MAX_PERMISOS} usados · ${Math.abs(restantes)} en exceso`
-          : `${usados} de ${MAX_PERMISOS} usados`}
+      <span className="mp-counter-label">
+        {usados === 0 ? 'Sin permisos registrados' : `${usados} permiso${usados !== 1 ? 's' : ''} registrado${usados !== 1 ? 's' : ''}`}
       </span>
-      <AnimatePresence>
-        {advertencia && !excedido && (
-          <motion.div className="mp-alert mp-alert--warn" variants={slideV} initial="hidden" animate="visible" exit="exit">
-            <AlertTriangle size={12} strokeWidth={2} /> Queda solo 1 permiso disponible
-          </motion.div>
-        )}
-        {excedido && (
-          <motion.div className="mp-alert mp-alert--error" variants={slideV} initial="hidden" animate="visible" exit="exit">
-            <AlertCircle size={12} strokeWidth={2} /> Usuario excedió el límite permitido
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
@@ -209,8 +185,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       .finally(() => setCargandoPermisos(false))
   }, [usuarioSel?.id])
 
-  const restantes  = MAX_PERMISOS - permisosUsados
-  const excedido   = restantes < 0
   const duracion   = calcDuration(fechaInicio, fechaFin, jornada)
   const tipoLabel  = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
@@ -570,25 +544,12 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     </div>
                     {!cargandoPermisos && (
                       <div className="mp-summary-row">
-                        <span className="mp-summary-label">Restantes</span>
-                        <span className={`mp-summary-value ${excedido ? 'mp-val--error' : restantes === 1 ? 'mp-val--warn' : ''}`}>
-                          {excedido ? `−${Math.abs(restantes)} permisos` : `${restantes} de ${MAX_PERMISOS}`}
+                        <span className="mp-summary-label">Historial</span>
+                        <span className="mp-summary-value">
+                          {permisosUsados === 0 ? 'Sin permisos' : `${permisosUsados} permiso${permisosUsados !== 1 ? 's' : ''}`}
                         </span>
                       </div>
                     )}
-
-                    <AnimatePresence>
-                      {restantes === 1 && !excedido && !cargandoPermisos && (
-                        <motion.div className="mp-summary-alert mp-summary-alert--warn" variants={slideV} initial="hidden" animate="visible" exit="exit">
-                          <AlertTriangle size={11} strokeWidth={2.5} /> Queda solo 1 permiso disponible
-                        </motion.div>
-                      )}
-                      {excedido && !cargandoPermisos && (
-                        <motion.div className="mp-summary-alert mp-summary-alert--error" variants={slideV} initial="hidden" animate="visible" exit="exit">
-                          <AlertCircle size={11} strokeWidth={2.5} /> Usuario excedió el límite
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
 
                     {duracion && (
                       <div style={{ paddingTop: 10 }}>
@@ -613,9 +574,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
           {/* Footer */}
           <div className="mp-footer">
-            {excedido && (
-              <span className="mp-footer-warn"><AlertCircle size={13} strokeWidth={2} /> Límite de permisos excedido</span>
-            )}
             <button className="mp-btn-cancel" onClick={onClose}>Cancelar</button>
             <button className="mp-btn-save" disabled={!formValido || guardando} onClick={handleGuardar}>
               {guardando
