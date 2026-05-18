@@ -234,12 +234,28 @@ const parseCSV = (text) => {
   })
 }
 
+const excelSerialAFecha = (n) => {
+  const d = new Date(Date.UTC(1899, 11, 30) + Number(n) * 86400000)
+  return isNaN(d) ? null : d.toISOString().slice(0, 10)
+}
+
+const normalizarFecha = (v) => {
+  if (v === null || v === undefined || v === '') return null
+  const s = String(v).trim()
+  if (!s) return null
+  if (/^\d{4,5}$/.test(s)) return excelSerialAFecha(Number(s))
+  return s
+}
+
+const CAMPOS_FECHA = new Set(['fecha', 'fecha_recepcion'])
+
 const mapearFila = (row) => {
   const payload = {}
   for (const [k, v] of Object.entries(row)) {
     const kNorm = k.toLowerCase().trim().replace(/\s+/g, '_')
     const col = ALIAS_IMPORT[kNorm] !== undefined ? ALIAS_IMPORT[kNorm] : (COLUMNAS_BD.has(kNorm) ? kNorm : null)
-    if (col && v !== '' && v !== null) payload[col] = String(v).trim()
+    if (!col || v === '' || v === null) continue
+    payload[col] = CAMPOS_FECHA.has(col) ? normalizarFecha(v) : String(v).trim()
   }
   if (payload.monto_solicitado) payload.monto_solicitado = Number(payload.monto_solicitado) || null
   if (payload.monto_real)       payload.monto_real       = Number(payload.monto_real)       || null
