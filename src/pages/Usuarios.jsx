@@ -837,10 +837,18 @@ export default function Usuarios({ usuario }) {
     const uOriginal = usuarios.find((u) => u.id === userId)
 
     // 1. Actualizar tabla usuarios
-    const { error } = await supabase
+    let { error } = await supabase
       .from('usuarios')
       .update({ nombre: editNombre.trim(), email: editEmail.trim().toLowerCase(), rol: editRol, rut: editRut.trim() || null })
       .eq('id', userId)
+
+    // Si la columna rut aún no existe en la BD, reintentar sin ella
+    if (error && (error.message?.includes('rut') || error.code === '42703')) {
+      ;({ error } = await supabase
+        .from('usuarios')
+        .update({ nombre: editNombre.trim(), email: editEmail.trim().toLowerCase(), rol: editRol })
+        .eq('id', userId))
+    }
 
     if (error) {
       setMensajeEdit({ tipo: 'error', texto: error.message })
