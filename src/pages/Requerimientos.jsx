@@ -239,8 +239,6 @@ function DetalleReqContenido({ r }) {
       <div className="req-detalle-grid-2">
         <div className="req-detalle-seccion">
           <p className="req-detalle-titulo">Montos</p>
-          <div className="req-detalle-fila"><span>Monto solicitado</span><strong>{formatMonto(r.monto_solicitado)}</strong></div>
-          <div className="req-detalle-fila"><span>Monto real</span><strong>{formatMonto(r.monto_real)}</strong></div>
         </div>
         <div className="req-detalle-seccion">
           <p className="req-detalle-titulo">Adquisición</p>
