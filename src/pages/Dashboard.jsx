@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Package2, FolderOpen, TrendingUp, Archive,
   PlusCircle, Pencil, Wrench,
-  Ticket, MapPin, Activity, Clock,
-  ArrowRight,
+  Ticket, Activity, Clock,
+  ArrowRight, ClipboardList, CheckCircle2, CircleDot, XCircle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Dashboard.css'
 
-/* ── Paletas de estados ─────────────────────────────────── */
+/* ── Paletas ────────────────────────────────────────────── */
 const ESTADO_COLOR = { Bueno: '#16a34a', Regular: '#d97706', Malo: '#dc2626', Baja: '#9ca3af' }
 const ESTADO_BG    = { Bueno: '#dcfce7', Regular: '#fef3c7', Malo: '#fee2e2', Baja: '#f3f4f6' }
 
@@ -17,11 +17,17 @@ const PRIORIDAD_COLOR = { alta: '#dc2626', media: '#d97706', baja: '#16a34a' }
 const PRIORIDAD_BG    = { alta: '#fee2e2', media: '#fef3c7', baja: '#dcfce7' }
 
 const ACCION_META = {
-  crear:         { color: '#16a34a', bg: '#dcfce7', Icon: PlusCircle, label: 'Creación',     verbo: 'agregó'                  },
-  actualizar:    { color: '#2563eb', bg: '#dbeafe', Icon: Pencil,     label: 'Actualización', verbo: 'actualizó'               },
-  baja:          { color: '#dc2626', bg: '#fee2e2', Icon: Archive,    label: 'Baja',           verbo: 'dio de baja'             },
-  eliminar:      { color: '#dc2626', bg: '#fee2e2', Icon: Archive,    label: 'Eliminación',    verbo: 'eliminó'                 },
-  mantenimiento: { color: '#d97706', bg: '#fef3c7', Icon: Wrench,     label: 'Mantenimiento',  verbo: 'registró mantenimiento en'},
+  crear:         { color: '#16a34a', bg: '#dcfce7', Icon: PlusCircle, label: 'Creación',      verbo: 'agregó'                   },
+  actualizar:    { color: '#2563eb', bg: '#dbeafe', Icon: Pencil,     label: 'Actualización',  verbo: 'actualizó'                },
+  baja:          { color: '#dc2626', bg: '#fee2e2', Icon: Archive,    label: 'Baja',            verbo: 'dio de baja'              },
+  eliminar:      { color: '#dc2626', bg: '#fee2e2', Icon: Archive,    label: 'Eliminación',     verbo: 'eliminó'                  },
+  mantenimiento: { color: '#d97706', bg: '#fef3c7', Icon: Wrench,     label: 'Mantenimiento',   verbo: 'registró mantenimiento en'},
+}
+
+const TICKET_ESTADO = {
+  'Abierto':    { color: '#1d4ed8', bg: '#dbeafe', Icon: CircleDot    },
+  'En proceso': { color: '#854d0e', bg: '#fef9c3', Icon: Activity     },
+  'Resuelto':   { color: '#166534', bg: '#dcfce7', Icon: CheckCircle2 },
 }
 
 /* ── Utilidades ─────────────────────────────────────────── */
@@ -33,6 +39,14 @@ function tiempoRelativo(fecha) {
   if (hrs < 24) return `hace ${hrs} h`
   const dias = Math.floor(hrs / 24)
   return `hace ${dias} día${dias > 1 ? 's' : ''}`
+}
+
+function fmtMonto(v) {
+  const n = Number(v)
+  if (!n) return '$0'
+  if (n >= 1000000) return '$' + (n / 1000000).toLocaleString('es-CL', { maximumFractionDigits: 1 }) + 'M'
+  if (n >= 1000)    return '$' + Math.round(n / 1000).toLocaleString('es-CL') + 'k'
+  return '$' + n.toLocaleString('es-CL')
 }
 
 function traducirClaves(claves, allCats) {
@@ -113,7 +127,6 @@ function ActividadReciente({ actividades }) {
   return (
     <div className="dash-card dash-actividad">
       <SectionTitle icon={Activity} label="Actividad reciente" />
-
       {actividades === null ? (
         <div style={{ display:'flex', alignItems:'center', gap:10, color:'#94a3b8', fontSize:13 }}>
           <div className="dash-mini-spin" />
@@ -160,145 +173,10 @@ function ActividadReciente({ actividades }) {
   )
 }
 
-/* ── InventarioPorUbicacion ─────────────────────────────── */
-function InventarioPorUbicacion({ bienes }) {
-  const [animado, setAnimado] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setAnimado(true), 180); return () => clearTimeout(t) }, [bienes.length])
-
-  const datos = Object.entries(
-    bienes.filter(b => b.ubicacion?.trim())
-      .reduce((acc, b) => { const k = b.ubicacion.trim(); acc[k] = (acc[k] || 0) + 1; return acc }, {})
-  )
-    .map(([nombre, count]) => ({ nombre, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-
-  if (datos.length === 0) return null
-
-  const total    = datos.reduce((s, d) => s + d.count, 0)
-  const maxCount = datos[0].count
-
-  return (
-    <div className="dash-card dash-ubicacion">
-      <SectionTitle
-        icon={MapPin} label="Inventario por ubicación"
-        extra={<span style={{ marginLeft:'auto', fontSize:12, color:'#94a3b8', fontWeight:600 }}>Top 5 · {total} bienes</span>}
-      />
-      <div className="dash-ubic-list">
-        {datos.map((d, i) => (
-          <div key={d.nombre} className="dash-ubic-row">
-            <span className="dash-ubic-label" title={d.nombre}>{d.nombre}</span>
-            <div className="dash-ubic-bar-wrap">
-              <div className="dash-ubic-bar" style={{
-                width: animado ? `${(d.count / maxCount) * 100}%` : '0%',
-                transitionDelay: `${i * 0.07}s`,
-              }} />
-            </div>
-            <span className="dash-ubic-count">{d.count}</span>
-            <span className="dash-ubic-pct">{Math.round((d.count / total) * 100)}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/* ── TicketsAlerta ──────────────────────────────────────── */
-function TicketsAlerta({ tickets, onVerTodos }) {
-  if (!tickets || tickets.length === 0) return null
-
-  return (
-    <motion.div
-      className="dash-card dash-tickets-alerta"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: 'easeOut' }}
-      style={{ marginBottom: 14 }}
-    >
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <SectionTitle
-            icon={Ticket} label="Tickets abiertos"
-            iconBg="#fee2e2" iconColor="#dc2626"
-          />
-          <motion.span
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            style={{
-              background: '#dc2626', color: '#fff',
-              borderRadius: 99, padding: '1px 9px',
-              fontSize: 11, fontWeight: 700, lineHeight: '18px',
-              marginLeft: -4,
-            }}
-          >
-            {tickets.length}
-          </motion.span>
-        </div>
-        <button
-          onClick={onVerTodos}
-          style={{
-            display:'flex', alignItems:'center', gap:5,
-            fontSize: 12, color: '#1a237e', background: '#eef0ff',
-            border: 'none', cursor: 'pointer', fontWeight: 600,
-            padding: '5px 12px', borderRadius: 8, fontFamily: 'inherit',
-            transition: 'background 0.15s',
-          }}
-          onMouseOver={e => e.currentTarget.style.background = '#e0e4ff'}
-          onMouseOut={e => e.currentTarget.style.background = '#eef0ff'}
-        >
-          Ver todos
-          <ArrowRight size={12} />
-        </button>
-      </div>
-
-      <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-        {tickets.slice(0, 5).map((t, i) => (
-          <motion.div
-            key={t.id}
-            className="dash-ticket-item"
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.22 }}
-          >
-            <div style={{
-              width: 32, height: 32, borderRadius: 9, flexShrink: 0,
-              background: PRIORIDAD_BG[t.prioridad] || '#f3f4f6',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: PRIORIDAD_COLOR[t.prioridad] || '#64748b',
-            }}>
-              <Ticket size={15} strokeWidth={2} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin:0, fontSize:13, fontWeight:600, color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {t.titulo}
-              </p>
-              <p style={{ margin:'2px 0 0', fontSize:11, color:'#94a3b8', lineHeight:1.4 }}>
-                <strong style={{ color:'#64748b' }}>{t.creado_por_nombre}</strong>
-                {t.area_reporte ? ` · ${t.area_reporte}` : ''}
-                {t.lugar_falla  ? ` · ${t.lugar_falla}` : ''}
-                {' · '}{tiempoRelativo(t.creado_en)}
-              </p>
-            </div>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 99, flexShrink: 0,
-              background: PRIORIDAD_BG[t.prioridad] || '#f3f4f6',
-              color: PRIORIDAD_COLOR[t.prioridad] || '#64748b',
-              textTransform: 'capitalize',
-            }}>
-              {t.prioridad}
-            </span>
-          </motion.div>
-        ))}
-      </div>
-    </motion.div>
-  )
-}
-
 /* ══════════════════════════════════════════════════════════
    DASHBOARD PRINCIPAL
    ══════════════════════════════════════════════════════════ */
-export default function Dashboard({ usuario, onIrATickets }) {
+export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }) {
   const esAdmin   = usuario?.rol === 'admin'
   const esSoporte = usuario?.rol === 'soporte'
   const esGestor  = esAdmin || esSoporte
@@ -307,10 +185,11 @@ export default function Dashboard({ usuario, onIrATickets }) {
   const [categorias,           setCategorias]           = useState([])
   const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
   const [actividades,          setActividades]          = useState(null)
-  const [ticketsAbiertos,      setTicketsAbiertos]      = useState([])
   const [cargando,             setCargando]             = useState(true)
   const [categoriaFiltro,      setCategoriaFiltro]      = useState(null)
   const [estadoFiltro,         setEstadoFiltro]         = useState(null)
+  const [statsTickets,         setStatsTickets]         = useState(null)
+  const [statsReqs,            setStatsReqs]            = useState(null)
 
   useEffect(() => {
     const cargar = async () => {
@@ -336,20 +215,18 @@ export default function Dashboard({ usuario, onIrATickets }) {
   }, [])
 
   useEffect(() => {
-    if (!esGestor) return
-    const fetchTickets = async () => {
-      const { data } = await supabase.from('tickets')
-        .select('id, titulo, prioridad, creado_por_nombre, area_reporte, lugar_falla, creado_en')
-        .eq('estado', 'Abierto').order('creado_en', { ascending: false })
-      setTicketsAbiertos(data ?? [])
+    const cargarStats = async () => {
+      let qT = supabase.from('tickets').select('estado, prioridad, titulo, creado_por_nombre, area_reporte, lugar_falla, creado_en')
+      if (!esGestor && usuario?.id) qT = qT.eq('creado_por', usuario.id)
+      const [{ data: tData }, { data: rData }] = await Promise.all([
+        qT,
+        supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo'),
+      ])
+      setStatsTickets(tData ?? [])
+      setStatsReqs(rData ?? [])
     }
-    fetchTickets()
-    const ch = supabase.channel('tickets-dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, fetchTickets)
-      .subscribe()
-
-    return () => supabase.removeChannel(ch)
-  }, [esGestor])
+    cargarStats()
+  }, [])
 
   useEffect(() => {
     supabase.from('actividades').select('*').order('created_at', { ascending: false }).limit(3)
@@ -371,7 +248,7 @@ export default function Dashboard({ usuario, onIrATickets }) {
     </div>
   )
 
-  /* ── Filtros y datos derivados ───────────────────────── */
+  /* ── Filtros inventario ──────────────────────────────── */
   const tieneAccesoCat = (catId) =>
     esAdmin || categoriasPermitidas.includes('todos') || categoriasPermitidas.includes(catId)
 
@@ -399,7 +276,6 @@ export default function Dashboard({ usuario, onIrATickets }) {
   const catActiva = categorias.find(c => c.id === categoriaFiltro)
 
   const toggleEstado    = e  => setEstadoFiltro(prev => prev === e ? null : e)
-  const toggleCategoria = id => { setCategoriaFiltro(prev => prev === id ? null : id); setEstadoFiltro(null) }
 
   const KPI_CONFIG = [
     { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          Icon: Package2,   color: '#1a237e', bg: '#eef0ff', iconBg: '#e8eaf6' },
@@ -408,6 +284,30 @@ export default function Dashboard({ usuario, onIrATickets }) {
     { label: 'Dados de baja',                                                       valor: enBaja,         Icon: Archive,    color: '#dc2626', bg: '#fef2f2', iconBg: '#fee2e2' },
   ]
 
+  /* ── Stats tickets ───────────────────────────────────── */
+  const tTotal     = statsTickets?.length ?? 0
+  const tAbiertos  = statsTickets?.filter(t => t.estado === 'Abierto').length ?? 0
+  const tEnProceso = statsTickets?.filter(t => t.estado === 'En proceso').length ?? 0
+  const tResueltos = statsTickets?.filter(t => t.estado === 'Resuelto').length ?? 0
+  const tRecientes = statsTickets
+    ?.filter(t => t.estado === 'Abierto')
+    .slice(0, 3) ?? []
+
+  /* ── Stats requerimientos ────────────────────────────── */
+  const rTotal     = statsReqs?.length ?? 0
+  const rEnProceso = statsReqs?.filter(r =>
+    ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)
+  ).length ?? 0
+  const rComprados = statsReqs?.filter(r =>
+    ['Comprado','Contratado','En ejecución'].includes(r.estado)
+  ).length ?? 0
+  const rRechazados = statsReqs?.filter(r =>
+    (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto'
+  ).length ?? 0
+  const rMontoSol  = statsReqs?.reduce((acc, r) => acc + (Number(r.monto_solicitado) || 0), 0) ?? 0
+  const rMontoReal = statsReqs?.reduce((acc, r) => acc + (Number(r.monto_real)       || 0), 0) ?? 0
+
+  /* ── Render ──────────────────────────────────────────── */
   return (
     <div className="dash-wrap">
 
@@ -424,7 +324,7 @@ export default function Dashboard({ usuario, onIrATickets }) {
         <p>Resumen general del inventario{categoriaFiltro ? ` — ${catActiva?.label}` : ''}</p>
       </motion.div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards inventario */}
       <div className="dash-kpis">
         {KPI_CONFIG.map((kpi, i) => (
           <motion.div
@@ -446,8 +346,6 @@ export default function Dashboard({ usuario, onIrATickets }) {
           </motion.div>
         ))}
       </div>
-
-      {esGestor && <TicketsAlerta tickets={ticketsAbiertos} onVerTodos={onIrATickets} />}
 
       {/* Charts: Donut + Actividad */}
       <div className="dash-charts">
@@ -500,68 +398,140 @@ export default function Dashboard({ usuario, onIrATickets }) {
         </motion.div>
       </div>
 
-      {/* Ubicaciones */}
-      <InventarioPorUbicacion bienes={bienesPermitidos} />
+      {/* ── Fila inferior: Tickets + Requerimientos ── */}
+      <div className="dash-bottom-grid">
 
-      {/* Categorías */}
-      <motion.div
-        className="dash-card"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.42, duration: 0.3 }}
-      >
-        <SectionTitle
-          icon={FolderOpen} label="Todas las categorías"
-          extra={categoriaFiltro && (
-            <button
-              onClick={() => { setCategoriaFiltro(null); setEstadoFiltro(null) }}
-              style={{
-                marginLeft: 'auto', fontSize: 11, color: '#64748b',
-                background: '#f1f5f9', border: 'none', cursor: 'pointer',
-                padding: '3px 10px', borderRadius: 6, fontFamily: 'inherit', fontWeight: 600,
-              }}
-            >
-              Limpiar filtro
-            </button>
-          )}
-        />
-        <div className="dash-cat-grid">
-          {catGrid.map((c, i) => {
-            const activa = categoriaFiltro === c.id
-            return (
-              <motion.div
-                key={c.id}
-                className="dash-cat-item"
-                onClick={() => toggleCategoria(c.id)}
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.45 + i * 0.03, duration: 0.22 }}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  background: activa ? 'rgb(var(--primary-rgb))' : (c.count > 0 ? '#f0f2ff' : '#f9fafb'),
-                  borderColor: activa ? 'rgb(var(--acento-rgb))' : (c.count > 0 ? 'rgba(212,160,23,0.2)' : '#e5e7eb'),
-                  boxShadow: activa ? '0 8px 28px rgba(var(--primary-rgb),0.35)' : 'none',
-                }}
-              >
-                <div className="dash-cat-item-icon">{c.icon}</div>
-                <div className="dash-cat-item-label" style={{ color: activa ? '#f0d060' : '#374151' }}>
-                  {c.label}
+        {/* Tickets */}
+        <motion.div
+          className="dash-card"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.42, duration: 0.3 }}
+        >
+          <div className="dash-resumen-header">
+            <SectionTitle icon={Ticket} label="Tickets de soporte" iconBg="#fee2e2" iconColor="#dc2626" />
+            {onIrATickets && (
+              <button className="dash-resumen-link" onClick={onIrATickets}>
+                Ver todos <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* KPI pills */}
+          <div className="dash-stat-pills">
+            <div className="dash-stat-pill dash-stat-pill--total">
+              <span className="dsp-num">{tTotal}</span>
+              <span className="dsp-label">Total</span>
+            </div>
+            {['Abierto','En proceso','Resuelto'].map(estado => {
+              const cfg = TICKET_ESTADO[estado]
+              const count = estado === 'Abierto' ? tAbiertos : estado === 'En proceso' ? tEnProceso : tResueltos
+              return (
+                <div key={estado} className="dash-stat-pill" style={{ background: cfg.bg }}>
+                  <cfg.Icon size={14} style={{ color: cfg.color, flexShrink: 0 }} strokeWidth={2.5} />
+                  <span className="dsp-num" style={{ color: cfg.color }}>{count}</span>
+                  <span className="dsp-label">{estado}</span>
                 </div>
-                <div className="dash-cat-item-count" style={{ color: activa ? '#fff' : (c.count > 0 ? '#1a237e' : '#d1d5db') }}>
-                  {c.count}
-                </div>
-              </motion.div>
-            )
-          })}
-          {catGrid.length === 0 && (
-            <p style={{ fontSize: 13, color: '#94a3b8', gridColumn: '1/-1' }}>
-              No hay categorías creadas.
+              )
+            })}
+          </div>
+
+          {/* Mini lista tickets abiertos recientes */}
+          {tRecientes.length > 0 ? (
+            <div className="dash-mini-list">
+              <p className="dash-mini-list-title">Abiertos recientes</p>
+              {tRecientes.map((t, i) => (
+                <motion.div
+                  key={t.id ?? i}
+                  className="dash-mini-item"
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.45 + i * 0.05 }}
+                >
+                  <div className="dash-mini-dot" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+                    <Ticket size={12} strokeWidth={2} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="dash-mini-titulo">{t.titulo || t.area_reporte || '—'}</p>
+                    <p className="dash-mini-sub">
+                      {t.creado_por_nombre}
+                      {t.lugar_falla ? ` · ${t.lugar_falla}` : ''}
+                      {' · '}{tiempoRelativo(t.creado_en)}
+                    </p>
+                  </div>
+                  {t.prioridad && (
+                    <span className="dash-mini-badge" style={{
+                      background: PRIORIDAD_BG[t.prioridad],
+                      color: PRIORIDAD_COLOR[t.prioridad],
+                    }}>
+                      {t.prioridad}
+                    </span>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          ) : statsTickets !== null && tAbiertos === 0 ? (
+            <p className="dash-resumen-empty">
+              <CheckCircle2 size={16} style={{ color: '#16a34a' }} /> Sin tickets abiertos
             </p>
-          )}
-        </div>
-      </motion.div>
+          ) : null}
+        </motion.div>
 
+        {/* Requerimientos */}
+        <motion.div
+          className="dash-card"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.48, duration: 0.3 }}
+        >
+          <div className="dash-resumen-header">
+            <SectionTitle icon={ClipboardList} label="Requerimientos" iconBg="#ecfdf5" iconColor="#059669" />
+            {onIrARequerimientos && (
+              <button className="dash-resumen-link" onClick={onIrARequerimientos}>
+                Ver todos <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* KPI pills */}
+          <div className="dash-stat-pills">
+            <div className="dash-stat-pill dash-stat-pill--total">
+              <span className="dsp-num">{rTotal}</span>
+              <span className="dsp-label">Total</span>
+            </div>
+            <div className="dash-stat-pill" style={{ background: '#fef9c3' }}>
+              <CircleDot size={14} style={{ color: '#854d0e', flexShrink: 0 }} strokeWidth={2.5} />
+              <span className="dsp-num" style={{ color: '#854d0e' }}>{rEnProceso}</span>
+              <span className="dsp-label">En proceso</span>
+            </div>
+            <div className="dash-stat-pill" style={{ background: '#dcfce7' }}>
+              <CheckCircle2 size={14} style={{ color: '#16a34a', flexShrink: 0 }} strokeWidth={2.5} />
+              <span className="dsp-num" style={{ color: '#16a34a' }}>{rComprados}</span>
+              <span className="dsp-label">Comprados</span>
+            </div>
+            <div className="dash-stat-pill" style={{ background: '#fee2e2' }}>
+              <XCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} strokeWidth={2.5} />
+              <span className="dsp-num" style={{ color: '#dc2626' }}>{rRechazados}</span>
+              <span className="dsp-label">Rechazados</span>
+            </div>
+          </div>
+
+          {/* Montos destacados */}
+          <div className="dash-montos-row">
+            <div className="dash-monto-box dash-monto-box--sol">
+              <span className="dash-monto-label">Monto solicitado</span>
+              <span className="dash-monto-valor">{fmtMonto(rMontoSol)}</span>
+              <span className="dash-monto-sub">{statsReqs?.filter(r => Number(r.monto_solicitado) > 0).length ?? 0} req. con monto</span>
+            </div>
+            <div className="dash-monto-box dash-monto-box--real">
+              <span className="dash-monto-label">Monto real</span>
+              <span className="dash-monto-valor">{fmtMonto(rMontoReal)}</span>
+              <span className="dash-monto-sub">{statsReqs?.filter(r => Number(r.monto_real) > 0).length ?? 0} req. con monto real</span>
+            </div>
+          </div>
+        </motion.div>
+
+      </div>
     </div>
   )
 }
