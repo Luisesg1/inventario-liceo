@@ -299,8 +299,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [apellidosNuevo,    setApellidosNuevo]    = useState('')
   const [emailNuevo,        setEmailNuevo]        = useState('')
   const [rolNuevo,          setRolNuevo]          = useState('')
-  const [creandoUser,       setCreandoUser]       = useState(false)
-  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
+  const [creandoUser,            setCreandoUser]            = useState(false)
+  const [usuarioEncontrado,      setUsuarioEncontrado]      = useState(null)
+  const [usuarioEncontradoEmail, setUsuarioEncontradoEmail] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
   const [cargandoPermisos,  setCargandoPermisos]  = useState(false)
 
@@ -378,15 +379,39 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
     }
   }, [rutNuevo, usuarios])
 
+  // Buscar usuario interno por email al escribirlo
+  useEffect(() => {
+    if (!emailNuevo.trim()) { setUsuarioEncontradoEmail(null); return }
+    const encontrado = usuarios.find(u =>
+      u.email?.toLowerCase() === emailNuevo.trim().toLowerCase()
+    )
+    setUsuarioEncontradoEmail(encontrado ?? null)
+  }, [emailNuevo, usuarios])
+
   function seleccionar(u) {
     setUsuarioSel(u); setDropdownOpen(false); setBusqueda(''); setModoCrear(false)
-    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setEmailNuevo(''); setRolNuevo(''); setUsuarioEncontrado(null)
+    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setEmailNuevo(''); setRolNuevo('')
+    setUsuarioEncontrado(null); setUsuarioEncontradoEmail(null)
   }
 
-  function handleCrearUsuario() {
-    if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim()) return
+  async function handleCrearUsuario() {
+    if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo) return
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
-    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), email: emailNuevo.trim() || null, rol: rolNuevo || null, isExterno: true })
+    const rut    = rutNuevo.trim()
+
+    // Si el email coincide con un usuario interno, vincularlo y guardar su RUT
+    const interno = usuarioEncontradoEmail ?? usuarios.find(u =>
+      u.email?.toLowerCase() === emailNuevo.trim().toLowerCase()
+    )
+    if (interno) {
+      if (!interno.rut && rut) {
+        await supabase.from('usuarios').update({ rut }).eq('id', interno.id)
+      }
+      seleccionar({ ...interno, rut: interno.rut || rut })
+      return
+    }
+
+    seleccionar({ id: null, nombre, rut, email: emailNuevo.trim(), rol: rolNuevo, isExterno: true })
   }
 
   async function handleGuardar() {
@@ -539,19 +564,48 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                 </div>
                                 <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico *"
                                   value={emailNuevo} onChange={e => setEmailNuevo(e.target.value)} />
-                                <select className="mp-input mp-input--sm" value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}>
-                                  <option value="">Seleccionar rol *</option>
-                                  {Object.entries(ROL_LABEL).map(([v, l]) => (
-                                    <option key={v} value={v}>{l}</option>
-                                  ))}
-                                </select>
+
+                                <AnimatePresence>
+                                  {usuarioEncontradoEmail && (
+                                    <motion.div className="mp-rut-found"
+                                      variants={slideV} initial="hidden" animate="visible" exit="exit">
+                                      <div className="mp-rut-found-info">
+                                        <div className="mp-avatar" style={{ background: getAvatarColor(usuarioEncontradoEmail.nombre), width: 26, height: 26, fontSize: 10 }}>
+                                          {getInitials(usuarioEncontradoEmail.nombre)}
+                                        </div>
+                                        <div>
+                                          <div className="mp-rut-found-name">{usuarioEncontradoEmail.nombre}</div>
+                                          <div className="mp-rut-found-sub">Usuario registrado — se vinculará automáticamente</div>
+                                        </div>
+                                      </div>
+                                      <button type="button" className="mp-btn-save mp-btn--sm"
+                                        onClick={handleCrearUsuario}>
+                                        Seleccionar
+                                      </button>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+
+                                {!usuarioEncontradoEmail && (
+                                  <>
+                                    <select className="mp-input mp-input--sm" value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}>
+                                      <option value="">Seleccionar rol *</option>
+                                      {Object.entries(ROL_LABEL).map(([v, l]) => (
+                                        <option key={v} value={v}>{l}</option>
+                                      ))}
+                                    </select>
+                                  </>
+                                )}
+
                                 <div className="mp-new-user-actions">
                                   <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
-                                  <button type="button" className="mp-btn-save mp-btn--sm"
-                                    disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo || creandoUser}
-                                    onClick={handleCrearUsuario}>
-                                    {creandoUser ? 'Creando…' : 'Crear usuario'}
-                                  </button>
+                                  {!usuarioEncontradoEmail && (
+                                    <button type="button" className="mp-btn-save mp-btn--sm"
+                                      disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo || creandoUser}
+                                      onClick={handleCrearUsuario}>
+                                      {creandoUser ? 'Creando…' : 'Crear usuario'}
+                                    </button>
+                                  )}
                                 </div>
                               </>
                             )}
