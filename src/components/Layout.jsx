@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, FileText, ChevronRight, X, LogOut,
-  Menu, Loader2, ShoppingCart,
+  Menu, Loader2, ShoppingCart, ShieldCheck,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -491,6 +491,22 @@ export default function Layout({
               )}
             </motion.div>
           ))}
+
+          {/* Permisos */}
+          {esAdmin && (
+            <motion.div
+              className={`nav-item ${paginaActual === 'permisos' ? 'active' : ''}`}
+              onClick={() => handleNav('permisos')}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <ShieldCheck size={15} strokeWidth={paginaActual === 'permisos' ? 2.5 : 2} />
+              </span>
+              Permisos
+            </motion.div>
+          )}
 
           {/* Ajustes con submenú */}
           {esAdmin && (
