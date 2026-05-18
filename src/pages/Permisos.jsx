@@ -792,39 +792,35 @@ export default function Permisos({ usuario }) {
     let { data: us, error: usErr } = await supabase
       .from('usuarios').select('id, nombre, email, rol, rut').order('nombre')
     if (usErr) {
-      console.warn('[Permisos] Error cargando usuarios con rut:', usErr)
       ;({ data: us } = await supabase
         .from('usuarios').select('id, nombre, email, rol').order('nombre'))
     }
-    console.log('[Permisos] Usuarios cargados:', us)
-    const { data: ps, error: psErr } = await supabase
+    const { data: ps } = await supabase
       .from('ausencias')
       .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
       .order('fecha_inicio', { ascending: false })
-    console.log('[Permisos] Ausencias cargadas:', ps, 'error:', psErr)
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
     setCargando(false)
   }
 
   async function handleGetPermisosUsados(userId, rut) {
+    let total = 0
     if (userId) {
       const { count } = await supabase
         .from('ausencias').select('*', { count: 'exact', head: true }).eq('usuario_id', userId)
-      return count ?? 0
+      total += count ?? 0
     }
     if (rut) {
       const { count } = await supabase
         .from('ausencias').select('*', { count: 'exact', head: true }).eq('externo_rut', rut)
-      return count ?? 0
+      total += count ?? 0
     }
-    return 0
+    return total
   }
 
   async function handleGuardar(datos) {
     const u = datos.usuario
-    console.log('[Permisos] handleGuardar datos:', datos)
-    console.log('[Permisos] usuario seleccionado:', u)
 
     // Validar duplicados por solapamiento de fechas
     if (u?.id && !u.isExterno) {
@@ -863,16 +859,13 @@ export default function Permisos({ usuario }) {
       recordatorio:   datos.recordatorio,
     }
 
-    console.log('[Permisos] payload a guardar:', payload)
     let error
     if (datos.id) {
       ;({ error } = await supabase.from('ausencias').update(payload).eq('id', datos.id))
     } else {
-      const res = await supabase.from('ausencias').insert(payload)
-      error = res.error
-      console.log('[Permisos] resultado insert:', res)
+      ;({ error } = await supabase.from('ausencias').insert(payload))
     }
-    if (error) { console.error('[Permisos] error al guardar:', error); throw error }
+    if (error) throw error
     await cargarDatos()
   }
 
