@@ -305,7 +305,6 @@ export default function Layout({
 
   // ── Nav items ─────────────────────────────────────────
   const navItems = [
-    ...(!esSoloTickets || esSoporte ? [{ id: 'dashboard', Icon: LayoutDashboard, label: 'Inicio' }] : []),
     { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
@@ -387,6 +386,22 @@ export default function Layout({
         {/* Nav */}
         <nav className="sidebar-nav">
           <p className="nav-section">Principal</p>
+
+          {/* Inicio — siempre primero */}
+          {(!esSoloTickets || esSoporte) && (
+            <motion.div
+              className={`nav-item ${paginaActual === 'dashboard' ? 'active' : ''}`}
+              onClick={() => handleNav('dashboard')}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <LayoutDashboard size={15} strokeWidth={paginaActual === 'dashboard' ? 2.5 : 2} />
+              </span>
+              Inicio
+            </motion.div>
+          )}
 
           {/* Inventario con submenú (solo si no es soloTickets) */}
           {!esSoloTickets && (
