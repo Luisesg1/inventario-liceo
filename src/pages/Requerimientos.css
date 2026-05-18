@@ -31,6 +31,25 @@
 .req-kpi--ok      { border-left-color: #16a34a; }
 .req-kpi--mal     { border-left-color: #dc2626; }
 .req-kpi--monto   { border-left-color: #2563eb; }
+
+.req-kpi--clickable {
+  cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s, border-left-width 0.1s;
+  user-select: none;
+}
+.req-kpi--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  opacity: 1;
+}
+.req-kpi--clickable:not(.req-kpi--active) {
+  opacity: 0.65;
+}
+.req-kpi--active {
+  border-left-width: 5px;
+  opacity: 1;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+}
 .req-kpi-num {
   font-size: 22px;
   font-weight: 700;

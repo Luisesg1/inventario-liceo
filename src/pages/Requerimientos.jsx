@@ -424,6 +424,7 @@ export default function Requerimientos({ usuario }) {
   const [busqueda,          setBusqueda]          = useState('')
   const [filtroEstado,      setFiltroEstado]      = useState('')
   const [filtroFondo,       setFiltroFondo]       = useState('')
+  const [filtroKpi,         setFiltroKpi]         = useState(null)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
 
   useEffect(() => { cargar() }, [])
@@ -438,13 +439,27 @@ export default function Requerimientos({ usuario }) {
   const filtrados = useMemo(() => items.filter(r => {
     if (filtroEstado && r.estado !== filtroEstado) return false
     if (filtroFondo  && r.fondo  !== filtroFondo)  return false
+    if (filtroKpi === 'proceso')   {
+      if (!['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)) return false
+    }
+    if (filtroKpi === 'comprados') {
+      if (!['Comprado','Contratado','En ejecución'].includes(r.estado)) return false
+    }
+    if (filtroKpi === 'rechazados') {
+      if (!(r.estado ?? '').startsWith('Rechazado') && r.estado !== 'Devuelto') return false
+    }
+    if (filtroKpi === 'monto') {
+      if (!r.monto_solicitado) return false
+    }
     if (busqueda.trim()) {
       const q   = busqueda.toLowerCase()
       const hay = s => (s ?? '').toLowerCase().includes(q)
       if (!hay(r.contenido) && !hay(r.solicitante) && !hay(r.accion) && !hay(r.orden_compra) && !hay(r.numero_factura)) return false
     }
     return true
-  }), [items, filtroEstado, filtroFondo, busqueda])
+  }), [items, filtroEstado, filtroFondo, filtroKpi, busqueda])
+
+  const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const abrirNuevo    = () => { setForm(FORM_VACIO); setModal('nuevo') }
@@ -505,23 +520,38 @@ export default function Requerimientos({ usuario }) {
 
       {/* KPIs */}
       <div className="req-kpis">
-        <div className="req-kpi">
+        <div
+          className={`req-kpi req-kpi--clickable ${filtroKpi === null ? 'req-kpi--active' : ''}`}
+          onClick={() => setFiltroKpi(null)}
+        >
           <span className="req-kpi-num">{kpis.total}</span>
           <span className="req-kpi-label">Total</span>
         </div>
-        <div className="req-kpi req-kpi--proceso">
+        <div
+          className={`req-kpi req-kpi--proceso req-kpi--clickable ${filtroKpi === 'proceso' ? 'req-kpi--active' : ''}`}
+          onClick={() => toggleKpi('proceso')}
+        >
           <span className="req-kpi-num">{kpis.enProceso}</span>
           <span className="req-kpi-label">En proceso</span>
         </div>
-        <div className="req-kpi req-kpi--ok">
+        <div
+          className={`req-kpi req-kpi--ok req-kpi--clickable ${filtroKpi === 'comprados' ? 'req-kpi--active' : ''}`}
+          onClick={() => toggleKpi('comprados')}
+        >
           <span className="req-kpi-num">{kpis.comprados}</span>
           <span className="req-kpi-label">Comprados</span>
         </div>
-        <div className="req-kpi req-kpi--mal">
+        <div
+          className={`req-kpi req-kpi--mal req-kpi--clickable ${filtroKpi === 'rechazados' ? 'req-kpi--active' : ''}`}
+          onClick={() => toggleKpi('rechazados')}
+        >
           <span className="req-kpi-num">{kpis.rechazados}</span>
           <span className="req-kpi-label">Rechazados</span>
         </div>
-        <div className="req-kpi req-kpi--monto">
+        <div
+          className={`req-kpi req-kpi--monto req-kpi--clickable ${filtroKpi === 'monto' ? 'req-kpi--active' : ''}`}
+          onClick={() => toggleKpi('monto')}
+        >
           <span className="req-kpi-num">{formatMonto(kpis.montoTotal)}</span>
           <span className="req-kpi-label">Monto solicitado</span>
         </div>
