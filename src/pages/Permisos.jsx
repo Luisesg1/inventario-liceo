@@ -293,11 +293,12 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [usuarioSel,        setUsuarioSel]        = useState(userInit)
   const [dropdownOpen,      setDropdownOpen]      = useState(false)
   const [busqueda,          setBusqueda]          = useState('')
-  const [modoCrear,         setModoCrear]         = useState(true)
+  const [modoCrear,         setModoCrear]         = useState(false)
   const [rutNuevo,          setRutNuevo]          = useState('')
   const [nombresNuevo,      setNombresNuevo]      = useState('')
   const [apellidosNuevo,    setApellidosNuevo]    = useState('')
   const [emailNuevo,        setEmailNuevo]        = useState('')
+  const [rolNuevo,          setRolNuevo]          = useState('')
   const [creandoUser,       setCreandoUser]       = useState(false)
   const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
@@ -379,13 +380,13 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   function seleccionar(u) {
     setUsuarioSel(u); setDropdownOpen(false); setBusqueda(''); setModoCrear(false)
-    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setEmailNuevo(''); setUsuarioEncontrado(null)
+    setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo(''); setEmailNuevo(''); setRolNuevo(''); setUsuarioEncontrado(null)
   }
 
   function handleCrearUsuario() {
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim()) return
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
-    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), email: emailNuevo.trim() || null, rol: null, isExterno: true })
+    seleccionar({ id: null, nombre, rut: rutNuevo.trim(), email: emailNuevo.trim() || null, rol: rolNuevo || null, isExterno: true })
   }
 
   async function handleGuardar() {
@@ -536,8 +537,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                   <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
                                     value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
                                 </div>
-                                <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico"
+                                <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico *"
                                   value={emailNuevo} onChange={e => setEmailNuevo(e.target.value)} />
+                                <select className="mp-input mp-input--sm" value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}>
+                                  <option value="">Rol (opcional)…</option>
+                                  {Object.entries(ROL_LABEL).map(([v, l]) => (
+                                    <option key={v} value={v}>{l}</option>
+                                  ))}
+                                </select>
                                 <div className="mp-new-user-actions">
                                   <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
                                   <button type="button" className="mp-btn-save mp-btn--sm"
