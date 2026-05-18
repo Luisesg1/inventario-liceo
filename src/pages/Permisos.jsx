@@ -934,12 +934,13 @@ export default function Permisos({ usuario }) {
             <table className="permisos-table">
               <thead>
                 <tr>
-                  <th>Usuario</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th></th>
+                  <th>Usuario</th><th>Rol</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {permisos.map(p => {
-                  const u = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut }
+                  const u = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut, email: p.externo_email, rol: null }
+                  const rolLabel = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
                   return (
                     <tr key={p.id}>
                       <td>
@@ -949,10 +950,12 @@ export default function Permisos({ usuario }) {
                           </div>
                           <div>
                             <div className="permisos-user-name">{u.nombre ?? '—'}</div>
-                            <div className="permisos-user-email">{u.rut ?? ROL_LABEL[u.rol] ?? u.rol}</div>
+                            {u.rut && <div className="permisos-user-rut">{u.rut}</div>}
+                            {u.email && <div className="permisos-user-email">{u.email}</div>}
                           </div>
                         </div>
                       </td>
+                      <td><span className="permisos-badge permisos-badge--rol">{rolLabel}</span></td>
                       <td><span className="permisos-badge permisos-badge--tipo">{TIPO_LABEL[p.tipo] ?? p.tipo}</span></td>
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_inicio)}</td>
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_fin)}</td>
