@@ -530,12 +530,12 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                   <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
                                     value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
                                 </div>
-                                <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico (opcional)"
+                                <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico"
                                   value={emailNuevo} onChange={e => setEmailNuevo(e.target.value)} />
                                 <div className="mp-new-user-actions">
                                   <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
                                   <button type="button" className="mp-btn-save mp-btn--sm"
-                                    disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || creandoUser}
+                                    disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || creandoUser}
                                     onClick={handleCrearUsuario}>
                                     {creandoUser ? 'Creando…' : 'Crear usuario'}
                                   </button>
