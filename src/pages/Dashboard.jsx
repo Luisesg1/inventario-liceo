@@ -226,6 +226,14 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       setStatsReqs(rData ?? [])
     }
     cargarStats()
+
+    const chT = supabase.channel('dash-tickets-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargarStats)
+      .subscribe()
+    const chR = supabase.channel('dash-reqs-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos' }, cargarStats)
+      .subscribe()
+    return () => { supabase.removeChannel(chT); supabase.removeChannel(chR) }
   }, [])
 
   useEffect(() => {
@@ -419,7 +427,11 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
 
           {/* KPI pills */}
           <div className="dash-stat-pills">
-            <div className="dash-stat-pill dash-stat-pill--total">
+            <div
+              className="dash-stat-pill dash-stat-pill--total dash-stat-pill--link"
+              onClick={onIrATickets}
+              title="Ver todos los tickets"
+            >
               <span className="dsp-num">{tTotal}</span>
               <span className="dsp-label">Total</span>
             </div>
@@ -427,7 +439,13 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
               const cfg = TICKET_ESTADO[estado]
               const count = estado === 'Abierto' ? tAbiertos : estado === 'En proceso' ? tEnProceso : tResueltos
               return (
-                <div key={estado} className="dash-stat-pill" style={{ background: cfg.bg }}>
+                <div
+                  key={estado}
+                  className="dash-stat-pill dash-stat-pill--link"
+                  style={{ background: cfg.bg }}
+                  onClick={onIrATickets}
+                  title={`Ver tickets ${estado.toLowerCase()}`}
+                >
                   <cfg.Icon size={14} style={{ color: cfg.color, flexShrink: 0 }} strokeWidth={2.5} />
                   <span className="dsp-num" style={{ color: cfg.color }}>{count}</span>
                   <span className="dsp-label">{estado}</span>
@@ -495,21 +513,40 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
 
           {/* KPI pills */}
           <div className="dash-stat-pills">
-            <div className="dash-stat-pill dash-stat-pill--total">
+            <div
+              className="dash-stat-pill dash-stat-pill--total dash-stat-pill--link"
+              onClick={onIrARequerimientos}
+              title="Ver todos los requerimientos"
+            >
               <span className="dsp-num">{rTotal}</span>
               <span className="dsp-label">Total</span>
             </div>
-            <div className="dash-stat-pill" style={{ background: '#fef9c3' }}>
+            <div
+              className="dash-stat-pill dash-stat-pill--link"
+              style={{ background: '#fef9c3' }}
+              onClick={onIrARequerimientos}
+              title="Ver requerimientos en proceso"
+            >
               <CircleDot size={14} style={{ color: '#854d0e', flexShrink: 0 }} strokeWidth={2.5} />
               <span className="dsp-num" style={{ color: '#854d0e' }}>{rEnProceso}</span>
               <span className="dsp-label">En proceso</span>
             </div>
-            <div className="dash-stat-pill" style={{ background: '#dcfce7' }}>
+            <div
+              className="dash-stat-pill dash-stat-pill--link"
+              style={{ background: '#dcfce7' }}
+              onClick={onIrARequerimientos}
+              title="Ver requerimientos comprados"
+            >
               <CheckCircle2 size={14} style={{ color: '#16a34a', flexShrink: 0 }} strokeWidth={2.5} />
               <span className="dsp-num" style={{ color: '#16a34a' }}>{rComprados}</span>
               <span className="dsp-label">Comprados</span>
             </div>
-            <div className="dash-stat-pill" style={{ background: '#fee2e2' }}>
+            <div
+              className="dash-stat-pill dash-stat-pill--link"
+              style={{ background: '#fee2e2' }}
+              onClick={onIrARequerimientos}
+              title="Ver requerimientos rechazados"
+            >
               <XCircle size={14} style={{ color: '#dc2626', flexShrink: 0 }} strokeWidth={2.5} />
               <span className="dsp-num" style={{ color: '#dc2626' }}>{rRechazados}</span>
               <span className="dsp-label">Rechazados</span>

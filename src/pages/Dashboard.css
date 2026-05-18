@@ -321,6 +321,18 @@
 .dash-stat-pill--total {
   background: #eef0ff;
 }
+.dash-stat-pill--link {
+  cursor: pointer;
+  transition: transform 0.13s ease, box-shadow 0.13s ease, filter 0.13s ease;
+}
+.dash-stat-pill--link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  filter: brightness(0.95);
+}
+.dash-stat-pill--link:active {
+  transform: translateY(0);
+}
 .dsp-num {
   font-size: 18px;
   font-weight: 800;
