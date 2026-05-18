@@ -676,6 +676,7 @@ export default function Usuarios({ usuario }) {
   // Edición
   const [editNombre, setEditNombre]       = useState('')
   const [editEmail, setEditEmail]         = useState('')
+  const [editRut,   setEditRut]           = useState('')
   const [editRol, setEditRol]             = useState('encargado')
   const [editPassword, setEditPassword]       = useState('')
   const [editConfirmPass, setEditConfirmPass] = useState('')
@@ -751,7 +752,7 @@ export default function Usuarios({ usuario }) {
     const u = usuarios.find((u) => u.id === userId)
     setPanelActivo({ id: userId, modo })
     if (modo === 'editar') {
-      setEditNombre(u.nombre); setEditEmail(u.email); setEditRol(u.rol)
+      setEditNombre(u.nombre); setEditEmail(u.email); setEditRut(u.rut ?? ''); setEditRol(u.rol)
       setEditPassword(''); setEditConfirmPass('')
       setEditShowPass(false); setEditShowConfirm(false)
       setMensajeEdit({ tipo: '', texto: '' })
@@ -838,7 +839,7 @@ export default function Usuarios({ usuario }) {
     // 1. Actualizar tabla usuarios
     const { error } = await supabase
       .from('usuarios')
-      .update({ nombre: editNombre.trim(), email: editEmail.trim().toLowerCase(), rol: editRol })
+      .update({ nombre: editNombre.trim(), email: editEmail.trim().toLowerCase(), rol: editRol, rut: editRut.trim() || null })
       .eq('id', userId)
 
     if (error) {
@@ -1147,6 +1148,15 @@ export default function Usuarios({ usuario }) {
                     <label className="form-label">Nombre
                       <input className="form-input" value={editNombre}
                         onChange={(e) => setEditNombre(e.target.value)} />
+                    </label>
+                    <label className="form-label">RUT
+                      <input className="form-input" placeholder="ej: 12.345.678-9" value={editRut}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9kK]/g, '').toUpperCase()
+                          if (raw.length < 2) { setEditRut(raw); return }
+                          const v = raw.slice(-1), b = raw.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                          setEditRut(`${b}-${v}`)
+                        }} />
                     </label>
                     <div className="form-row-2">
                       <label className="form-label">Email
