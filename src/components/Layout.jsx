@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, FileText, ChevronRight, X, LogOut,
-  Menu, Loader2,
+  Menu, Loader2, ShoppingCart,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -305,6 +305,7 @@ export default function Layout({
 
   // ── Nav items ─────────────────────────────────────────
   const navItems = [
+    ...(!esSoloTickets ? [{ id: 'requerimientos', Icon: ShoppingCart, label: 'Requerimientos' }] : []),
     { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
@@ -319,7 +320,8 @@ export default function Layout({
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
-    tickets:    'Tickets',
+    requerimientos: 'Requerimientos',
+    tickets:        'Tickets',
     ajustes:    'Personalizar',
     campos:     'Campos por categoría',
   }

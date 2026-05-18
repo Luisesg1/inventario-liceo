@@ -10,6 +10,7 @@ import Auditoria from './pages/Auditoria'
 import Tickets   from './pages/Tickets'
 import Ajustes          from './pages/Ajustes'
 import CamposCategoria  from './pages/CamposCategoria'
+import Requerimientos   from './pages/Requerimientos'
 import { aplicarTema } from './utils/tema'
 
 export default function App() {
@@ -165,7 +166,7 @@ export default function App() {
   const esSoporte     = usuario.rol === 'soporte'
   const esSoloTickets = esDocente || esSoporte
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
-  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
+  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard' || pagina === 'requerimientos'
   const paginaSegura = (esDocente && soloStaff) ? 'tickets'
     : (esSoporte && pagina === 'inventario') ? 'tickets'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
@@ -177,6 +178,7 @@ export default function App() {
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={() => cambiarPagina('tickets')} />}
+      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
