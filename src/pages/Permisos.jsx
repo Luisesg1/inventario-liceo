@@ -664,10 +664,11 @@ export default function Permisos({ usuario }) {
   async function handleCrearUsuario({ rut, nombres, apellidos }) {
     const nombre  = `${nombres} ${apellidos}`.trim()
     const rutNorm = normRut(rut)
-    const email   = `${rutNorm.toLowerCase()}@externo.local`
+    const id      = crypto.randomUUID()
+    const email   = `${rutNorm.toLowerCase()}_${id.slice(0, 8)}@externo.local`
     const { data, error } = await supabase
       .from('usuarios')
-      .insert({ id: crypto.randomUUID(), nombre, email, rol: 'docente', rut: formatRut(rut) })
+      .insert({ id, nombre, email, rol: 'docente', rut: formatRut(rut) })
       .select().single()
     if (error) throw error
     setUsuarios(prev => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
