@@ -477,7 +477,13 @@ export default function Layout({ usuario, onLogout, children, paginaActual, setP
           <div className="avatar">{usuario.nombre[0]}</div>
           <div className="user-info">
             <p>{usuario.nombre}</p>
-            <span>{esAdmin ? 'Administrador' : 'Encargado'}</span>
+            <span>{{
+              admin:     'Administrador',
+              editor:    'Editor',
+              encargado: 'Encargado',
+              docente:   'Docente',
+              soporte:   'Soporte',
+            }[usuario.rol] ?? usuario.rol}</span>
           </div>
         </div>
       </aside>
