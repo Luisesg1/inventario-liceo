@@ -136,36 +136,97 @@
 }
 .req-btn-nuevo:hover { opacity: 0.88; }
 
-/* ── Filtro de fechas ── */
-.req-filter-fechas {
+/* ── DateRangePicker compacto ── */
+.drp-wrap {
+  position: relative;
+}
+.drp-trigger {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: nowrap;
-}
-.req-filter-fecha-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
   white-space: nowrap;
-}
-.req-filter-fecha {
-  width: 140px;
-  min-width: 0;
   cursor: pointer;
+  font-size: 13px;
+  user-select: none;
 }
-.req-btn-clear-fecha {
-  background: transparent;
-  border: 1px solid var(--border, #e5e7eb);
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--text-secondary, #6b7280);
-  cursor: pointer;
-  padding: 4px 8px;
+.drp-trigger--active {
+  border-color: var(--color-boton, #6366f1);
+  color: var(--color-boton, #4f46e5);
+  background: rgba(99, 102, 241, 0.06);
+}
+.drp-clear {
+  margin-left: 2px;
+  font-size: 11px;
+  color: #9ca3af;
+  border-radius: 50%;
+  padding: 1px 4px;
   line-height: 1;
-  white-space: nowrap;
+  cursor: pointer;
 }
-.req-btn-clear-fecha:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.drp-clear:hover { color: #dc2626; background: #fee2e2; }
+.drp-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 280px;
+}
+.drp-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.drp-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.drp-col-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.drp-sep {
+  font-size: 14px;
+  color: #9ca3af;
+  padding-bottom: 8px;
+}
+.drp-date-input {
+  padding: 7px 9px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 7px;
+  font-size: 13px;
+  background: var(--input-bg, #f9fafb);
+  color: var(--text-primary, #111827);
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  cursor: pointer;
+}
+.drp-date-input:focus { outline: none; border-color: var(--color-boton, #6366f1); }
+.drp-btn-limpiar {
+  background: transparent;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 7px;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+}
+.drp-btn-limpiar:hover { background: #fee2e2; }
 
 /* ── Tabla ── */
 .req-table-wrap {

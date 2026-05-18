@@ -590,6 +590,80 @@ function ImportarReq({ onImportado, onCerrar }) {
   )
 }
 
+// ── DateRangePicker compacto ──────────────────────────────────────────────
+function DateRangePicker({ desde, hasta, onDesde, onHasta, onLimpiar }) {
+  const [abierto, setAbierto] = useState(false)
+  const ref = useRef()
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setAbierto(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const formatLabel = (d) => {
+    if (!d) return null
+    const [y, m, day] = d.split('-')
+    return `${day}/${m}/${y}`
+  }
+
+  const tieneRango = desde || hasta
+  const label = tieneRango
+    ? `${formatLabel(desde) || '…'} → ${formatLabel(hasta) || '…'}`
+    : '📅 Filtrar por fecha'
+
+  return (
+    <div className="drp-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`drp-trigger req-filter ${tieneRango ? 'drp-trigger--active' : ''}`}
+        onClick={() => setAbierto(a => !a)}
+      >
+        {tieneRango ? `📅 ${label}` : label}
+        {tieneRango && (
+          <span
+            className="drp-clear"
+            onMouseDown={e => { e.stopPropagation(); onLimpiar() }}
+            title="Limpiar"
+          >✕</span>
+        )}
+      </button>
+      {abierto && (
+        <div className="drp-panel">
+          <div className="drp-row">
+            <div className="drp-col">
+              <span className="drp-col-label">Desde</span>
+              <input
+                type="date"
+                className="drp-date-input"
+                value={desde}
+                max={hasta || undefined}
+                onChange={e => onDesde(e.target.value)}
+              />
+            </div>
+            <div className="drp-sep">→</div>
+            <div className="drp-col">
+              <span className="drp-col-label">Hasta</span>
+              <input
+                type="date"
+                className="drp-date-input"
+                value={hasta}
+                min={desde || undefined}
+                onChange={e => onHasta(e.target.value)}
+              />
+            </div>
+          </div>
+          {tieneRango && (
+            <button type="button" className="drp-btn-limpiar" onClick={() => { onLimpiar(); setAbierto(false) }}>
+              Limpiar fechas
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 export default function Requerimientos({ usuario }) {
   const esAdmin     = usuario.rol === 'admin'
@@ -931,31 +1005,13 @@ export default function Requerimientos({ usuario }) {
           <option value="">Todos los fondos</option>
           {FONDOS.map(f => <option key={f}>{f}</option>)}
         </select>
-        <div className="req-filter-fechas">
-          <label className="req-filter-fecha-label">Desde</label>
-          <input
-            type="date"
-            className="req-filter req-filter-fecha"
-            value={filtroFechaDesde}
-            onChange={e => setFiltroFechaDesde(e.target.value)}
-            max={filtroFechaHasta || undefined}
-          />
-          <label className="req-filter-fecha-label">Hasta</label>
-          <input
-            type="date"
-            className="req-filter req-filter-fecha"
-            value={filtroFechaHasta}
-            onChange={e => setFiltroFechaHasta(e.target.value)}
-            min={filtroFechaDesde || undefined}
-          />
-          {(filtroFechaDesde || filtroFechaHasta) && (
-            <button
-              className="req-btn-clear-fecha"
-              onClick={() => { setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
-              title="Limpiar fechas"
-            >✕</button>
-          )}
-        </div>
+        <DateRangePicker
+          desde={filtroFechaDesde}
+          hasta={filtroFechaHasta}
+          onDesde={setFiltroFechaDesde}
+          onHasta={setFiltroFechaHasta}
+          onLimpiar={() => { setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
+        />
         {puedeEditar && (
           <button className="req-btn-tool" onClick={() => setModalImportar(true)}>
             ⬆ Importar
