@@ -353,8 +353,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   const usuariosFiltrados = usuarios.filter(u => {
     if (!busqueda.trim()) return true
-    const q = normStr(busqueda)
-    return normStr(u.nombre).includes(q) || normStr(u.rut ?? '').includes(q)
+    const q    = normStr(busqueda)
+    const qRut = normRut(busqueda)
+    return normStr(u.nombre).includes(q)
+      || normStr(u.rut ?? '').includes(q)
+      || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
   })
 
   const formValido = !!usuarioSel && !!fechaInicio && !!fechaFin && !!tipoPermiso
