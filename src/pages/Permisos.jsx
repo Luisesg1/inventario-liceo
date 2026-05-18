@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
-  Eye, Pencil, Trash2,
+  Eye, Pencil, Trash2, AlertCircle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Permisos.css'
@@ -306,6 +306,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [recordatorio, setRecordatorio] = useState(isEdit ? !!editData.recordatorio : false)
   const [diasRecord,  setDiasRecord]  = useState(isEdit && editData.recordatorio ? editData.recordatorio : '1')
   const [guardando,   setGuardando]   = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState('')
 
   const dropdownRef = useRef(null)
   const searchRef   = useRef(null)
@@ -375,6 +376,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   async function handleGuardar() {
     if (!formValido || guardando) return
+    setErrorGuardar('')
     setGuardando(true)
     try {
       await onGuardar?.({
@@ -388,6 +390,10 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
         recordatorio: recordatorio ? diasRecord : null,
       })
       onClose?.()
+    } catch (err) {
+      setErrorGuardar(err.message === 'DUPLICADO'
+        ? 'Este usuario ya tiene un permiso en ese período de fechas.'
+        : 'Ocurrió un error al guardar. Intenta de nuevo.')
     } finally { setGuardando(false) }
   }
 
@@ -718,6 +724,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
           {/* Footer */}
           <div className="mp-footer">
+            {errorGuardar && (
+              <span className="mp-footer-warn"><AlertCircle size={13} strokeWidth={2} />{errorGuardar}</span>
+            )}
             <button className="mp-btn-cancel" onClick={onClose}>Cancelar</button>
             <button className="mp-btn-save" disabled={!formValido || guardando} onClick={handleGuardar}>
               {guardando
@@ -748,12 +757,18 @@ export default function Permisos({ usuario }) {
 
   async function cargarDatos() {
     setCargando(true)
-    const [{ data: us }, { data: ps }] = await Promise.all([
-      supabase.from('usuarios').select('id, nombre, email, rol, rut').order('nombre'),
-      supabase.from('ausencias')
-        .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
-        .order('fecha_inicio', { ascending: false }),
-    ])
+    // Intentar con rut; si el campo no existe en la tabla, reintentar sin él
+    let { data: us, error: usErr } = await supabase
+      .from('usuarios').select('id, nombre, email, rol, rut').order('nombre')
+    if (usErr) {
+      ;({ data: us } = await supabase
+        .from('usuarios').select('id, nombre, email, rol').order('nombre'))
+    }
+    // Join sin rut para que no falle si la columna no existe en usuarios
+    const { data: ps } = await supabase
+      .from('ausencias')
+      .select('*, usuario:usuario_id(id, nombre, email, rol)')
+      .order('fecha_inicio', { ascending: false })
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
     setCargando(false)
@@ -768,6 +783,19 @@ export default function Permisos({ usuario }) {
 
   async function handleGuardar(datos) {
     const u = datos.usuario
+
+    // Validar duplicados (solo en nuevos registros o si cambió usuario/fechas)
+    if (u?.id && !u.isExterno) {
+      let q = supabase.from('ausencias')
+        .select('id', { count: 'exact', head: true })
+        .eq('usuario_id', u.id)
+        .lte('fecha_inicio', datos.fechaFin)
+        .gte('fecha_fin',    datos.fechaInicio)
+      if (datos.id) q = q.neq('id', datos.id)
+      const { count } = await q
+      if (count > 0) throw new Error('DUPLICADO')
+    }
+
     const payload = {
       usuario_id:     u?.isExterno ? null : (u?.id ?? null),
       externo_nombre: u?.isExterno ? u.nombre : null,
