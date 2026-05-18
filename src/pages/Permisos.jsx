@@ -333,17 +333,19 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   }, [dropdownOpen])
 
   useEffect(() => {
-    if (fechaInicio && fechaFin && fechaFin < fechaInicio) setFechaFin(fechaInicio)
-  }, [fechaInicio, fechaFin])
+    if (!fechaInicio) return
+    if (!fechaFin) { setFechaFin(fechaInicio); return }
+    if (fechaFin < fechaInicio) setFechaFin(fechaInicio)
+  }, [fechaInicio])
 
   useEffect(() => {
     if (!usuarioSel || !onGetPermisosUsados) return
     setCargandoPermisos(true)
-    onGetPermisosUsados(usuarioSel.id)
+    onGetPermisosUsados(usuarioSel.id, usuarioSel.rut)
       .then(n => setPermisosUsados(n ?? 0))
       .catch(() => setPermisosUsados(0))
       .finally(() => setCargandoPermisos(false))
-  }, [usuarioSel?.id])
+  }, [usuarioSel?.id, usuarioSel?.rut])
 
   const duracion    = calcDuration(fechaInicio, fechaFin, jornada)
   const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
@@ -794,21 +796,37 @@ export default function Permisos({ usuario }) {
     setCargando(false)
   }
 
-  async function handleGetPermisosUsados(userId) {
-    if (!userId) return 0
-    const { count } = await supabase
-      .from('ausencias').select('*', { count: 'exact', head: true }).eq('usuario_id', userId)
-    return count ?? 0
+  async function handleGetPermisosUsados(userId, rut) {
+    if (userId) {
+      const { count } = await supabase
+        .from('ausencias').select('*', { count: 'exact', head: true }).eq('usuario_id', userId)
+      return count ?? 0
+    }
+    if (rut) {
+      const { count } = await supabase
+        .from('ausencias').select('*', { count: 'exact', head: true }).eq('externo_rut', rut)
+      return count ?? 0
+    }
+    return 0
   }
 
   async function handleGuardar(datos) {
     const u = datos.usuario
 
-    // Validar duplicados (solo en nuevos registros o si cambió usuario/fechas)
+    // Validar duplicados por solapamiento de fechas
     if (u?.id && !u.isExterno) {
       let q = supabase.from('ausencias')
         .select('id', { count: 'exact', head: true })
         .eq('usuario_id', u.id)
+        .lte('fecha_inicio', datos.fechaFin)
+        .gte('fecha_fin',    datos.fechaInicio)
+      if (datos.id) q = q.neq('id', datos.id)
+      const { count } = await q
+      if (count > 0) throw new Error('DUPLICADO')
+    } else if (u?.isExterno && u.rut) {
+      let q = supabase.from('ausencias')
+        .select('id', { count: 'exact', head: true })
+        .eq('externo_rut', u.rut)
         .lte('fecha_inicio', datos.fechaFin)
         .gte('fecha_fin',    datos.fechaInicio)
       if (datos.id) q = q.neq('id', datos.id)
