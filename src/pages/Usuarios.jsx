@@ -90,6 +90,13 @@ const PERMISOS_POR_ROL = {
     },
     categorias: ['todos'],
   },
+  visor_requerimientos: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, gestionar_tickets: false,
+    },
+    categorias: [],
+  },
 }
 
 const ROL_COLORES = {
@@ -98,6 +105,16 @@ const ROL_COLORES = {
   encargado: { bg: '#f3f4f6', color: '#374151' },
   docente:   { bg: '#fef3c7', color: '#92400e' },
   soporte:   { bg: '#e0f2fe', color: '#0369a1' },
+  visor_requerimientos: { bg: '#f3e8ff', color: '#6b21a8' },
+}
+
+const ROL_LABEL = {
+  admin: 'Administrador',
+  editor: 'Editor',
+  encargado: 'Encargado',
+  docente: 'Docente',
+  soporte: 'Soporte',
+  visor_requerimientos: 'Visor requerimientos',
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -549,6 +566,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                 <select className="form-select" value={rol} onChange={(e) => cambiarRol(e.target.value)}>
                   <option value="encargado">Encargado</option>
                   <option value="editor">Editor</option>
+                  <option value="visor_requerimientos">Visor requerimientos</option>
                   <option value="admin">Administrador</option>
                   <option value="soporte">Soporte</option>
                 </select>
@@ -1015,6 +1033,7 @@ export default function Usuarios({ usuario }) {
           <option value="encargado">Encargado</option>
           <option value="docente">Docente</option>
           <option value="soporte">Soporte</option>
+          <option value="visor_requerimientos">Visor requerimientos</option>
         </select>
       </div>
       {busqueda && (
@@ -1072,11 +1091,12 @@ export default function Usuarios({ usuario }) {
                     <option value="admin">Admin</option>
                     <option value="docente">Docente</option>
                     <option value="soporte">Soporte</option>
+                    <option value="visor_requerimientos">Visor req.</option>
                   </select>
                 ) : (
                   <span className="rol-select"
                     style={{ background: colores.bg, color: colores.color, cursor: 'default' }}>
-                    {u.rol.charAt(0).toUpperCase() + u.rol.slice(1)}
+                    {ROL_LABEL[u.rol] ?? u.rol}
                   </span>
                 )}
 
@@ -1141,6 +1161,7 @@ export default function Usuarios({ usuario }) {
                           <option value="admin">Administrador</option>
                           <option value="docente">Docente</option>
                           <option value="soporte">Soporte</option>
+                          <option value="visor_requerimientos">Visor requerimientos</option>
                         </select>
                       </label>
                     </div>
@@ -1295,7 +1316,6 @@ export default function Usuarios({ usuario }) {
 
       {/* ── Modal confirmación cambio de rol ── */}
       {confirmCambioRol && (() => {
-        const ROL_LABEL  = { admin: 'Administrador', editor: 'Editor', encargado: 'Encargado', docente: 'Docente', soporte: 'Soporte' }
         const colActual  = ROL_COLORES[confirmCambioRol.rolActual] ?? { bg: '#f3f4f6', color: '#374151' }
         const colNuevo   = ROL_COLORES[confirmCambioRol.nuevoRol]  ?? { bg: '#f3f4f6', color: '#374151' }
         const perfilNuevo = PERMISOS_POR_ROL[confirmCambioRol.nuevoRol] ?? { permisos: { ...PERMISOS_VACIO } }

@@ -28,10 +28,11 @@
   max-width: 200px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
-.req-kpi--proceso { border-left-color: #d97706; }
-.req-kpi--ok      { border-left-color: #16a34a; }
-.req-kpi--mal     { border-left-color: #dc2626; }
-.req-kpi--monto   { border-left-color: #2563eb; max-width: 260px; flex: 1.35; }
+.req-kpi--proceso    { border-left-color: #d97706; }
+.req-kpi--ok         { border-left-color: #16a34a; }
+.req-kpi--mal        { border-left-color: #dc2626; }
+.req-kpi--monto      { border-left-color: #2563eb; max-width: 260px; flex: 1.35; }
+.req-kpi--monto-real { border-left-color: #059669; max-width: 260px; flex: 1.35; }
 
 .req-kpi--resumen {
   cursor: default;
@@ -134,6 +135,37 @@
   white-space: nowrap;
 }
 .req-btn-nuevo:hover { opacity: 0.88; }
+
+/* ── Filtro de fechas ── */
+.req-filter-fechas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.req-filter-fecha-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+}
+.req-filter-fecha {
+  width: 140px;
+  min-width: 0;
+  cursor: pointer;
+}
+.req-btn-clear-fecha {
+  background: transparent;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.req-btn-clear-fecha:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
 
 /* ── Tabla ── */
 .req-table-wrap {

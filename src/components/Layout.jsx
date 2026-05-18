@@ -25,6 +25,7 @@ const ROL_LABEL = {
   encargado: 'Encargado',
   docente:   'Docente',
   soporte:   'Soporte',
+  visor_requerimientos: 'Visor requerimientos',
 }
 
 const sidebarVariants = {
@@ -45,7 +46,10 @@ export default function Layout({
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
   const esDocente     = usuario.rol === 'docente'
+  const esVisorReq    = usuario.rol === 'visor_requerimientos'
   const esSoloTickets = esDocente || esSoporte
+  const muestraRequerimientos = !esSoloTickets || esVisorReq
+  const muestraInventario = !esSoloTickets && !esVisorReq
 
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -305,7 +309,7 @@ export default function Layout({
 
   // ── Nav items ─────────────────────────────────────────
   const navItems = [
-    ...(!esSoloTickets ? [{ id: 'requerimientos', Icon: ShoppingCart, label: 'Requerimientos' }] : []),
+    ...(muestraRequerimientos ? [{ id: 'requerimientos', Icon: ShoppingCart, label: 'Requerimientos' }] : []),
     { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
@@ -390,7 +394,7 @@ export default function Layout({
           <p className="nav-section">Principal</p>
 
           {/* Inicio — siempre primero */}
-          {(!esSoloTickets || esSoporte) && (
+          {((!esSoloTickets && !esVisorReq) || esSoporte) && (
             <motion.div
               className={`nav-item ${paginaActual === 'dashboard' ? 'active' : ''}`}
               onClick={() => handleNav('dashboard')}
@@ -406,7 +410,7 @@ export default function Layout({
           )}
 
           {/* Inventario con submenú (solo si no es soloTickets) */}
-          {!esSoloTickets && (
+          {muestraInventario && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${inventarioActivo ? 'active' : ''}`}

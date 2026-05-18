@@ -593,7 +593,8 @@ function ImportarReq({ onImportado, onCerrar }) {
 // ════════════════════════════════════════════════════════════════════════════
 export default function Requerimientos({ usuario }) {
   const esAdmin     = usuario.rol === 'admin'
-  const puedeEditar = esAdmin || usuario.rol === 'editor' || usuario.rol === 'encargado'
+  const esVisorReq  = usuario.rol === 'visor_requerimientos'
+  const puedeEditar = !esVisorReq && (esAdmin || usuario.rol === 'editor' || usuario.rol === 'encargado')
 
   const [items,             setItems]             = useState([])
   const [cargando,          setCargando]          = useState(true)
@@ -607,6 +608,8 @@ export default function Requerimientos({ usuario }) {
   const [filtroEstado,      setFiltroEstado]      = useState('')
   const [filtroFondo,       setFiltroFondo]       = useState('')
   const [filtroKpi,         setFiltroKpi]         = useState(null)
+  const [filtroFechaDesde,  setFiltroFechaDesde]  = useState('')
+  const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
   const [imagenesNuevas,     setImagenesNuevas]     = useState([])
@@ -641,6 +644,8 @@ export default function Requerimientos({ usuario }) {
   const filtrados = useMemo(() => items.filter(r => {
     if (filtroEstado && r.estado !== filtroEstado) return false
     if (filtroFondo  && r.fondo  !== filtroFondo)  return false
+    if (filtroFechaDesde && r.fecha && r.fecha < filtroFechaDesde) return false
+    if (filtroFechaHasta && r.fecha && r.fecha > filtroFechaHasta) return false
     if (filtroKpi === 'proceso')   {
       if (!['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)) return false
     }
@@ -656,7 +661,7 @@ export default function Requerimientos({ usuario }) {
       if (!hay(r.contenido) && !hay(r.solicitante) && !hay(r.accion) && !hay(r.orden_compra) && !hay(r.numero_factura)) return false
     }
     return true
-  }), [items, filtroEstado, filtroFondo, filtroKpi, busqueda])
+  }), [items, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
 
   const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
@@ -845,14 +850,17 @@ export default function Requerimientos({ usuario }) {
   }
 
   const kpis = useMemo(() => {
-    const conMonto = items.filter(r => Number(r.monto_solicitado) > 0)
+    const conMonto     = items.filter(r => Number(r.monto_solicitado) > 0)
+    const conMontoReal = items.filter(r => Number(r.monto_real) > 0)
     return {
-      total:      items.length,
-      enProceso:  items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
-      comprados:  items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
-      rechazados: items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
-      montoTotal: conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
-      conMonto:   conMonto.length,
+      total:         items.length,
+      enProceso:     items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
+      comprados:     items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
+      rechazados:    items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
+      montoTotal:    conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
+      conMonto:      conMonto.length,
+      montoRealTotal: conMontoReal.reduce((acc, r) => acc + Number(r.monto_real), 0),
+      conMontoReal:  conMontoReal.length,
     }
   }, [items])
 
@@ -897,6 +905,14 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-label">Monto solicitado (total)</span>
           <span className="req-kpi-hint">{kpis.conMonto} con monto · {kpis.total - kpis.conMonto} sin monto</span>
         </div>
+        <div
+          className="req-kpi req-kpi--monto-real req-kpi--resumen"
+          title="Suma de todos los montos reales registrados (no filtra la tabla)"
+        >
+          <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
+          <span className="req-kpi-label">Monto real (total)</span>
+          <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -915,6 +931,31 @@ export default function Requerimientos({ usuario }) {
           <option value="">Todos los fondos</option>
           {FONDOS.map(f => <option key={f}>{f}</option>)}
         </select>
+        <div className="req-filter-fechas">
+          <label className="req-filter-fecha-label">Desde</label>
+          <input
+            type="date"
+            className="req-filter req-filter-fecha"
+            value={filtroFechaDesde}
+            onChange={e => setFiltroFechaDesde(e.target.value)}
+            max={filtroFechaHasta || undefined}
+          />
+          <label className="req-filter-fecha-label">Hasta</label>
+          <input
+            type="date"
+            className="req-filter req-filter-fecha"
+            value={filtroFechaHasta}
+            onChange={e => setFiltroFechaHasta(e.target.value)}
+            min={filtroFechaDesde || undefined}
+          />
+          {(filtroFechaDesde || filtroFechaHasta) && (
+            <button
+              className="req-btn-clear-fecha"
+              onClick={() => { setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
+              title="Limpiar fechas"
+            >✕</button>
+          )}
+        </div>
         {puedeEditar && (
           <button className="req-btn-tool" onClick={() => setModalImportar(true)}>
             ⬆ Importar
