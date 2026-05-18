@@ -289,12 +289,21 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
     eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
     importar_csv: false, gestionar_usuarios: false, exportar: false,
     registrar_prestamo: false, registrar_incidencia: false,
+    ver_tickets: false, gestionar_tickets: false,
   };
   switch (rol) {
-    case "admin":   return Object.fromEntries(Object.keys(base).map(k => [k, true]));
-    case "editor":  return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true };
-    case "soporte": return base;
-    default:        return { ...base, ver_inventario: true, exportar: true };
+    case "admin":
+      return Object.fromEntries(Object.keys(base).map(k => [k, true]));
+    case "editor":
+      return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
+               exportar: true, registrar_prestamo: true, registrar_incidencia: true,
+               ver_tickets: true };
+    case "soporte":
+      return { ...base, ver_tickets: true, gestionar_tickets: true };
+    case "docente":
+      return { ...base, ver_tickets: true };
+    default: // encargado
+      return { ...base, ver_inventario: true, exportar: true, ver_tickets: true };
   }
 }
 

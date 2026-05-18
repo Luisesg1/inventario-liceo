@@ -21,19 +21,21 @@ const STRENGTH_INFO = [null,
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 const ACCIONES = [
-  { key: 'ver_inventario',       label: 'Ver inventario',      labelCorto: 'Ver inv.' },
-  { key: 'agregar_bien',         label: 'Agregar bien',         labelCorto: 'Agregar' },
-  { key: 'editar_bien',          label: 'Editar bien',          labelCorto: 'Editar' },
-  { key: 'eliminar_bien',        label: 'Eliminar bien',        labelCorto: 'Eliminar' },
-  { key: 'eliminar_lote',        label: 'Eliminar en lote',     labelCorto: 'Lote' },
-  { key: 'gestionar_categorias', label: 'Gestionar categorías', labelCorto: 'Categ.' },
-  { key: 'importar_csv',         label: 'Importar CSV',         labelCorto: 'CSV' },
-  { key: 'gestionar_usuarios',   label: 'Gestionar usuarios',   labelCorto: 'Usuarios' },
-  { key: 'exportar',             label: 'Exportar',             labelCorto: 'Exportar' },
-  { key: 'registrar_prestamo',   label: 'Registrar préstamo',   labelCorto: 'Préstamo' },
-  { key: 'registrar_incidencia', label: 'Registrar incidencia', labelCorto: 'Incidencia' },
+  { key: 'ver_inventario',       label: 'Ver inventario',        labelCorto: 'Ver inv.' },
+  { key: 'agregar_bien',         label: 'Agregar bien',           labelCorto: 'Agregar' },
+  { key: 'editar_bien',          label: 'Editar bien',            labelCorto: 'Editar' },
+  { key: 'eliminar_bien',        label: 'Eliminar bien',          labelCorto: 'Eliminar' },
+  { key: 'eliminar_lote',        label: 'Eliminar en lote',       labelCorto: 'Lote' },
+  { key: 'gestionar_categorias', label: 'Gestionar categorías',   labelCorto: 'Categ.' },
+  { key: 'importar_csv',         label: 'Importar CSV',           labelCorto: 'CSV' },
+  { key: 'gestionar_usuarios',   label: 'Gestionar usuarios',     labelCorto: 'Usuarios' },
+  { key: 'exportar',             label: 'Exportar',               labelCorto: 'Exportar' },
+  { key: 'registrar_prestamo',   label: 'Registrar préstamo',     labelCorto: 'Préstamo' },
+  { key: 'registrar_incidencia', label: 'Registrar incidencia',   labelCorto: 'Incidencia' },
+  // Tickets
+  { key: 'ver_tickets',          label: 'Ver tickets (propios)',  labelCorto: 'Ver tick.' },
+  { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets', labelCorto: 'Gest. tick.' },
 ]
-
 
 // Acciones que aplican por categoría (las demás son globales)
 const ACCIONES_POR_CATEGORIA = [
@@ -44,6 +46,7 @@ const ACCIONES_POR_CATEGORIA = [
 const ACCIONES_GLOBALES = [
   'gestionar_categorias', 'gestionar_usuarios',
   'registrar_prestamo', 'registrar_incidencia',
+  'ver_tickets', 'gestionar_tickets',
 ]
 
 const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
@@ -59,6 +62,7 @@ const PERMISOS_POR_ROL = {
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
       importar_csv: false, gestionar_usuarios: false, exportar: true,
       registrar_prestamo: true, registrar_incidencia: true,
+      ver_tickets: true, gestionar_tickets: false,
     },
     categorias: ['todos'],
   },
@@ -68,15 +72,22 @@ const PERMISOS_POR_ROL = {
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
       importar_csv: false, gestionar_usuarios: false, exportar: false,
       registrar_prestamo: false, registrar_incidencia: false,
+      ver_tickets: true, gestionar_tickets: false,
     },
     categorias: ['todos'],
   },
   soporte: {
-    permisos:   { ...PERMISOS_VACIO },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, gestionar_tickets: true,
+    },
     categorias: ['todos'],
   },
   docente: {
-    permisos:   { ...PERMISOS_VACIO },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, gestionar_tickets: false,
+    },
     categorias: ['todos'],
   },
 }
