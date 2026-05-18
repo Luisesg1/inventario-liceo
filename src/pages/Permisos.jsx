@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
+  Eye, Pencil, Trash2,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Permisos.css'
@@ -29,8 +30,8 @@ const TIPOS_PERMISO = [
 const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label]))
 
 const JORNADAS = [
-  { value: 'medio_dia',    label: 'Medio día' },
-  { value: 'dia_completo', label: 'Día completo' },
+  { value: 'medio_dia',     label: 'Medio día' },
+  { value: 'dia_completo',  label: 'Día completo' },
   { value: 'personalizado', label: 'Personalizado' },
 ]
 
@@ -94,6 +95,12 @@ function normRut(r = '') {
   return r.replace(/[^0-9kK]/g, '').toUpperCase()
 }
 
+function userFromPermiso(p) {
+  if (p.usuario) return p.usuario
+  if (p.externo_nombre) return { id: null, nombre: p.externo_nombre, rut: p.externo_rut, rol: null, isExterno: true }
+  return null
+}
+
 // ── Animations ─────────────────────────────────────────────────────────────
 
 const overlayV = {
@@ -129,33 +136,176 @@ function PermisoDots({ usados }) {
   )
 }
 
+// ── ModalVerPermiso ────────────────────────────────────────────────────────
+
+function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar }) {
+  const u       = userFromPermiso(permiso) ?? {}
+  const nombre  = u.nombre ?? '—'
+  const duracion = calcDuration(permiso.fecha_inicio, permiso.fecha_fin, permiso.jornada)
+
+  return (
+    <AnimatePresence>
+      <motion.div className="mp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
+        onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
+        <motion.div className="mp-modal mp-modal--sm" variants={modalV} initial="hidden" animate="visible" exit="exit">
+
+          <div className="mp-header">
+            <div className="mp-header-left">
+              <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
+              <div>
+                <p className="mp-header-title">Detalle del permiso</p>
+                <p className="mp-header-sub">{formatFecha(permiso.fecha_inicio)} — {formatFecha(permiso.fecha_fin)}</p>
+              </div>
+            </div>
+            <button className="mp-close-btn" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
+          </div>
+
+          <div className="mp-ver-body">
+            <div className="mp-ver-user">
+              <div className="mp-avatar" style={{ background: getAvatarColor(nombre), width: 44, height: 44, fontSize: 15 }}>
+                {getInitials(nombre)}
+              </div>
+              <div>
+                <p className="mp-summary-user-name" style={{ fontSize: 15 }}>{nombre}</p>
+                <p className="mp-summary-user-email">{u.rut ?? ROL_LABEL[u.rol] ?? u.rol ?? 'Usuario externo'}</p>
+              </div>
+            </div>
+
+            <div className="mp-ver-grid">
+              <div className="mp-ver-field">
+                <span className="mp-section-label" style={{ marginBottom: 4 }}>Tipo</span>
+                <span className="permisos-badge permisos-badge--tipo">{TIPO_LABEL[permiso.tipo] ?? permiso.tipo}</span>
+              </div>
+              <div className="mp-ver-field">
+                <span className="mp-section-label" style={{ marginBottom: 4 }}>Jornada</span>
+                <span className="permisos-badge permisos-badge--jornada">{JORNADA_LABEL[permiso.jornada] ?? permiso.jornada}</span>
+              </div>
+              <div className="mp-ver-field">
+                <span className="mp-section-label" style={{ marginBottom: 4 }}>Fecha inicio</span>
+                <span className="mp-ver-value">{formatFecha(permiso.fecha_inicio)}</span>
+              </div>
+              <div className="mp-ver-field">
+                <span className="mp-section-label" style={{ marginBottom: 4 }}>Fecha fin</span>
+                <span className="mp-ver-value">{formatFecha(permiso.fecha_fin)}</span>
+              </div>
+              {permiso.jornada === 'medio_dia' && permiso.periodo && (
+                <div className="mp-ver-field">
+                  <span className="mp-section-label" style={{ marginBottom: 4 }}>Período</span>
+                  <span className="mp-ver-value">{permiso.periodo === 'am' ? 'AM — Mañana' : 'PM — Tarde'}</span>
+                </div>
+              )}
+              {permiso.jornada === 'personalizado' && permiso.hora_inicio && (
+                <div className="mp-ver-field">
+                  <span className="mp-section-label" style={{ marginBottom: 4 }}>Horario</span>
+                  <span className="mp-ver-value">{permiso.hora_inicio} — {permiso.hora_fin}</span>
+                </div>
+              )}
+              {duracion && (
+                <div className="mp-ver-field">
+                  <span className="mp-section-label" style={{ marginBottom: 4 }}>Duración</span>
+                  <div className="mp-duration-badge" style={{ display: 'inline-flex' }}>
+                    <CalendarRange size={12} strokeWidth={2.5} />{duracion}
+                  </div>
+                </div>
+              )}
+              {permiso.recordatorio && (
+                <div className="mp-ver-field">
+                  <span className="mp-section-label" style={{ marginBottom: 4 }}>Recordatorio</span>
+                  <span className="mp-ver-value">
+                    {permiso.recordatorio === '1' ? '1 día antes'
+                      : permiso.recordatorio === '7' ? '1 semana antes'
+                      : `${permiso.recordatorio} días antes`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {permiso.notas && (
+              <div className="mp-ver-notas">
+                <p className="mp-section-label" style={{ marginBottom: 6 }}>Notas</p>
+                <p className="mp-ver-notas-text">{permiso.notas}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mp-footer">
+            <button className="mp-btn-danger" onClick={onEliminar}>
+              <Trash2 size={14} strokeWidth={2.5} /> Eliminar
+            </button>
+            <div style={{ flex: 1 }} />
+            <button className="mp-btn-cancel" onClick={onClose}>Cerrar</button>
+            <button className="mp-btn-save" onClick={onEditar}>
+              <Pencil size={14} strokeWidth={2.5} /> Editar
+            </button>
+          </div>
+
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
+// ── ModalConfirmarEliminar ─────────────────────────────────────────────────
+
+function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando }) {
+  return (
+    <AnimatePresence>
+      <motion.div className="mp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
+        onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
+        <motion.div className="mp-modal mp-modal--confirm" variants={modalV} initial="hidden" animate="visible" exit="exit">
+
+          <div className="mp-confirm-body">
+            <div className="mp-confirm-icon"><Trash2 size={24} strokeWidth={1.5} /></div>
+            <p className="mp-confirm-title">¿Eliminar permiso?</p>
+            <p className="mp-confirm-desc">Esta acción no se puede deshacer. El registro desaparecerá permanentemente.</p>
+          </div>
+
+          <div className="mp-footer">
+            <button className="mp-btn-cancel" onClick={onClose}>Cancelar</button>
+            <button className="mp-btn-danger" disabled={eliminando} onClick={onConfirmar}>
+              {eliminando
+                ? 'Eliminando…'
+                : <><Trash2 size={14} strokeWidth={2.5} /> Eliminar</>}
+            </button>
+          </div>
+
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados }) {
-  const [usuarioSel,       setUsuarioSel]       = useState(null)
-  const [dropdownOpen,     setDropdownOpen]     = useState(false)
-  const [busqueda,         setBusqueda]         = useState('')
-  const [modoCrear,        setModoCrear]        = useState(true)
-  const [rutNuevo,         setRutNuevo]         = useState('')
-  const [nombresNuevo,     setNombresNuevo]     = useState('')
-  const [apellidosNuevo,   setApellidosNuevo]   = useState('')
-  const [creandoUser,      setCreandoUser]      = useState(false)
-  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
-  const [permisosUsados,   setPermisosUsados]   = useState(0)
-  const [cargandoPermisos, setCargandoPermisos] = useState(false)
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, editData }) {
+  const isEdit = !!editData
 
-  const [fechaInicio,      setFechaInicio]      = useState('')
-  const [fechaFin,         setFechaFin]         = useState('')
-  const [jornada,          setJornada]          = useState('dia_completo')
-  const [periodo,          setPeriodo]          = useState('am')
-  const [horaInicio,       setHoraInicio]       = useState('08:00')
-  const [horaFin,          setHoraFin]          = useState('17:00')
-  const [tipoPermiso,      setTipoPermiso]      = useState('')
-  const [motivoOtro,       setMotivoOtro]       = useState('')
-  const [notas,            setNotas]            = useState('')
-  const [recordatorio,     setRecordatorio]     = useState(false)
-  const [diasRecord,       setDiasRecord]       = useState('1')
-  const [guardando,        setGuardando]        = useState(false)
+  const userInit = isEdit ? userFromPermiso(editData) : null
+
+  const [usuarioSel,        setUsuarioSel]        = useState(userInit)
+  const [dropdownOpen,      setDropdownOpen]      = useState(false)
+  const [busqueda,          setBusqueda]          = useState('')
+  const [modoCrear,         setModoCrear]         = useState(true)
+  const [rutNuevo,          setRutNuevo]          = useState('')
+  const [nombresNuevo,      setNombresNuevo]      = useState('')
+  const [apellidosNuevo,    setApellidosNuevo]    = useState('')
+  const [creandoUser,       setCreandoUser]       = useState(false)
+  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
+  const [permisosUsados,    setPermisosUsados]    = useState(0)
+  const [cargandoPermisos,  setCargandoPermisos]  = useState(false)
+
+  const [fechaInicio, setFechaInicio] = useState(isEdit ? (editData.fecha_inicio ?? '') : '')
+  const [fechaFin,    setFechaFin]    = useState(isEdit ? (editData.fecha_fin   ?? '') : '')
+  const [jornada,     setJornada]     = useState(isEdit ? (editData.jornada     ?? 'dia_completo') : 'dia_completo')
+  const [periodo,     setPeriodo]     = useState(isEdit ? (editData.periodo     ?? 'am') : 'am')
+  const [horaInicio,  setHoraInicio]  = useState(isEdit ? (editData.hora_inicio ?? '08:00') : '08:00')
+  const [horaFin,     setHoraFin]     = useState(isEdit ? (editData.hora_fin    ?? '17:00') : '17:00')
+  const [tipoPermiso, setTipoPermiso] = useState(isEdit ? (editData.tipo        ?? '') : '')
+  const [motivoOtro,  setMotivoOtro]  = useState(isEdit && editData.tipo === 'otro' ? (editData.notas ?? '') : '')
+  const [notas,       setNotas]       = useState(isEdit && editData.tipo !== 'otro' ? (editData.notas ?? '') : '')
+  const [recordatorio, setRecordatorio] = useState(isEdit ? !!editData.recordatorio : false)
+  const [diasRecord,  setDiasRecord]  = useState(isEdit && editData.recordatorio ? editData.recordatorio : '1')
+  const [guardando,   setGuardando]   = useState(false)
 
   const dropdownRef = useRef(null)
   const searchRef   = useRef(null)
@@ -185,8 +335,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       .finally(() => setCargandoPermisos(false))
   }, [usuarioSel?.id])
 
-  const duracion   = calcDuration(fechaInicio, fechaFin, jornada)
-  const tipoLabel  = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
+  const duracion    = calcDuration(fechaInicio, fechaFin, jornada)
+  const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
 
   const usuariosFiltrados = usuarios.filter(u => {
@@ -198,7 +348,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const formValido = !!usuarioSel && !!fechaInicio && !!fechaFin && !!tipoPermiso
     && (tipoPermiso !== 'otro' || motivoOtro.trim().length > 0)
 
-  // Autocompletar al escribir RUT
   useEffect(() => {
     const rut = rutNuevo.trim()
     if (!rut) { setUsuarioEncontrado(null); setNombresNuevo(''); setApellidosNuevo(''); return }
@@ -221,7 +370,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   function handleCrearUsuario() {
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim()) return
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
-    // Externo: no se inserta en usuarios, se guarda en ausencias directamente
     seleccionar({ id: null, nombre, rut: rutNuevo.trim(), rol: null, isExterno: true })
   }
 
@@ -230,8 +378,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
     setGuardando(true)
     try {
       await onGuardar?.({
+        id: editData?.id ?? null,
         usuario: usuarioSel, fechaInicio, fechaFin, jornada,
-        periodo:    jornada === 'medio_dia'    ? periodo    : null,
+        periodo:    jornada === 'medio_dia'     ? periodo    : null,
         horaInicio: jornada === 'personalizado' ? horaInicio : null,
         horaFin:    jornada === 'personalizado' ? horaFin    : null,
         tipoPermiso, motivoOtro: tipoPermiso === 'otro' ? motivoOtro.trim() : null,
@@ -253,11 +402,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
             <div className="mp-header-left">
               <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
               <div>
-                <p className="mp-header-title">Registrar permiso</p>
+                <p className="mp-header-title">{isEdit ? 'Editar permiso' : 'Registrar permiso'}</p>
                 <p className="mp-header-sub">
                   {usuarioActual?.nombre
-                    ? <>Hola, <strong>{usuarioActual.nombre}</strong> — registra permisos y días autorizados.</>
-                    : 'Registra permisos y días autorizados para usuarios.'}
+                    ? <>Hola, <strong>{usuarioActual.nombre}</strong> — {isEdit ? 'modifica los datos del permiso.' : 'registra permisos y días autorizados.'}</>
+                    : isEdit ? 'Modifica los datos del permiso.' : 'Registra permisos y días autorizados para usuarios.'}
                 </p>
               </div>
             </div>
@@ -288,7 +437,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           <div className="mp-user-name">{usuarioSel.nombre}</div>
                           <div className="mp-user-email">{usuarioSel.rut ? `${usuarioSel.rut} · ` : ''}{usuarioSel.email}</div>
                         </div>
-                        <span className="mp-rol-tag">{ROL_LABEL[usuarioSel.rol] ?? usuarioSel.rol}</span>
+                        <span className="mp-rol-tag">{ROL_LABEL[usuarioSel.rol] ?? usuarioSel.rol ?? 'Externo'}</span>
                       </>
                     ) : (
                       <span className="mp-user-placeholder">Buscar o seleccionar usuario…</span>
@@ -301,14 +450,12 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       <motion.div className="mp-dropdown"
                         initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0, transition: { duration: 0.13 } }}
                         exit={{ opacity: 0, y: -4, transition: { duration: 0.10 } }}>
-                        {/* Buscador */}
                         <div className="mp-search-wrap">
                           <Search size={13} className="mp-search-icon" strokeWidth={2.5} />
                           <input ref={searchRef} type="text" className="mp-search-input"
                             placeholder="Buscar por nombre o RUT…"
                             value={busqueda} onChange={e => setBusqueda(e.target.value)} />
                         </div>
-                        {/* Lista */}
                         <div className="mp-dropdown-list">
                           {usuariosFiltrados.length === 0 && !modoCrear
                             ? <div className="mp-dropdown-empty">No se encontró ningún usuario</div>
@@ -327,7 +474,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                             ))
                           }
                         </div>
-                        {/* Crear usuario */}
                         {!modoCrear ? (
                           <div className="mp-dropdown-footer">
                             <button type="button" className="mp-create-user-btn" onClick={() => setModoCrear(true)}>
@@ -341,7 +487,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                               value={rutNuevo}
                               onChange={e => setRutNuevo(formatRut(e.target.value))} />
 
-                            {/* Usuario encontrado por RUT */}
                             <AnimatePresence>
                               {usuarioEncontrado && (
                                 <motion.div className="mp-rut-found"
@@ -388,7 +533,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                   </AnimatePresence>
                 </div>
 
-                {/* Contador permisos */}
                 <AnimatePresence>
                   {usuarioSel && !cargandoPermisos && (
                     <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
@@ -578,7 +722,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
             <button className="mp-btn-save" disabled={!formValido || guardando} onClick={handleGuardar}>
               {guardando
                 ? <><CheckCircle2 size={14} strokeWidth={2.5} />Guardando…</>
-                : <><Save size={14} strokeWidth={2.5} />Guardar permiso</>}
+                : <><Save size={14} strokeWidth={2.5} />{isEdit ? 'Guardar cambios' : 'Guardar permiso'}</>}
             </button>
           </div>
 
@@ -591,10 +735,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 // ── Permisos (página) ──────────────────────────────────────────────────────
 
 export default function Permisos({ usuario }) {
-  const [usuarios,     setUsuarios]     = useState([])
-  const [permisos,     setPermisos]     = useState([])
-  const [cargando,     setCargando]     = useState(true)
-  const [modalAbierto, setModalAbierto] = useState(false)
+  const [usuarios,        setUsuarios]        = useState([])
+  const [permisos,        setPermisos]        = useState([])
+  const [cargando,        setCargando]        = useState(true)
+  const [modalAbierto,    setModalAbierto]    = useState(false)
+  const [permisoVer,      setPermisoVer]      = useState(null)
+  const [permisoEditar,   setPermisoEditar]   = useState(null)
+  const [permisoEliminar, setPermisoEliminar] = useState(null)
+  const [eliminando,      setEliminando]      = useState(false)
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -620,22 +768,51 @@ export default function Permisos({ usuario }) {
 
   async function handleGuardar(datos) {
     const u = datos.usuario
-    const { error } = await supabase.from('ausencias').insert({
-      usuario_id:      u?.isExterno ? null : (u?.id ?? null),
-      externo_nombre:  u?.isExterno ? u.nombre : null,
-      externo_rut:     u?.isExterno ? u.rut    : null,
-      fecha_inicio:    datos.fechaInicio,
-      fecha_fin:       datos.fechaFin,
-      jornada:         datos.jornada,
-      periodo:         datos.periodo,
-      hora_inicio:     datos.horaInicio,
-      hora_fin:        datos.horaFin,
-      tipo:            datos.tipoPermiso,
-      notas:           datos.motivoOtro || datos.notas || null,
-      recordatorio:    datos.recordatorio,
-    })
+    const payload = {
+      usuario_id:     u?.isExterno ? null : (u?.id ?? null),
+      externo_nombre: u?.isExterno ? u.nombre : null,
+      externo_rut:    u?.isExterno ? u.rut    : null,
+      fecha_inicio:   datos.fechaInicio,
+      fecha_fin:      datos.fechaFin,
+      jornada:        datos.jornada,
+      periodo:        datos.periodo,
+      hora_inicio:    datos.horaInicio,
+      hora_fin:       datos.horaFin,
+      tipo:           datos.tipoPermiso,
+      notas:          datos.motivoOtro || datos.notas || null,
+      recordatorio:   datos.recordatorio,
+    }
+
+    let error
+    if (datos.id) {
+      ;({ error } = await supabase.from('ausencias').update(payload).eq('id', datos.id))
+    } else {
+      ;({ error } = await supabase.from('ausencias').insert(payload))
+    }
     if (error) throw error
     await cargarDatos()
+  }
+
+  async function handleEliminar() {
+    if (!permisoEliminar || eliminando) return
+    setEliminando(true)
+    try {
+      const { error } = await supabase.from('ausencias').delete().eq('id', permisoEliminar.id)
+      if (error) throw error
+      setPermisoEliminar(null)
+      setPermisoVer(null)
+      await cargarDatos()
+    } finally { setEliminando(false) }
+  }
+
+  function abrirEditar(p) {
+    setPermisoVer(null)
+    setPermisoEditar(p)
+  }
+
+  function abrirEliminar(p) {
+    setPermisoVer(null)
+    setPermisoEliminar(p)
   }
 
   return (
@@ -677,12 +854,12 @@ export default function Permisos({ usuario }) {
             <table className="permisos-table">
               <thead>
                 <tr>
-                  <th>Usuario</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th>
+                  <th>Usuario</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th></th>
                 </tr>
               </thead>
               <tbody>
                 {permisos.map(p => {
-                  const u = p.usuario ?? {}
+                  const u = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut }
                   return (
                     <tr key={p.id}>
                       <td>
@@ -700,6 +877,19 @@ export default function Permisos({ usuario }) {
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_inicio)}</td>
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_fin)}</td>
                       <td><span className="permisos-badge permisos-badge--jornada">{JORNADA_LABEL[p.jornada] ?? p.jornada}</span></td>
+                      <td>
+                        <div className="permisos-actions">
+                          <button className="permisos-action-btn" title="Ver" onClick={() => setPermisoVer(p)}>
+                            <Eye size={14} strokeWidth={2} />
+                          </button>
+                          <button className="permisos-action-btn" title="Editar" onClick={() => abrirEditar(p)}>
+                            <Pencil size={14} strokeWidth={2} />
+                          </button>
+                          <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={() => abrirEliminar(p)}>
+                            <Trash2 size={14} strokeWidth={2} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
@@ -716,6 +906,34 @@ export default function Permisos({ usuario }) {
           onClose={() => setModalAbierto(false)}
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
+        />
+      )}
+
+      {permisoEditar && (
+        <ModalPermiso
+          usuarios={usuarios}
+          usuarioActual={usuario}
+          editData={permisoEditar}
+          onClose={() => setPermisoEditar(null)}
+          onGuardar={handleGuardar}
+          onGetPermisosUsados={handleGetPermisosUsados}
+        />
+      )}
+
+      {permisoVer && (
+        <ModalVerPermiso
+          permiso={permisoVer}
+          onClose={() => setPermisoVer(null)}
+          onEditar={() => abrirEditar(permisoVer)}
+          onEliminar={() => abrirEliminar(permisoVer)}
+        />
+      )}
+
+      {permisoEliminar && (
+        <ModalConfirmarEliminar
+          eliminando={eliminando}
+          onClose={() => setPermisoEliminar(null)}
+          onConfirmar={handleEliminar}
         />
       )}
 
