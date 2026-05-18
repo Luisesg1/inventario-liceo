@@ -1005,7 +1005,6 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto real (total)</span>
-          <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
         </div>
       </div>
 
