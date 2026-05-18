@@ -738,13 +738,15 @@ export default function Usuarios({ usuario }) {
     const { userId, nuevoRol } = confirmCambioRol
     setAplicandoRol(true)
     const perfilNuevo = PERMISOS_POR_ROL[nuevoRol] ?? { permisos: { ...PERMISOS_VACIO }, categorias: ['todos'] }
-    await Promise.all([
+    const [{ error: errRol }, { error: errPermisos }] = await Promise.all([
       supabase.from('usuarios').update({ rol: nuevoRol }).eq('id', userId),
-      supabase.from('permisos_usuario').update({
-        permisos:   perfilNuevo.permisos,
-        categorias: perfilNuevo.categorias,
-      }).eq('usuario_id', userId),
+      supabase.from('permisos_usuario').upsert(
+        { usuario_id: userId, permisos: perfilNuevo.permisos, categorias: perfilNuevo.categorias },
+        { onConflict: 'usuario_id' }
+      ),
     ])
+    if (errRol)      console.error('[cambioRol] error actualizando rol:', errRol)
+    if (errPermisos) console.error('[cambioRol] error actualizando permisos:', errPermisos)
     setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, rol: nuevoRol } : u))
     setConfirmCambioRol(null)
     setAplicandoRol(false)
