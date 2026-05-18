@@ -14,11 +14,11 @@
   justify-content: center;
 }
 .req-kpi {
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border, #e5e7eb);
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-left: 3px solid #9ca3af;
   border-radius: 10px;
-  padding: 14px 24px;
+  padding: 14px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,41 +26,60 @@
   min-width: 120px;
   flex: 1;
   max-width: 200px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 .req-kpi--proceso { border-left-color: #d97706; }
 .req-kpi--ok      { border-left-color: #16a34a; }
 .req-kpi--mal     { border-left-color: #dc2626; }
-.req-kpi--monto   { border-left-color: #2563eb; }
+.req-kpi--monto   { border-left-color: #2563eb; max-width: 260px; flex: 1.35; }
+
+.req-kpi--resumen {
+  cursor: default;
+  opacity: 1;
+}
 
 .req-kpi--clickable {
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s, border-left-width 0.1s;
+  transition: transform 0.12s, box-shadow 0.12s, border-left-width 0.1s;
   user-select: none;
 }
 .req-kpi--clickable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-  opacity: 1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 .req-kpi--clickable:not(.req-kpi--active) {
-  opacity: 0.65;
+  background: #f8fafc;
+}
+.req-kpi--clickable:not(.req-kpi--active) .req-kpi-num {
+  color: #374151;
 }
 .req-kpi--active {
   border-left-width: 5px;
-  opacity: 1;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
 }
 .req-kpi-num {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary, #111827);
-  line-height: 1;
+  color: #111827;
+  line-height: 1.15;
+}
+.req-kpi-num--monto {
+  font-size: clamp(15px, 1.8vw, 20px);
+  letter-spacing: -0.02em;
 }
 .req-kpi-label {
   font-size: 11px;
-  color: var(--text-secondary, #6b7280);
+  color: #6b7280;
   font-weight: 500;
   text-align: center;
+  line-height: 1.25;
+}
+.req-kpi-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 2px;
 }
 
 /* ── Toolbar ── */

@@ -274,6 +274,11 @@ function formatMonto(v) {
   return '$' + Number(v).toLocaleString('es-CL')
 }
 
+function formatMontoKpi(v) {
+  if (v === null || v === undefined || v === '' || Number(v) === 0) return '$0'
+  return '$' + Number(v).toLocaleString('es-CL')
+}
+
 function formatFecha(d) {
   if (!d) return '—'
   return new Date(d + 'T00:00:00').toLocaleDateString('es-CL')
@@ -645,9 +650,6 @@ export default function Requerimientos({ usuario }) {
     if (filtroKpi === 'rechazados') {
       if (!(r.estado ?? '').startsWith('Rechazado') && r.estado !== 'Devuelto') return false
     }
-    if (filtroKpi === 'monto') {
-      if (!r.monto_solicitado) return false
-    }
     if (busqueda.trim()) {
       const q   = busqueda.toLowerCase()
       const hay = s => (s ?? '').toLowerCase().includes(q)
@@ -842,13 +844,17 @@ export default function Requerimientos({ usuario }) {
     finally { setExportando(false) }
   }
 
-  const kpis = useMemo(() => ({
-    total:      items.length,
-    enProceso:  items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
-    comprados:  items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
-    rechazados: items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
-    montoTotal: items.reduce((acc, r) => acc + (Number(r.monto_solicitado) || 0), 0),
-  }), [items])
+  const kpis = useMemo(() => {
+    const conMonto = items.filter(r => Number(r.monto_solicitado) > 0)
+    return {
+      total:      items.length,
+      enProceso:  items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
+      comprados:  items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
+      rechazados: items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
+      montoTotal: conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
+      conMonto:   conMonto.length,
+    }
+  }, [items])
 
   return (
     <div className="req-page">
@@ -884,11 +890,12 @@ export default function Requerimientos({ usuario }) {
           <span className="req-kpi-label">Rechazados</span>
         </div>
         <div
-          className={`req-kpi req-kpi--monto req-kpi--clickable ${filtroKpi === 'monto' ? 'req-kpi--active' : ''}`}
-          onClick={() => toggleKpi('monto')}
+          className="req-kpi req-kpi--monto req-kpi--resumen"
+          title="Suma de todos los montos solicitados registrados (no filtra la tabla)"
         >
-          <span className="req-kpi-num">{formatMonto(kpis.montoTotal)}</span>
-          <span className="req-kpi-label">Monto solicitado</span>
+          <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
+          <span className="req-kpi-label">Monto solicitado (total)</span>
+          <span className="req-kpi-hint">{kpis.conMonto} con monto · {kpis.total - kpis.conMonto} sin monto</span>
         </div>
       </div>
 
