@@ -142,7 +142,7 @@ function PermisoDots({ usados }) {
 
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCrearUsuario }) {
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onCrearUsuario }) {
   const [usuarioSel,       setUsuarioSel]       = useState(null)
   const [dropdownOpen,     setDropdownOpen]     = useState(false)
   const [busqueda,         setBusqueda]         = useState('')
@@ -269,7 +269,11 @@ function ModalPermiso({ usuarios, onClose, onGuardar, onGetPermisosUsados, onCre
               <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
               <div>
                 <p className="mp-header-title">Registrar permiso</p>
-                <p className="mp-header-sub">Registra permisos y días autorizados para usuarios.</p>
+                <p className="mp-header-sub">
+                  {usuarioActual?.nombre
+                    ? <>Hola, <strong>{usuarioActual.nombre}</strong> — registra permisos y días autorizados.</>
+                    : 'Registra permisos y días autorizados para usuarios.'}
+                </p>
               </div>
             </div>
             <button className="mp-close-btn" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
@@ -744,6 +748,7 @@ export default function Permisos({ usuario }) {
       {modalAbierto && (
         <ModalPermiso
           usuarios={usuarios}
+          usuarioActual={usuario}
           onClose={() => setModalAbierto(false)}
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
