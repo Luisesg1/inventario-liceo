@@ -612,6 +612,7 @@ export default function Permisos({ usuario }) {
   }
 
   async function handleGetPermisosUsados(userId) {
+    if (!userId) return 0
     const { count } = await supabase
       .from('ausencias').select('*', { count: 'exact', head: true }).eq('usuario_id', userId)
     return count ?? 0
