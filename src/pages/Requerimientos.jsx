@@ -239,6 +239,8 @@ function DetalleReqContenido({ r }) {
       <div className="req-detalle-grid-2">
         <div className="req-detalle-seccion">
           <p className="req-detalle-titulo">Montos</p>
+          <div className="req-detalle-fila"><span>Monto solicitado</span><strong>{formatMonto(r.monto_solicitado)}</strong></div>
+          <div className="req-detalle-fila"><span>Monto real</span><strong>{formatMonto(r.monto_real)}</strong></div>
         </div>
         <div className="req-detalle-seccion">
           <p className="req-detalle-titulo">Adquisición</p>
@@ -993,7 +995,7 @@ export default function Requerimientos({ usuario }) {
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
-        
+          <span className="req-kpi-label">Monto solicitado (total)</span>
           
         </div>
         <div
@@ -1002,8 +1004,8 @@ export default function Requerimientos({ usuario }) {
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
-         
-          
+          <span className="req-kpi-label">Monto real (total)</span>
+          <span className="req-kpi-hint">{kpis.conMontoReal} con monto · {kpis.total - kpis.conMontoReal} sin monto</span>
         </div>
       </div>
 
