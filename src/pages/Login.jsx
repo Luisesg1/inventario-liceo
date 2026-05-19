@@ -110,7 +110,8 @@ export default function Login({
 
   /* ── Estado registro ── */
   const [vistaRegistro, setVistaRegistro] = useState(false)
-  const [regNombre,     setRegNombre]     = useState('')
+  const [regNombres,    setRegNombres]    = useState('')
+  const [regApellidos,  setRegApellidos]  = useState('')
   const [regRut,        setRegRut]        = useState('')
   const [regEmail,      setRegEmail]      = useState('')
   const [regPass,       setRegPass]       = useState('')
@@ -144,6 +145,7 @@ export default function Login({
 
   async function handleRegistro(e) {
     e.preventDefault(); setError('')
+    if (!regNombres.trim() || !regApellidos.trim()) { setError('Nombres y apellidos son requeridos'); return }
     if (!regRut.trim()) { setError('El RUT es requerido'); return }
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
     if (!REQUISITOS_PASS.every(r => r.test(regPass))) {
@@ -158,7 +160,7 @@ export default function Login({
     }
     const { error: signUpError } = await supabase.auth.signUp({
       email: regEmail, password: regPass,
-      options: { data: { nombre: regNombre, rut: regRut.trim(), via_invitacion: 'true' } },
+      options: { data: { nombre: `${regNombres.trim()} ${regApellidos.trim()}`.trim(), rut: regRut.trim(), via_invitacion: 'true' } },
     })
     setCargando(false)
     if (signUpError) {
@@ -374,9 +376,14 @@ export default function Login({
                   ) : (
                     <form onSubmit={handleRegistro}>
                       <div className="login-field">
-                        <label>Nombre completo</label>
-                        <input type="text" value={regNombre} onChange={e => setRegNombre(e.target.value)}
-                          placeholder="Nombre Apellido" autoFocus required />
+                        <label>Nombres</label>
+                        <input type="text" value={regNombres} onChange={e => setRegNombres(e.target.value)}
+                          placeholder="Nombres" autoFocus required />
+                      </div>
+                      <div className="login-field">
+                        <label>Apellidos</label>
+                        <input type="text" value={regApellidos} onChange={e => setRegApellidos(e.target.value)}
+                          placeholder="Apellidos" required />
                       </div>
                       <div className="login-field">
                         <label>RUT</label>
