@@ -60,6 +60,16 @@ function PasswordStrength({ password }) {
   )
 }
 
+/* ── RUT formatter ───────────────────────────────────── */
+function formatRut(value) {
+  const clean = value.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length === 0) return ''
+  const body = clean.slice(0, -1)
+  const dv   = clean.slice(-1)
+  const withDots = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return body.length > 0 ? `${withDots}-${dv}` : dv
+}
+
 /* ── ErrorMsg ────────────────────────────────────────── */
 function ErrorMsg({ msg }) {
   if (!msg) return null
@@ -101,6 +111,7 @@ export default function Login({
   /* ── Estado registro ── */
   const [vistaRegistro, setVistaRegistro] = useState(false)
   const [regNombre,     setRegNombre]     = useState('')
+  const [regRut,        setRegRut]        = useState('')
   const [regEmail,      setRegEmail]      = useState('')
   const [regPass,       setRegPass]       = useState('')
   const [regPassConf,   setRegPassConf]   = useState('')
@@ -133,6 +144,7 @@ export default function Login({
 
   async function handleRegistro(e) {
     e.preventDefault(); setError('')
+    if (!regRut.trim()) { setError('El RUT es requerido'); return }
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
     if (!REQUISITOS_PASS.every(r => r.test(regPass))) {
       setError('La contraseña no cumple todos los requisitos de seguridad'); return
@@ -146,7 +158,7 @@ export default function Login({
     }
     const { error: signUpError } = await supabase.auth.signUp({
       email: regEmail, password: regPass,
-      options: { data: { nombre: regNombre, via_invitacion: 'true' } },
+      options: { data: { nombre: regNombre, rut: regRut.trim(), via_invitacion: 'true' } },
     })
     setCargando(false)
     if (signUpError) {
@@ -362,6 +374,11 @@ export default function Login({
                         <label>Nombre completo</label>
                         <input type="text" value={regNombre} onChange={e => setRegNombre(e.target.value)}
                           placeholder="Nombre Apellido" autoFocus required />
+                      </div>
+                      <div className="login-field">
+                        <label>RUT</label>
+                        <input type="text" value={regRut} onChange={e => setRegRut(formatRut(e.target.value))}
+                          placeholder="12.345.678-9" required />
                       </div>
                       <div className="login-field">
                         <label>Correo electrónico</label>

@@ -424,9 +424,19 @@ function PanelPermisos({ usuario: u, onCerrar }) {
 // ══════════════════════════════════════════════════════════════════════════
 // Modal: Crear usuario + asignar permisos en el mismo flujo
 // ══════════════════════════════════════════════════════════════════════════
+function formatRut(value) {
+  const clean = value.replace(/[^0-9kK]/g, '').toUpperCase()
+  if (clean.length === 0) return ''
+  const body = clean.slice(0, -1)
+  const dv   = clean.slice(-1)
+  const withDots = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return body.length > 0 ? `${withDots}-${dv}` : dv
+}
+
 function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [paso, setPaso]           = useState(1) // 1 = datos, 2 = permisos
   const [nombre, setNombre]       = useState('')
+  const [rut, setRut]             = useState('')
   const [email, setEmail]         = useState('')
   const [rol, setRol]             = useState('encargado')
   const [guardando, setGuardando] = useState(false)
@@ -453,6 +463,9 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     if (!nombre.trim() || !email.trim()) {
       setMensaje({ tipo: 'error', texto: 'Nombre y email son requeridos.' }); return
     }
+    if (!rut.trim()) {
+      setMensaje({ tipo: 'error', texto: 'El RUT es requerido.' }); return
+    }
     setGuardando(true)
     setMensaje({ tipo: '', texto: '' })
     const { data: sessionData } = await supabase.auth.getSession()
@@ -463,7 +476,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), rol }),
+          body: JSON.stringify({ nombre: nombre.trim(), rut: rut.trim(), email: email.trim(), rol }),
         }
       )
       const json = await res.json()
@@ -555,6 +568,11 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                 Nombre
                 <input className="form-input" placeholder="Nombre completo"
                   value={nombre} onChange={(e) => setNombre(e.target.value)} />
+              </label>
+              <label className="form-label">
+                RUT
+                <input className="form-input" placeholder="12.345.678-9"
+                  value={rut} onChange={(e) => setRut(formatRut(e.target.value))} />
               </label>
               <label className="form-label">
                 Email
