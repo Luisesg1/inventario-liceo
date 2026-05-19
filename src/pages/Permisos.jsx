@@ -14,12 +14,18 @@ import './Permisos.css'
 const MAX_AUSENCIAS = 6
 
 const ROL_LABEL = {
-  admin:                'Administrador',
-  editor:               'Editor',
-  encargado:            'Encargado',
-  docente:              'Docente',
-  soporte:              'Soporte',
-  visor_requerimientos: 'Visor requerimientos',
+  admin:               'Administrador',
+  directivo:           'Directivo/Coordinador',
+  docente:             'Docente',
+  asistente:           'Asistente de la educación',
+  encargado_inventario:'Encargado inventario',
+  encargado_soporte:   'Encargado Soporte técnico',
+  encargado_permisos:  'Encargado Permisos',
+  // Legacy
+  editor:              'Editor',
+  encargado:           'Encargado',
+  soporte:             'Soporte',
+  visor_requerimientos:'Visor requerimientos',
 }
 
 const TIPOS_PERMISO = [

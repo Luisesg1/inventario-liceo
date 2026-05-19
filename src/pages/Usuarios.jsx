@@ -60,30 +60,13 @@ const PERMISOS_POR_ROL = {
     permisos:   Object.fromEntries(ACCIONES.map((a) => [a.key, true])),
     categorias: ['todos'],
   },
-  editor: {
+  directivo: {
     permisos: {
       ver_inventario: true, agregar_bien: true, editar_bien: true,
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
       importar_csv: false, gestionar_usuarios: false, exportar: true,
       registrar_prestamo: true, registrar_incidencia: true,
       ver_tickets: true, gestionar_tickets: false,
-    },
-    categorias: ['todos'],
-  },
-  encargado: {
-    permisos: {
-      ver_inventario: true, agregar_bien: false, editar_bien: false,
-      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-      importar_csv: false, gestionar_usuarios: false, exportar: false,
-      registrar_prestamo: false, registrar_incidencia: false,
-      ver_tickets: true, gestionar_tickets: false,
-    },
-    categorias: ['todos'],
-  },
-  soporte: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, gestionar_tickets: true,
     },
     categorias: ['todos'],
   },
@@ -94,31 +77,78 @@ const PERMISOS_POR_ROL = {
     },
     categorias: ['todos'],
   },
-  visor_requerimientos: {
+  asistente: {
     permisos: {
-      ...PERMISOS_VACIO,
+      ver_inventario: true, agregar_bien: false, editar_bien: false,
+      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+      importar_csv: false, gestionar_usuarios: false, exportar: false,
+      registrar_prestamo: false, registrar_incidencia: false,
       ver_tickets: true, gestionar_tickets: false,
     },
-    categorias: [],
+    categorias: ['todos'],
   },
+  encargado_inventario: {
+    permisos: {
+      ver_inventario: true, agregar_bien: true, editar_bien: true,
+      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+      importar_csv: false, gestionar_usuarios: false, exportar: true,
+      registrar_prestamo: true, registrar_incidencia: true,
+      ver_tickets: false, gestionar_tickets: false,
+    },
+    categorias: ['todos'],
+  },
+  encargado_soporte: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, gestionar_tickets: true,
+    },
+    categorias: ['todos'],
+  },
+  encargado_permisos: {
+    permisos: {
+      ver_inventario: true, agregar_bien: false, editar_bien: false,
+      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+      importar_csv: false, gestionar_usuarios: true, exportar: false,
+      registrar_prestamo: false, registrar_incidencia: false,
+      ver_tickets: true, gestionar_tickets: false,
+    },
+    categorias: ['todos'],
+  },
+  // Legacy — usuarios existentes con roles anteriores
+  editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
+  encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
+  soporte:              { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true }, categorias: ['todos'] },
+  visor_requerimientos: { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: false }, categorias: [] },
 }
 
 const ROL_COLORES = {
-  admin:     { bg: '#e8eaf6', color: '#1a237e' },
-  editor:    { bg: '#dcfce7', color: '#15803d' },
-  encargado: { bg: '#f3f4f6', color: '#374151' },
-  docente:   { bg: '#fef3c7', color: '#92400e' },
-  soporte:   { bg: '#e0f2fe', color: '#0369a1' },
-  visor_requerimientos: { bg: '#f3e8ff', color: '#6b21a8' },
+  admin:               { bg: '#e8eaf6', color: '#1a237e' },
+  directivo:           { bg: '#fce7f3', color: '#9d174d' },
+  docente:             { bg: '#fef3c7', color: '#92400e' },
+  asistente:           { bg: '#f3f4f6', color: '#374151' },
+  encargado_inventario:{ bg: '#dcfce7', color: '#15803d' },
+  encargado_soporte:   { bg: '#e0f2fe', color: '#0369a1' },
+  encargado_permisos:  { bg: '#f3e8ff', color: '#6b21a8' },
+  // Legacy
+  editor:              { bg: '#dcfce7', color: '#15803d' },
+  encargado:           { bg: '#f3f4f6', color: '#374151' },
+  soporte:             { bg: '#e0f2fe', color: '#0369a1' },
+  visor_requerimientos:{ bg: '#f3e8ff', color: '#6b21a8' },
 }
 
 const ROL_LABEL = {
-  admin: 'Administrador',
-  editor: 'Editor',
-  encargado: 'Encargado',
-  docente: 'Docente',
-  soporte: 'Soporte',
-  visor_requerimientos: 'Visor requerimientos',
+  admin:               'Administrador',
+  directivo:           'Directivo/Coordinador',
+  docente:             'Docente',
+  asistente:           'Asistente de la educación',
+  encargado_inventario:'Encargado inventario',
+  encargado_soporte:   'Encargado Soporte técnico',
+  encargado_permisos:  'Encargado Permisos',
+  // Legacy
+  editor:              'Editor',
+  encargado:           'Encargado',
+  soporte:             'Soporte',
+  visor_requerimientos:'Visor requerimientos',
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -458,7 +488,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [apellidos, setApellidos] = useState('')
   const [rut, setRut]             = useState('')
   const [email, setEmail]         = useState('')
-  const [rol, setRol]             = useState('encargado')
+  const [rol, setRol]             = useState('encargado_inventario')
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
   const [fieldErrors, setFieldErrors] = useState({})
@@ -479,14 +509,14 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
 
   // Draft de permisos: se inicializa según el rol seleccionado
   const [draft, setDraft] = useState(() => {
-    const def = PERMISOS_POR_ROL.encargado
+    const def = PERMISOS_POR_ROL.encargado_inventario
     return { permisos: { ...def.permisos }, categorias: [...def.categorias] }
   })
 
   // Actualizar draft cuando cambia el rol (solo en paso 1)
   function cambiarRol(nuevoRol) {
     setRol(nuevoRol)
-    const def = PERMISOS_POR_ROL[nuevoRol] ?? PERMISOS_POR_ROL.encargado
+    const def = PERMISOS_POR_ROL[nuevoRol] ?? PERMISOS_POR_ROL.encargado_inventario
     setDraft({ permisos: { ...def.permisos }, categorias: [...def.categorias] })
   }
 
@@ -641,11 +671,13 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               <label className="form-label">
                 Rol
                 <select className="form-select" value={rol} onChange={(e) => cambiarRol(e.target.value)}>
-                  <option value="encargado">Encargado</option>
-                  <option value="editor">Editor</option>
-                  <option value="visor_requerimientos">Visor requerimientos</option>
                   <option value="admin">Administrador</option>
-                  <option value="soporte">Soporte</option>
+                  <option value="directivo">Directivo/Coordinador</option>
+                  <option value="docente">Docente</option>
+                  <option value="asistente">Asistente de la educación</option>
+                  <option value="encargado_inventario">Encargado inventario</option>
+                  <option value="encargado_soporte">Encargado Soporte técnico</option>
+                  <option value="encargado_permisos">Encargado Permisos</option>
                 </select>
               </label>
             </div>
@@ -754,7 +786,7 @@ export default function Usuarios({ usuario }) {
   const [editNombre, setEditNombre]       = useState('')
   const [editEmail, setEditEmail]         = useState('')
   const [editRut,   setEditRut]           = useState('')
-  const [editRol, setEditRol]             = useState('encargado')
+  const [editRol, setEditRol]             = useState('encargado_inventario')
   const [editPassword, setEditPassword]       = useState('')
   const [editConfirmPass, setEditConfirmPass] = useState('')
   const [editShowPass, setEditShowPass]       = useState(false)
@@ -1122,12 +1154,13 @@ export default function Usuarios({ usuario }) {
           title="Filtrar por rol"
         >
           <option value="todos">Todos los roles</option>
-          <option value="admin">Admin</option>
-          <option value="editor">Editor</option>
-          <option value="encargado">Encargado</option>
+          <option value="admin">Administrador</option>
+          <option value="directivo">Directivo/Coordinador</option>
           <option value="docente">Docente</option>
-          <option value="soporte">Soporte</option>
-          <option value="visor_requerimientos">Visor requerimientos</option>
+          <option value="asistente">Asistente de la educación</option>
+          <option value="encargado_inventario">Encargado inventario</option>
+          <option value="encargado_soporte">Encargado Soporte técnico</option>
+          <option value="encargado_permisos">Encargado Permisos</option>
         </select>
       </div>
       {busqueda && (
@@ -1191,12 +1224,13 @@ export default function Usuarios({ usuario }) {
                         setConfirmCambioRol({ userId: u.id, nombreUsuario: u.nombre, rolActual: u.rol, nuevoRol: e.target.value })
                     }}
                     disabled={eliminando}>
-                    <option value="encargado">Encargado</option>
-                    <option value="editor">Editor</option>
-                    <option value="admin">Admin</option>
+                    <option value="admin">Administrador</option>
+                    <option value="directivo">Directivo/Coordinador</option>
                     <option value="docente">Docente</option>
-                    <option value="soporte">Soporte</option>
-                    <option value="visor_requerimientos">Visor req.</option>
+                    <option value="asistente">Asistente de la educación</option>
+                    <option value="encargado_inventario">Enc. inventario</option>
+                    <option value="encargado_soporte">Enc. Soporte</option>
+                    <option value="encargado_permisos">Enc. Permisos</option>
                   </select>
                 ) : (
                   <span className="rol-select"
@@ -1270,12 +1304,13 @@ export default function Usuarios({ usuario }) {
                       <label className="form-label">Rol
                         <select className="form-select" value={editRol}
                           onChange={(e) => setEditRol(e.target.value)}>
-                          <option value="encargado">Encargado</option>
-                          <option value="editor">Editor</option>
                           <option value="admin">Administrador</option>
+                          <option value="directivo">Directivo/Coordinador</option>
                           <option value="docente">Docente</option>
-                          <option value="soporte">Soporte</option>
-                          <option value="visor_requerimientos">Visor requerimientos</option>
+                          <option value="asistente">Asistente de la educación</option>
+                          <option value="encargado_inventario">Encargado inventario</option>
+                          <option value="encargado_soporte">Encargado Soporte técnico</option>
+                          <option value="encargado_permisos">Encargado Permisos</option>
                         </select>
                       </label>
                     </div>
