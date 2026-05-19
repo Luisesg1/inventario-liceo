@@ -223,10 +223,12 @@ function ToggleSwitch({ activo, size = 'md' }) {
   )
 }
 
-function TablaPermisos({ draft, onChange }) {
+function TablaPermisos({ draft, onChange, onFinalizado }) {
   const [catsBD, setCatsBD] = useState([])
   const [paso, setPaso]     = useState(1)
   const [nivel, setNivel]   = useState(() => detectarNivelActual(draft?.permisos ?? {}))
+
+  function irAlPaso4() { setPaso(4); onFinalizado?.() }
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -453,7 +455,7 @@ function TablaPermisos({ draft, onChange }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
             <button onClick={() => setPaso(1)} style={sec}>← Atrás</button>
-            <button onClick={() => nivel === 'personalizado' ? setPaso(3) : setPaso(4)} style={prim}>
+            <button onClick={() => nivel === 'personalizado' ? setPaso(3) : irAlPaso4()} style={prim}>
               Siguiente →
             </button>
           </div>
@@ -492,7 +494,7 @@ function TablaPermisos({ draft, onChange }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
             <button onClick={() => setPaso(2)} style={sec}>← Atrás</button>
-            <button onClick={() => setPaso(4)} style={prim}>Siguiente →</button>
+            <button onClick={irAlPaso4} style={prim}>Siguiente →</button>
           </div>
         </div>
       )}
@@ -672,6 +674,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [usuarioCreado, setUsuarioCreado] = useState(null)
   const [rutVinculado, setRutVinculado]   = useState([]) // cuentas existentes con ese RUT
+  const [permisosListos, setPermisosListos] = useState(false)
 
   async function checkRutVinculado(rutVal) {
     if (!rutVal.trim() || !validarRut(rutVal)) { setRutVinculado([]); return }
@@ -915,7 +918,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               </div>
             )}
 
-            <TablaPermisos draft={draft} onChange={setDraft} />
+            <TablaPermisos draft={draft} onChange={setDraft} onFinalizado={() => setPermisosListos(true)} />
 
             {mensaje.texto && (
               <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
@@ -926,7 +929,12 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               <button className="btn-secundario" onClick={onCerrar}>
                 Omitir y cerrar
               </button>
-              <button className="btn-primario" onClick={handleGuardarPermisos} disabled={guardando}>
+              <button
+                className="btn-primario"
+                onClick={handleGuardarPermisos}
+                disabled={guardando || !permisosListos}
+                title={!permisosListos ? 'Completa todos los pasos primero' : undefined}
+              >
                 {guardando ? 'Guardando…' : 'Guardar permisos y finalizar'}
               </button>
             </div>
