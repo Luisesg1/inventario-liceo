@@ -923,6 +923,9 @@ export default function Permisos({ usuario }) {
   const [permisoEliminar, setPermisoEliminar] = useState(null)
   const [eliminando,      setEliminando]      = useState(false)
   const [errorEliminar,   setErrorEliminar]   = useState('')
+  const [busqueda,        setBusqueda]        = useState('')
+  const [filtroTipo,      setFiltroTipo]      = useState('')
+  const [filtroRol,       setFiltroRol]       = useState('')
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -1066,6 +1069,44 @@ export default function Permisos({ usuario }) {
     setPermisoEliminar(p)
   }
 
+  // ── Stats por usuario (año actual, sin filtrar) ──────────────────────────
+  const thisYear = new Date().getFullYear()
+  const userStatsMap = (() => {
+    const map = {}
+    permisos.forEach(p => {
+      const key = p.usuario_id ?? p.externo_rut ?? '__ext__'
+      if (!map[key]) map[key] = { count: 0, dias: 0 }
+      const startYear = p.fecha_inicio ? parseInt(p.fecha_inicio.slice(0, 4)) : null
+      if (startYear === thisYear) {
+        map[key].count++
+        if (p.jornada === 'medio_dia') {
+          map[key].dias += 0.5
+        } else if (p.fecha_inicio && p.fecha_fin) {
+          const s = new Date(p.fecha_inicio + 'T12:00:00')
+          const e = new Date(p.fecha_fin   + 'T12:00:00')
+          if (!isNaN(s) && !isNaN(e) && e >= s) map[key].dias += Math.round((e - s) / 86400000) + 1
+        }
+      }
+    })
+    return map
+  })()
+
+  // ── Filtrado ──────────────────────────────────────────────────────────────
+  const permisosFiltrados = permisos.filter(p => {
+    const u = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut, email: p.externo_email, rol: null }
+    if (busqueda.trim()) {
+      const q    = normStr(busqueda)
+      const qRut = normRut(busqueda)
+      const ok   = normStr(u.nombre ?? '').includes(q)
+        || normStr(u.email ?? '').includes(q)
+        || (qRut.length > 1 && normRut(u.rut ?? '').includes(qRut))
+      if (!ok) return false
+    }
+    if (filtroTipo && p.tipo !== filtroTipo) return false
+    if (filtroRol  && (p.usuario?.rol ?? null) !== filtroRol) return false
+    return true
+  })
+
   return (
     <div className="permisos-page">
 
@@ -1090,6 +1131,38 @@ export default function Permisos({ usuario }) {
           </button>
         </div>
 
+        {/* ── Buscador + Filtros ── */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+            <Search size={13} strokeWidth={2.5}
+              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+            <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre, RUT o email…"
+              style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
+          </div>
+          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
+            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+            <option value="">Todos los tipos</option>
+            {TIPOS_PERMISO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          <select value={filtroRol} onChange={e => setFiltroRol(e.target.value)}
+            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+            <option value="">Todos los roles</option>
+            {Object.entries(ROL_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          {(busqueda || filtroTipo || filtroRol) && (
+            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol('') }}
+              style={{ padding: '6px 10px', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <X size={12} strokeWidth={2.5} /> Limpiar
+            </button>
+          )}
+          {permisosFiltrados.length !== permisos.length && (
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+              {permisosFiltrados.length} de {permisos.length}
+            </span>
+          )}
+        </div>
+
         <div className="permisos-table-wrap">
           {cargando ? (
             <div className="permisos-loading">
@@ -1101,17 +1174,27 @@ export default function Permisos({ usuario }) {
               <div className="permisos-empty-icon"><CalendarCheck size={20} strokeWidth={1.5} /></div>
               No hay ausencias registradas aún.
             </div>
+          ) : permisosFiltrados.length === 0 ? (
+            <div className="permisos-empty">
+              <div className="permisos-empty-icon"><Search size={20} strokeWidth={1.5} /></div>
+              No se encontraron resultados para los filtros aplicados.
+            </div>
           ) : (
             <table className="permisos-table">
               <thead>
                 <tr>
-                  <th>Usuario</th><th>Rol</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th></th>
+                  <th>Usuario</th><th>Rol</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th>Ausencias {thisYear}</th><th></th>
                 </tr>
               </thead>
               <tbody>
-                {permisos.map(p => {
-                  const u = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut, email: p.externo_email, rol: null }
+                {permisosFiltrados.map(p => {
+                  const u       = p.usuario ?? { nombre: p.externo_nombre, rut: p.externo_rut, email: p.externo_email, rol: null }
                   const rolLabel = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
+                  const statsKey = p.usuario_id ?? p.externo_rut ?? '__ext__'
+                  const stats    = userStatsMap[statsKey] ?? { count: 0, dias: 0 }
+                  const restantes = Math.max(MAX_AUSENCIAS - stats.count, 0)
+                  const agotada   = stats.count >= MAX_AUSENCIAS
+                  const diasFmt   = stats.dias % 1 === 0 ? stats.dias : stats.dias.toFixed(1)
                   return (
                     <tr key={p.id}>
                       <td>
@@ -1131,6 +1214,32 @@ export default function Permisos({ usuario }) {
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_inicio)}</td>
                       <td style={{ color: '#475569' }}>{formatFecha(p.fecha_fin)}</td>
                       <td><span className="permisos-badge permisos-badge--jornada">{JORNADA_LABEL[p.jornada] ?? p.jornada}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
+                          {/* Dots */}
+                          <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                            {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => (
+                              <span key={i} style={{
+                                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                                background: i < stats.count
+                                  ? (agotada ? '#b91c1c' : '#1a237e')
+                                  : '#e2e8f0',
+                                display: 'inline-block',
+                              }} />
+                            ))}
+                          </div>
+                          {/* Texto restantes */}
+                          <span style={{ fontSize: 11, color: agotada ? '#b91c1c' : '#64748b', fontWeight: agotada ? 600 : 400 }}>
+                            {agotada
+                              ? `Cuota agotada (${stats.count}/${MAX_AUSENCIAS})`
+                              : `${restantes} restante${restantes !== 1 ? 's' : ''} de ${MAX_AUSENCIAS}`}
+                          </span>
+                          {/* Días acumulados */}
+                          <span style={{ fontSize: 10.5, color: '#94a3b8' }}>
+                            {diasFmt} día{stats.dias !== 1 ? 's' : ''} acumulado{stats.dias !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </td>
                       <td>
                         <div className="permisos-actions">
                           <button className="permisos-action-btn" title="Ver" onClick={() => setPermisoVer(p)}>
