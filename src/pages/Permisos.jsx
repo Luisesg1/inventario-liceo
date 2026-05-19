@@ -73,7 +73,7 @@ function getInitials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
 }
 
-// Cuenta días hábiles entre dos fechas (excluye fines de semana + inhabilitados)
+// Cuenta días hábiles entre dos fechas (Lun-Vie, excluye inhabilitados)
 function diasHabiles(fechaInicio, fechaFin, inhabilitados = new Set()) {
   if (!fechaInicio || !fechaFin) return 0
   let total = 0
@@ -81,7 +81,7 @@ function diasHabiles(fechaInicio, fechaFin, inhabilitados = new Set()) {
   const fin = new Date(fechaFin   + 'T12:00:00')
   if (isNaN(cur) || isNaN(fin) || fin < cur) return 0
   while (cur <= fin) {
-    const dow = cur.getDay() // 0=dom, 6=sáb
+    const dow = cur.getDay()
     const iso = cur.toISOString().slice(0, 10)
     if (dow !== 0 && dow !== 6 && !inhabilitados.has(iso)) total++
     cur.setDate(cur.getDate() + 1)
@@ -89,11 +89,24 @@ function diasHabiles(fechaInicio, fechaFin, inhabilitados = new Set()) {
   return total
 }
 
-function calcDuration(fechaInicio, fechaFin, jornada, inhabilitados = new Set()) {
+// Cuenta todos los días calendario (Lun-Dom) — para licencia médica
+function diasCalendario(fechaInicio, fechaFin) {
+  if (!fechaInicio || !fechaFin) return 0
+  const s = new Date(fechaInicio + 'T12:00:00')
+  const e = new Date(fechaFin   + 'T12:00:00')
+  if (isNaN(s) || isNaN(e) || e < s) return 0
+  return Math.round((e - s) / 86400000) + 1
+}
+
+// tipo: 'licencia_medica' → todos los días | resto → solo hábiles
+function calcDuration(fechaInicio, fechaFin, jornada, inhabilitados = new Set(), tipo = '') {
   if (!fechaInicio || !fechaFin) return null
   if (jornada === 'medio_dia') return '½ día'
-  const h = diasHabiles(fechaInicio, fechaFin, inhabilitados)
+  const h = tipo === 'licencia_medica'
+    ? diasCalendario(fechaInicio, fechaFin)
+    : diasHabiles(fechaInicio, fechaFin, inhabilitados)
   if (h === 0) return null
+  if (tipo === 'licencia_medica') return h === 1 ? '1 día' : `${h} días`
   return h === 1 ? '1 día hábil' : `${h} días hábiles`
 }
 
@@ -111,7 +124,11 @@ function calcDiasTotales(rows, soloDescuento = false, inhabilitados = new Set())
       const horas = (eh * 60 + em - (sh * 60 + sm)) / 60
       total += Math.max(0, horas / 8)
     } else if (p.fecha_inicio && p.fecha_fin) {
-      total += diasHabiles(p.fecha_inicio, p.fecha_fin, inhabilitados)
+      // licencia médica cuenta todos los días (Lun-Dom)
+      // permiso administrativo solo cuenta días hábiles (Lun-Vie)
+      total += p.tipo === 'licencia_medica'
+        ? diasCalendario(p.fecha_inicio, p.fecha_fin)
+        : diasHabiles(p.fecha_inicio, p.fecha_fin, inhabilitados)
     }
   })
   return total
@@ -217,12 +234,181 @@ function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
   )
 }
 
+// ── CalendarioFeriados ─────────────────────────────────────────────────────
+
+const CAL_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const CAL_DIAS  = ['Lu','Ma','Mi','Ju','Vi','Sá','Do']
+
+function CalendarioFeriados({
+  value, onChange, min, max,
+  inhabilitados = new Set(), etiquetas = new Map(),
+  placeholder = 'Seleccionar fecha',
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const ref  = useRef(null)
+  const hoyIso = new Date().toISOString().slice(0, 10)
+
+  const parsedVal = value ? new Date(value + 'T12:00:00') : null
+  const [mes,  setMes]  = useState(() => parsedVal?.getMonth()     ?? new Date().getMonth())
+  const [anio, setAnio] = useState(() => parsedVal?.getFullYear()  ?? new Date().getFullYear())
+
+  useEffect(() => {
+    function onOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setAbierto(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  // Navegar al mes del valor externo
+  useEffect(() => {
+    if (value) {
+      const d = new Date(value + 'T12:00:00')
+      setMes(d.getMonth()); setAnio(d.getFullYear())
+    }
+  }, [value])
+
+  function anterior() { mes === 0 ? (setMes(11), setAnio(a => a - 1)) : setMes(m => m - 1) }
+  function siguiente() { mes === 11 ? (setMes(0), setAnio(a => a + 1)) : setMes(m => m + 1) }
+
+  // Construir grilla del mes
+  let dowInicio = new Date(anio, mes, 1).getDay()
+  dowInicio = dowInicio === 0 ? 6 : dowInicio - 1 // Lun=0
+  const diasEnMes = new Date(anio, mes + 1, 0).getDate()
+  const celdas = [...Array(dowInicio).fill(null), ...Array.from({ length: diasEnMes }, (_, i) => i + 1)]
+  while (celdas.length % 7 !== 0) celdas.push(null)
+
+  function seleccionar(d) {
+    if (!d) return
+    const iso = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    if (min && iso < min) return
+    if (max && iso > max) return
+    onChange(iso); setAbierto(false)
+  }
+
+  function displayValue() {
+    if (!value) return placeholder
+    const [y, m, d] = value.split('-')
+    return `${d}/${m}/${y}`
+  }
+
+  return (
+    <div style={{ position: 'relative' }} ref={ref}>
+      {/* Trigger */}
+      <button type="button" className="mp-input"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
+        onClick={() => setAbierto(a => !a)}>
+        <span style={{ color: value ? '#374151' : '#9ca3af', fontSize: 13 }}>{displayValue()}</span>
+        <CalendarCheck size={13} strokeWidth={2} style={{ color: '#94a3b8', flexShrink: 0 }} />
+      </button>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {abierto && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.14 } }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.10 } }}
+            style={{
+              position: 'absolute', zIndex: 9999, top: 'calc(100% + 6px)', left: 0,
+              background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.14)', padding: '14px 12px',
+              minWidth: 264, userSelect: 'none',
+            }}>
+
+            {/* Navegación mes */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <button type="button" onClick={anterior}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, color: '#475569', fontSize: 18, lineHeight: 1 }}>
+                ‹
+              </button>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>
+                {CAL_MESES[mes]} {anio}
+              </span>
+              <button type="button" onClick={siguiente}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, color: '#475569', fontSize: 18, lineHeight: 1 }}>
+                ›
+              </button>
+            </div>
+
+            {/* Encabezados días */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+              {CAL_DIAS.map((d, i) => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: i >= 5 ? '#fca5a5' : '#94a3b8', paddingBottom: 4 }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Celdas de días */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {celdas.map((d, i) => {
+                if (!d) return <div key={`v${i}`} />
+                const iso = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                const dow = new Date(iso + 'T12:00:00').getDay()
+                const esFinSemana  = dow === 0 || dow === 6
+                const esInhab      = inhabilitados.has(iso)
+                const esSel        = iso === value
+                const esHoy        = iso === hoyIso
+                const deshabilitado = (min && iso < min) || (max && iso > max)
+                const etiqueta     = etiquetas.get(iso)
+
+                let bg = 'transparent'
+                let color = esFinSemana ? '#94a3b8' : '#111827'
+                let fw = 400
+                if (deshabilitado) color = '#d1d5db'
+                else if (esSel)   { bg = '#1a237e'; color = '#fff'; fw = 700 }
+                else if (esInhab) { bg = '#fef2f2'; color = '#dc2626' }
+
+                return (
+                  <div key={iso}
+                    title={etiqueta ?? (esFinSemana ? 'Fin de semana' : undefined)}
+                    onClick={() => !deshabilitado && seleccionar(d)}
+                    onMouseEnter={e => { if (!deshabilitado && !esSel) e.currentTarget.style.background = '#f1f5f9' }}
+                    onMouseLeave={e => { if (!esSel) e.currentTarget.style.background = esInhab ? '#fef2f2' : 'transparent' }}
+                    style={{
+                      position: 'relative', textAlign: 'center', fontSize: 12.5, fontWeight: fw,
+                      padding: '5px 2px', borderRadius: 7, cursor: deshabilitado ? 'default' : 'pointer',
+                      background: bg, color,
+                      border: esHoy && !esSel ? '1.5px solid #1a237e' : '1.5px solid transparent',
+                    }}>
+                    {d}
+                    {esInhab && !esSel && (
+                      <span style={{
+                        position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
+                        width: 3, height: 3, borderRadius: '50%', background: '#ef4444', display: 'block',
+                      }} />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Leyenda */}
+            <div style={{ display: 'flex', gap: 12, marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#94a3b8' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 3, background: '#fef2f2', border: '1px solid #fca5a5', display: 'inline-block', flexShrink: 0 }} />
+                Feriado / Inhábil
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#94a3b8' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 3, border: '1.5px solid #1a237e', display: 'inline-block', flexShrink: 0 }} />
+                Hoy
+              </span>
+            </div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ── ModalVerPermiso ────────────────────────────────────────────────────────
 
 function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar, diasInhabilitados = new Set() }) {
   const u       = userFromPermiso(permiso) ?? {}
   const nombre  = u.nombre ?? '—'
-  const duracion = calcDuration(permiso.fecha_inicio, permiso.fecha_fin, permiso.jornada, diasInhabilitados)
+  const duracion = calcDuration(permiso.fecha_inicio, permiso.fecha_fin, permiso.jornada, diasInhabilitados, permiso.tipo)
 
   return (
     <AnimatePresence>
@@ -366,7 +552,7 @@ function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando, errorElimina
 
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onUsuarioCreado, editData, diasInhabilitados = new Set() }) {
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onUsuarioCreado, editData, diasInhabilitados = new Set(), feriadosLabels = new Map() }) {
   const isEdit = !!editData
 
   const userInit = isEdit ? userFromPermiso(editData) : null
@@ -433,7 +619,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       .finally(() => setCargandoPermisos(false))
   }, [usuarioSel?.id, usuarioSel?.rut])
 
-  const duracion    = calcDuration(fechaInicio, fechaFin, jornada, diasInhabilitados)
+  const duracion    = calcDuration(fechaInicio, fechaFin, jornada, diasInhabilitados, tipoPermiso)
   const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
 
@@ -785,11 +971,20 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 <div className="mp-date-row" style={{ marginBottom: 12 }}>
                   <div className="mp-field-group">
                     <label className="mp-field-label">Fecha inicio</label>
-                    <input type="date" className="mp-input" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+                    <CalendarioFeriados
+                      value={fechaInicio} onChange={setFechaInicio}
+                      inhabilitados={diasInhabilitados} etiquetas={feriadosLabels}
+                      placeholder="Seleccionar…"
+                    />
                   </div>
                   <div className="mp-field-group">
                     <label className="mp-field-label">Fecha fin</label>
-                    <input type="date" className="mp-input" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+                    <CalendarioFeriados
+                      value={fechaFin} onChange={setFechaFin}
+                      min={fechaInicio}
+                      inhabilitados={diasInhabilitados} etiquetas={feriadosLabels}
+                      placeholder="Seleccionar…"
+                    />
                   </div>
                 </div>
                 <div className="mp-jornada-pills">
@@ -1313,6 +1508,14 @@ export default function Permisos({ usuario }) {
 
   const thisYear = new Date().getFullYear()
 
+  // Mapa fecha → etiqueta para el calendario (feriados + días especiales)
+  const feriadosLabelsMap = (() => {
+    const m = new Map()
+    feriadosAPI.forEach(f => m.set(f.fecha, f.nombre))
+    diasAdmin.forEach(d => m.set(d.fecha, d.motivo))
+    return m
+  })()
+
   // ── Resuelve el usuario de una ausencia (incluso si fue borrado) ──────────
   function resolveUser(p) {
     if (p.usuario) return p.usuario
@@ -1527,7 +1730,7 @@ export default function Permisos({ usuario }) {
                           exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
                           style={{ overflow: 'hidden' }}>
                           {aus.map((p, idx) => {
-                            const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados)
+                            const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados, p.tipo)
                             return (
                               <div key={p.id} style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
@@ -1584,6 +1787,7 @@ export default function Permisos({ usuario }) {
           onGetPermisosUsados={handleGetPermisosUsados}
           onUsuarioCreado={handleUsuarioCreado}
           diasInhabilitados={diasInhabilitados}
+          feriadosLabels={feriadosLabelsMap}
         />
       )}
 
@@ -1597,6 +1801,7 @@ export default function Permisos({ usuario }) {
           onGetPermisosUsados={handleGetPermisosUsados}
           onUsuarioCreado={handleUsuarioCreado}
           diasInhabilitados={diasInhabilitados}
+          feriadosLabels={feriadosLabelsMap}
         />
       )}
 
