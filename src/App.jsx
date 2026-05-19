@@ -16,6 +16,7 @@ import { aplicarTema } from './utils/tema'
 
 export default function App() {
   const [usuario,            setUsuario]            = useState(null)
+  const [permisosUsuario,    setPermisosUsuario]    = useState({})
   const [cargando,           setCargando]           = useState(true)
   const [logoUrl,            setLogoUrl]            = useState(null)
   const [nombreSistema,      setNombreSistema]      = useState('Inventario')
@@ -141,6 +142,13 @@ export default function App() {
     }
 
     setUsuario(data)
+    // Cargar permisos granulares
+    if (data.rol !== 'admin') {
+      supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
+        .then(({ data: pd }) => { if (pd?.permisos) setPermisosUsuario(pd.permisos) })
+    } else {
+      setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true })
+    }
     if (data.rol === 'docente') {
       setPagina('tickets')
       localStorage.setItem('app_pagina', 'tickets')
@@ -178,7 +186,11 @@ export default function App() {
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
   const esSoloTickets = esDocente || esSoporte
   const paginasVisorReq = ['requerimientos', 'tickets']
+  const puedeVerAuditoriaReq  = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_requerimientos
+  const puedeVerAuditoriaPermisos = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_permisos
   const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos' || pagina === 'permisos'
+    || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
+    || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard' || pagina === 'requerimientos'
   const paginaSegura = (esDocente && soloStaff) ? 'tickets'
     : (esSoporte && pagina === 'inventario') ? 'tickets'
@@ -187,10 +199,23 @@ export default function App() {
     : pagina
 
   return (
-    <Layout usuario={usuario} onLogout={() => supabase.auth.signOut()} paginaActual={paginaSegura} setPagina={cambiarPagina} onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }} logoUrl={logoUrl} nombreSistema={nombreSistema} nombreInstitucion={nombreInstitucion}>
+    <Layout
+      usuario={usuario}
+      onLogout={() => supabase.auth.signOut()}
+      paginaActual={paginaSegura}
+      setPagina={cambiarPagina}
+      onRefreshTicketBadge={fn => { refreshTicketBadge.current = fn }}
+      logoUrl={logoUrl}
+      nombreSistema={nombreSistema}
+      nombreInstitucion={nombreInstitucion}
+      puedeVerAuditoriaReq={puedeVerAuditoriaReq}
+      puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
+    >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
-      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
+      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
+      {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
+      {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="permisos" />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} />}

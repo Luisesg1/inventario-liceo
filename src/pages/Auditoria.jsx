@@ -63,7 +63,29 @@ function agruparPorDia(logs) {
   return items
 }
 
-export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
+const CAMPO_LABEL_REQ = {
+  numero_req: 'N° Manual', fecha: 'Fecha', contenido: 'Contenido',
+  solicitante: 'Solicitante', fondo: 'Fondo', dimension: 'Dimensión',
+  sub_dimension: 'Sub-Dimensión', accion: 'Acción',
+  monto_solicitado: 'Monto Solicitado', monto_real: 'Monto Real',
+  estado: 'Estado', fecha_recepcion: 'Fecha Recepción',
+  orden_compra: 'Orden de Compra', rut_proveedor: 'RUT Proveedor',
+  numero_factura: 'N° Factura', evidencia: 'Evidencia', observacion: 'Observación',
+}
+
+const CAMPO_LABEL_PERMISOS = {
+  ver_inventario: 'Ver inventario', agregar_bien: 'Agregar bien',
+  editar_bien: 'Editar bien', eliminar_bien: 'Eliminar bien',
+  eliminar_lote: 'Eliminar lote', gestionar_categorias: 'Gestionar categorías',
+  importar_csv: 'Importar CSV', gestionar_usuarios: 'Gestionar usuarios',
+  exportar: 'Exportar', registrar_prestamo: 'Registrar préstamo',
+  registrar_incidencia: 'Registrar incidencia',
+  ver_tickets: 'Ver tickets', gestionar_tickets: 'Gestionar tickets',
+  ver_auditoria_requerimientos: 'Auditoría requerimientos',
+  ver_auditoria_permisos: 'Auditoría permisos',
+}
+
+export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario' }) {
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
   const [cargando, setCargando]       = useState(true)
@@ -87,17 +109,24 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
       .then(({ data }) => { if (data) setCategorias(data) })
   }, [])
 
+  const campoLabel = (campo) => {
+    if (modulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
+    if (modulo === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
+    return CAMPO_LABEL[campo] ?? campo
+  }
+
   const cargar = useCallback(async () => {
     setCargando(true)
     let q = supabase
       .from('audit_logs')
       .select('*', { count: 'exact' })
+      .eq('modulo', modulo)
       .order('creado_en', { ascending: false })
       .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
 
     if (filtroAccion) q = q.eq('accion', filtroAccion)
     if (filtroRol)    q = q.eq('usuario_rol', filtroRol)
-    if (filtroCat)    q = q.eq('categoria', filtroCat)
+    if (modulo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
     if (filtroDesde)  q = q.gte('creado_en', filtroDesde + 'T00:00:00')
     if (filtroHasta)  q = q.lte('creado_en', filtroHasta + 'T23:59:59')
     if (buscar)       q = q.or(`bien_nombre.ilike.%${buscar}%,usuario_nombre.ilike.%${buscar}%`)
@@ -199,13 +228,15 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
               <option value="encargado">Encargado</option>
             </select>
 
-            <select className="audit-select" value={filtroCat}
-              onChange={e => { setFiltroCat(e.target.value); setPagina(0) }}>
-              <option value="">Todas las categorías</option>
-              {categorias.map(c => (
-                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-              ))}
-            </select>
+            {modulo === 'inventario' && (
+              <select className="audit-select" value={filtroCat}
+                onChange={e => { setFiltroCat(e.target.value); setPagina(0) }}>
+                <option value="">Todas las categorías</option>
+                {categorias.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="audit-filtros-row">
@@ -312,14 +343,14 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
                     </p>
                     {cambios.length > 0 && !abierto && (
                       <p className="audit-item-campos">
-                        {cambios.map(c => CAMPO_LABEL[c.campo] ?? c.campo).join(' · ')}
+                        {cambios.map(c => campoLabel(c.campo)).join(' · ')}
                       </p>
                     )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {/* Botón Ver bien — solo si el bien no está eliminado */}
-                    {log.bien_id && log.accion !== 'eliminar' && onVerBien && (
+                    {/* Botón Ver bien — solo inventario */}
+                    {modulo === 'inventario' && log.bien_id && log.accion !== 'eliminar' && onVerBien && (
                       bienesEliminados.has(log.bien_id)
                         ? <span className="audit-bien-noexiste" title="Este bien fue eliminado del inventario">Ya no existe</span>
                         : <button
@@ -345,7 +376,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
                     {cambios.map((c, i) => (
                       <div key={i} className="audit-cambio-row">
                         <span className="audit-campo-label">
-                          {CAMPO_LABEL[c.campo] ?? c.campo}
+                          {campoLabel(c.campo)}
                         </span>
                         <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
                           {c.anterior ?? '—'}
@@ -354,7 +385,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria }) {
                         <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
                           {c.nuevo ?? '—'}
                         </span>
-                        {usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
+                        {modulo === 'inventario' && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
                           <button
                             className="audit-btn-restore"
                             onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}

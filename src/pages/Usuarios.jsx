@@ -35,6 +35,9 @@ const ACCIONES = [
   // Tickets
   { key: 'ver_tickets',          label: 'Ver tickets (propios)',  labelCorto: 'Ver tick.' },
   { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets', labelCorto: 'Gest. tick.' },
+  // Auditoría
+  { key: 'ver_auditoria_requerimientos', label: 'Ver auditoría de requerimientos', labelCorto: 'Aud. Req.' },
+  { key: 'ver_auditoria_permisos',       label: 'Ver auditoría de permisos',       labelCorto: 'Aud. Perm.' },
 ]
 
 // Acciones que aplican por categoría (las demás son globales)
@@ -47,6 +50,7 @@ const ACCIONES_GLOBALES = [
   'gestionar_categorias', 'gestionar_usuarios',
   'registrar_prestamo', 'registrar_incidencia',
   'ver_tickets', 'gestionar_tickets',
+  'ver_auditoria_requerimientos', 'ver_auditoria_permisos',
 ]
 
 const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))

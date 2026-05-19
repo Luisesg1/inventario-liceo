@@ -42,6 +42,7 @@ export default function Layout({
   usuario, onLogout, children, paginaActual, setPagina,
   onRefreshTicketBadge, logoUrl,
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
+  puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
@@ -309,12 +310,15 @@ export default function Layout({
 
   // ── Nav items ─────────────────────────────────────────
   const navItems = [
-    ...(muestraRequerimientos ? [{ id: 'requerimientos', Icon: ShoppingCart, label: 'Requerimientos' }] : []),
     { id: 'tickets', Icon: Ticket, label: 'Tickets' },
   ]
 
-  const inventarioActivo = paginaActual === 'inventario' || paginaActual === 'auditoria'
-  const [inventarioAbierto, setInventarioAbierto] = useState(inventarioActivo)
+  const inventarioActivo    = paginaActual === 'inventario' || paginaActual === 'auditoria'
+  const requerimientosActivo = paginaActual === 'requerimientos' || paginaActual === 'auditoria_requerimientos'
+  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'auditoria_permisos'
+  const [inventarioAbierto,    setInventarioAbierto]    = useState(inventarioActivo)
+  const [requerimientosAbierto, setRequerimientosAbierto] = useState(requerimientosActivo)
+  const [permisosAbierto,      setPermisosAbierto]      = useState(permisosActivo)
 
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos' || paginaActual === 'usuarios'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
@@ -324,6 +328,8 @@ export default function Layout({
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios',
+    auditoria_requerimientos: 'Auditoría de Requerimientos',
+    auditoria_permisos:       'Auditoría de Permisos',
     requerimientos: 'Requerimientos',
     tickets:        'Tickets',
     ajustes:    'Personalizar',
@@ -460,6 +466,57 @@ export default function Layout({
             </>
           )}
 
+          {/* Requerimientos con submenú */}
+          {muestraRequerimientos && (
+            <>
+              <motion.div
+                className={`nav-item nav-item--parent ${requerimientosActivo ? 'active' : ''}`}
+                onClick={() => setRequerimientosAbierto(o => !o)}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
+                <span className="nav-icon">
+                  <ShoppingCart size={15} strokeWidth={2} />
+                </span>
+                Requerimientos
+                <span className={`nav-chevron ${requerimientosAbierto ? 'nav-chevron--open' : ''}`}>
+                  <ChevronRight size={13} strokeWidth={2.5} />
+                </span>
+              </motion.div>
+              <AnimatePresence initial={false}>
+                {requerimientosAbierto && (
+                  <motion.div
+                    className="nav-submenu"
+                    variants={submenuVariants}
+                    initial="closed"
+                    animate="open"
+                    exit="closed"
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div
+                      className={`nav-subitem ${paginaActual === 'requerimientos' ? 'active' : ''}`}
+                      onClick={() => handleNav('requerimientos')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Ver requerimientos
+                    </div>
+                    {puedeVerAuditoriaReq && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'auditoria_requerimientos' ? 'active' : ''}`}
+                        onClick={() => handleNav('auditoria_requerimientos')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Auditoría
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
+
+          {/* Tickets */}
           {navItems.map(({ id, Icon, label }) => (
             <motion.div
               key={id}
@@ -473,7 +530,6 @@ export default function Layout({
                 <Icon size={15} strokeWidth={paginaActual === id ? 2.5 : 2} />
               </span>
               {label}
-
               {id === 'tickets' && (esAdmin || esSoporte) && (
                 <AnimatePresence>
                   {ticketsAbiertos > 0 && (
@@ -492,20 +548,52 @@ export default function Layout({
             </motion.div>
           ))}
 
-          {/* Permisos */}
+          {/* Permisos con submenú */}
           {esAdmin && (
-            <motion.div
-              className={`nav-item ${paginaActual === 'permisos' ? 'active' : ''}`}
-              onClick={() => handleNav('permisos')}
-              whileHover={{ x: 2 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            >
-              <span className="nav-icon">
-                <ShieldCheck size={15} strokeWidth={paginaActual === 'permisos' ? 2.5 : 2} />
-              </span>
-              Permisos
-            </motion.div>
+            <>
+              <motion.div
+                className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
+                onClick={() => setPermisosAbierto(o => !o)}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              >
+                <span className="nav-icon">
+                  <ShieldCheck size={15} strokeWidth={2} />
+                </span>
+                Permisos
+                <span className={`nav-chevron ${permisosAbierto ? 'nav-chevron--open' : ''}`}>
+                  <ChevronRight size={13} strokeWidth={2.5} />
+                </span>
+              </motion.div>
+              <AnimatePresence initial={false}>
+                {permisosAbierto && (
+                  <motion.div
+                    className="nav-submenu"
+                    variants={submenuVariants}
+                    initial="closed"
+                    animate="open"
+                    exit="closed"
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div
+                      className={`nav-subitem ${paginaActual === 'permisos' ? 'active' : ''}`}
+                      onClick={() => handleNav('permisos')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Ver permisos
+                    </div>
+                    <div
+                      className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}
+                      onClick={() => handleNav('auditoria_permisos')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
           )}
 
           {/* Ajustes con submenú */}
