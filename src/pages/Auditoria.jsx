@@ -191,7 +191,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
             ⚠️ La tabla de auditoría no está configurada
           </p>
           <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>
-            Ejecuta el archivo <strong>supabase_auditoria.sql</strong> en el SQL Editor de Supabase para activar el sistema de auditoría.
+            Ejecuta el archivo <strong>{modulo === 'inventario' ? 'supabase_auditoria.sql' : 'supabase_auditoria_modulos.sql'}</strong> en el SQL Editor de Supabase para activar el sistema de auditoría.
           </p>
         </div>
       )}
@@ -203,7 +203,11 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
           <div className="audit-search-row">
             <input
               className="audit-input"
-              placeholder="Buscar por bien o usuario…"
+              placeholder={
+                modulo === 'requerimientos' ? 'Buscar por requerimiento o usuario…' :
+                modulo === 'permisos'       ? 'Buscar por usuario…' :
+                'Buscar por bien o usuario…'
+              }
               value={buscadorVal}
               onChange={e => setBuscadorVal(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && aplicarBusqueda()}
