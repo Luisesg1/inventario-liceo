@@ -78,6 +78,34 @@ function calcDuration(fechaInicio, fechaFin, jornada) {
   return diffDays === 1 ? '1 día' : `${diffDays} días`
 }
 
+// Calcula días reales (float) de una lista de ausencias
+// medio_dia=0.5, personalizado=horas/8, resto=días calendario
+function calcDiasTotales(rows) {
+  let total = 0
+  rows.forEach(p => {
+    if (p.jornada === 'medio_dia') {
+      total += 0.5
+    } else if (p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin) {
+      const [sh, sm] = p.hora_inicio.split(':').map(Number)
+      const [eh, em] = p.hora_fin.split(':').map(Number)
+      const horas = (eh * 60 + em - (sh * 60 + sm)) / 60
+      total += Math.max(0, horas / 8)
+    } else if (p.fecha_inicio && p.fecha_fin) {
+      const s = new Date(p.fecha_inicio + 'T12:00:00')
+      const e = new Date(p.fecha_fin   + 'T12:00:00')
+      if (!isNaN(s) && !isNaN(e) && e >= s) total += Math.round((e - s) / 86400000) + 1
+    }
+  })
+  return total
+}
+
+function fmtDias(d) {
+  if (d === 0)   return '0'
+  if (d === 0.5) return '½'
+  if (d % 1 === 0) return String(d)
+  return d.toFixed(1)
+}
+
 function formatFecha(fecha) {
   if (!fecha) return '—'
   const [y, m, d] = fecha.split('-')
@@ -143,22 +171,29 @@ const slideV = {
 
 // ── PermisoDots ────────────────────────────────────────────────────────────
 
-function PermisoDots({ usados, max = MAX_AUSENCIAS }) {
-  const restantes = Math.max(max - usados, 0)
-  const agotada = usados >= max
+function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
+  const restantes = Math.max(max - dias, 0)
+  const agotada   = dias >= max
+  const dotColor  = agotada ? '#b91c1c' : '#1a237e'
   return (
     <div className="mp-counter">
       <div className="mp-dots">
-        {Array.from({ length: max }).map((_, i) => (
-          <span key={i} className={`mp-dot ${i < usados ? 'mp-dot--used' : 'mp-dot--free'}`} />
-        ))}
+        {Array.from({ length: max }).map((_, i) => {
+          const filled = Math.min(Math.max(dias - i, 0), 1)
+          const bg = filled >= 1
+            ? dotColor
+            : filled > 0
+              ? `linear-gradient(90deg, ${dotColor} ${filled * 100}%, #e2e8f0 ${filled * 100}%)`
+              : '#e2e8f0'
+          return <span key={i} className="mp-dot" style={{ background: bg }} />
+        })}
       </div>
       <span className="mp-counter-label">
-        {usados === 0
+        {dias === 0
           ? 'Sin ausencias este año'
           : agotada
-            ? `Cuota agotada este año (${max}/${max})`
-            : `Te quedan ${restantes} ausencia${restantes !== 1 ? 's' : ''} este año`}
+            ? `Cuota agotada este año (${max}/${max} días)`
+            : `Te quedan ${fmtDias(restantes)} día${restantes !== 1 ? 's' : ''} este año`}
       </span>
     </div>
   )
@@ -700,7 +735,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 <AnimatePresence>
                   {usuarioSel && !cargandoPermisos && (
                     <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
-                      <PermisoDots usados={permisosUsados} />
+                      <PermisoDots dias={permisosUsados} />
                     </motion.div>
                   )}
                   {cargandoPermisos && (
@@ -865,8 +900,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           {permisosUsados === 0
                             ? 'Sin ausencias'
                             : permisosUsados >= MAX_AUSENCIAS
-                              ? `${permisosUsados}/${MAX_AUSENCIAS} — cuota agotada`
-                              : `${permisosUsados}/${MAX_AUSENCIAS} — quedan ${MAX_AUSENCIAS - permisosUsados}`}
+                              ? `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS} días — cuota agotada`
+                              : `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS} días — quedan ${fmtDias(Math.max(MAX_AUSENCIAS - permisosUsados, 0))}`}
                         </span>
                       </div>
                     )}
@@ -956,46 +991,32 @@ export default function Permisos({ usuario }) {
   }
 
   async function handleGetPermisosUsados(userId, rut) {
-    const year = new Date().getFullYear()
+    const year  = new Date().getFullYear()
     const desde = `${year}-01-01`
     const hasta = `${year}-12-31`
+    const cols  = 'jornada, fecha_inicio, fecha_fin, hora_inicio, hora_fin'
 
-    // Collect all user IDs that share the same RUT
+    // IDs que comparten el mismo RUT
     let userIds = userId ? [userId] : []
     if (rut) {
-      const { data: mismoRut } = await supabase
-        .from('usuarios').select('id').eq('rut', rut)
-      if (mismoRut?.length) {
-        const ids = mismoRut.map(u => u.id)
-        userIds = [...new Set([...userIds, ...ids])]
-      }
+      const { data: mismoRut } = await supabase.from('usuarios').select('id').eq('rut', rut)
+      if (mismoRut?.length) userIds = [...new Set([...userIds, ...mismoRut.map(u => u.id)])]
     }
 
-    let total = 0
+    let rows = []
 
-    // Count by internal user IDs (current year)
     if (userIds.length) {
-      const { count } = await supabase
-        .from('ausencias')
-        .select('*', { count: 'exact', head: true })
-        .in('usuario_id', userIds)
-        .gte('fecha_inicio', desde)
-        .lte('fecha_inicio', hasta)
-      total += count ?? 0
+      const { data } = await supabase.from('ausencias').select(cols)
+        .in('usuario_id', userIds).gte('fecha_inicio', desde).lte('fecha_inicio', hasta)
+      if (data) rows = [...rows, ...data]
     }
-
-    // Count by external RUT (current year)
     if (rut) {
-      const { count } = await supabase
-        .from('ausencias')
-        .select('*', { count: 'exact', head: true })
-        .eq('externo_rut', rut)
-        .gte('fecha_inicio', desde)
-        .lte('fecha_inicio', hasta)
-      total += count ?? 0
+      const { data } = await supabase.from('ausencias').select(cols)
+        .eq('externo_rut', rut).gte('fecha_inicio', desde).lte('fecha_inicio', hasta)
+      if (data) rows = [...rows, ...data]
     }
 
-    return total
+    return calcDiasTotales(rows) // retorna días reales (float)
   }
 
   function handleUsuarioCreado(nuevoUsuario) {
@@ -1105,13 +1126,7 @@ export default function Permisos({ usuario }) {
       const startYear = p.fecha_inicio ? parseInt(p.fecha_inicio.slice(0, 4)) : null
       if (startYear === thisYear) {
         map[key].count++
-        if (p.jornada === 'medio_dia') {
-          map[key].dias += 0.5
-        } else if (p.fecha_inicio && p.fecha_fin) {
-          const s = new Date(p.fecha_inicio + 'T12:00:00')
-          const e = new Date(p.fecha_fin   + 'T12:00:00')
-          if (!isNaN(s) && !isNaN(e) && e >= s) map[key].dias += Math.round((e - s) / 86400000) + 1
-        }
+        map[key].dias += calcDiasTotales([p])
       }
     })
     return map
@@ -1260,9 +1275,15 @@ export default function Permisos({ usuario }) {
                       {/* Stats dots */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
                         <div style={{ display: 'flex', gap: 3 }}>
-                          {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => (
-                            <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', background: i < stats.count ? dotColor : '#e2e8f0' }} />
-                          ))}
+                          {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => {
+                            const filled = Math.min(Math.max(stats.dias - i, 0), 1)
+                            const bg = filled >= 1
+                              ? dotColor
+                              : filled > 0
+                                ? `linear-gradient(90deg, ${dotColor} ${filled*100}%, #e2e8f0 ${filled*100}%)`
+                                : '#e2e8f0'
+                            return <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: bg }} />
+                          })}
                         </div>
                         <span style={{ fontSize: 11, color: textColor, fontWeight: (agotada || advertencia) ? 700 : 400, whiteSpace: 'nowrap' }}>
                           {agotada
