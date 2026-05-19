@@ -46,12 +46,8 @@ Deno.serve(async (req: Request) => {
     const rolesValidos = ["admin", "editor", "encargado", "soporte", "visor_requerimientos"];
     const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "encargado";
 
-    // 5. Verificar RUT duplicado
-    if (rut?.trim()) {
-      const { data: rutExistente } = await supabaseAnon
-        .from("usuarios").select("id").eq("rut", rut.trim()).maybeSingle();
-      if (rutExistente) return json({ error: "Ya existe un usuario con ese RUT." }, 400);
-    }
+    // 5. RUT duplicado — permitido (una persona puede tener múltiples cuentas)
+    //    El aviso se muestra en el frontend antes de crear.
 
     // 6. Cliente admin
     const supabaseAdmin = createClient(

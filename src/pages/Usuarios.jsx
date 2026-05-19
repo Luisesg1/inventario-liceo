@@ -459,6 +459,14 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
   const [fieldErrors, setFieldErrors] = useState({})
   const [usuarioCreado, setUsuarioCreado] = useState(null)
+  const [rutVinculado, setRutVinculado]   = useState([]) // cuentas existentes con ese RUT
+
+  async function checkRutVinculado(rutVal) {
+    if (!rutVal.trim() || !validarRut(rutVal)) { setRutVinculado([]); return }
+    const { data } = await supabase
+      .from('usuarios').select('nombre, email').eq('rut', rutVal.trim())
+    setRutVinculado(data ?? [])
+  }
 
   function setFE(field, msg) { setFieldErrors(p => ({ ...p, [field]: msg })) }
   function clearFE(field)    { setFieldErrors(p => ({ ...p, [field]: '' })) } // { id, nombre, rol }
@@ -605,8 +613,19 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                 RUT
                 <input className="form-input" placeholder="12.345.678-9"
                   style={fieldErrors.rut ? { borderColor: '#dc2626' } : {}}
-                  value={rut} onChange={(e) => { setRut(formatRut(e.target.value)); clearFE('rut') }} />
+                  value={rut}
+                  onChange={(e) => { setRut(formatRut(e.target.value)); clearFE('rut'); setRutVinculado([]) }}
+                  onBlur={() => checkRutVinculado(rut)} />
                 {fieldErrors.rut && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.rut}</span>}
+                {rutVinculado.length > 0 && (
+                  <div style={{ marginTop: 6, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 7, padding: '9px 12px', fontSize: 12.5, color: '#92400e' }}>
+                    <strong>⚠️ Este RUT ya tiene {rutVinculado.length === 1 ? 'una cuenta' : `${rutVinculado.length} cuentas`} registrada{rutVinculado.length > 1 ? 's' : ''}:</strong>
+                    {rutVinculado.map((u, i) => (
+                      <div key={i} style={{ marginTop: 3 }}>• {u.nombre} — <span style={{ color: '#78350f' }}>{u.email}</span></div>
+                    ))}
+                    <div style={{ marginTop: 5, color: '#78350f', fontWeight: 500 }}>Se creará una cuenta adicional independiente.</div>
+                  </div>
+                )}
               </label>
               <label className="form-label">
                 Email
@@ -784,6 +803,13 @@ export default function Usuarios({ usuario }) {
   }, [])
 
   useEffect(() => { cargarUsuarios(); if (esAdmin) cargarCodigo() }, [cargarUsuarios, cargarCodigo, esAdmin])
+
+  // RUTs que aparecen en más de una cuenta
+  const rutsDuplicados = (() => {
+    const counts = {}
+    usuarios.forEach(u => { if (u.rut) counts[u.rut] = (counts[u.rut] ?? 0) + 1 })
+    return new Set(Object.entries(counts).filter(([, n]) => n > 1).map(([r]) => r))
+  })()
 
   const usuariosFiltrados = usuarios
     .filter((u) =>
@@ -1138,7 +1164,17 @@ export default function Usuarios({ usuario }) {
                     {u.nombre}
                     {esYo && <span className="badge-yo">Tú</span>}
                   </div>
-                  {u.rut && <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500 }}>{u.rut}</div>}
+                  {u.rut && (
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {u.rut}
+                      {rutsDuplicados.has(u.rut) && (
+                        <span title="Este RUT tiene más de una cuenta registrada"
+                          style={{ background: '#fef9c3', color: '#854d0e', borderRadius: 4, padding: '1px 5px', fontSize: 10, fontWeight: 700, cursor: 'default' }}>
+                          🔗 vinculado
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="usuario-email">{u.email}</div>
                 </div>
 
