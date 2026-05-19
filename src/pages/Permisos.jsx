@@ -1892,12 +1892,12 @@ export default function Permisos({ usuario }) {
                           {agotada
                             ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
                             : restantes <= 1
-                              ? `⚠️ Queda ${fmtDias(restantes)} día`
+                              ? `⚠️ Usó ${diasFmt}d — queda 1 día`
                               : restantes <= 2
-                                ? `⚠️ ${fmtDias(restantes)} días restantes · ${diasFmt}d`
+                                ? `⚠️ Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`
                                 : stats.dias === 0
                                   ? `${MAX_AUSENCIAS} días disponibles`
-                                  : `${fmtDias(restantes)} restantes · ${diasFmt}d`}
+                                  : `Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`}
                         </span>
                       </div>
                       {/* Chevron */}
