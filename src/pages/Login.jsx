@@ -70,6 +70,21 @@ function formatRut(value) {
   return body.length > 0 ? `${withDots}-${dv}` : dv
 }
 
+function validarRut(rut) {
+  const clean = rut.replace(/\./g, '').replace('-', '').toUpperCase()
+  if (clean.length < 2) return false
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  let suma = 0, multiplo = 2
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += parseInt(cuerpo[i]) * multiplo
+    multiplo = multiplo < 7 ? multiplo + 1 : 2
+  }
+  const esperado = 11 - (suma % 11)
+  const dvEsperado = esperado === 11 ? '0' : esperado === 10 ? 'K' : esperado.toString()
+  return dv === dvEsperado
+}
+
 /* ── ErrorMsg ────────────────────────────────────────── */
 function ErrorMsg({ msg }) {
   if (!msg) return null
@@ -147,6 +162,7 @@ export default function Login({
     e.preventDefault(); setError('')
     if (!regNombres.trim() || !regApellidos.trim()) { setError('Nombres y apellidos son requeridos'); return }
     if (!regRut.trim()) { setError('El RUT es requerido'); return }
+    if (!validarRut(regRut)) { setError('El RUT ingresado no es válido'); return }
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
     if (!REQUISITOS_PASS.every(r => r.test(regPass))) {
       setError('La contraseña no cumple todos los requisitos de seguridad'); return

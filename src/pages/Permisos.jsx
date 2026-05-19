@@ -96,6 +96,21 @@ function formatRut(raw = '') {
   return `${formatted}-${verif}`
 }
 
+function validarRut(rut) {
+  const clean = rut.replace(/\./g, '').replace('-', '').toUpperCase()
+  if (clean.length < 2) return false
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  let suma = 0, multiplo = 2
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += parseInt(cuerpo[i]) * multiplo
+    multiplo = multiplo < 7 ? multiplo + 1 : 2
+  }
+  const esperado = 11 - (suma % 11)
+  const dvEsperado = esperado === 11 ? '0' : esperado === 10 ? 'K' : esperado.toString()
+  return dv === dvEsperado
+}
+
 function normRut(r = '') {
   return r.replace(/[^0-9kK]/g, '').toUpperCase()
 }
@@ -396,6 +411,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   async function handleCrearUsuario() {
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo) return
+    if (!validarRut(rutNuevo)) { alert('El RUT ingresado no es válido.'); return }
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
     const rut    = rutNuevo.trim()
 
