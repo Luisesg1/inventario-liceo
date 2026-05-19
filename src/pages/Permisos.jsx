@@ -926,6 +926,15 @@ export default function Permisos({ usuario }) {
   const [busqueda,        setBusqueda]        = useState('')
   const [filtroTipo,      setFiltroTipo]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')
+  const [colapsados,      setColapsados]      = useState(new Set()) // keys de grupos cerrados
+
+  function toggleColapso(key) {
+    setColapsados(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -1217,6 +1226,8 @@ export default function Permisos({ usuario }) {
               {grupos.map(({ usuario: u, ausencias: aus }) => {
                 const rut      = u.rut ?? u.externo_rut
                 const statsKey = rut ? normRut(rut) : (u.id ?? 'unknown')
+                const cardKey  = u.id ?? rut ?? u.nombre
+                const abierto  = !colapsados.has(cardKey)
                 const stats    = userStatsMap[statsKey] ?? { count: 0, dias: 0 }
                 const restantes   = Math.max(MAX_AUSENCIAS - stats.count, 0)
                 const agotada     = stats.count >= MAX_AUSENCIAS
@@ -1227,11 +1238,12 @@ export default function Permisos({ usuario }) {
                 const rolLabel    = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
 
                 return (
-                  <div key={u.id ?? rut ?? u.nombre}
+                  <div key={cardKey}
                     style={{ border: '1px solid #e9edf5', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
 
-                    {/* ── Cabecera del usuario ── */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                    {/* ── Cabecera del usuario (clickeable) ── */}
+                    <div onClick={() => toggleColapso(cardKey)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderBottom: abierto ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', userSelect: 'none' }}>
                       <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
                         {getInitials(u.nombre ?? '')}
                       </div>
@@ -1260,40 +1272,53 @@ export default function Permisos({ usuario }) {
                               : `${restantes} restantes · ${diasFmt} día${stats.dias !== 1 ? 's' : ''}`}
                         </span>
                       </div>
+                      {/* Chevron */}
+                      <ChevronDown size={15} strokeWidth={2.5}
+                        style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform 0.2s', transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
                     </div>
 
-                    {/* ── Filas de ausencias ── */}
-                    {aus.map((p, idx) => {
-                      const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada)
-                      return (
-                        <div key={p.id} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '9px 16px 9px 66px',
-                          borderTop: idx > 0 ? '1px solid #f8fafc' : 'none',
-                          background: '#fff',
-                        }}>
-                          <span className="permisos-badge permisos-badge--tipo" style={{ flexShrink: 0 }}>{TIPO_LABEL[p.tipo] ?? p.tipo}</span>
-                          <span style={{ fontSize: 12.5, color: '#475569', flex: 1, whiteSpace: 'nowrap' }}>
-                            {formatFecha(p.fecha_inicio)}
-                            <span style={{ color: '#cbd5e1', margin: '0 5px' }}>→</span>
-                            {formatFecha(p.fecha_fin)}
-                          </span>
-                          <span className="permisos-badge permisos-badge--jornada" style={{ flexShrink: 0 }}>{JORNADA_LABEL[p.jornada] ?? p.jornada}</span>
-                          {duracion && <span style={{ fontSize: 11.5, color: '#94a3b8', flexShrink: 0 }}>{duracion}</span>}
-                          <div style={{ display: 'flex', gap: 2, marginLeft: 4, flexShrink: 0 }}>
-                            <button className="permisos-action-btn" title="Ver" onClick={() => setPermisoVer(p)} style={{ color: '#64748b', width: 28, height: 28 }}>
-                              <Eye size={13} strokeWidth={2} />
-                            </button>
-                            <button className="permisos-action-btn" title="Editar" onClick={() => abrirEditar(p)} style={{ color: '#64748b', width: 28, height: 28 }}>
-                              <Pencil size={13} strokeWidth={2} />
-                            </button>
-                            <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={() => abrirEliminar(p)} style={{ color: '#ef4444', width: 28, height: 28 }}>
-                              <Trash2 size={13} strokeWidth={2} />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {/* ── Filas de ausencias (colapsables) ── */}
+                    <AnimatePresence initial={false}>
+                      {abierto && (
+                        <motion.div key="rows"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto', transition: { duration: 0.2 } }}
+                          exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
+                          style={{ overflow: 'hidden' }}>
+                          {aus.map((p, idx) => {
+                            const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada)
+                            return (
+                              <div key={p.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                padding: '9px 16px 9px 66px',
+                                borderTop: '1px solid #f8fafc',
+                                background: '#fff',
+                              }}>
+                                <span className="permisos-badge permisos-badge--tipo" style={{ flexShrink: 0 }}>{TIPO_LABEL[p.tipo] ?? p.tipo}</span>
+                                <span style={{ fontSize: 12.5, color: '#475569', flex: 1, whiteSpace: 'nowrap' }}>
+                                  {formatFecha(p.fecha_inicio)}
+                                  <span style={{ color: '#cbd5e1', margin: '0 5px' }}>→</span>
+                                  {formatFecha(p.fecha_fin)}
+                                </span>
+                                <span className="permisos-badge permisos-badge--jornada" style={{ flexShrink: 0 }}>{JORNADA_LABEL[p.jornada] ?? p.jornada}</span>
+                                {duracion && <span style={{ fontSize: 11.5, color: '#94a3b8', flexShrink: 0 }}>{duracion}</span>}
+                                <div style={{ display: 'flex', gap: 2, marginLeft: 4, flexShrink: 0 }}>
+                                  <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
+                                    <Eye size={13} strokeWidth={2} />
+                                  </button>
+                                  <button className="permisos-action-btn" title="Editar" onClick={e => { e.stopPropagation(); abrirEditar(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
+                                    <Pencil size={13} strokeWidth={2} />
+                                  </button>
+                                  <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={e => { e.stopPropagation(); abrirEliminar(p) }} style={{ color: '#ef4444', width: 28, height: 28 }}>
+                                    <Trash2 size={13} strokeWidth={2} />
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                   </div>
                 )
