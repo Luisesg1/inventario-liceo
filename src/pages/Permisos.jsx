@@ -1183,7 +1183,8 @@ export default function Permisos({ usuario }) {
             <table className="permisos-table">
               <thead>
                 <tr>
-                  <th>Usuario</th><th>Rol</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th>Ausencias {thisYear}</th><th></th>
+                  <th>Usuario</th><th>Rol</th><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Jornada</th><th>Ausencias {thisYear}</th>
+                  <th style={{ position: 'sticky', right: 0, background: '#f8fafc', width: 100, minWidth: 100 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -1192,9 +1193,12 @@ export default function Permisos({ usuario }) {
                   const rolLabel = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
                   const statsKey = p.usuario_id ?? p.externo_rut ?? '__ext__'
                   const stats    = userStatsMap[statsKey] ?? { count: 0, dias: 0 }
-                  const restantes = Math.max(MAX_AUSENCIAS - stats.count, 0)
-                  const agotada   = stats.count >= MAX_AUSENCIAS
-                  const diasFmt   = stats.dias % 1 === 0 ? stats.dias : stats.dias.toFixed(1)
+                  const restantes   = Math.max(MAX_AUSENCIAS - stats.count, 0)
+                  const agotada     = stats.count >= MAX_AUSENCIAS
+                  const advertencia = !agotada && restantes <= 1          // 1 restante → naranja
+                  const dotColor    = agotada ? '#b91c1c' : advertencia ? '#d97706' : '#1a237e'
+                  const textColor   = agotada ? '#b91c1c' : advertencia ? '#d97706' : '#64748b'
+                  const diasFmt     = stats.dias % 1 === 0 ? stats.dias : stats.dias.toFixed(1)
                   return (
                     <tr key={p.id}>
                       <td>
@@ -1221,18 +1225,18 @@ export default function Permisos({ usuario }) {
                             {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => (
                               <span key={i} style={{
                                 width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                                background: i < stats.count
-                                  ? (agotada ? '#b91c1c' : '#1a237e')
-                                  : '#e2e8f0',
+                                background: i < stats.count ? dotColor : '#e2e8f0',
                                 display: 'inline-block',
                               }} />
                             ))}
                           </div>
                           {/* Texto restantes */}
-                          <span style={{ fontSize: 11, color: agotada ? '#b91c1c' : '#64748b', fontWeight: agotada ? 600 : 400 }}>
+                          <span style={{ fontSize: 11, color: textColor, fontWeight: (agotada || advertencia) ? 600 : 400 }}>
                             {agotada
                               ? `Cuota agotada (${stats.count}/${MAX_AUSENCIAS})`
-                              : `${restantes} restante${restantes !== 1 ? 's' : ''} de ${MAX_AUSENCIAS}`}
+                              : advertencia
+                                ? `⚠️ Solo queda 1 ausencia`
+                                : `${restantes} restante${restantes !== 1 ? 's' : ''} de ${MAX_AUSENCIAS}`}
                           </span>
                           {/* Días acumulados */}
                           <span style={{ fontSize: 10.5, color: '#94a3b8' }}>
@@ -1240,15 +1244,18 @@ export default function Permisos({ usuario }) {
                           </span>
                         </div>
                       </td>
-                      <td>
+                      <td style={{ position: 'sticky', right: 0, background: 'inherit', whiteSpace: 'nowrap' }}>
                         <div className="permisos-actions">
-                          <button className="permisos-action-btn" title="Ver" onClick={() => setPermisoVer(p)}>
+                          <button className="permisos-action-btn" title="Ver" onClick={() => setPermisoVer(p)}
+                            style={{ color: '#475569' }}>
                             <Eye size={14} strokeWidth={2} />
                           </button>
-                          <button className="permisos-action-btn" title="Editar" onClick={() => abrirEditar(p)}>
+                          <button className="permisos-action-btn" title="Editar" onClick={() => abrirEditar(p)}
+                            style={{ color: '#475569' }}>
                             <Pencil size={14} strokeWidth={2} />
                           </button>
-                          <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={() => abrirEliminar(p)}>
+                          <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={() => abrirEliminar(p)}
+                            style={{ color: '#ef4444' }}>
                             <Trash2 size={14} strokeWidth={2} />
                           </button>
                         </div>
