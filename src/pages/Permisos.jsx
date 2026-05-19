@@ -413,6 +413,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   async function handleCrearUsuario() {
     setErrorNuevoUsuario('')
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo) return
+    if (nombresNuevo.trim().split(/\s+/).length < 2) { setErrorNuevoUsuario('Ingresa al menos 2 nombres.'); return }
+    if (apellidosNuevo.trim().split(/\s+/).length < 2) { setErrorNuevoUsuario('Ingresa al menos 2 apellidos.'); return }
     if (!validarRut(rutNuevo)) { setErrorNuevoUsuario('El RUT ingresado no es válido.'); return }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setErrorNuevoUsuario('El correo electrónico no es válido.'); return }
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()

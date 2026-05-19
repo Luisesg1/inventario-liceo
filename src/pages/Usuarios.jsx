@@ -477,8 +477,14 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   // Paso 1: crear usuario y pasar a permisos
   async function handleCrear() {
     const nombre = `${nombres.trim()} ${apellidos.trim()}`.trim()
-    if (!nombre || !email.trim()) {
+    if (!nombres.trim() || !apellidos.trim() || !email.trim()) {
       setMensaje({ tipo: 'error', texto: 'Nombres, apellidos y email son requeridos.' }); return
+    }
+    if (nombres.trim().split(/\s+/).length < 2) {
+      setMensaje({ tipo: 'error', texto: 'Ingresa al menos 2 nombres.' }); return
+    }
+    if (apellidos.trim().split(/\s+/).length < 2) {
+      setMensaje({ tipo: 'error', texto: 'Ingresa al menos 2 apellidos.' }); return
     }
     if (!rut.trim()) {
       setMensaje({ tipo: 'error', texto: 'El RUT es requerido.' }); return

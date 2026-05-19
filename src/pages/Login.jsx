@@ -161,6 +161,8 @@ export default function Login({
   async function handleRegistro(e) {
     e.preventDefault(); setError('')
     if (!regNombres.trim() || !regApellidos.trim()) { setError('Nombres y apellidos son requeridos'); return }
+    if (regNombres.trim().split(/\s+/).length < 2) { setError('Ingresa al menos 2 nombres'); return }
+    if (regApellidos.trim().split(/\s+/).length < 2) { setError('Ingresa al menos 2 apellidos'); return }
     if (!regRut.trim()) { setError('El RUT es requerido'); return }
     if (!validarRut(regRut)) { setError('El RUT ingresado no es válido'); return }
     if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
