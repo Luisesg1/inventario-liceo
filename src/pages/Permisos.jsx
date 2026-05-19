@@ -11,6 +11,8 @@ import './Permisos.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
+const MAX_AUSENCIAS = 6
+
 const ROL_LABEL = {
   admin:                'Administrador',
   editor:               'Editor',
@@ -141,16 +143,22 @@ const slideV = {
 
 // ── PermisoDots ────────────────────────────────────────────────────────────
 
-function PermisoDots({ usados }) {
+function PermisoDots({ usados, max = MAX_AUSENCIAS }) {
+  const restantes = Math.max(max - usados, 0)
+  const agotada = usados >= max
   return (
     <div className="mp-counter">
       <div className="mp-dots">
-        {Array.from({ length: Math.max(usados, 1) }).map((_, i) => (
-          <span key={i} className="mp-dot mp-dot--used" />
+        {Array.from({ length: max }).map((_, i) => (
+          <span key={i} className={`mp-dot ${i < usados ? 'mp-dot--used' : 'mp-dot--free'}`} />
         ))}
       </div>
       <span className="mp-counter-label">
-        {usados === 0 ? 'Sin ausencias registradas' : `${usados} ausencia${usados !== 1 ? 's' : ''} registrada${usados !== 1 ? 's' : ''}`}
+        {usados === 0
+          ? 'Sin ausencias este año'
+          : agotada
+            ? `Cuota agotada este año (${max}/${max})`
+            : `Te quedan ${restantes} ausencia${restantes !== 1 ? 's' : ''} este año`}
       </span>
     </div>
   )
@@ -852,9 +860,13 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     </div>
                     {!cargandoPermisos && (
                       <div className="mp-summary-row">
-                        <span className="mp-summary-label">Historial</span>
+                        <span className="mp-summary-label">Ausencias este año</span>
                         <span className="mp-summary-value">
-                          {permisosUsados === 0 ? 'Sin ausencias' : `${permisosUsados} ausencia${permisosUsados !== 1 ? 's' : ''}`}
+                          {permisosUsados === 0
+                            ? 'Sin ausencias'
+                            : permisosUsados >= MAX_AUSENCIAS
+                              ? `${permisosUsados}/${MAX_AUSENCIAS} — cuota agotada`
+                              : `${permisosUsados}/${MAX_AUSENCIAS} — quedan ${MAX_AUSENCIAS - permisosUsados}`}
                         </span>
                       </div>
                     )}
@@ -932,17 +944,45 @@ export default function Permisos({ usuario }) {
   }
 
   async function handleGetPermisosUsados(userId, rut) {
+    const year = new Date().getFullYear()
+    const desde = `${year}-01-01`
+    const hasta = `${year}-12-31`
+
+    // Collect all user IDs that share the same RUT
+    let userIds = userId ? [userId] : []
+    if (rut) {
+      const { data: mismoRut } = await supabase
+        .from('usuarios').select('id').eq('rut', rut)
+      if (mismoRut?.length) {
+        const ids = mismoRut.map(u => u.id)
+        userIds = [...new Set([...userIds, ...ids])]
+      }
+    }
+
     let total = 0
-    if (userId) {
+
+    // Count by internal user IDs (current year)
+    if (userIds.length) {
       const { count } = await supabase
-        .from('ausencias').select('*', { count: 'exact', head: true }).eq('usuario_id', userId)
+        .from('ausencias')
+        .select('*', { count: 'exact', head: true })
+        .in('usuario_id', userIds)
+        .gte('fecha_inicio', desde)
+        .lte('fecha_inicio', hasta)
       total += count ?? 0
     }
+
+    // Count by external RUT (current year)
     if (rut) {
       const { count } = await supabase
-        .from('ausencias').select('*', { count: 'exact', head: true }).eq('externo_rut', rut)
+        .from('ausencias')
+        .select('*', { count: 'exact', head: true })
+        .eq('externo_rut', rut)
+        .gte('fecha_inicio', desde)
+        .lte('fecha_inicio', hasta)
       total += count ?? 0
     }
+
     return total
   }
 
