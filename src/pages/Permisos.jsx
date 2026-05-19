@@ -23,17 +23,22 @@ const ROL_LABEL = {
 }
 
 const TIPOS_PERMISO = [
-  { value: 'personal', label: 'Personales' },
-  { value: 'ausencia', label: 'Ausencia' },
-  { value: 'medico',   label: 'Médico' },
-  { value: 'licencia', label: 'Licencia' },
-  { value: 'otro',     label: 'Otro' },
+  { value: 'licencia_medica',        label: 'Licencia médica' },
+  { value: 'permiso_administrativo', label: 'Permiso administrativo' },
 ]
 
-const MAX_NOTAS   = 400
-const MAX_MOTIVO  = 300
+// Tipos que NO descuentan del cupo (solo quedan registrados)
+const TIPOS_SIN_DESCUENTO = new Set(['licencia_medica'])
+
+const MAX_NOTAS = 400
 
 const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label]))
+
+// Estilos visuales por tipo
+const TIPO_STYLE = {
+  licencia_medica:        { bg: '#eff6ff', color: '#1d4ed8', icon: '🏥' },
+  permiso_administrativo: { bg: '#fef9c3', color: '#854d0e', icon: '📋' },
+}
 
 const JORNADAS = [
   { value: 'medio_dia',     label: 'Medio día' },
@@ -78,11 +83,12 @@ function calcDuration(fechaInicio, fechaFin, jornada) {
   return diffDays === 1 ? '1 día' : `${diffDays} días`
 }
 
-// Calcula días reales (float) de una lista de ausencias
-// medio_dia=0.5, personalizado=horas/8, resto=días calendario
-function calcDiasTotales(rows) {
+// Calcula días reales (float) de una lista de ausencias.
+// soloDescuento=true excluye tipos que no descuentan cupo (ej. licencia_medica)
+function calcDiasTotales(rows, soloDescuento = false) {
   let total = 0
   rows.forEach(p => {
+    if (soloDescuento && TIPOS_SIN_DESCUENTO.has(p.tipo)) return
     if (p.jornada === 'medio_dia') {
       total += 0.5
     } else if (p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin) {
@@ -237,7 +243,12 @@ function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar }) {
             <div className="mp-ver-grid">
               <div className="mp-ver-field">
                 <span className="mp-section-label" style={{ marginBottom: 4 }}>Tipo</span>
-                <span className="permisos-badge permisos-badge--tipo">{TIPO_LABEL[permiso.tipo] ?? permiso.tipo}</span>
+                <span className="permisos-badge permisos-badge--tipo" style={{
+                  background: TIPO_STYLE[permiso.tipo]?.bg ?? '#f1f5f9',
+                  color: TIPO_STYLE[permiso.tipo]?.color ?? '#475569',
+                }}>
+                  {TIPO_STYLE[permiso.tipo]?.icon ?? ''} {TIPO_LABEL[permiso.tipo] ?? permiso.tipo}
+                </span>
               </div>
               <div className="mp-ver-field">
                 <span className="mp-section-label" style={{ marginBottom: 4 }}>Jornada</span>
@@ -373,9 +384,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [periodo,     setPeriodo]     = useState(isEdit ? (editData.periodo     ?? 'am') : 'am')
   const [horaInicio,  setHoraInicio]  = useState(isEdit ? (editData.hora_inicio ?? '08:00') : '08:00')
   const [horaFin,     setHoraFin]     = useState(isEdit ? (editData.hora_fin    ?? '17:00') : '17:00')
-  const [tipoPermiso, setTipoPermiso] = useState(isEdit ? (editData.tipo        ?? '') : '')
-  const [motivoOtro,  setMotivoOtro]  = useState(isEdit && editData.tipo === 'otro' ? (editData.notas ?? '') : '')
-  const [notas,       setNotas]       = useState(isEdit && editData.tipo !== 'otro' ? (editData.notas ?? '') : '')
+  const [tipoPermiso, setTipoPermiso] = useState(isEdit ? (editData.tipo  ?? '') : '')
+  const [notas,       setNotas]       = useState(isEdit ? (editData.notas ?? '') : '')
   const [recordatorio, setRecordatorio] = useState(isEdit ? !!editData.recordatorio : false)
   const [diasRecord,  setDiasRecord]  = useState(isEdit && editData.recordatorio ? editData.recordatorio : '1')
   const [guardando,   setGuardando]   = useState(false)
@@ -424,8 +434,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
   })
 
+  // Notas siempre obligatorias (motivo de la licencia / permiso)
   const formValido = !!usuarioSel && !!fechaInicio && !!fechaFin && !!tipoPermiso
-    && (tipoPermiso !== 'otro' || motivoOtro.trim().length > 0)
+    && notas.trim().length > 0
 
   useEffect(() => {
     const rut = rutNuevo.trim()
@@ -521,7 +532,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
         periodo:    jornada === 'medio_dia'     ? periodo    : null,
         horaInicio: jornada === 'personalizado' ? horaInicio : null,
         horaFin:    jornada === 'personalizado' ? horaFin    : null,
-        tipoPermiso, motivoOtro: tipoPermiso === 'otro' ? motivoOtro.trim() : null,
+        tipoPermiso,
         notas: notas.trim() || null,
         recordatorio: recordatorio ? diasRecord : null,
       })
@@ -750,22 +761,10 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
               <section>
                 <p className="mp-section-label">Tipo de ausencia</p>
                 <select className="mp-select" value={tipoPermiso}
-                  onChange={e => { setTipoPermiso(e.target.value); setMotivoOtro('') }}>
+                  onChange={e => setTipoPermiso(e.target.value)}>
                   <option value="">Seleccionar tipo…</option>
                   {TIPOS_PERMISO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
-                <AnimatePresence>
-                  {tipoPermiso === 'otro' && (
-                    <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
-                      <textarea className="mp-textarea" placeholder="Escriba el motivo de la ausencia…"
-                        maxLength={MAX_MOTIVO}
-                        value={motivoOtro} onChange={e => setMotivoOtro(e.target.value)} />
-                      <span className={`mp-char-count ${motivoOtro.length > MAX_MOTIVO * 0.9 ? 'mp-char-count--warn' : ''}`}>
-                        {motivoOtro.length}/{MAX_MOTIVO}
-                      </span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </section>
 
               {/* Período */}
@@ -816,10 +815,24 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 </AnimatePresence>
               </section>
 
-              {/* Notas */}
+              {/* Notas — obligatorias */}
               <section>
-                <p className="mp-section-label">Notas <span style={{ color: '#cbd5e1', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(opcional)</span></p>
-                <textarea className="mp-textarea" placeholder="Información adicional sobre la ausencia…"
+                <p className="mp-section-label">
+                  {tipoPermiso === 'licencia_medica'
+                    ? 'Motivo de la licencia médica'
+                    : tipoPermiso === 'permiso_administrativo'
+                      ? 'Motivo del permiso administrativo'
+                      : 'Motivo'}
+                  {' '}<span style={{ color: '#ef4444', fontWeight: 700 }}>*</span>
+                </p>
+                <textarea className="mp-textarea"
+                  placeholder={
+                    tipoPermiso === 'licencia_medica'
+                      ? 'Ej: Consulta médica / reposo prescrito…'
+                      : tipoPermiso === 'permiso_administrativo'
+                        ? 'Ej: Trámite notarial, actividad institucional…'
+                        : 'Escribe el motivo de la ausencia…'
+                  }
                   maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />
                 <span className={`mp-char-count ${notas.length > MAX_NOTAS * 0.9 ? 'mp-char-count--warn' : ''}`}>
@@ -994,7 +1007,7 @@ export default function Permisos({ usuario }) {
     const year  = new Date().getFullYear()
     const desde = `${year}-01-01`
     const hasta = `${year}-12-31`
-    const cols  = 'jornada, fecha_inicio, fecha_fin, hora_inicio, hora_fin'
+    const cols  = 'jornada, fecha_inicio, fecha_fin, hora_inicio, hora_fin, tipo'
 
     // IDs que comparten el mismo RUT
     let userIds = userId ? [userId] : []
@@ -1016,7 +1029,7 @@ export default function Permisos({ usuario }) {
       if (data) rows = [...rows, ...data]
     }
 
-    return calcDiasTotales(rows) // retorna días reales (float)
+    return calcDiasTotales(rows, true) // solo tipos que descuentan cupo
   }
 
   function handleUsuarioCreado(nuevoUsuario) {
@@ -1062,7 +1075,7 @@ export default function Permisos({ usuario }) {
       hora_inicio:    datos.horaInicio,
       hora_fin:       datos.horaFin,
       tipo:           datos.tipoPermiso,
-      notas:          datos.motivoOtro || datos.notas || null,
+      notas:          datos.notas || null,
       recordatorio:   datos.recordatorio,
     }
 
@@ -1126,7 +1139,10 @@ export default function Permisos({ usuario }) {
       const startYear = p.fecha_inicio ? parseInt(p.fecha_inicio.slice(0, 4)) : null
       if (startYear === thisYear) {
         map[key].count++
-        map[key].dias += calcDiasTotales([p])
+        // Solo suma días si el tipo descuenta del cupo
+        if (!TIPOS_SIN_DESCUENTO.has(p.tipo)) {
+          map[key].dias += calcDiasTotales([p])
+        }
       }
     })
     return map
@@ -1315,7 +1331,13 @@ export default function Permisos({ usuario }) {
                                 borderTop: '1px solid #f8fafc',
                                 background: '#fff',
                               }}>
-                                <span className="permisos-badge permisos-badge--tipo" style={{ flexShrink: 0 }}>{TIPO_LABEL[p.tipo] ?? p.tipo}</span>
+                                <span className="permisos-badge permisos-badge--tipo" style={{
+                                  flexShrink: 0,
+                                  background: TIPO_STYLE[p.tipo]?.bg ?? '#f1f5f9',
+                                  color: TIPO_STYLE[p.tipo]?.color ?? '#475569',
+                                }}>
+                                  {TIPO_STYLE[p.tipo]?.icon ?? ''} {TIPO_LABEL[p.tipo] ?? p.tipo}
+                                </span>
                                 <span style={{ fontSize: 12.5, color: '#475569', flex: 1, whiteSpace: 'nowrap' }}>
                                   {formatFecha(p.fecha_inicio)}
                                   <span style={{ color: '#cbd5e1', margin: '0 5px' }}>→</span>
