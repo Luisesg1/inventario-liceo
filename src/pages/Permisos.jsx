@@ -315,7 +315,10 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [emailNuevo,        setEmailNuevo]        = useState('')
   const [rolNuevo,          setRolNuevo]          = useState('')
   const [creandoUser,            setCreandoUser]            = useState(false)
-  const [errorNuevoUsuario,      setErrorNuevoUsuario]      = useState('')
+  const [nuevoFE,                setNuevoFE]                = useState({})
+
+  function setNFE(field, msg) { setNuevoFE(p => ({ ...p, [field]: msg })) }
+  function clearNFE(field)    { setNuevoFE(p => ({ ...p, [field]: '' })) }
   const [usuarioEncontrado,      setUsuarioEncontrado]      = useState(null)
   const [usuarioEncontradoEmail, setUsuarioEncontradoEmail] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
@@ -411,12 +414,16 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   }
 
   async function handleCrearUsuario() {
-    setErrorNuevoUsuario('')
-    if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo) return
-    if (nombresNuevo.trim().split(/\s+/).length < 2) { setErrorNuevoUsuario('Ingresa al menos 2 nombres.'); return }
-    if (apellidosNuevo.trim().split(/\s+/).length < 2) { setErrorNuevoUsuario('Ingresa al menos 2 apellidos.'); return }
-    if (!validarRut(rutNuevo)) { setErrorNuevoUsuario('El RUT ingresado no es válido.'); return }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setErrorNuevoUsuario('El correo electrónico no es válido.'); return }
+    setNuevoFE({})
+    let ok = true
+    if (!rutNuevo.trim()) { setNFE('rut', 'El RUT es requerido'); ok = false }
+    else if (!validarRut(rutNuevo)) { setNFE('rut', 'RUT no válido'); ok = false }
+    if (nombresNuevo.trim().split(/\s+/).length < 2) { setNFE('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (apellidosNuevo.trim().split(/\s+/).length < 2) { setNFE('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
+    if (!emailNuevo.trim()) { setNFE('email', 'El correo es requerido'); ok = false }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setNFE('email', 'Correo no válido'); ok = false }
+    if (!rolNuevo) { setNFE('rol', 'Selecciona un rol'); ok = false }
+    if (!ok) return
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
     const rut    = rutNuevo.trim()
 
@@ -447,14 +454,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       )
       const json = await res.json()
       if (!res.ok) {
-        setErrorNuevoUsuario(json.error ?? 'Error al crear el usuario.')
+        setNFE('server', json.error ?? 'Error al crear el usuario.')
         return
       }
       const nuevoUsuario = { ...json.usuario, rut }
       onUsuarioCreado(nuevoUsuario)
       seleccionar(nuevoUsuario)
     } catch {
-      setErrorNuevoUsuario('No se pudo conectar al servidor.')
+      setNFE('server', 'No se pudo conectar al servidor.')
     } finally {
       setCreandoUser(false)
     }
@@ -577,7 +584,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                             <p className="mp-new-user-title">Nuevo usuario</p>
                             <input type="text" className="mp-input mp-input--sm" placeholder="RUT (ej: 12.345.678-9)"
                               value={rutNuevo}
-                              onChange={e => setRutNuevo(formatRut(e.target.value))} />
+                              style={nuevoFE.rut ? { borderColor: '#dc2626' } : {}}
+                              onChange={e => { setRutNuevo(formatRut(e.target.value)); clearNFE('rut') }} />
+                            {nuevoFE.rut && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.rut}</span>}
 
                             <AnimatePresence>
                               {usuarioEncontrado && (
@@ -603,13 +612,23 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                             {!usuarioEncontrado && (
                               <>
                                 <div className="mp-date-row">
-                                  <input type="text" className="mp-input mp-input--sm" placeholder="Nombres"
-                                    value={nombresNuevo} onChange={e => setNombresNuevo(e.target.value)} />
-                                  <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
-                                    value={apellidosNuevo} onChange={e => setApellidosNuevo(e.target.value)} />
+                                  <div>
+                                    <input type="text" className="mp-input mp-input--sm" placeholder="Nombres"
+                                      style={nuevoFE.nombres ? { borderColor: '#dc2626' } : {}}
+                                      value={nombresNuevo} onChange={e => { setNombresNuevo(e.target.value); clearNFE('nombres') }} />
+                                    {nuevoFE.nombres && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.nombres}</span>}
+                                  </div>
+                                  <div>
+                                    <input type="text" className="mp-input mp-input--sm" placeholder="Apellidos"
+                                      style={nuevoFE.apellidos ? { borderColor: '#dc2626' } : {}}
+                                      value={apellidosNuevo} onChange={e => { setApellidosNuevo(e.target.value); clearNFE('apellidos') }} />
+                                    {nuevoFE.apellidos && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.apellidos}</span>}
+                                  </div>
                                 </div>
                                 <input type="email" className="mp-input mp-input--sm" placeholder="Correo electrónico *"
-                                  value={emailNuevo} onChange={e => setEmailNuevo(e.target.value)} />
+                                  style={nuevoFE.email ? { borderColor: '#dc2626' } : {}}
+                                  value={emailNuevo} onChange={e => { setEmailNuevo(e.target.value); clearNFE('email') }} />
+                                {nuevoFE.email && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.email}</span>}
 
                                 <AnimatePresence>
                                   {usuarioEncontradoEmail && (
@@ -634,18 +653,21 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
                                 {!usuarioEncontradoEmail && (
                                   <>
-                                    <select className="mp-input mp-input--sm" value={rolNuevo} onChange={e => setRolNuevo(e.target.value)}>
+                                    <select className="mp-input mp-input--sm" value={rolNuevo}
+                                      style={nuevoFE.rol ? { borderColor: '#dc2626' } : {}}
+                                      onChange={e => { setRolNuevo(e.target.value); clearNFE('rol') }}>
                                       <option value="">Seleccionar rol *</option>
                                       {Object.entries(ROL_LABEL).map(([v, l]) => (
                                         <option key={v} value={v}>{l}</option>
                                       ))}
                                     </select>
+                                    {nuevoFE.rol && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.rol}</span>}
                                   </>
                                 )}
 
-                                {errorNuevoUsuario && (
+                                {nuevoFE.server && (
                                   <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px' }}>
-                                    {errorNuevoUsuario}
+                                    {nuevoFE.server}
                                   </div>
                                 )}
                                 <div className="mp-new-user-actions">
