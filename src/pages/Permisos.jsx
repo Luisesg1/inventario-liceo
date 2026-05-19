@@ -1168,31 +1168,42 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
 // ── DiaRow ─────────────────────────────────────────────────────────────────
 
-function DiaRow({ item, isEditing, editMotivo, onStartEdit, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit }) {
+function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFecha, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit }) {
   const esAPI = item.origen === 'api'
   return (
     <div className="inh-row">
-      <span className={`inh-chip ${esAPI ? 'inh-chip--api' : 'inh-chip--admin'}`}>
-        {formatFecha(item.fecha)}
-      </span>
       {isEditing ? (
         <>
+          {/* Fecha editable */}
+          <input
+            type="date"
+            className="mp-input"
+            style={{ width: 126, padding: '3px 7px', fontSize: 12, height: 28, flexShrink: 0 }}
+            value={editFecha}
+            onChange={e => onEditFecha(e.target.value)}
+          />
+          {/* Motivo editable */}
           <input
             className="mp-input"
-            style={{ flex: 1, padding: '3px 8px', fontSize: 12.5, height: 28 }}
+            style={{ flex: 1, padding: '3px 8px', fontSize: 12.5, height: 28, minWidth: 0 }}
             value={editMotivo}
             onChange={e => onEditMotivo(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter')  onSaveEdit(item.fecha)
+              if (e.key === 'Enter')  onSaveEdit(item.fecha, editFecha, editMotivo, item.origen)
               if (e.key === 'Escape') onCancelEdit()
             }}
             autoFocus
           />
-          <button className="inh-btn-ok" onClick={() => onSaveEdit(item.fecha)} disabled={guardandoEdit}>✓</button>
-          <button className="inh-btn-x"  onClick={onCancelEdit}>✕</button>
+          <button className="inh-btn-ok"
+            onClick={() => onSaveEdit(item.fecha, editFecha, editMotivo, item.origen)}
+            disabled={guardandoEdit || !editFecha}>✓</button>
+          <button className="inh-btn-x" onClick={onCancelEdit}>✕</button>
         </>
       ) : (
         <>
+          <span className={`inh-chip ${esAPI ? 'inh-chip--api' : 'inh-chip--admin'}`}>
+            {formatFecha(item.fecha)}
+          </span>
           <span className="inh-row-name">{item.motivo}</span>
           <div className="inh-row-actions">
             <button className="inh-action-btn" title="Editar" onClick={() => onStartEdit(item.fecha, item.motivo)}>
@@ -1216,7 +1227,8 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
   const [nuevoMotivo, setNuevoMotivo] = useState('')
   const [guardando,   setGuardando]   = useState(false)
   const [errGuardar,  setErrGuardar]  = useState('')
-  const [editando,    setEditando]    = useState(null)   // fecha siendo editada
+  const [editando,    setEditando]    = useState(null)   // fecha original siendo editada
+  const [editFecha,   setEditFecha]   = useState('')     // nueva fecha (puede cambiar)
   const [editMotivo,  setEditMotivo]  = useState('')
   const [guardandoEdit, setGuardandoEdit] = useState(false)
 
@@ -1240,10 +1252,10 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
     finally  { setGuardando(false) }
   }
 
-  async function handleSaveEdit(fecha) {
-    if (!editMotivo.trim()) return
+  async function handleSaveEdit(fechaOriginal, nuevaFecha, nuevoMotivo, origen) {
+    if (!nuevoMotivo.trim() || !nuevaFecha) return
     setGuardandoEdit(true)
-    try { await onEditar(fecha, editMotivo.trim()); setEditando(null) }
+    try { await onEditar(fechaOriginal, nuevaFecha, nuevoMotivo.trim(), origen); setEditando(null) }
     catch {} finally { setGuardandoEdit(false) }
   }
 
@@ -1300,9 +1312,9 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                 ) : (
                   feriadosAPI.map(f => (
                     <DiaRow key={f.fecha} item={f}
-                      isEditing={editando === f.fecha} editMotivo={editMotivo}
-                      onStartEdit={(fecha, mot) => { setEditando(fecha); setEditMotivo(mot) }}
-                      onEditMotivo={setEditMotivo}
+                      isEditing={editando === f.fecha} editFecha={editFecha} editMotivo={editMotivo}
+                      onStartEdit={(fecha, mot) => { setEditando(fecha); setEditFecha(fecha); setEditMotivo(mot) }}
+                      onEditFecha={setEditFecha} onEditMotivo={setEditMotivo}
                       onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
                       onEliminar={onEliminar} guardandoEdit={guardandoEdit}
                     />
@@ -1339,7 +1351,7 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                     {diasAdmin.map(d => (
                       <DiaRow key={d.fecha} item={d}
                         isEditing={editando === d.fecha} editMotivo={editMotivo}
-                        onStartEdit={(fecha, mot) => { setEditando(fecha); setEditMotivo(mot) }}
+                        onStartEdit={(fecha, mot) => { setEditando(fecha); setEditFecha(fecha); setEditMotivo(mot) }}
                         onEditMotivo={setEditMotivo}
                         onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
                         onEliminar={onEliminar} guardandoEdit={guardandoEdit}
@@ -1508,10 +1520,21 @@ export default function Permisos({ usuario }) {
     await cargarDiasInhabilitados()
   }
 
-  async function handleEditarDia(fecha, nuevoMotivo) {
-    const { error } = await supabase
-      .from('dias_inhabilitados').update({ motivo: nuevoMotivo }).eq('fecha', fecha)
-    if (error) throw error
+  async function handleEditarDia(fechaOriginal, nuevaFecha, nuevoMotivo, origen) {
+    if (fechaOriginal !== nuevaFecha) {
+      // La fecha cambió: delete + insert (fecha es PK)
+      const { error: delErr } = await supabase
+        .from('dias_inhabilitados').delete().eq('fecha', fechaOriginal)
+      if (delErr) throw delErr
+      const { error: insErr } = await supabase
+        .from('dias_inhabilitados').insert({ fecha: nuevaFecha, motivo: nuevoMotivo, origen })
+      if (insErr) throw insErr
+    } else {
+      // Solo cambió el motivo
+      const { error } = await supabase
+        .from('dias_inhabilitados').update({ motivo: nuevoMotivo }).eq('fecha', fechaOriginal)
+      if (error) throw error
+    }
     await cargarDiasInhabilitados()
   }
 
