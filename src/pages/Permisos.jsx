@@ -14,14 +14,16 @@ import './Permisos.css'
 const MAX_AUSENCIAS = 6
 
 const ROL_LABEL = {
-  admin:               'Administrador',
-  directivo:           'Directivo/Coordinador',
-  docente:             'Docente',
-  asistente:           'Asistente de la educación',
+  admin:          'Administrador',
+  directivo:      'Directivo',
+  coordinador:    'Coordinador',
+  docente:        'Docente',
+  asistente:      'Asistente de la educación',
+  administrativo: 'Administrativo',
+  // Legacy
   encargado_inventario:'Encargado inventario',
   encargado_soporte:   'Encargado Soporte técnico',
   encargado_permisos:  'Encargado Permisos',
-  // Legacy
   editor:              'Editor',
   encargado:           'Encargado',
   soporte:             'Soporte',

@@ -43,8 +43,8 @@ Deno.serve(async (req: Request) => {
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
 
-    const rolesValidos = ["admin", "directivo", "docente", "asistente", "encargado_inventario", "encargado_soporte", "encargado_permisos", "editor", "encargado", "soporte", "visor_requerimientos"];
-    const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "encargado_inventario";
+    const rolesValidos = ["admin", "directivo", "coordinador", "docente", "asistente", "administrativo", "encargado_inventario", "encargado_soporte", "encargado_permisos", "editor", "encargado", "soporte", "visor_requerimientos"];
+    const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "docente";
 
     // 5. RUT duplicado — permitido (una persona puede tener múltiples cuentas)
     //    El aviso se muestra en el frontend antes de crear.
@@ -306,10 +306,14 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
       return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
                exportar: true, registrar_prestamo: true, registrar_incidencia: true,
                ver_tickets: true };
+    case "coordinador":
+      return { ...base, ver_tickets: true };
     case "docente":
       return { ...base, ver_tickets: true };
     case "asistente":
-      return { ...base, ver_inventario: true, ver_tickets: true };
+      return { ...base, ver_tickets: true };
+    case "administrativo":
+      return { ...base };
     case "encargado_inventario":
       return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
                exportar: true, registrar_prestamo: true, registrar_incidencia: true };

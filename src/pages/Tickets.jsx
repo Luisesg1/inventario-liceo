@@ -16,7 +16,7 @@ const KPI_BORDER = { 'Abierto': '#2563eb', 'En proceso': '#d97706', 'Resuelto': 
 
 const AREAS = ['Proyector', 'Conector HDMI Muro', 'Conector HDMI Proyector', 'Notebook',
   'Computador de escritorio', 'Impresora', 'Red de Internet', 'Teclado', 'Mouse', 'Otro']
-const ROLES = ['Administrador', 'Directivo/Coordinador', 'Docente', 'Asistente de la educación', 'Encargado inventario', 'Encargado Soporte técnico', 'Encargado Permisos']
+const ROLES = ['Administrador', 'Directivo', 'Coordinador', 'Docente', 'Asistente de la educación', 'Administrativo']
 
 const MAX_PALABRAS = 100
 const contarPalabras = (str) => str.trim() ? str.trim().split(/\s+/).length : 0
