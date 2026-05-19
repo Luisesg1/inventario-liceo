@@ -114,6 +114,7 @@
   transition: opacity 0.1s;
 }
 .inh-btn-ok:disabled { opacity: 0.45; }
+.inh-btn-ok--danger  { background: #ef4444; }
 .inh-btn-x {
   background: none; border: none; color: #94a3b8; cursor: pointer;
   font-size: 13px; padding: 2px 5px; flex-shrink: 0;

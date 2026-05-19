@@ -141,6 +141,15 @@ function fmtDias(d) {
   return d.toFixed(1)
 }
 
+// Colores progresivos según días usados vs cuota
+function getAusenciaColors(dias, max = MAX_AUSENCIAS) {
+  const restantes = Math.max(max - dias, 0)
+  if (dias >= max)    return { dot: '#b91c1c', text: '#b91c1c' } // rojo — agotada
+  if (restantes <= 1) return { dot: '#ea580c', text: '#ea580c' } // naranja — 1 restante
+  if (restantes <= 2) return { dot: '#d97706', text: '#b45309' } // ámbar — 2 restantes
+  return { dot: '#1a237e', text: '#64748b' }                      // azul — normal
+}
+
 function formatFecha(fecha) {
   if (!fecha) return '—'
   const [y, m, d] = fecha.split('-')
@@ -209,7 +218,8 @@ const slideV = {
 function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
   const restantes = Math.max(max - dias, 0)
   const agotada   = dias >= max
-  const dotColor  = agotada ? '#b91c1c' : '#1a237e'
+  const { dot: dotColor, text: textColor } = getAusenciaColors(dias, max)
+  const bold = dias > 0 && restantes <= 2
   return (
     <div className="mp-counter">
       <div className="mp-dots">
@@ -223,7 +233,7 @@ function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
           return <span key={i} className="mp-dot" style={{ background: bg }} />
         })}
       </div>
-      <span className="mp-counter-label">
+      <span className="mp-counter-label" style={{ color: textColor, fontWeight: bold ? 600 : 400 }}>
         {dias === 0
           ? 'Sin ausencias este año'
           : agotada
@@ -1116,12 +1126,15 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     {!cargandoPermisos && (
                       <div className="mp-summary-row">
                         <span className="mp-summary-label">Ausencias este año</span>
-                        <span className="mp-summary-value">
+                        <span className="mp-summary-value" style={{
+                          color: getAusenciaColors(permisosUsados).text,
+                          fontWeight: permisosUsados >= MAX_AUSENCIAS - 2 && permisosUsados > 0 ? 700 : 500,
+                        }}>
                           {permisosUsados === 0
                             ? 'Sin ausencias'
                             : permisosUsados >= MAX_AUSENCIAS
-                              ? `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS} días — cuota agotada`
-                              : `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS} días — quedan ${fmtDias(Math.max(MAX_AUSENCIAS - permisosUsados, 0))}`}
+                              ? `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS}d — cuota agotada`
+                              : `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS}d — quedan ${fmtDias(Math.max(MAX_AUSENCIAS - permisosUsados, 0))}`}
                         </span>
                       </div>
                     )}
@@ -1168,36 +1181,32 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
 // ── DiaRow ─────────────────────────────────────────────────────────────────
 
-function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFecha, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit }) {
+function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFecha, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit, confirmando, onPedirConfirm, onCancelConfirm }) {
   const esAPI = item.origen === 'api'
   return (
     <div className="inh-row">
       {isEditing ? (
         <>
-          {/* Fecha editable */}
-          <input
-            type="date"
-            className="mp-input"
+          <input type="date" className="mp-input"
             style={{ width: 126, padding: '3px 7px', fontSize: 12, height: 28, flexShrink: 0 }}
-            value={editFecha}
-            onChange={e => onEditFecha(e.target.value)}
-          />
-          {/* Motivo editable */}
-          <input
-            className="mp-input"
+            value={editFecha} onChange={e => onEditFecha(e.target.value)} />
+          <input className="mp-input"
             style={{ flex: 1, padding: '3px 8px', fontSize: 12.5, height: 28, minWidth: 0 }}
-            value={editMotivo}
-            onChange={e => onEditMotivo(e.target.value)}
+            value={editMotivo} onChange={e => onEditMotivo(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter')  onSaveEdit(item.fecha, editFecha, editMotivo, item.origen)
               if (e.key === 'Escape') onCancelEdit()
-            }}
-            autoFocus
-          />
-          <button className="inh-btn-ok"
-            onClick={() => onSaveEdit(item.fecha, editFecha, editMotivo, item.origen)}
-            disabled={guardandoEdit || !editFecha}>✓</button>
+            }} autoFocus />
+          <button className="inh-btn-ok" onClick={() => onSaveEdit(item.fecha, editFecha, editMotivo, item.origen)} disabled={guardandoEdit || !editFecha}>✓</button>
           <button className="inh-btn-x" onClick={onCancelEdit}>✕</button>
+        </>
+      ) : confirmando ? (
+        <>
+          <span style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>
+            ¿Eliminar <strong style={{ color: '#374151' }}>{item.motivo}</strong>?
+          </span>
+          <button className="inh-btn-x" onClick={onCancelConfirm} style={{ fontSize: 12, padding: '3px 8px' }}>No</button>
+          <button className="inh-btn-ok inh-btn-ok--danger" onClick={() => onEliminar(item.fecha)}>Eliminar</button>
         </>
       ) : (
         <>
@@ -1209,7 +1218,7 @@ function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFec
             <button className="inh-action-btn" title="Editar" onClick={() => onStartEdit(item.fecha, item.motivo)}>
               <Pencil size={11} strokeWidth={2} />
             </button>
-            <button className="inh-action-btn inh-action-btn--danger" title="Eliminar" onClick={() => onEliminar(item.fecha)}>
+            <button className="inh-action-btn inh-action-btn--danger" title="Eliminar" onClick={onPedirConfirm}>
               <Trash2 size={11} strokeWidth={2} />
             </button>
           </div>
@@ -1231,6 +1240,7 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
   const [editFecha,   setEditFecha]   = useState('')     // nueva fecha (puede cambiar)
   const [editMotivo,  setEditMotivo]  = useState('')
   const [guardandoEdit, setGuardandoEdit] = useState(false)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(null) // fecha del item a eliminar
 
   const year  = new Date().getFullYear()
   const total = feriadosAPI.length + diasAdmin.length
@@ -1259,7 +1269,7 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
     catch {} finally { setGuardandoEdit(false) }
   }
 
-  const colStyle = { display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+  const colStyle = { display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }
   const headStyle = {
     padding: '14px 18px 10px',
     borderBottom: '1px solid #f1f5f9',
@@ -1292,7 +1302,7 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
           </div>
 
           {/* ── Body 2 cols ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxHeight: '52vh', overflow: 'hidden', borderBottom: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '52vh', borderBottom: '1px solid #f1f5f9' }}>
 
             {/* LEFT: Feriados oficiales */}
             <div style={{ ...colStyle, borderRight: '1px solid #f1f5f9' }}>
@@ -1317,6 +1327,9 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                       onEditFecha={setEditFecha} onEditMotivo={setEditMotivo}
                       onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
                       onEliminar={onEliminar} guardandoEdit={guardandoEdit}
+                      confirmando={confirmarEliminar === f.fecha}
+                      onPedirConfirm={() => setConfirmarEliminar(f.fecha)}
+                      onCancelConfirm={() => setConfirmarEliminar(null)}
                     />
                   ))
                 )}
@@ -1350,11 +1363,14 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                   <>
                     {diasAdmin.map(d => (
                       <DiaRow key={d.fecha} item={d}
-                        isEditing={editando === d.fecha} editMotivo={editMotivo}
+                        isEditing={editando === d.fecha} editFecha={editFecha} editMotivo={editMotivo}
                         onStartEdit={(fecha, mot) => { setEditando(fecha); setEditFecha(fecha); setEditMotivo(mot) }}
-                        onEditMotivo={setEditMotivo}
+                        onEditFecha={setEditFecha} onEditMotivo={setEditMotivo}
                         onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
                         onEliminar={onEliminar} guardandoEdit={guardandoEdit}
+                        confirmando={confirmarEliminar === d.fecha}
+                        onPedirConfirm={() => setConfirmarEliminar(d.fecha)}
+                        onCancelConfirm={() => setConfirmarEliminar(null)}
                       />
                     ))}
 
@@ -1811,12 +1827,10 @@ export default function Permisos({ usuario }) {
                 const cardKey  = u.id ?? rut ?? u.nombre
                 const abierto  = !colapsados.has(cardKey)
                 const stats    = userStatsMap[statsKey] ?? { count: 0, dias: 0 }
-                const restantes   = Math.max(MAX_AUSENCIAS - stats.count, 0)
-                const agotada     = stats.count >= MAX_AUSENCIAS
-                const advertencia = !agotada && restantes <= 1
-                const dotColor    = agotada ? '#b91c1c' : advertencia ? '#d97706' : '#1a237e'
-                const textColor   = agotada ? '#b91c1c' : advertencia ? '#d97706' : '#64748b'
-                const diasFmt     = stats.dias % 1 === 0 ? stats.dias : stats.dias.toFixed(1)
+                const restantes = Math.max(MAX_AUSENCIAS - stats.dias, 0)
+                const agotada   = stats.dias >= MAX_AUSENCIAS
+                const { dot: dotColor, text: textColor } = getAusenciaColors(stats.dias)
+                const diasFmt   = fmtDias(stats.dias)
                 const rolLabel    = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
 
                 return (
@@ -1852,12 +1866,12 @@ export default function Permisos({ usuario }) {
                             return <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: bg }} />
                           })}
                         </div>
-                        <span style={{ fontSize: 11, color: textColor, fontWeight: (agotada || advertencia) ? 700 : 400, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 11, color: textColor, fontWeight: restantes <= 2 ? 700 : 400, whiteSpace: 'nowrap' }}>
                           {agotada
-                            ? `Cuota agotada (${stats.count}/${MAX_AUSENCIAS})`
-                            : advertencia
-                              ? `⚠️ Solo queda 1 ausencia`
-                              : `${restantes} restantes · ${diasFmt} día${stats.dias !== 1 ? 's' : ''}`}
+                            ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
+                            : restantes <= 1
+                              ? `⚠️ Queda ${fmtDias(restantes)} día`
+                              : `${fmtDias(restantes)} restantes · ${diasFmt}d`}
                         </span>
                       </div>
                       {/* Chevron */}
