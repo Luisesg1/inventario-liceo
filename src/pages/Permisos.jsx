@@ -1166,128 +1166,235 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   )
 }
 
+// ── DiaRow ─────────────────────────────────────────────────────────────────
+
+function DiaRow({ item, isEditing, editMotivo, onStartEdit, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit }) {
+  const esAPI = item.origen === 'api'
+  return (
+    <div className="inh-row">
+      <span className={`inh-chip ${esAPI ? 'inh-chip--api' : 'inh-chip--admin'}`}>
+        {formatFecha(item.fecha)}
+      </span>
+      {isEditing ? (
+        <>
+          <input
+            className="mp-input"
+            style={{ flex: 1, padding: '3px 8px', fontSize: 12.5, height: 28 }}
+            value={editMotivo}
+            onChange={e => onEditMotivo(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter')  onSaveEdit(item.fecha)
+              if (e.key === 'Escape') onCancelEdit()
+            }}
+            autoFocus
+          />
+          <button className="inh-btn-ok" onClick={() => onSaveEdit(item.fecha)} disabled={guardandoEdit}>✓</button>
+          <button className="inh-btn-x"  onClick={onCancelEdit}>✕</button>
+        </>
+      ) : (
+        <>
+          <span className="inh-row-name">{item.motivo}</span>
+          <div className="inh-row-actions">
+            <button className="inh-action-btn" title="Editar" onClick={() => onStartEdit(item.fecha, item.motivo)}>
+              <Pencil size={11} strokeWidth={2} />
+            </button>
+            <button className="inh-action-btn inh-action-btn--danger" title="Eliminar" onClick={() => onEliminar(item.fecha)}>
+              <Trash2 size={11} strokeWidth={2} />
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── ModalDiasInhabilitados ─────────────────────────────────────────────────
 
-function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar }) {
+function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar, onEditar }) {
+  const [mostrarForm, setMostrarForm] = useState(false)
   const [nuevaFecha,  setNuevaFecha]  = useState('')
   const [nuevoMotivo, setNuevoMotivo] = useState('')
   const [guardando,   setGuardando]   = useState(false)
   const [errGuardar,  setErrGuardar]  = useState('')
+  const [editando,    setEditando]    = useState(null)   // fecha siendo editada
+  const [editMotivo,  setEditMotivo]  = useState('')
+  const [guardandoEdit, setGuardandoEdit] = useState(false)
+
+  const year  = new Date().getFullYear()
+  const total = feriadosAPI.length + diasAdmin.length
+
+  // Set y mapa para el CalendarioFeriados dentro del form
+  const inhabSet = new Set([...feriadosAPI.map(f => f.fecha), ...diasAdmin.map(d => d.fecha)])
+  const etiqMap  = new Map([
+    ...feriadosAPI.map(f => [f.fecha, f.motivo]),
+    ...diasAdmin.map(d  => [d.fecha, d.motivo]),
+  ])
 
   async function handleAgregar() {
     if (!nuevaFecha || !nuevoMotivo.trim()) return
     setGuardando(true); setErrGuardar('')
     try {
       await onAgregar(nuevaFecha, nuevoMotivo.trim())
-      setNuevaFecha(''); setNuevoMotivo('')
-    } catch {
-      setErrGuardar('No se pudo guardar. Intenta de nuevo.')
-    } finally { setGuardando(false) }
+      setNuevaFecha(''); setNuevoMotivo(''); setMostrarForm(false)
+    } catch { setErrGuardar('No se pudo guardar. Intenta de nuevo.') }
+    finally  { setGuardando(false) }
   }
 
-  const year = new Date().getFullYear()
+  async function handleSaveEdit(fecha) {
+    if (!editMotivo.trim()) return
+    setGuardandoEdit(true)
+    try { await onEditar(fecha, editMotivo.trim()); setEditando(null) }
+    catch {} finally { setGuardandoEdit(false) }
+  }
+
+  const colStyle = { display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+  const headStyle = {
+    padding: '14px 18px 10px',
+    borderBottom: '1px solid #f1f5f9',
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8,
+  }
 
   return (
     <AnimatePresence>
       <motion.div className="mp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
         onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
         <motion.div className="mp-modal" variants={modalV} initial="hidden" animate="visible" exit="exit"
-          style={{ maxWidth: 560 }}>
+          style={{ maxWidth: 700, width: '95vw' }}>
 
-          <div className="mp-header">
-            <div className="mp-header-left">
-              <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
+          {/* ── Header ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CalendarCheck size={17} strokeWidth={2} style={{ color: '#475569' }} />
+              </div>
               <div>
-                <p className="mp-header-title">Días inhabilitados {year}</p>
-                <p className="mp-header-sub">Feriados oficiales, puentes y días especiales del colegio.</p>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                  Días inhabilitados {year}
+                </p>
+                <p style={{ margin: '1px 0 0', fontSize: 12.5, color: '#94a3b8' }}>
+                  {total > 0 ? `${total} días configurados` : 'Sin días configurados'} · feriados y días especiales
+                </p>
               </div>
             </div>
             <button className="mp-close-btn" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
           </div>
 
-          <div className="mp-body" style={{ flexDirection: 'column', gap: 20, padding: '20px 24px', overflowY: 'auto', maxHeight: '60vh' }}>
+          {/* ── Body 2 cols ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', maxHeight: '52vh', overflow: 'hidden', borderBottom: '1px solid #f1f5f9' }}>
 
-            {/* Feriados oficiales (API) */}
-            <section>
-              <p className="mp-section-label" style={{ marginBottom: 10 }}>
-                Feriados oficiales Chile {year}
-                <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
-                  (nager.date)
-                </span>
-              </p>
-              {cargandoAPI ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#94a3b8', fontSize: 13 }}>
-                  <Loader2 size={14} className="animate-spin" /> Cargando feriados…
+            {/* LEFT: Feriados oficiales */}
+            <div style={{ ...colStyle, borderRight: '1px solid #f1f5f9' }}>
+              <div style={headStyle}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Feriados oficiales</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#cbd5e1' }}>Chile {year} · nager.date</p>
                 </div>
-              ) : feriadosAPI.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#94a3b8' }}>No se pudieron cargar los feriados (sin conexión).</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {feriadosAPI.map(f => (
-                    <div key={f.fecha} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: '#eff6ff', borderRadius: 7, border: '1px solid #bfdbfe' }}>
-                      <span style={{ fontSize: 12, color: '#1d4ed8', fontWeight: 600, minWidth: 90 }}>{formatFecha(f.fecha)}</span>
-                      <span style={{ fontSize: 12.5, color: '#1e40af', flex: 1 }}>{f.nombre}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Días especiales (admin) */}
-            <section>
-              <p className="mp-section-label" style={{ marginBottom: 10 }}>
-                Días especiales
-                <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
-                  (puentes, días del colegio, etc.)
-                </span>
-              </p>
-
-              {diasAdmin.length === 0 ? (
-                <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>No hay días especiales registrados.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
-                  {diasAdmin.map(d => (
-                    <div key={d.fecha} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: '#fef9c3', borderRadius: 7, border: '1px solid #fde68a' }}>
-                      <span style={{ fontSize: 12, color: '#854d0e', fontWeight: 600, minWidth: 90 }}>{formatFecha(d.fecha)}</span>
-                      <span style={{ fontSize: 12.5, color: '#854d0e', flex: 1 }}>{d.motivo}</span>
-                      <button onClick={() => onEliminar(d.fecha)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, display: 'flex', alignItems: 'center' }}>
-                        <Trash2 size={13} strokeWidth={2} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Agregar nuevo día */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div className="mp-field-group" style={{ flex: '0 0 auto' }}>
-                  <label className="mp-field-label">Fecha</label>
-                  <input type="date" className="mp-input" value={nuevaFecha}
-                    onChange={e => setNuevaFecha(e.target.value)} />
-                </div>
-                <div className="mp-field-group" style={{ flex: 1, minWidth: 180 }}>
-                  <label className="mp-field-label">Motivo</label>
-                  <input type="text" className="mp-input" placeholder="Ej: Día puente, Feriado regional…"
-                    value={nuevoMotivo} onChange={e => setNuevoMotivo(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAgregar() }} />
-                </div>
-                <button className="mp-btn-save"
-                  disabled={!nuevaFecha || !nuevoMotivo.trim() || guardando}
-                  onClick={handleAgregar}
-                  style={{ flexShrink: 0 }}>
-                  <Plus size={14} strokeWidth={2.5} />
-                  {guardando ? 'Guardando…' : 'Agregar'}
-                </button>
               </div>
-              {errGuardar && (
-                <span style={{ fontSize: 12, color: '#dc2626', marginTop: 6, display: 'block' }}>{errGuardar}</span>
-              )}
-            </section>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '6px 10px' }}>
+                {cargandoAPI ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#94a3b8', fontSize: 13, padding: '12px 4px' }}>
+                    <Loader2 size={14} className="animate-spin" /> Cargando…
+                  </div>
+                ) : feriadosAPI.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#cbd5e1', padding: '12px 4px', margin: 0 }}>Sin datos disponibles.</p>
+                ) : (
+                  feriadosAPI.map(f => (
+                    <DiaRow key={f.fecha} item={f}
+                      isEditing={editando === f.fecha} editMotivo={editMotivo}
+                      onStartEdit={(fecha, mot) => { setEditando(fecha); setEditMotivo(mot) }}
+                      onEditMotivo={setEditMotivo}
+                      onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
+                      onEliminar={onEliminar} guardandoEdit={guardandoEdit}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT: Días especiales */}
+            <div style={{ ...colStyle }}>
+              <div style={headStyle}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Días especiales</p>
+                  <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#cbd5e1' }}>Puentes, días del colegio, etc.</p>
+                </div>
+                {!mostrarForm && (
+                  <button onClick={() => setMostrarForm(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#0f172a', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, letterSpacing: '-0.01em' }}>
+                    <Plus size={11} strokeWidth={2.5} /> Agregar
+                  </button>
+                )}
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '6px 10px' }}>
+                {diasAdmin.length === 0 && !mostrarForm ? (
+                  <div style={{ padding: '20px 4px', textAlign: 'center' }}>
+                    <p style={{ fontSize: 12.5, color: '#cbd5e1', margin: '0 0 10px' }}>Sin días especiales registrados.</p>
+                    <button onClick={() => setMostrarForm(true)}
+                      style={{ background: 'none', border: '1.5px dashed #e2e8f0', borderRadius: 8, padding: '6px 16px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      + Agregar el primero
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {diasAdmin.map(d => (
+                      <DiaRow key={d.fecha} item={d}
+                        isEditing={editando === d.fecha} editMotivo={editMotivo}
+                        onStartEdit={(fecha, mot) => { setEditando(fecha); setEditMotivo(mot) }}
+                        onEditMotivo={setEditMotivo}
+                        onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
+                        onEliminar={onEliminar} guardandoEdit={guardandoEdit}
+                      />
+                    ))}
+
+                    {/* Form agregar */}
+                    <AnimatePresence>
+                      {mostrarForm && (
+                        <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit"
+                          style={{ padding: '12px 6px', borderTop: diasAdmin.length > 0 ? '1px solid #f1f5f9' : 'none', marginTop: diasAdmin.length > 0 ? 4 : 0 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div>
+                              <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>Fecha</label>
+                              <CalendarioFeriados
+                                value={nuevaFecha} onChange={setNuevaFecha}
+                                inhabilitados={inhabSet} etiquetas={etiqMap}
+                                placeholder="Seleccionar fecha…"
+                              />
+                            </div>
+                            <div>
+                              <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>Motivo</label>
+                              <input type="text" className="mp-input"
+                                placeholder="Ej: Día puente, Feriado regional…"
+                                value={nuevoMotivo} onChange={e => setNuevoMotivo(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleAgregar() }} />
+                            </div>
+                            {errGuardar && <span style={{ fontSize: 12, color: '#dc2626' }}>{errGuardar}</span>}
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => { setMostrarForm(false); setNuevaFecha(''); setNuevoMotivo(''); setErrGuardar('') }}
+                                style={{ flex: 1, background: 'none', border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 0', fontSize: 12.5, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Cancelar
+                              </button>
+                              <button onClick={handleAgregar}
+                                disabled={!nuevaFecha || !nuevoMotivo.trim() || guardando}
+                                style={{ flex: 2, background: '#0f172a', color: '#fff', border: 'none', borderRadius: 7, padding: '7px 0', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: (!nuevaFecha || !nuevoMotivo.trim() || guardando) ? 0.45 : 1 }}>
+                                {guardando ? 'Guardando…' : 'Guardar día'}
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
+              </div>
+            </div>
 
           </div>
 
-          <div className="mp-footer">
+          {/* ── Footer ── */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 24px' }}>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>
+              {total} {total === 1 ? 'día inhabilitado' : 'días inhabilitados'} en {year}
+            </span>
             <button className="mp-btn-cancel" onClick={onClose}>Cerrar</button>
           </div>
 
@@ -1351,28 +1458,35 @@ export default function Permisos({ usuario }) {
   async function cargarDiasInhabilitados() {
     setCargandoAPI(true)
     const year = new Date().getFullYear()
-    const set  = new Set()
-    let apiList = []
 
-    // 1. Feriados oficiales Chile (nager.date — gratuito, sin API key)
+    // 1. Fechas ya en DB para este año
+    const { data: dbRows } = await supabase
+      .from('dias_inhabilitados').select('fecha')
+      .gte('fecha', `${year}-01-01`).lte('fecha', `${year}-12-31`)
+    const dbFechas = new Set((dbRows ?? []).map(r => r.fecha))
+
+    // 2. Sync feriados oficiales → DB (solo los nuevos, no re-inserta borrados)
     try {
       const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/CL`)
       if (res.ok) {
-        const data = await res.json()
-        apiList = data.map(f => ({ fecha: f.date, nombre: f.localName }))
-        apiList.forEach(f => set.add(f.fecha))
+        const apiData = await res.json()
+        const nuevos = apiData
+          .filter(f => !dbFechas.has(f.date))
+          .map(f => ({ fecha: f.date, motivo: f.localName, origen: 'api' }))
+        if (nuevos.length > 0) {
+          await supabase.from('dias_inhabilitados').insert(nuevos)
+        }
       }
-    } catch (e) { console.warn('Feriados API no disponible:', e) }
+    } catch (e) { console.warn('API feriados no disponible:', e) }
 
-    // 2. Días especiales guardados por el admin en DB
-    const { data: adminRows } = await supabase
+    // 3. DB como fuente de verdad
+    const { data: allRows } = await supabase
       .from('dias_inhabilitados').select('*').order('fecha')
-    const adminList = adminRows ?? []
-    adminList.forEach(d => set.add(d.fecha))
+    const rows = allRows ?? []
 
-    setFeriadosAPI(apiList)
-    setDiasAdmin(adminList)
-    setDiasInhabilitados(set)
+    setFeriadosAPI(rows.filter(r => r.origen === 'api'))
+    setDiasAdmin(rows.filter(r => r.origen === 'admin'))
+    setDiasInhabilitados(new Set(rows.map(r => r.fecha)))
     setCargandoAPI(false)
   }
 
@@ -1390,6 +1504,13 @@ export default function Permisos({ usuario }) {
 
   async function handleEliminarDia(fecha) {
     const { error } = await supabase.from('dias_inhabilitados').delete().eq('fecha', fecha)
+    if (error) throw error
+    await cargarDiasInhabilitados()
+  }
+
+  async function handleEditarDia(fecha, nuevoMotivo) {
+    const { error } = await supabase
+      .from('dias_inhabilitados').update({ motivo: nuevoMotivo }).eq('fecha', fecha)
     if (error) throw error
     await cargarDiasInhabilitados()
   }
@@ -1511,7 +1632,7 @@ export default function Permisos({ usuario }) {
   // Mapa fecha → etiqueta para el calendario (feriados + días especiales)
   const feriadosLabelsMap = (() => {
     const m = new Map()
-    feriadosAPI.forEach(f => m.set(f.fecha, f.nombre))
+    feriadosAPI.forEach(f => m.set(f.fecha, f.motivo))
     diasAdmin.forEach(d => m.set(d.fecha, d.motivo))
     return m
   })()
@@ -1832,6 +1953,7 @@ export default function Permisos({ usuario }) {
           onClose={() => setModalInhabilitados(false)}
           onAgregar={handleAgregarDia}
           onEliminar={handleEliminarDia}
+          onEditar={handleEditarDia}
         />
       )}
 

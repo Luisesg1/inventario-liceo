@@ -73,6 +73,54 @@
 .permisos-btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; transform: translateY(-1px); }
 .permisos-btn-secondary:active { transform: translateY(0); }
 
+/* ── Días inhabilitados modal ───────────────────────────── */
+.inh-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px; border-radius: 7px;
+  transition: background 0.1s; cursor: default;
+}
+.inh-row:hover { background: #f8fafc; }
+
+.inh-chip {
+  font-size: 10.5px; font-weight: 600; padding: 2px 8px;
+  border-radius: 20px; flex-shrink: 0; letter-spacing: 0.01em;
+  min-width: 74px; text-align: center; white-space: nowrap;
+}
+.inh-chip--api   { color: #3b82f6; background: #eff6ff; }
+.inh-chip--admin { color: #d97706; background: #fffbeb; }
+
+.inh-row-name {
+  flex: 1; font-size: 12.5px; color: #374151;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.inh-row-actions {
+  display: flex; gap: 1px; opacity: 0;
+  transition: opacity 0.12s; flex-shrink: 0;
+}
+.inh-row:hover .inh-row-actions { opacity: 1; }
+
+.inh-action-btn {
+  background: none; border: none; cursor: pointer;
+  color: #94a3b8; padding: 3px 5px; border-radius: 5px;
+  display: flex; align-items: center;
+  transition: color 0.1s, background 0.1s;
+}
+.inh-action-btn:hover                   { color: #475569; background: #f1f5f9; }
+.inh-action-btn--danger:hover           { color: #ef4444 !important; background: #fef2f2 !important; }
+
+.inh-btn-ok {
+  background: #0f172a; color: #fff; border: none; border-radius: 6px;
+  padding: 3px 10px; font-size: 12px; cursor: pointer; flex-shrink: 0;
+  transition: opacity 0.1s;
+}
+.inh-btn-ok:disabled { opacity: 0.45; }
+.inh-btn-x {
+  background: none; border: none; color: #94a3b8; cursor: pointer;
+  font-size: 13px; padding: 2px 5px; flex-shrink: 0;
+  transition: color 0.1s;
+}
+.inh-btn-x:hover { color: #475569; }
+
 /* ── Tabla ──────────────────────────────────────────── */
 .permisos-table-wrap { overflow-x: auto; }
 .permisos-table { width: 100%; border-collapse: collapse; font-size: 13px; }
