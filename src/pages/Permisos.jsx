@@ -285,7 +285,7 @@ function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando, errorElimina
 
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, editData }) {
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onUsuarioCreado, editData }) {
   const isEdit = !!editData
 
   const userInit = isEdit ? userFromPermiso(editData) : null
@@ -411,7 +411,32 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       return
     }
 
-    seleccionar({ id: null, nombre, rut, email: emailNuevo.trim(), rol: rolNuevo, isExterno: true })
+    // Crear usuario real en el sistema vía edge function
+    setCreandoUser(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok) {
+        alert(json.error ?? 'Error al crear el usuario.')
+        return
+      }
+      const nuevoUsuario = { ...json.usuario, rut }
+      onUsuarioCreado(nuevoUsuario)
+      seleccionar(nuevoUsuario)
+    } catch {
+      alert('No se pudo conectar al servidor.')
+    } finally {
+      setCreandoUser(false)
+    }
   }
 
   async function handleGuardar() {
@@ -873,6 +898,10 @@ export default function Permisos({ usuario }) {
     return total
   }
 
+  function handleUsuarioCreado(nuevoUsuario) {
+    setUsuarios(prev => [...prev, nuevoUsuario])
+  }
+
   async function handleGuardar(datos) {
     const u = datos.usuario
 
@@ -1043,6 +1072,7 @@ export default function Permisos({ usuario }) {
           onClose={() => setModalAbierto(false)}
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
+          onUsuarioCreado={handleUsuarioCreado}
         />
       )}
 
@@ -1054,6 +1084,7 @@ export default function Permisos({ usuario }) {
           onClose={() => setPermisoEditar(null)}
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
+          onUsuarioCreado={handleUsuarioCreado}
         />
       )}
 
