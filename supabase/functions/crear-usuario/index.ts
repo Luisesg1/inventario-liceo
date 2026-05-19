@@ -46,14 +46,21 @@ Deno.serve(async (req: Request) => {
     const rolesValidos = ["admin", "editor", "encargado", "soporte", "visor_requerimientos"];
     const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "encargado";
 
-    // 5. Cliente admin
+    // 5. Verificar RUT duplicado
+    if (rut?.trim()) {
+      const { data: rutExistente } = await supabaseAnon
+        .from("usuarios").select("id").eq("rut", rut.trim()).maybeSingle();
+      if (rutExistente) return json({ error: "Ya existe un usuario con ese RUT." }, 400);
+    }
+
+    // 6. Cliente admin
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 6. Crear usuario con contraseña temporal
+    // 7. Crear usuario con contraseña temporal
     const passwordTemporal = generarPassword();
     console.log("Creando usuario:", email.trim());
 
@@ -64,7 +71,11 @@ Deno.serve(async (req: Request) => {
     });
 
     if (createError || !authData.user) {
-      return json({ error: createError?.message ?? "Error al crear el usuario." }, 400);
+      const msg = createError?.message ?? ""
+      const traducido = msg.includes("already been registered") || msg.includes("already registered")
+        ? "Ya existe un usuario con ese correo electrónico."
+        : "Error al crear el usuario: " + msg
+      return json({ error: traducido }, 400);
     }
 
     const nuevoUserId = authData.user.id;

@@ -435,7 +435,8 @@ function formatRut(value) {
 
 function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [paso, setPaso]           = useState(1) // 1 = datos, 2 = permisos
-  const [nombre, setNombre]       = useState('')
+  const [nombres, setNombres]     = useState('')
+  const [apellidos, setApellidos] = useState('')
   const [rut, setRut]             = useState('')
   const [email, setEmail]         = useState('')
   const [rol, setRol]             = useState('encargado')
@@ -460,8 +461,9 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
 
   // Paso 1: crear usuario y pasar a permisos
   async function handleCrear() {
-    if (!nombre.trim() || !email.trim()) {
-      setMensaje({ tipo: 'error', texto: 'Nombre y email son requeridos.' }); return
+    const nombre = `${nombres.trim()} ${apellidos.trim()}`.trim()
+    if (!nombre || !email.trim()) {
+      setMensaje({ tipo: 'error', texto: 'Nombres, apellidos y email son requeridos.' }); return
     }
     if (!rut.trim()) {
       setMensaje({ tipo: 'error', texto: 'El RUT es requerido.' }); return
@@ -476,7 +478,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nombre: nombre.trim(), rut: rut.trim(), email: email.trim(), rol }),
+          body: JSON.stringify({ nombre: `${nombres.trim()} ${apellidos.trim()}`.trim(), rut: rut.trim(), email: email.trim(), rol }),
         }
       )
       const json = await res.json()
@@ -565,9 +567,14 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
             </p>
             <div className="form-grid">
               <label className="form-label">
-                Nombre
-                <input className="form-input" placeholder="Nombre completo"
-                  value={nombre} onChange={(e) => setNombre(e.target.value)} />
+                Nombres
+                <input className="form-input" placeholder="Nombres"
+                  value={nombres} onChange={(e) => setNombres(e.target.value)} />
+              </label>
+              <label className="form-label">
+                Apellidos
+                <input className="form-input" placeholder="Apellidos"
+                  value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
               </label>
               <label className="form-label">
                 RUT
@@ -1018,7 +1025,7 @@ export default function Usuarios({ usuario }) {
           }}>🔍</span>
           <input
             type="text"
-            placeholder="Buscar por nombre o email…"
+            placeholder="Buscar por nombre, RUT o email…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             style={{

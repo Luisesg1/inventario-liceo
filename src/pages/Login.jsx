@@ -162,9 +162,12 @@ export default function Login({
     })
     setCargando(false)
     if (signUpError) {
-      setError(signUpError.message === 'User already registered'
-        ? 'Ya existe una cuenta con ese correo'
-        : 'Error al crear la cuenta: ' + signUpError.message)
+      const m = signUpError.message ?? ''
+      setError(
+        m === 'User already registered' || m.includes('already been registered') || m.includes('already registered')
+          ? 'Ya existe una cuenta con ese correo electrónico.'
+          : 'Error al crear la cuenta: ' + m
+      )
       return
     }
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: regEmail, password: regPass })

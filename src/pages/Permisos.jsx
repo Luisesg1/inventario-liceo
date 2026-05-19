@@ -135,7 +135,7 @@ function PermisoDots({ usados }) {
         ))}
       </div>
       <span className="mp-counter-label">
-        {usados === 0 ? 'Sin permisos registrados' : `${usados} permiso${usados !== 1 ? 's' : ''} registrado${usados !== 1 ? 's' : ''}`}
+        {usados === 0 ? 'Sin ausencias registradas' : `${usados} ausencia${usados !== 1 ? 's' : ''} registrada${usados !== 1 ? 's' : ''}`}
       </span>
     </div>
   )
@@ -158,7 +158,7 @@ function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar }) {
             <div className="mp-header-left">
               <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
               <div>
-                <p className="mp-header-title">Detalle del permiso</p>
+                <p className="mp-header-title">Detalle de la ausencia</p>
                 <p className="mp-header-sub">{formatFecha(permiso.fecha_inicio)} — {formatFecha(permiso.fecha_fin)}</p>
               </div>
             </div>
@@ -261,7 +261,7 @@ function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando, errorElimina
 
           <div className="mp-confirm-body">
             <div className="mp-confirm-icon"><Trash2 size={24} strokeWidth={1.5} /></div>
-            <p className="mp-confirm-title">¿Eliminar permiso?</p>
+            <p className="mp-confirm-title">¿Eliminar ausencia?</p>
             <p className="mp-confirm-desc">Esta acción no se puede deshacer. El registro desaparecerá permanentemente.</p>
           </div>
 
@@ -457,7 +457,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       onClose?.()
     } catch (err) {
       setErrorGuardar(err.message === 'DUPLICADO'
-        ? 'Este usuario ya tiene un permiso en ese período de fechas.'
+        ? 'Este usuario ya tiene una ausencia en ese período de fechas.'
         : 'Ocurrió un error al guardar. Intenta de nuevo.')
     } finally { setGuardando(false) }
   }
@@ -473,11 +473,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
             <div className="mp-header-left">
               <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
               <div>
-                <p className="mp-header-title">{isEdit ? 'Editar permiso' : 'Registrar permiso'}</p>
+                <p className="mp-header-title">{isEdit ? 'Editar ausencia' : 'Registrar ausencia'}</p>
                 <p className="mp-header-sub">
                   {usuarioActual?.nombre
-                    ? <>Hola, <strong>{usuarioActual.nombre}</strong> — {isEdit ? 'modifica los datos del permiso.' : 'registra permisos y días autorizados.'}</>
-                    : isEdit ? 'Modifica los datos del permiso.' : 'Registra permisos y días autorizados para usuarios.'}
+                    ? <>Hola, <strong>{usuarioActual.nombre}</strong> — {isEdit ? 'modifica los datos de la ausencia.' : 'registra ausencias y días autorizados.'}</>
+                    : isEdit ? 'Modifica los datos de la ausencia.' : 'Registra ausencias y días autorizados para usuarios.'}
                 </p>
               </div>
             </div>
@@ -649,7 +649,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                   )}
                   {cargandoPermisos && (
                     <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 8 }}>
-                      <span className="mp-loading-text">Verificando permisos…</span>
+                      <span className="mp-loading-text">Verificando ausencias…</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -657,7 +657,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
               {/* Tipo de permiso */}
               <section>
-                <p className="mp-section-label">Tipo de permiso</p>
+                <p className="mp-section-label">Tipo de ausencia</p>
                 <select className="mp-select" value={tipoPermiso}
                   onChange={e => { setTipoPermiso(e.target.value); setMotivoOtro('') }}>
                   <option value="">Seleccionar tipo…</option>
@@ -666,7 +666,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 <AnimatePresence>
                   {tipoPermiso === 'otro' && (
                     <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
-                      <textarea className="mp-textarea" placeholder="Escriba el motivo del permiso…"
+                      <textarea className="mp-textarea" placeholder="Escriba el motivo de la ausencia…"
                         maxLength={MAX_MOTIVO}
                         value={motivoOtro} onChange={e => setMotivoOtro(e.target.value)} />
                       <span className={`mp-char-count ${motivoOtro.length > MAX_MOTIVO * 0.9 ? 'mp-char-count--warn' : ''}`}>
@@ -679,7 +679,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
               {/* Período */}
               <section>
-                <p className="mp-section-label">Período del permiso</p>
+                <p className="mp-section-label">Período de ausencia</p>
                 <div className="mp-date-row" style={{ marginBottom: 12 }}>
                   <div className="mp-field-group">
                     <label className="mp-field-label">Fecha inicio</label>
@@ -728,7 +728,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
               {/* Notas */}
               <section>
                 <p className="mp-section-label">Notas <span style={{ color: '#cbd5e1', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(opcional)</span></p>
-                <textarea className="mp-textarea" placeholder="Información adicional sobre el permiso…"
+                <textarea className="mp-textarea" placeholder="Información adicional sobre la ausencia…"
                   maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />
                 <span className={`mp-char-count ${notas.length > MAX_NOTAS * 0.9 ? 'mp-char-count--warn' : ''}`}>
@@ -742,7 +742,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 <div className="mp-reminder-row">
                   <label className="mp-checkbox-wrap">
                     <input type="checkbox" className="mp-checkbox" checked={recordatorio} onChange={e => setRecordatorio(e.target.checked)} />
-                    <span className="mp-checkbox-label">Recordar antes del inicio del permiso</span>
+                    <span className="mp-checkbox-label">Recordar antes del inicio de la ausencia</span>
                   </label>
                   <AnimatePresence>
                     {recordatorio && (
@@ -761,7 +761,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
             {/* ── Columna derecha — Resumen ── */}
             <div className="mp-summary-col">
-              <p className="mp-summary-title">Resumen del permiso</p>
+              <p className="mp-summary-title">Resumen de la ausencia</p>
 
               <div className="mp-summary-card">
                 {usuarioSel ? (
@@ -806,7 +806,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       <div className="mp-summary-row">
                         <span className="mp-summary-label">Historial</span>
                         <span className="mp-summary-value">
-                          {permisosUsados === 0 ? 'Sin permisos' : `${permisosUsados} permiso${permisosUsados !== 1 ? 's' : ''}`}
+                          {permisosUsados === 0 ? 'Sin ausencias' : `${permisosUsados} ausencia${permisosUsados !== 1 ? 's' : ''}`}
                         </span>
                       </div>
                     )}
@@ -826,7 +826,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
               <div className="mp-info-card">
                 <Info size={14} className="mp-info-icon" />
-                <p className="mp-info-text">Durante este período, el usuario se marcará con permiso en el sistema.</p>
+                <p className="mp-info-text">Durante este período, el usuario se marcará con ausencia en el sistema.</p>
               </div>
             </div>
 
@@ -841,7 +841,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
             <button className="mp-btn-save" disabled={!formValido || guardando} onClick={handleGuardar}>
               {guardando
                 ? <><CheckCircle2 size={14} strokeWidth={2.5} />Guardando…</>
-                : <><Save size={14} strokeWidth={2.5} />{isEdit ? 'Guardar cambios' : 'Guardar permiso'}</>}
+                : <><Save size={14} strokeWidth={2.5} />{isEdit ? 'Guardar cambios' : 'Guardar ausencia'}</>}
             </button>
           </div>
 
@@ -983,8 +983,8 @@ export default function Permisos({ usuario }) {
 
       <div className="permisos-header">
         <div>
-          <h1 className="permisos-title">Permisos</h1>
-          <p className="permisos-subtitle">Gestiona los permisos administrativos del sistema.</p>
+          <h1 className="permisos-title">Ausencias</h1>
+          <p className="permisos-subtitle">Gestiona las ausencias del personal.</p>
         </div>
       </div>
 
@@ -993,12 +993,12 @@ export default function Permisos({ usuario }) {
           <div className="permisos-card-header-left">
             <div className="permisos-card-icon"><CalendarCheck size={16} strokeWidth={2} /></div>
             <div>
-              <p className="permisos-card-title">Permisos registrados</p>
-              <p className="permisos-card-desc">Períodos de permiso autorizados para los usuarios.</p>
+              <p className="permisos-card-title">Ausencias registradas</p>
+              <p className="permisos-card-desc">Períodos de ausencia autorizados para los usuarios.</p>
             </div>
           </div>
           <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
-            <Plus size={14} strokeWidth={2.5} /> Registrar permiso
+            <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
           </button>
         </div>
 
@@ -1011,7 +1011,7 @@ export default function Permisos({ usuario }) {
           ) : permisos.length === 0 ? (
             <div className="permisos-empty">
               <div className="permisos-empty-icon"><CalendarCheck size={20} strokeWidth={1.5} /></div>
-              No hay permisos registrados aún.
+              No hay ausencias registradas aún.
             </div>
           ) : (
             <table className="permisos-table">
