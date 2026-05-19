@@ -50,6 +50,14 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
+    // 5. Desligar registros relacionados para evitar errores de FK
+    await supabaseAdmin.from("ausencias").update({ usuario_id: null }).eq("usuario_id", userId);
+    await supabaseAdmin.from("permisos_usuario").delete().eq("usuario_id", userId);
+
+    // 6. Eliminar de la tabla usuarios
+    await supabaseAdmin.from("usuarios").delete().eq("id", userId);
+
+    // 7. Eliminar de Supabase Auth
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (deleteError) {
       return json({ error: deleteError.message }, 400);
