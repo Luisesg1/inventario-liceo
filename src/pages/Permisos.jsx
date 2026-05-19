@@ -702,7 +702,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
     let ok = true
     if (!rutNuevo.trim()) { setNFE('rut', 'El RUT es requerido'); ok = false }
     else if (!validarRut(rutNuevo)) { setNFE('rut', 'RUT no válido'); ok = false }
-    if (nombresNuevo.trim().split(/\s+/).length < 2) { setNFE('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (!nombresNuevo.trim()) { setNFE('nombres', 'Ingresa al menos 1 nombre'); ok = false }
     if (apellidosNuevo.trim().split(/\s+/).length < 2) { setNFE('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
     if (!emailNuevo.trim()) { setNFE('email', 'El correo es requerido'); ok = false }
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setNFE('email', 'Correo no válido'); ok = false }

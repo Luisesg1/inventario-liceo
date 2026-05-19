@@ -169,7 +169,7 @@ export default function Login({
   async function handleRegistro(e) {
     e.preventDefault(); setError(''); setRegErrors({})
     let ok = true
-    if (regNombres.trim().split(/\s+/).length < 2) { setFieldError('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (!regNombres.trim()) { setFieldError('nombres', 'Ingresa al menos 1 nombre'); ok = false }
     if (regApellidos.trim().split(/\s+/).length < 2) { setFieldError('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
     if (!regRut.trim()) { setFieldError('rut', 'El RUT es requerido'); ok = false }
     else if (!validarRut(regRut)) { setFieldError('rut', 'RUT no válido'); ok = false }
