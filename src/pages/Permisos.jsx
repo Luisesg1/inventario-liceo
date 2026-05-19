@@ -315,6 +315,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [emailNuevo,        setEmailNuevo]        = useState('')
   const [rolNuevo,          setRolNuevo]          = useState('')
   const [creandoUser,            setCreandoUser]            = useState(false)
+  const [errorNuevoUsuario,      setErrorNuevoUsuario]      = useState('')
   const [usuarioEncontrado,      setUsuarioEncontrado]      = useState(null)
   const [usuarioEncontradoEmail, setUsuarioEncontradoEmail] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
@@ -410,8 +411,10 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   }
 
   async function handleCrearUsuario() {
+    setErrorNuevoUsuario('')
     if (!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo) return
-    if (!validarRut(rutNuevo)) { alert('El RUT ingresado no es válido.'); return }
+    if (!validarRut(rutNuevo)) { setErrorNuevoUsuario('El RUT ingresado no es válido.'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setErrorNuevoUsuario('El correo electrónico no es válido.'); return }
     const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
     const rut    = rutNuevo.trim()
 
@@ -442,14 +445,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       )
       const json = await res.json()
       if (!res.ok) {
-        alert(json.error ?? 'Error al crear el usuario.')
+        setErrorNuevoUsuario(json.error ?? 'Error al crear el usuario.')
         return
       }
       const nuevoUsuario = { ...json.usuario, rut }
       onUsuarioCreado(nuevoUsuario)
       seleccionar(nuevoUsuario)
     } catch {
-      alert('No se pudo conectar al servidor.')
+      setErrorNuevoUsuario('No se pudo conectar al servidor.')
     } finally {
       setCreandoUser(false)
     }
@@ -638,6 +641,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                   </>
                                 )}
 
+                                {errorNuevoUsuario && (
+                                  <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px' }}>
+                                    {errorNuevoUsuario}
+                                  </div>
+                                )}
                                 <div className="mp-new-user-actions">
                                   <button type="button" className="mp-btn-cancel mp-btn--sm" onClick={() => setModoCrear(false)}>Cancelar</button>
                                   {!usuarioEncontradoEmail && (
