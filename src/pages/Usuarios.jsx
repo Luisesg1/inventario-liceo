@@ -495,7 +495,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     const nombre = `${nombres.trim()} ${apellidos.trim()}`.trim()
     setFieldErrors({})
     let ok = true
-    if (nombres.trim().split(/\s+/).length < 2) { setFE('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (!nombres.trim()) { setFE('nombres', 'Ingresa al menos 1 nombre'); ok = false }
     if (apellidos.trim().split(/\s+/).length < 2) { setFE('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
     if (!rut.trim()) { setFE('rut', 'El RUT es requerido'); ok = false }
     else if (!validarRut(rut)) { setFE('rut', 'RUT no válido'); ok = false }
