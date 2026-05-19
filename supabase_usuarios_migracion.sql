@@ -3,8 +3,7 @@
 --  Ejecutar en Supabase SQL Editor
 -- ══════════════════════════════════════════════════════════
 
--- Eliminar restricción UNIQUE en rut (si existe)
--- Permite que una persona tenga más de una cuenta con el mismo RUT
+-- Eliminar restricción UNIQUE en rut
+-- (el índice se borra automáticamente al soltar el constraint)
 ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rut_key;
-DROP INDEX IF EXISTS usuarios_rut_idx;
-DROP INDEX IF EXISTS usuarios_rut_unique;
+ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rut_unique;
