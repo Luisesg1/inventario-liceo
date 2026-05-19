@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
     // 4. Validar body
     const body = await req.json();
-    const { nombre, email, rol } = body as { nombre?: string; email?: string; rol?: string };
+    const { nombre, rut, email, rol } = body as { nombre?: string; rut?: string; email?: string; rol?: string };
 
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
@@ -75,6 +75,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         id: nuevoUserId,
         nombre: nombre.trim(),
+        rut: rut?.trim() || null,
         email: email.trim().toLowerCase(),
         rol: rolFinal,
         debe_cambiar_password: true,
