@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
-  Eye, Pencil, Trash2, AlertCircle,
+  Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Permisos.css'
@@ -233,13 +233,35 @@ function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
           return <span key={i} className="mp-dot" style={{ background: bg }} />
         })}
       </div>
-      <span className="mp-counter-label" style={{ color: textColor, fontWeight: bold ? 600 : 400 }}>
-        {dias === 0
-          ? 'Sin ausencias este año'
-          : agotada
-            ? `Cuota agotada este año (${max}/${max} días)`
-            : `Te quedan ${fmtDias(restantes)} día${restantes !== 1 ? 's' : ''} este año`}
-      </span>
+      {agotada ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: '#fef2f2', border: '1.5px solid #fca5a5',
+          borderRadius: 9, padding: '8px 12px', marginTop: 4,
+        }}>
+          <AlertTriangle size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
+          <div>
+            <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 700, display: 'block', lineHeight: 1.3 }}>
+              Cuota agotada — {fmtDias(dias)}/{max} días usados este año
+            </span>
+            <span style={{ fontSize: 11.5, color: '#ef4444', display: 'block', marginTop: 1 }}>
+              {dias > max
+                ? `Se excedió la cuota por ${fmtDias(dias - max)} día${dias - max !== 1 ? 's' : ''}`
+                : 'No quedan días disponibles para este usuario'}
+            </span>
+          </div>
+        </div>
+      ) : (
+        <span className="mp-counter-label" style={{ color: textColor, fontWeight: bold ? 600 : 400 }}>
+          {dias === 0
+            ? `Sin ausencias este año · ${max} días disponibles`
+            : restantes <= 1
+              ? `⚠️ Solo queda ${fmtDias(restantes)} día hábil este año`
+              : restantes <= 2
+                ? `⚠️ Quedan ${fmtDias(restantes)} días · úsalos con cuidado`
+                : `Quedan ${fmtDias(restantes)} días este año (${fmtDias(dias)} usados)`}
+        </span>
+      )}
     </div>
   )
 }
@@ -1866,12 +1888,16 @@ export default function Permisos({ usuario }) {
                             return <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: bg }} />
                           })}
                         </div>
-                        <span style={{ fontSize: 11, color: textColor, fontWeight: restantes <= 2 ? 700 : 400, whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: 11, color: textColor, fontWeight: agotada || restantes <= 2 ? 700 : 400, whiteSpace: 'nowrap' }}>
                           {agotada
                             ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
                             : restantes <= 1
                               ? `⚠️ Queda ${fmtDias(restantes)} día`
-                              : `${fmtDias(restantes)} restantes · ${diasFmt}d`}
+                              : restantes <= 2
+                                ? `⚠️ ${fmtDias(restantes)} días restantes · ${diasFmt}d`
+                                : stats.dias === 0
+                                  ? `${MAX_AUSENCIAS} días disponibles`
+                                  : `${fmtDias(restantes)} restantes · ${diasFmt}d`}
                         </span>
                       </div>
                       {/* Chevron */}
