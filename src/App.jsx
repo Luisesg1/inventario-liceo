@@ -181,10 +181,9 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
 
-  const esDocente     = usuario.rol === 'docente'
-  const esSoporte     = usuario.rol === 'soporte'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
-  const esSoloTickets = esDocente || esSoporte
+  const puedeVerInventario     = usuario.rol === 'admin' || !!permisosUsuario?.ver_inventario
+  const puedeGestionarTickets  = usuario.rol === 'admin' || !!permisosUsuario?.gestionar_tickets
   const paginasVisorReq = ['requerimientos', 'tickets']
   const puedeVerAuditoriaReq  = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_requerimientos
   const puedeVerAuditoriaPermisos = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_permisos
@@ -192,8 +191,7 @@ export default function App() {
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard' || pagina === 'requerimientos'
-  const paginaSegura = (esDocente && soloStaff) ? 'tickets'
-    : (esSoporte && pagina === 'inventario') ? 'tickets'
+  const paginaSegura = (!puedeVerInventario && soloStaff) ? 'tickets'
     : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
     : pagina
@@ -210,6 +208,8 @@ export default function App() {
       nombreInstitucion={nombreInstitucion}
       puedeVerAuditoriaReq={puedeVerAuditoriaReq}
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
+      puedeVerInventario={puedeVerInventario}
+      puedeGestionarTickets={puedeGestionarTickets}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}

@@ -43,14 +43,12 @@ export default function Layout({
   onRefreshTicketBadge, logoUrl,
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
+  puedeVerInventario = false, puedeGestionarTickets = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
-  const esSoporte = usuario.rol === 'soporte'
-  const esDocente     = usuario.rol === 'docente'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
-  const esSoloTickets = esDocente || esSoporte
-  const muestraRequerimientos = !esSoloTickets || esVisorReq
-  const muestraInventario = !esSoloTickets && !esVisorReq
+  const muestraInventario = puedeVerInventario
+  const muestraRequerimientos = puedeVerInventario || esVisorReq
 
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -58,7 +56,7 @@ export default function Layout({
   const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
 
   useEffect(() => {
-    if (!esAdmin && !esSoporte) return
+    if (!puedeGestionarTickets) return
     const cargar = async () => {
       const { count } = await supabase
         .from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
@@ -70,7 +68,7 @@ export default function Layout({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, cargar)
       .subscribe()
     return () => supabase.removeChannel(sub)
-  }, [esAdmin, esSoporte])
+  }, [puedeGestionarTickets])
 
   // ── Backup / Export ───────────────────────────────────
   const fetchBackupData = async () => {
@@ -400,7 +398,7 @@ export default function Layout({
           <p className="nav-section">Principal</p>
 
           {/* Inicio — siempre primero */}
-          {((!esSoloTickets && !esVisorReq) || esSoporte) && (
+          {(muestraInventario || puedeGestionarTickets) && (
             <motion.div
               className={`nav-item ${paginaActual === 'dashboard' ? 'active' : ''}`}
               onClick={() => handleNav('dashboard')}
@@ -530,7 +528,7 @@ export default function Layout({
                 <Icon size={15} strokeWidth={paginaActual === id ? 2.5 : 2} />
               </span>
               {label}
-              {id === 'tickets' && (esAdmin || esSoporte) && (
+              {id === 'tickets' && puedeGestionarTickets && (
                 <AnimatePresence>
                   {ticketsAbiertos > 0 && (
                     <motion.span
