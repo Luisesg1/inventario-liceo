@@ -457,7 +457,11 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [rol, setRol]             = useState('encargado')
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
-  const [usuarioCreado, setUsuarioCreado] = useState(null) // { id, nombre, rol }
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [usuarioCreado, setUsuarioCreado] = useState(null)
+
+  function setFE(field, msg) { setFieldErrors(p => ({ ...p, [field]: msg })) }
+  function clearFE(field)    { setFieldErrors(p => ({ ...p, [field]: '' })) } // { id, nombre, rol }
   const [passwordTemporal, setPasswordTemporal] = useState(null) // null = email OK, string = email falló
   const [emailErrorDetalle, setEmailErrorDetalle] = useState(null)
 
@@ -477,21 +481,14 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   // Paso 1: crear usuario y pasar a permisos
   async function handleCrear() {
     const nombre = `${nombres.trim()} ${apellidos.trim()}`.trim()
-    if (!nombres.trim() || !apellidos.trim() || !email.trim()) {
-      setMensaje({ tipo: 'error', texto: 'Nombres, apellidos y email son requeridos.' }); return
-    }
-    if (nombres.trim().split(/\s+/).length < 2) {
-      setMensaje({ tipo: 'error', texto: 'Ingresa al menos 2 nombres.' }); return
-    }
-    if (apellidos.trim().split(/\s+/).length < 2) {
-      setMensaje({ tipo: 'error', texto: 'Ingresa al menos 2 apellidos.' }); return
-    }
-    if (!rut.trim()) {
-      setMensaje({ tipo: 'error', texto: 'El RUT es requerido.' }); return
-    }
-    if (!validarRut(rut)) {
-      setMensaje({ tipo: 'error', texto: 'El RUT ingresado no es válido.' }); return
-    }
+    setFieldErrors({})
+    let ok = true
+    if (nombres.trim().split(/\s+/).length < 2) { setFE('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (apellidos.trim().split(/\s+/).length < 2) { setFE('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
+    if (!rut.trim()) { setFE('rut', 'El RUT es requerido'); ok = false }
+    else if (!validarRut(rut)) { setFE('rut', 'RUT no válido'); ok = false }
+    if (!email.trim()) { setFE('email', 'El email es requerido'); ok = false }
+    if (!ok) return
     setGuardando(true)
     setMensaje({ tipo: '', texto: '' })
     const { data: sessionData } = await supabase.auth.getSession()
@@ -593,22 +590,30 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               <label className="form-label">
                 Nombres
                 <input className="form-input" placeholder="Nombres"
-                  value={nombres} onChange={(e) => setNombres(e.target.value)} />
+                  style={fieldErrors.nombres ? { borderColor: '#dc2626' } : {}}
+                  value={nombres} onChange={(e) => { setNombres(e.target.value); clearFE('nombres') }} />
+                {fieldErrors.nombres && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.nombres}</span>}
               </label>
               <label className="form-label">
                 Apellidos
                 <input className="form-input" placeholder="Apellidos"
-                  value={apellidos} onChange={(e) => setApellidos(e.target.value)} />
+                  style={fieldErrors.apellidos ? { borderColor: '#dc2626' } : {}}
+                  value={apellidos} onChange={(e) => { setApellidos(e.target.value); clearFE('apellidos') }} />
+                {fieldErrors.apellidos && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.apellidos}</span>}
               </label>
               <label className="form-label">
                 RUT
                 <input className="form-input" placeholder="12.345.678-9"
-                  value={rut} onChange={(e) => setRut(formatRut(e.target.value))} />
+                  style={fieldErrors.rut ? { borderColor: '#dc2626' } : {}}
+                  value={rut} onChange={(e) => { setRut(formatRut(e.target.value)); clearFE('rut') }} />
+                {fieldErrors.rut && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.rut}</span>}
               </label>
               <label className="form-label">
                 Email
                 <input className="form-input" type="email" placeholder="correo@ejemplo.com"
-                  value={email} onChange={(e) => setEmail(e.target.value)} />
+                  style={fieldErrors.email ? { borderColor: '#dc2626' } : {}}
+                  value={email} onChange={(e) => { setEmail(e.target.value); clearFE('email') }} />
+                {fieldErrors.email && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.email}</span>}
               </label>
               <label className="form-label">
                 Rol
