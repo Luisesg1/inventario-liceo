@@ -131,13 +131,102 @@ const ROL_LABEL = {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// Tabla cruzada: filas = categorías, columnas = acciones
-// La fila "Todos" muestra ✓/✕ que activan el permiso globalmente.
-// Las demás filas muestran si esa categoría está permitida (col Acceso)
-// y los checks de acción solo se activan si la categoría tiene acceso.
+// Configuración de permisos — Diseño por fases (Stepper)
 // ══════════════════════════════════════════════════════════════════════════
+
+const NIVELES_ACCESO = [
+  {
+    key: 'lectura',
+    label: 'Solo lectura',
+    desc: 'Solo puede ver el inventario',
+    icon: '👁️',
+    permisosCat: {
+      ver_inventario: true, agregar_bien: false, editar_bien: false,
+      eliminar_bien: false, eliminar_lote: false, importar_csv: false, exportar: false,
+    },
+  },
+  {
+    key: 'editor',
+    label: 'Editor',
+    desc: 'Ver, agregar, editar y exportar bienes',
+    icon: '✏️',
+    permisosCat: {
+      ver_inventario: true, agregar_bien: true, editar_bien: true,
+      eliminar_bien: false, eliminar_lote: false, importar_csv: false, exportar: true,
+    },
+  },
+  {
+    key: 'admin',
+    label: 'Administrador',
+    desc: 'Acceso completo: ver, crear, editar, eliminar e importar',
+    icon: '⚙️',
+    permisosCat: {
+      ver_inventario: true, agregar_bien: true, editar_bien: true,
+      eliminar_bien: true, eliminar_lote: true, importar_csv: true, exportar: true,
+    },
+  },
+  {
+    key: 'personalizado',
+    label: 'Personalizado',
+    desc: 'Define exactamente qué puede hacer este usuario',
+    icon: '🎛️',
+    permisosCat: null,
+  },
+]
+
+function getIconForCat(label) {
+  const l = (label ?? '').toLowerCase()
+  if (l.includes('biblioteca') || l.includes('libro')) return '📚'
+  if (l.includes('computador') || l.includes('comput') || l.includes(' pc')) return '💻'
+  if (l.includes('deport')) return '⚽'
+  if (l.includes('music') || l.includes('instrument')) return '🎵'
+  if (l.includes('librería') || l.includes('libreria') || l.includes('papelería')) return '📋'
+  if (l.includes('mueble') || l.includes('silla') || l.includes('mesa')) return '🪑'
+  if (l.includes('tecnolog') || l.includes('electr')) return '🖥️'
+  if (l.includes('laborator')) return '🧪'
+  if (l.includes('arte') || l.includes('artístico') || l.includes('artistico')) return '🎨'
+  if (l.includes('proyect')) return '📽️'
+  if (l.includes('otro') || l.includes('general')) return '📦'
+  return '🗂️'
+}
+
+function detectarNivelActual(permisos) {
+  if (!permisos) return 'lectura'
+  for (const n of NIVELES_ACCESO.slice(0, 3)) {
+    const keys = Object.keys(n.permisosCat)
+    if (keys.every(k => !!permisos[k] === !!n.permisosCat[k])) return n.key
+  }
+  return 'personalizado'
+}
+
+function ToggleSwitch({ activo, size = 'md' }) {
+  const w = size === 'sm' ? 36 : 44
+  const h = size === 'sm' ? 20 : 24
+  const d = size === 'sm' ? 14 : 18
+  return (
+    <div style={{
+      width: w, height: h, borderRadius: h / 2,
+      background: activo ? 'rgb(var(--primary-rgb))' : '#d1d5db',
+      position: 'relative', flexShrink: 0,
+      transition: 'background 0.2s',
+      pointerEvents: 'none',
+    }}>
+      <span style={{
+        position: 'absolute',
+        top: (h - d) / 2,
+        left: activo ? w - d - (h - d) / 2 : (h - d) / 2,
+        width: d, height: d, borderRadius: '50%',
+        background: '#fff', transition: 'left 0.2s',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.25)', display: 'block',
+      }} />
+    </div>
+  )
+}
+
 function TablaPermisos({ draft, onChange }) {
   const [catsBD, setCatsBD] = useState([])
+  const [paso, setPaso]     = useState(1)
+  const [nivel, setNivel]   = useState(() => detectarNivelActual(draft?.permisos ?? {}))
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -146,194 +235,304 @@ function TablaPermisos({ draft, onChange }) {
 
   if (!draft) return <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando…</p>
 
-  const accCat    = ACCIONES.filter((a) => ACCIONES_POR_CATEGORIA.includes(a.key))
-  const accGlobal = ACCIONES.filter((a) => ACCIONES_GLOBALES.includes(a.key))
+  const todasActivas = draft.categorias?.includes('todos')
+  const accCat    = ACCIONES.filter(a => ACCIONES_POR_CATEGORIA.includes(a.key))
+  const accGlobal = ACCIONES.filter(a => ACCIONES_GLOBALES.includes(a.key))
 
-  // Categorías específicas desde la BD
-  const catsSinTodos = catsBD.map((c) => ({ key: c.id, label: c.label }))
-
-  // ¿Tiene acceso a una categoría específica?
-  const tieneAccesoCat = (catKey) =>
-    draft.categorias?.includes('todos') || draft.categorias?.includes(catKey)
-
-  // Toggle acceso a una categoría específica (excluye 'todos')
   function toggleCat(catKey) {
     const cats = draft.categorias ?? []
     let nuevas
     if (cats.includes(catKey)) {
-      nuevas = cats.filter((c) => c !== catKey && c !== 'todos')
+      nuevas = cats.filter(c => c !== catKey && c !== 'todos')
     } else {
-      const sinTodos    = cats.filter((c) => c !== 'todos')
-      nuevas            = [...sinTodos, catKey]
-      if (catsSinTodos.every((c) => nuevas.includes(c.key))) nuevas = ['todos']
+      const sinTodos = cats.filter(c => c !== 'todos')
+      nuevas = [...sinTodos, catKey]
+      if (catsBD.every(c => nuevas.includes(c.id))) nuevas = ['todos']
     }
     onChange({ ...draft, categorias: nuevas })
   }
 
-  // Toggle "Todos" — activa/desactiva acceso a TODAS las categorías
   function toggleTodas() {
-    const tieneTodasActivas = draft.categorias?.includes('todos')
-    onChange({
-      ...draft,
-      categorias: tieneTodasActivas ? [] : ['todos'],
-    })
+    onChange({ ...draft, categorias: todasActivas ? [] : ['todos'] })
   }
 
-  // Toggle permiso de acción
   function toggleAccion(key) {
     onChange({ ...draft, permisos: { ...draft.permisos, [key]: !draft.permisos[key] } })
   }
 
-  // ¿Todas las categorías tienen acceso?
-  const todasActivas = draft.categorias?.includes('todos')
+  function aplicarNivel(nivelKey) {
+    setNivel(nivelKey)
+    if (nivelKey !== 'personalizado') {
+      const n = NIVELES_ACCESO.find(n => n.key === nivelKey)
+      onChange({ ...draft, permisos: { ...draft.permisos, ...n.permisosCat } })
+    }
+  }
+
+  const pasoEfectivo = paso === 3 && nivel !== 'personalizado' ? 2 : paso
+  const stepsBase = [
+    { n: 1, label: 'Módulos' },
+    { n: 2, label: 'Nivel de acceso' },
+    ...(nivel === 'personalizado' ? [{ n: 3, label: 'Personalizar' }] : []),
+    { n: 4, label: 'Acciones globales' },
+  ]
+
+  const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+  const prim = { ...btn, border: 'none', background: 'rgb(var(--primary-rgb))', color: '#fff' }
+  const sec  = { ...btn, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151' }
 
   return (
     <div>
-      {/* ── Tabla principal ── */}
-      <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #dbeafe', marginBottom: 16 }}>
-        <table style={tb.table}>
-          <thead>
-            <tr>
-              <th style={tb.thCat}>Categoría</th>
-              {/* Columna Acceso */}
-              <th style={{ ...tb.thAccion, color: '#cbd5e1' }} title="Acceso a esta categoría">
-                Acceso
-              </th>
-              {/* Columnas de acciones */}
-              {accCat.map((a) => (
-                <th key={a.key} style={tb.thAccion} title={a.label}>
-                  {a.labelCorto}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-
-            {/* ── Fila especial "Todos" — check/cross por columna ── */}
-            <tr style={{ background: '#1a237e' }}>
-              <td style={{ ...tb.tdCheck, background: '#1a237e' }}>
-                <span style={{ color: '#f0d060', fontSize: 16, fontWeight: 700, lineHeight: 1 }}>✓</span>
-              </td>
-              {/* Check de acceso global */}
-              <td style={{ ...tb.tdCheck, background: '#1a237e' }}>
-                <CheckBtn activo={todasActivas} onClick={toggleTodas} />
-              </td>
-              {/* Check de acción global */}
-              {accCat.map((a) => {
-                const activo = draft.permisos?.[a.key] ?? false
-                return (
-                  <td key={a.key} style={{ ...tb.tdCheck, background: '#1a237e' }}>
-                    <CheckBtn activo={activo} onClick={() => toggleAccion(a.key)} />
-                  </td>
-                )
-              })}
-            </tr>
-
-            {/* ── Separador ── */}
-            <tr>
-              <td colSpan={2 + accCat.length} style={{
-                padding: '3px 14px', fontSize: 10, fontWeight: 700,
-                color: '#9ca3af', letterSpacing: '0.08em',
-                textTransform: 'uppercase', background: '#f1f5f9',
-                borderBottom: '1px solid #e5e7eb',
-              }}>
-                Por categoría
-              </td>
-            </tr>
-
-            {/* ── Filas de categorías específicas ── */}
-            {catsSinTodos.map((cat, idx) => {
-              const tieneAcceso = tieneAccesoCat(cat.key)
-              return (
-                <tr key={cat.key} style={{ background: idx % 2 === 0 ? '#fff' : '#f8faff' }}>
-                  <td style={tb.tdCat}>{cat.label}</td>
-                  {/* Toggle acceso a esta categoría */}
-                  <td style={tb.tdCheck}>
-                    <CheckBtn activo={tieneAcceso} onClick={() => toggleCat(cat.key)} />
-                  </td>
-                  {/* Acciones — solo check si tiene acceso, si no → guión */}
-                  {accCat.map((a) => {
-                    const activo = draft.permisos?.[a.key] ?? false
-                    return (
-                      <td key={a.key} style={tb.tdCheck}>
-                        {tieneAcceso
-                          ? <CheckBtn activo={activo} onClick={() => toggleAccion(a.key)} />
-                          : <span style={tb.dashDisabled}>—</span>
-                        }
-                      </td>
-                    )
-                  })}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Acciones globales ── */}
-      <p style={tb.secLabel}>Acciones globales</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {accGlobal.map((a) => {
-          const activo = draft.permisos?.[a.key] ?? false
-          return (
-            <button
-              key={a.key}
-              onClick={() => toggleAccion(a.key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '7px 16px', borderRadius: 8, border: '1.5px solid',
-                fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.14s',
-                backgroundColor: activo ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.06)',
-                borderColor:     activo ? '#22c55e' : '#fca5a5',
-                color:           activo ? '#15803d' : '#ef4444',
-              }}
+      {/* ── Stepper ── */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 26 }}>
+        {stepsBase.flatMap((s, i) => {
+          const esActivo     = pasoEfectivo === s.n
+          const esCompletado = pasoEfectivo > s.n
+          const items = [
+            <div
+              key={`s${s.n}`}
+              onClick={() => esCompletado && setPaso(s.n)}
+              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: esCompletado ? 'pointer' : 'default' }}
             >
-              <span style={{
-                width: 20, height: 20, borderRadius: 5, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                background: activo ? '#22c55e' : '#fca5a5',
-                color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0,
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 700, transition: 'all 0.25s',
+                background: esActivo
+                  ? 'rgb(var(--primary-rgb))'
+                  : esCompletado ? 'rgba(var(--acento-rgb), 0.15)' : '#f3f4f6',
+                color: esActivo ? '#fff' : esCompletado ? 'rgb(var(--acento-rgb))' : '#9ca3af',
+                border: `2px solid ${esActivo
+                  ? 'rgb(var(--primary-rgb))'
+                  : esCompletado ? 'rgba(var(--acento-rgb), 0.4)' : '#e5e7eb'}`,
+                boxShadow: esActivo ? '0 0 0 3px rgba(var(--primary-rgb), 0.15)' : 'none',
               }}>
-                {activo ? '✓' : '✕'}
+                {esCompletado ? '✓' : s.n}
+              </div>
+              <span style={{
+                fontSize: 10.5, fontWeight: esActivo ? 700 : 500, whiteSpace: 'nowrap',
+                color: esActivo ? 'rgb(var(--primary-rgb))' : '#6b7280',
+              }}>
+                {s.label}
               </span>
-              {a.label}
-            </button>
-          )
+            </div>,
+          ]
+          if (i < stepsBase.length - 1) {
+            items.push(
+              <div
+                key={`l${s.n}`}
+                style={{
+                  flex: 1, height: 2, marginBottom: 20,
+                  background: esCompletado ? 'rgb(var(--acento-rgb))' : '#e5e7eb',
+                  transition: 'background 0.3s',
+                }}
+              />
+            )
+          }
+          return items
         })}
       </div>
 
-      {/* Leyenda */}
-      <div style={{ display: 'flex', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
-        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#22c55e' }} />Con permiso</span>
-        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#fca5a5' }} />Sin permiso</span>
-        <span style={tb.leyenda}><span style={{ ...tb.leyendaDot, background: '#d1d5db' }} />Sin acceso a esa categoría</span>
-      </div>
-    </div>
-  )
-}
+      {/* ── Paso 1: Módulos ── */}
+      {pasoEfectivo === 1 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, gap: 12 }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 15, color: '#111827' }}>Módulos de inventario</p>
+              <p style={{ margin: '3px 0 0', fontSize: 12.5, color: '#6b7280' }}>
+                Selecciona a qué categorías tendrá acceso este usuario.
+              </p>
+            </div>
+            <button
+              onClick={toggleTodas}
+              style={{
+                ...btn, padding: '7px 14px', fontSize: 12, flexShrink: 0,
+                border: `1.5px solid ${todasActivas ? 'rgba(var(--primary-rgb),0.3)' : '#e5e7eb'}`,
+                background: todasActivas ? 'rgba(var(--primary-rgb),0.06)' : '#fff',
+                color: todasActivas ? 'rgb(var(--primary-rgb))' : '#6b7280',
+              }}
+            >
+              {todasActivas ? '✓ Todos seleccionados' : 'Seleccionar todos'}
+            </button>
+          </div>
 
-// Botón check/cross reutilizable
-function CheckBtn({ activo, onClick, disabled }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        width: 30, height: 30, borderRadius: 7,
-        border: `1.5px solid ${activo ? '#22c55e' : '#fca5a5'}`,
-        background: activo ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        transition: 'all 0.14s', outline: 'none',
-        opacity: disabled ? 0.4 : 1,
-      }}
-      title={activo ? 'Quitar permiso' : 'Dar permiso'}
-    >
-      {activo
-        ? <span style={{ color: '#16a34a', fontSize: 14, fontWeight: 700, lineHeight: 1 }}>✓</span>
-        : <span style={{ color: '#ef4444', fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✕</span>
-      }
-    </button>
+          {catsBD.length === 0 ? (
+            <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>
+              Cargando categorías…
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+              {catsBD.map(cat => {
+                const tieneAcceso = todasActivas || (draft.categorias?.includes(cat.id))
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => toggleCat(cat.id)}
+                    style={{
+                      padding: '16px 14px 14px', borderRadius: 12, userSelect: 'none',
+                      border: `2px solid ${tieneAcceso ? 'rgba(var(--primary-rgb),0.25)' : '#e5e7eb'}`,
+                      background: tieneAcceso ? 'rgba(var(--primary-rgb),0.04)' : '#fff',
+                      cursor: 'pointer', transition: 'all 0.18s',
+                      boxShadow: tieneAcceso
+                        ? '0 2px 8px rgba(var(--primary-rgb),0.08)'
+                        : '0 1px 2px rgba(0,0,0,0.04)',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                    }}
+                  >
+                    <div style={{ fontSize: 26, lineHeight: 1 }}>{getIconForCat(cat.label)}</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: '#111827', lineHeight: 1.3 }}>
+                        {cat.label}
+                      </p>
+                      <p style={{
+                        margin: '3px 0 0', fontSize: 11, fontWeight: tieneAcceso ? 600 : 400,
+                        color: tieneAcceso ? 'rgb(var(--primary-rgb))' : '#9ca3af',
+                      }}>
+                        {tieneAcceso ? 'Con acceso' : 'Sin acceso'}
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <ToggleSwitch activo={tieneAcceso} size="sm" />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>
+            <button onClick={() => setPaso(2)} style={prim}>Siguiente →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paso 2: Nivel de acceso ── */}
+      {pasoEfectivo === 2 && (
+        <div>
+          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Nivel de acceso</p>
+          <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
+            Elige el perfil de permisos para los módulos seleccionados.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+            {NIVELES_ACCESO.map(n => {
+              const sel = nivel === n.key
+              return (
+                <div
+                  key={n.key}
+                  onClick={() => aplicarNivel(n.key)}
+                  style={{
+                    padding: '18px 16px', borderRadius: 12, position: 'relative',
+                    border: `2px solid ${sel ? 'rgb(var(--primary-rgb))' : '#e5e7eb'}`,
+                    background: sel ? 'rgba(var(--primary-rgb),0.05)' : '#fff',
+                    cursor: 'pointer', transition: 'all 0.18s', userSelect: 'none',
+                    boxShadow: sel
+                      ? '0 4px 16px rgba(var(--primary-rgb),0.12)'
+                      : '0 1px 2px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {sel && (
+                    <div style={{
+                      position: 'absolute', top: 10, right: 10,
+                      width: 20, height: 20, borderRadius: '50%',
+                      background: 'rgb(var(--primary-rgb))', color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700,
+                    }}>✓</div>
+                  )}
+                  <div style={{ fontSize: 24, marginBottom: 10 }}>{n.icon}</div>
+                  <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 14, color: sel ? 'rgb(var(--primary-rgb))' : '#111827' }}>
+                    {n.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.4 }}>
+                    {n.desc}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
+            <button onClick={() => setPaso(1)} style={sec}>← Atrás</button>
+            <button onClick={() => nivel === 'personalizado' ? setPaso(3) : setPaso(4)} style={prim}>
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paso 3: Personalizar (solo si nivel === 'personalizado') ── */}
+      {pasoEfectivo === 3 && nivel === 'personalizado' && (
+        <div>
+          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Personalizar permisos</p>
+          <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
+            Activa o desactiva cada permiso de inventario individualmente.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {accCat.map(a => {
+              const activo = draft.permisos?.[a.key] ?? false
+              return (
+                <div
+                  key={a.key}
+                  onClick={() => toggleAccion(a.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
+                    border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
+                    background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                  <ToggleSwitch activo={activo} size="sm" />
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
+            <button onClick={() => setPaso(2)} style={sec}>← Atrás</button>
+            <button onClick={() => setPaso(4)} style={prim}>Siguiente →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Paso 4: Acciones globales ── */}
+      {pasoEfectivo === 4 && (
+        <div>
+          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Acciones globales</p>
+          <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
+            Permisos independientes del inventario: tickets, usuarios y auditorías.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {accGlobal.map(a => {
+              const activo = draft.permisos?.[a.key] ?? false
+              return (
+                <div
+                  key={a.key}
+                  onClick={() => toggleAccion(a.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
+                    border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
+                    background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                  <ToggleSwitch activo={activo} size="sm" />
+                </div>
+              )
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 22 }}>
+            <button onClick={() => setPaso(nivel === 'personalizado' ? 3 : 2)} style={sec}>← Atrás</button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -1508,54 +1707,6 @@ export default function Usuarios({ usuario }) {
       })()}
     </div>
   )
-}
-
-// ── Estilos tabla ───────────────────────────────────────────────────────────
-const tb = {
-  table: {
-    width: '100%', borderCollapse: 'collapse', fontSize: 12,
-  },
-  thCat: {
-    padding: '9px 14px', textAlign: 'left',
-    background: '#1a237e', color: 'rgba(255,255,255,0.9)',
-    fontWeight: 700, fontSize: 11,
-    borderBottom: '2px solid rgba(212,160,23,0.3)',
-    minWidth: 130, whiteSpace: 'nowrap',
-  },
-  thAccion: {
-    padding: '9px 8px', textAlign: 'center',
-    background: '#1a237e', color: 'rgba(255,255,255,0.65)',
-    fontWeight: 600, fontSize: 10,
-    borderBottom: '2px solid rgba(212,160,23,0.3)',
-    minWidth: 60, whiteSpace: 'nowrap',
-    letterSpacing: '0.02em',
-  },
-  tdCat: {
-    padding: '9px 14px', color: '#374151',
-    fontWeight: 500, fontSize: 13,
-    borderBottom: '1px solid #e5e7eb',
-    whiteSpace: 'nowrap',
-  },
-  tdCheck: {
-    padding: '6px 8px', textAlign: 'center',
-    borderBottom: '1px solid #e5e7eb',
-  },
-  dashDisabled: {
-    display: 'inline-block', color: '#d1d5db',
-    fontSize: 14, userSelect: 'none',
-  },
-  secLabel: {
-    fontSize: 10, fontWeight: 800, color: '#9ca3af',
-    textTransform: 'uppercase', letterSpacing: '0.1em',
-    margin: '0 0 8px',
-  },
-  leyenda: {
-    display: 'flex', alignItems: 'center', gap: 5,
-    fontSize: 11, color: '#6b7280',
-  },
-  leyendaDot: {
-    width: 10, height: 10, borderRadius: 3, display: 'inline-block',
-  },
 }
 
 // ── Estilos panel inline ────────────────────────────────────────────────────
