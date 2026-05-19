@@ -18,6 +18,9 @@ const AREAS = ['Proyector', 'Conector HDMI Muro', 'Conector HDMI Proyector', 'No
   'Computador de escritorio', 'Impresora', 'Red de Internet', 'Teclado', 'Mouse', 'Otro']
 const ROLES = ['Directivo', 'Docente', 'Asistente de la educación', 'Coordinador(a)']
 
+const MAX_PALABRAS = 100
+const contarPalabras = (str) => str.trim() ? str.trim().split(/\s+/).length : 0
+
 const FORM_VACIO = {
   nombre: '', apellidos: '', rol_solicitante: '', correo_contacto: '',
   area_reporte: '', area_otro: '', marca_modelo_falla: '',
@@ -39,7 +42,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const [guardando,       setGuardando]       = useState(false)
   const [ticketDetalle,   setTicketDetalle]   = useState(null)
   const [editEstado,      setEditEstado]      = useState('')
-  const [editPrioridad,   setEditPrioridad]   = useState('media')
+  const [editPrioridad,   setEditPrioridad]   = useState(null)
   const [editNotas,       setEditNotas]       = useState('')
   const [guardandoEdit,   setGuardandoEdit]   = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
@@ -126,21 +129,31 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
     setGuardando(false)
   }
 
-  const abrirDetalle = (t) => { setTicketDetalle(t); setEditEstado(t.estado); setEditPrioridad(t.prioridad ?? 'media'); setEditNotas(t.notas ?? '') }
+  const abrirDetalle = (t) => { setTicketDetalle(t); setEditEstado(t.estado); setEditPrioridad(t.prioridad ?? null); setEditNotas(t.notas ?? '') }
   const cerrarDetalle = () => { setTicketDetalle(null); setConfirmarEliminar(false) }
 
   const guardarCambios = async () => {
     if (!ticketDetalle) return
     setGuardandoEdit(true)
     const notasVal = editNotas.trim() || null
+
+    // Historial: agregar entrada si la nota cambió respecto a la última guardada
+    const historialActual = ticketDetalle.notas_historial ?? []
+    const ultimaNota = historialActual.length > 0
+      ? historialActual[historialActual.length - 1]?.texto
+      : ticketDetalle.notas
+    const nuevoHistorial = notasVal && notasVal !== ultimaNota
+      ? [...historialActual, { texto: notasVal, fecha: new Date().toISOString() }]
+      : historialActual
+
     const { error } = await supabase.from('tickets').update({
-      estado: editEstado, prioridad: editPrioridad, notas: notasVal,
+      estado: editEstado, prioridad: editPrioridad, notas: notasVal, notas_historial: nuevoHistorial,
     }).eq('id', ticketDetalle.id)
     if (!error) {
       setTickets(prev => prev.map(t => t.id === ticketDetalle.id
-        ? { ...t, estado: editEstado, prioridad: editPrioridad, notas: notasVal } : t))
+        ? { ...t, estado: editEstado, prioridad: editPrioridad, notas: notasVal, notas_historial: nuevoHistorial } : t))
       onTicketActualizado?.()
-      if ((editEstado === 'En proceso' || editEstado === 'Resuelto') && ticketDetalle.correo_contacto) {
+      if (ticketDetalle.correo_contacto) {
         console.log('[notify-ticket-status] invocando para', ticketDetalle.correo_contacto, editEstado)
         supabase.functions.invoke('notify-ticket-status', {
           body: {
@@ -148,7 +161,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             nombre: ticketDetalle.creado_por_nombre,
             area:   areaLabel(ticketDetalle),
             estado: editEstado,
-            notas:  notasVal,
+            notas:  notasVal,   // solo la última nota va al correo
           },
         }).then(({ data, error }) => {
           if (error) console.error('[notify-ticket-status] error:', JSON.stringify(error))
@@ -473,7 +486,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             {ticketDetalle.descripcion && (
               <div className="ticket-detalle-desc">{ticketDetalle.descripcion}</div>
             )}
-            {ticketDetalle.notas && (
+            {!esGestor && ticketDetalle.notas && (
               <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '9px 12px', fontSize: '0.83rem', color: '#166534', marginBottom: 14 }}>
                 📝 <strong>Notas:</strong> {ticketDetalle.notas}
               </div>
@@ -502,8 +515,26 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
                     </div>
                   </div>
                   <div className="modal-field">
-                    <label className="modal-label">Notas / Resolución {(editEstado === 'En proceso' || editEstado === 'Resuelto') && <span style={{ color: '#d4a017', fontWeight: 400 }}>(se enviará por correo al solicitante)</span>}</label>
-                    <textarea className="modal-textarea" value={editNotas} onChange={e => setEditNotas(e.target.value)} placeholder="Agrega observaciones o cómo se resolvió…" />
+                    <label className="modal-label">Notas / Resolución <span style={{ color: '#d4a017', fontWeight: 400 }}>(se enviará por correo al solicitante)</span></label>
+                    {(ticketDetalle.notas_historial ?? []).length > 0 && (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', maxHeight: 160, overflowY: 'auto', marginBottom: 8 }}>
+                        <p style={{ margin: '0 0 8px', fontSize: '0.72rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📋 Historial</p>
+                        {[...(ticketDetalle.notas_historial ?? [])].reverse().map((entry, i, arr) => (
+                          <div key={i} style={{ borderTop: i > 0 ? '1px solid #e5e7eb' : 'none', paddingTop: i > 0 ? 6 : 0, marginTop: i > 0 ? 6 : 0 }}>
+                            <p style={{ margin: '0 0 2px', fontSize: '0.7rem', color: '#9ca3af' }}>
+                              {new Date(entry.fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}{' '}
+                              {new Date(entry.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                              {i === 0 && <span style={{ marginLeft: 6, background: '#dbeafe', color: '#1d4ed8', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>última</span>}
+                            </p>
+                            <p style={{ margin: 0, fontSize: '0.82rem', color: '#374151' }}>{entry.texto}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <textarea className="modal-textarea" value={editNotas} onChange={e => { if (contarPalabras(e.target.value) <= MAX_PALABRAS) setEditNotas(e.target.value) }} placeholder="Agrega observaciones o cómo se resolvió…" />
+                    <p style={{ margin: '3px 0 0', fontSize: '0.73rem', textAlign: 'right', color: contarPalabras(editNotas) >= MAX_PALABRAS ? '#dc2626' : '#9ca3af' }}>
+                      {contarPalabras(editNotas)}/{MAX_PALABRAS} palabras
+                    </p>
                   </div>
                 </div>
                 {confirmarEliminar ? (

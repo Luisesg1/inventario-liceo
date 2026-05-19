@@ -39,3 +39,16 @@ CREATE POLICY "tickets_select" ON tickets FOR SELECT TO authenticated USING (tru
 CREATE POLICY "tickets_insert" ON tickets FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "tickets_update" ON tickets FOR UPDATE TO authenticated USING (true);
 CREATE POLICY "tickets_delete" ON tickets FOR DELETE TO authenticated USING (true);
+
+-- ══════════════════════════════════════════════════════════
+--  Migraciones
+-- ══════════════════════════════════════════════════════════
+
+-- 1. Historial de notas (array JSON de { texto, fecha })
+ALTER TABLE tickets
+  ADD COLUMN IF NOT EXISTS notas_historial jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+-- 2. Prioridad puede ser NULL (sin asignar)
+ALTER TABLE tickets
+  ALTER COLUMN prioridad DROP NOT NULL,
+  ALTER COLUMN prioridad SET DEFAULT NULL;

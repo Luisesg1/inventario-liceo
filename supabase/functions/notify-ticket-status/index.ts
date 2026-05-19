@@ -18,9 +18,9 @@ serve(async (req) => {
 
     if (!correo) return new Response('No correo', { status: 400, headers: cors })
 
-    const estadoColor = estado === 'Resuelto' ? '#16a34a' : '#d97706'
-    const estadoBg    = estado === 'Resuelto' ? '#dcfce7' : '#fef9c3'
-    const estadoIcon  = estado === 'Resuelto' ? '✅' : '🔄'
+    const estadoColor = estado === 'Resuelto' ? '#16a34a' : estado === 'Abierto' ? '#1d4ed8' : '#d97706'
+    const estadoBg    = estado === 'Resuelto' ? '#dcfce7' : estado === 'Abierto' ? '#dbeafe' : '#fef9c3'
+    const estadoIcon  = estado === 'Resuelto' ? '✅' : estado === 'Abierto' ? '🔵' : '🔄'
 
     const htmlContent = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
