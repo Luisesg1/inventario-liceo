@@ -61,6 +61,18 @@
 .permisos-btn-primary:hover { opacity: 0.90; box-shadow: 0 4px 18px rgba(26,35,126,0.32); transform: translateY(-1px); }
 .permisos-btn-primary:active { transform: translateY(0); }
 
+.permisos-btn-secondary {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff; color: #475569;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: border-color 0.13s, background 0.13s, transform 0.1s;
+  font-family: inherit; white-space: nowrap;
+}
+.permisos-btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; transform: translateY(-1px); }
+.permisos-btn-secondary:active { transform: translateY(0); }
+
 /* ── Tabla ──────────────────────────────────────────── */
 .permisos-table-wrap { overflow-x: auto; }
 .permisos-table { width: 100%; border-collapse: collapse; font-size: 13px; }

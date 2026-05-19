@@ -73,19 +73,33 @@ function getInitials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
 }
 
-function calcDuration(fechaInicio, fechaFin, jornada) {
+// Cuenta días hábiles entre dos fechas (excluye fines de semana + inhabilitados)
+function diasHabiles(fechaInicio, fechaFin, inhabilitados = new Set()) {
+  if (!fechaInicio || !fechaFin) return 0
+  let total = 0
+  const cur = new Date(fechaInicio + 'T12:00:00')
+  const fin = new Date(fechaFin   + 'T12:00:00')
+  if (isNaN(cur) || isNaN(fin) || fin < cur) return 0
+  while (cur <= fin) {
+    const dow = cur.getDay() // 0=dom, 6=sáb
+    const iso = cur.toISOString().slice(0, 10)
+    if (dow !== 0 && dow !== 6 && !inhabilitados.has(iso)) total++
+    cur.setDate(cur.getDate() + 1)
+  }
+  return total
+}
+
+function calcDuration(fechaInicio, fechaFin, jornada, inhabilitados = new Set()) {
   if (!fechaInicio || !fechaFin) return null
-  const start = new Date(fechaInicio + 'T12:00:00')
-  const end   = new Date(fechaFin   + 'T12:00:00')
-  if (isNaN(start) || isNaN(end) || end < start) return null
-  const diffDays = Math.round((end - start) / 86400000) + 1
   if (jornada === 'medio_dia') return '½ día'
-  return diffDays === 1 ? '1 día' : `${diffDays} días`
+  const h = diasHabiles(fechaInicio, fechaFin, inhabilitados)
+  if (h === 0) return null
+  return h === 1 ? '1 día hábil' : `${h} días hábiles`
 }
 
 // Calcula días reales (float) de una lista de ausencias.
 // soloDescuento=true excluye tipos que no descuentan cupo (ej. licencia_medica)
-function calcDiasTotales(rows, soloDescuento = false) {
+function calcDiasTotales(rows, soloDescuento = false, inhabilitados = new Set()) {
   let total = 0
   rows.forEach(p => {
     if (soloDescuento && TIPOS_SIN_DESCUENTO.has(p.tipo)) return
@@ -97,9 +111,7 @@ function calcDiasTotales(rows, soloDescuento = false) {
       const horas = (eh * 60 + em - (sh * 60 + sm)) / 60
       total += Math.max(0, horas / 8)
     } else if (p.fecha_inicio && p.fecha_fin) {
-      const s = new Date(p.fecha_inicio + 'T12:00:00')
-      const e = new Date(p.fecha_fin   + 'T12:00:00')
-      if (!isNaN(s) && !isNaN(e) && e >= s) total += Math.round((e - s) / 86400000) + 1
+      total += diasHabiles(p.fecha_inicio, p.fecha_fin, inhabilitados)
     }
   })
   return total
@@ -207,10 +219,10 @@ function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
 
 // ── ModalVerPermiso ────────────────────────────────────────────────────────
 
-function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar }) {
+function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar, diasInhabilitados = new Set() }) {
   const u       = userFromPermiso(permiso) ?? {}
   const nombre  = u.nombre ?? '—'
-  const duracion = calcDuration(permiso.fecha_inicio, permiso.fecha_fin, permiso.jornada)
+  const duracion = calcDuration(permiso.fecha_inicio, permiso.fecha_fin, permiso.jornada, diasInhabilitados)
 
   return (
     <AnimatePresence>
@@ -354,7 +366,7 @@ function ModalConfirmarEliminar({ onClose, onConfirmar, eliminando, errorElimina
 
 // ── ModalPermiso ───────────────────────────────────────────────────────────
 
-function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onUsuarioCreado, editData }) {
+function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermisosUsados, onUsuarioCreado, editData, diasInhabilitados = new Set() }) {
   const isEdit = !!editData
 
   const userInit = isEdit ? userFromPermiso(editData) : null
@@ -421,7 +433,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       .finally(() => setCargandoPermisos(false))
   }, [usuarioSel?.id, usuarioSel?.rut])
 
-  const duracion    = calcDuration(fechaInicio, fechaFin, jornada)
+  const duracion    = calcDuration(fechaInicio, fechaFin, jornada, diasInhabilitados)
   const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
 
@@ -959,6 +971,137 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   )
 }
 
+// ── ModalDiasInhabilitados ─────────────────────────────────────────────────
+
+function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar }) {
+  const [nuevaFecha,  setNuevaFecha]  = useState('')
+  const [nuevoMotivo, setNuevoMotivo] = useState('')
+  const [guardando,   setGuardando]   = useState(false)
+  const [errGuardar,  setErrGuardar]  = useState('')
+
+  async function handleAgregar() {
+    if (!nuevaFecha || !nuevoMotivo.trim()) return
+    setGuardando(true); setErrGuardar('')
+    try {
+      await onAgregar(nuevaFecha, nuevoMotivo.trim())
+      setNuevaFecha(''); setNuevoMotivo('')
+    } catch {
+      setErrGuardar('No se pudo guardar. Intenta de nuevo.')
+    } finally { setGuardando(false) }
+  }
+
+  const year = new Date().getFullYear()
+
+  return (
+    <AnimatePresence>
+      <motion.div className="mp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
+        onClick={e => { if (e.target === e.currentTarget) onClose?.() }}>
+        <motion.div className="mp-modal" variants={modalV} initial="hidden" animate="visible" exit="exit"
+          style={{ maxWidth: 560 }}>
+
+          <div className="mp-header">
+            <div className="mp-header-left">
+              <div className="mp-header-icon"><CalendarCheck size={18} strokeWidth={2} /></div>
+              <div>
+                <p className="mp-header-title">Días inhabilitados {year}</p>
+                <p className="mp-header-sub">Feriados oficiales, puentes y días especiales del colegio.</p>
+              </div>
+            </div>
+            <button className="mp-close-btn" onClick={onClose}><X size={16} strokeWidth={2.5} /></button>
+          </div>
+
+          <div className="mp-body" style={{ flexDirection: 'column', gap: 20, padding: '20px 24px', overflowY: 'auto', maxHeight: '60vh' }}>
+
+            {/* Feriados oficiales (API) */}
+            <section>
+              <p className="mp-section-label" style={{ marginBottom: 10 }}>
+                Feriados oficiales Chile {year}
+                <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                  (nager.date)
+                </span>
+              </p>
+              {cargandoAPI ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#94a3b8', fontSize: 13 }}>
+                  <Loader2 size={14} className="animate-spin" /> Cargando feriados…
+                </div>
+              ) : feriadosAPI.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#94a3b8' }}>No se pudieron cargar los feriados (sin conexión).</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {feriadosAPI.map(f => (
+                    <div key={f.fecha} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: '#eff6ff', borderRadius: 7, border: '1px solid #bfdbfe' }}>
+                      <span style={{ fontSize: 12, color: '#1d4ed8', fontWeight: 600, minWidth: 90 }}>{formatFecha(f.fecha)}</span>
+                      <span style={{ fontSize: 12.5, color: '#1e40af', flex: 1 }}>{f.nombre}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Días especiales (admin) */}
+            <section>
+              <p className="mp-section-label" style={{ marginBottom: 10 }}>
+                Días especiales
+                <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                  (puentes, días del colegio, etc.)
+                </span>
+              </p>
+
+              {diasAdmin.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>No hay días especiales registrados.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 14 }}>
+                  {diasAdmin.map(d => (
+                    <div key={d.fecha} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', background: '#fef9c3', borderRadius: 7, border: '1px solid #fde68a' }}>
+                      <span style={{ fontSize: 12, color: '#854d0e', fontWeight: 600, minWidth: 90 }}>{formatFecha(d.fecha)}</span>
+                      <span style={{ fontSize: 12.5, color: '#854d0e', flex: 1 }}>{d.motivo}</span>
+                      <button onClick={() => onEliminar(d.fecha)}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, display: 'flex', alignItems: 'center' }}>
+                        <Trash2 size={13} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Agregar nuevo día */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div className="mp-field-group" style={{ flex: '0 0 auto' }}>
+                  <label className="mp-field-label">Fecha</label>
+                  <input type="date" className="mp-input" value={nuevaFecha}
+                    onChange={e => setNuevaFecha(e.target.value)} />
+                </div>
+                <div className="mp-field-group" style={{ flex: 1, minWidth: 180 }}>
+                  <label className="mp-field-label">Motivo</label>
+                  <input type="text" className="mp-input" placeholder="Ej: Día puente, Feriado regional…"
+                    value={nuevoMotivo} onChange={e => setNuevoMotivo(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAgregar() }} />
+                </div>
+                <button className="mp-btn-save"
+                  disabled={!nuevaFecha || !nuevoMotivo.trim() || guardando}
+                  onClick={handleAgregar}
+                  style={{ flexShrink: 0 }}>
+                  <Plus size={14} strokeWidth={2.5} />
+                  {guardando ? 'Guardando…' : 'Agregar'}
+                </button>
+              </div>
+              {errGuardar && (
+                <span style={{ fontSize: 12, color: '#dc2626', marginTop: 6, display: 'block' }}>{errGuardar}</span>
+              )}
+            </section>
+
+          </div>
+
+          <div className="mp-footer">
+            <button className="mp-btn-cancel" onClick={onClose}>Cerrar</button>
+          </div>
+
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 // ── Permisos (página) ──────────────────────────────────────────────────────
 
 export default function Permisos({ usuario }) {
@@ -976,6 +1119,13 @@ export default function Permisos({ usuario }) {
   const [filtroRol,       setFiltroRol]       = useState('')
   const [colapsados,      setColapsados]      = useState(new Set()) // keys de grupos cerrados
 
+  // ── Días inhabilitados (feriados + puentes) ────────────────────────────
+  const [diasInhabilitados,  setDiasInhabilitados]  = useState(new Set())
+  const [feriadosAPI,        setFeriadosAPI]        = useState([])   // [{fecha, nombre}]
+  const [diasAdmin,          setDiasAdmin]          = useState([])   // rows de DB
+  const [cargandoAPI,        setCargandoAPI]        = useState(false)
+  const [modalInhabilitados, setModalInhabilitados] = useState(false)
+
   function toggleColapso(key) {
     setColapsados(prev => {
       const next = new Set(prev)
@@ -984,7 +1134,7 @@ export default function Permisos({ usuario }) {
     })
   }
 
-  useEffect(() => { cargarDatos() }, [])
+  useEffect(() => { cargarDatos(); cargarDiasInhabilitados() }, [])
 
   async function cargarDatos() {
     setCargando(true)
@@ -1001,6 +1151,52 @@ export default function Permisos({ usuario }) {
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
     setCargando(false)
+  }
+
+  async function cargarDiasInhabilitados() {
+    setCargandoAPI(true)
+    const year = new Date().getFullYear()
+    const set  = new Set()
+    let apiList = []
+
+    // 1. Feriados oficiales Chile (nager.date — gratuito, sin API key)
+    try {
+      const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/CL`)
+      if (res.ok) {
+        const data = await res.json()
+        apiList = data.map(f => ({ fecha: f.date, nombre: f.localName }))
+        apiList.forEach(f => set.add(f.fecha))
+      }
+    } catch (e) { console.warn('Feriados API no disponible:', e) }
+
+    // 2. Días especiales guardados por el admin en DB
+    const { data: adminRows } = await supabase
+      .from('dias_inhabilitados').select('*').order('fecha')
+    const adminList = adminRows ?? []
+    adminList.forEach(d => set.add(d.fecha))
+
+    setFeriadosAPI(apiList)
+    setDiasAdmin(adminList)
+    setDiasInhabilitados(set)
+    setCargandoAPI(false)
+  }
+
+  async function handleAgregarDia(fecha, motivo) {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const { error } = await supabase.from('dias_inhabilitados').insert({
+      fecha,
+      motivo,
+      origen: 'admin',
+      creado_por: sessionData?.session?.user?.id ?? null,
+    })
+    if (error) throw error
+    await cargarDiasInhabilitados()
+  }
+
+  async function handleEliminarDia(fecha) {
+    const { error } = await supabase.from('dias_inhabilitados').delete().eq('fecha', fecha)
+    if (error) throw error
+    await cargarDiasInhabilitados()
   }
 
   async function handleGetPermisosUsados(userId, rut) {
@@ -1029,7 +1225,7 @@ export default function Permisos({ usuario }) {
       if (data) rows = [...rows, ...data]
     }
 
-    return calcDiasTotales(rows, true) // solo tipos que descuentan cupo
+    return calcDiasTotales(rows, true, diasInhabilitados) // solo tipos que descuentan cupo, solo días hábiles
   }
 
   function handleUsuarioCreado(nuevoUsuario) {
@@ -1139,9 +1335,9 @@ export default function Permisos({ usuario }) {
       const startYear = p.fecha_inicio ? parseInt(p.fecha_inicio.slice(0, 4)) : null
       if (startYear === thisYear) {
         map[key].count++
-        // Solo suma días si el tipo descuenta del cupo
+        // Solo suma días hábiles si el tipo descuenta del cupo
         if (!TIPOS_SIN_DESCUENTO.has(p.tipo)) {
-          map[key].dias += calcDiasTotales([p])
+          map[key].dias += calcDiasTotales([p], false, diasInhabilitados)
         }
       }
     })
@@ -1199,9 +1395,17 @@ export default function Permisos({ usuario }) {
               <p className="permisos-card-desc">Períodos de ausencia autorizados para los usuarios.</p>
             </div>
           </div>
-          <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
-            <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {usuario?.rol === 'admin' && (
+              <button className="permisos-btn-secondary" onClick={() => setModalInhabilitados(true)}
+                title="Gestionar días inhabilitados (feriados, puentes)">
+                <CalendarCheck size={14} strokeWidth={2.5} /> Días inhabilitados
+              </button>
+            )}
+            <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
+              <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
+            </button>
+          </div>
         </div>
 
         {/* ── Buscador + Filtros ── */}
@@ -1323,7 +1527,7 @@ export default function Permisos({ usuario }) {
                           exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
                           style={{ overflow: 'hidden' }}>
                           {aus.map((p, idx) => {
-                            const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada)
+                            const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados)
                             return (
                               <div key={p.id} style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
@@ -1379,6 +1583,7 @@ export default function Permisos({ usuario }) {
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
           onUsuarioCreado={handleUsuarioCreado}
+          diasInhabilitados={diasInhabilitados}
         />
       )}
 
@@ -1391,6 +1596,7 @@ export default function Permisos({ usuario }) {
           onGuardar={handleGuardar}
           onGetPermisosUsados={handleGetPermisosUsados}
           onUsuarioCreado={handleUsuarioCreado}
+          diasInhabilitados={diasInhabilitados}
         />
       )}
 
@@ -1400,6 +1606,7 @@ export default function Permisos({ usuario }) {
           onClose={() => setPermisoVer(null)}
           onEditar={() => abrirEditar(permisoVer)}
           onEliminar={() => abrirEliminar(permisoVer)}
+          diasInhabilitados={diasInhabilitados}
         />
       )}
 
@@ -1409,6 +1616,17 @@ export default function Permisos({ usuario }) {
           errorEliminar={errorEliminar}
           onClose={() => { setPermisoEliminar(null); setErrorEliminar('') }}
           onConfirmar={handleEliminar}
+        />
+      )}
+
+      {modalInhabilitados && (
+        <ModalDiasInhabilitados
+          feriadosAPI={feriadosAPI}
+          diasAdmin={diasAdmin}
+          cargandoAPI={cargandoAPI}
+          onClose={() => setModalInhabilitados(false)}
+          onAgregar={handleAgregarDia}
+          onEliminar={handleEliminarDia}
         />
       )}
 
