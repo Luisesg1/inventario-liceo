@@ -135,6 +135,14 @@ export default function Login({
   const [regShowPass,   setRegShowPass]   = useState(false)
   const [regShowCodigo, setRegShowCodigo] = useState(false)
   const [regExito,      setRegExito]      = useState(false)
+  const [regErrors,     setRegErrors]     = useState({})
+
+  function setFieldError(field, msg) {
+    setRegErrors(prev => ({ ...prev, [field]: msg }))
+  }
+  function clearField(field) {
+    setRegErrors(prev => ({ ...prev, [field]: '' }))
+  }
 
   /* ── Handlers ─────────────────────────────────────── */
   async function handleLogin(e) {
@@ -159,16 +167,15 @@ export default function Login({
   }
 
   async function handleRegistro(e) {
-    e.preventDefault(); setError('')
-    if (!regNombres.trim() || !regApellidos.trim()) { setError('Nombres y apellidos son requeridos'); return }
-    if (regNombres.trim().split(/\s+/).length < 2) { setError('Ingresa al menos 2 nombres'); return }
-    if (regApellidos.trim().split(/\s+/).length < 2) { setError('Ingresa al menos 2 apellidos'); return }
-    if (!regRut.trim()) { setError('El RUT es requerido'); return }
-    if (!validarRut(regRut)) { setError('El RUT ingresado no es válido'); return }
-    if (regPass !== regPassConf) { setError('Las contraseñas no coinciden'); return }
-    if (!REQUISITOS_PASS.every(r => r.test(regPass))) {
-      setError('La contraseña no cumple todos los requisitos de seguridad'); return
-    }
+    e.preventDefault(); setError(''); setRegErrors({})
+    let ok = true
+    if (regNombres.trim().split(/\s+/).length < 2) { setFieldError('nombres', 'Ingresa al menos 2 nombres'); ok = false }
+    if (regApellidos.trim().split(/\s+/).length < 2) { setFieldError('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
+    if (!regRut.trim()) { setFieldError('rut', 'El RUT es requerido'); ok = false }
+    else if (!validarRut(regRut)) { setFieldError('rut', 'RUT no válido'); ok = false }
+    if (regPass !== regPassConf) { setFieldError('passConf', 'Las contraseñas no coinciden'); ok = false }
+    if (!REQUISITOS_PASS.every(r => r.test(regPass))) { setFieldError('pass', 'No cumple los requisitos de seguridad'); ok = false }
+    if (!ok) return
     setCargando(true)
     const { data: fnData, error: fnError } = await supabase.functions.invoke('register-user', {
       body: { codigo: regCodigo },
@@ -395,18 +402,27 @@ export default function Login({
                     <form onSubmit={handleRegistro}>
                       <div className="login-field">
                         <label>Nombres</label>
-                        <input type="text" value={regNombres} onChange={e => setRegNombres(e.target.value)}
-                          placeholder="Nombres" autoFocus required />
+                        <input type="text" value={regNombres}
+                          onChange={e => { setRegNombres(e.target.value); clearField('nombres') }}
+                          placeholder="Nombres" autoFocus required
+                          style={regErrors.nombres ? { borderColor: '#dc2626' } : {}} />
+                        {regErrors.nombres && <span className="login-field-hint login-field-hint--error">{regErrors.nombres}</span>}
                       </div>
                       <div className="login-field">
                         <label>Apellidos</label>
-                        <input type="text" value={regApellidos} onChange={e => setRegApellidos(e.target.value)}
-                          placeholder="Apellidos" required />
+                        <input type="text" value={regApellidos}
+                          onChange={e => { setRegApellidos(e.target.value); clearField('apellidos') }}
+                          placeholder="Apellidos" required
+                          style={regErrors.apellidos ? { borderColor: '#dc2626' } : {}} />
+                        {regErrors.apellidos && <span className="login-field-hint login-field-hint--error">{regErrors.apellidos}</span>}
                       </div>
                       <div className="login-field">
                         <label>RUT</label>
-                        <input type="text" value={regRut} onChange={e => setRegRut(formatRut(e.target.value))}
-                          placeholder="12.345.678-9" required />
+                        <input type="text" value={regRut}
+                          onChange={e => { setRegRut(formatRut(e.target.value)); clearField('rut') }}
+                          placeholder="12.345.678-9" required
+                          style={regErrors.rut ? { borderColor: '#dc2626' } : {}} />
+                        {regErrors.rut && <span className="login-field-hint login-field-hint--error">{regErrors.rut}</span>}
                       </div>
                       <div className="login-field">
                         <label>Correo electrónico</label>
@@ -417,21 +433,25 @@ export default function Login({
                         <label>Contraseña</label>
                         <div className="login-pass-wrap">
                           <input type={regShowPass ? 'text' : 'password'} value={regPass}
-                            onChange={e => setRegPass(e.target.value)}
-                            placeholder="Mínimo 8 caracteres" required />
+                            onChange={e => { setRegPass(e.target.value); clearField('pass') }}
+                            placeholder="Mínimo 8 caracteres" required
+                            style={regErrors.pass ? { borderColor: '#dc2626' } : {}} />
                           <button type="button" className="login-eye" onClick={() => setRegShowPass(v => !v)} tabIndex={-1}>
                             {regShowPass ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                         </div>
                         <PasswordStrength password={regPass} />
+                        {regErrors.pass && <span className="login-field-hint login-field-hint--error">{regErrors.pass}</span>}
                       </div>
                       <div className="login-field">
                         <label>Confirmar contraseña</label>
                         <div className="login-pass-wrap">
                           <input type={regShowPass ? 'text' : 'password'} value={regPassConf}
-                            onChange={e => setRegPassConf(e.target.value)}
-                            placeholder="Repite la contraseña" required />
+                            onChange={e => { setRegPassConf(e.target.value); clearField('passConf') }}
+                            placeholder="Repite la contraseña" required
+                            style={regErrors.passConf ? { borderColor: '#dc2626' } : {}} />
                         </div>
+                        {regErrors.passConf && <span className="login-field-hint login-field-hint--error">{regErrors.passConf}</span>}
                       </div>
                       <div className="login-field">
                         <label>Código de invitación</label>
