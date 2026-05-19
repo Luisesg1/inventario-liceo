@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import './CamposCategoria.css'
 
 const TIPOS = [
   { value: 'texto',    label: 'Texto',          icon: '📝' },
