@@ -43,7 +43,15 @@ export default function SetPassword({ onComplete, usuario }) {
     const { data: updateData, error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError('Error al guardar: ' + updateError.message)
+      const mensajesES = {
+        'New password should be different from the old password.': 'La nueva contraseña debe ser diferente a la contraseña actual.',
+        'Password should be at least 6 characters.': 'La contraseña debe tener al menos 6 caracteres.',
+        'Auth session missing!': 'Sesión expirada. Por favor, solicita un nuevo enlace.',
+        'User not found': 'Usuario no encontrado.',
+        'Invalid login credentials': 'Credenciales inválidas.',
+      }
+      const mensaje = mensajesES[updateError.message] ?? updateError.message
+      setError('Error al guardar: ' + mensaje)
       setLoading(false)
       return
     }

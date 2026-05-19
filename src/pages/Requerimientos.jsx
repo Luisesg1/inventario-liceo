@@ -80,6 +80,7 @@ function ComboField({ value, onChange, opciones = [], placeholder, disabled }) {
 }
 
 const COLUMNAS_EXPORT = [
+  { key: 'numero_req',       label: 'N° Manual' },
   { key: 'id',               label: 'N° Req.' },
   { key: 'fecha',            label: 'Fecha' },
   { key: 'contenido',        label: 'Contenido' },
@@ -101,6 +102,7 @@ const COLUMNAS_EXPORT = [
 
 // Columnas BD válidas para importación
 const COLUMNAS_BD = new Set([
+  'numero_req',
   'fecha', 'contenido', 'solicitante', 'fondo', 'dimension', 'sub_dimension', 'accion',
   'monto_solicitado', 'monto_real', 'estado', 'fecha_recepcion', 'orden_compra',
   'rut_proveedor', 'numero_factura', 'evidencia', 'observacion',
@@ -109,6 +111,9 @@ const ALIAS_IMPORT = {
   'n°_req.':         null,
   'n°_req':          null,
   'id':              null,
+  'n°_manual':       'numero_req',
+  'numero_manual':   'numero_req',
+  'num_req':         'numero_req',
   'monto_solicitado': 'monto_solicitado',
   'monto_real':       'monto_real',
   'monto sol.':       'monto_solicitado',
@@ -146,6 +151,7 @@ const ESTADO_STYLE = {
 }
 
 const FORM_VACIO = {
+  numero_req: '',
   fecha: '', contenido: '', solicitante: '', fondo: '',
   dimension: '', sub_dimension: '', accion: '',
   monto_solicitado: '', monto_real: '', estado: 'En proceso',
@@ -217,6 +223,7 @@ function DetalleReqContenido({ r }) {
       <div className="req-detalle-grid-2">
         <div className="req-detalle-seccion">
           <p className="req-detalle-titulo">General</p>
+          {r.numero_req && <div className="req-detalle-fila"><span>N° Manual</span><strong>{r.numero_req}</strong></div>}
           <div className="req-detalle-fila"><span>Fecha</span><strong>{formatFecha(r.fecha)}</strong></div>
           <div className="req-detalle-fila"><span>Solicitante</span><strong>{r.solicitante || '—'}</strong></div>
           <div className="req-detalle-fila"><span>Estado</span>
@@ -303,6 +310,187 @@ const cargarSheetJS = () => new Promise((resolve, reject) => {
   s.onload = resolve; s.onerror = reject
   document.head.appendChild(s)
 })
+
+// ── Exportar a CSV ────────────────────────────────────────────────────────
+function exportarCSVReq(items) {
+  const escapar = (v) => {
+    if (v === null || v === undefined) return ''
+    const s = String(v)
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const filas = [
+    COLUMNAS_EXPORT.map(c => c.label).join(','),
+    ...items.map(r => COLUMNAS_EXPORT.map(c => escapar(r[c.key])).join(',')),
+  ]
+  const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `requerimientos_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click(); URL.revokeObjectURL(url)
+}
+
+// ── Exportar a PDF ────────────────────────────────────────────────────────
+function exportarPDFReq(items) {
+  const fecha = new Date().toLocaleDateString('es-CL')
+  const cols = [
+    { key: 'numero_req', label: 'N° Manual' },
+    { key: 'id',         label: 'N° Req.' },
+    { key: 'fecha',      label: 'Fecha' },
+    { key: 'contenido',  label: 'Contenido' },
+    { key: 'solicitante',label: 'Solicitante' },
+    { key: 'fondo',      label: 'Fondo' },
+    { key: 'accion',     label: 'Acción' },
+    { key: 'monto_solicitado', label: 'Monto Sol.' },
+    { key: 'monto_real', label: 'Monto Real' },
+    { key: 'estado',     label: 'Estado' },
+    { key: 'evidencia',  label: 'Evidencia' },
+  ]
+  const filaColor = (estado) => {
+    if (['Comprado','Contratado','En ejecución'].includes(estado)) return '#dcfce7'
+    if (['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(estado)) return '#fef9c3'
+    if ((estado ?? '').startsWith('Rechazado') || estado === 'Devuelto') return '#fee2e2'
+    return '#ffffff'
+  }
+  const htmlContent = `<html><head><meta charset="utf-8"><style>
+    body { font-family: Arial, sans-serif; font-size: 10px; color: #111; margin: 0; padding: 16px; }
+    h1 { font-size: 15px; margin: 0 0 4px; color: #1e3a8a; }
+    .sub { font-size: 10px; color: #6b7280; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1e3a8a; color: white; padding: 5px 6px; text-align: left; font-size: 9px; }
+    td { padding: 4px 6px; border-bottom: 1px solid #e5e7eb; font-size: 9px; }
+    tr:nth-child(even) td { background: #f9fafb; }
+  </style></head><body>
+    <h1>Requerimientos</h1>
+    <p class="sub">Generado el ${fecha} · ${items.length} registro${items.length !== 1 ? 's' : ''}</p>
+    <table>
+      <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+      <tbody>${items.map(r => {
+        const bg = filaColor(r.estado)
+        return `<tr style="background:${bg}">${cols.map(c => {
+          let v = r[c.key] ?? '—'
+          if (c.key === 'monto_solicitado' || c.key === 'monto_real') v = v !== '—' ? '$' + Number(v).toLocaleString('es-CL') : '—'
+          if (c.key === 'fecha' && v !== '—') v = new Date(v + 'T00:00:00').toLocaleDateString('es-CL')
+          if (c.key === 'id') v = '#' + v
+          return `<td>${v}</td>`
+        }).join('')}</tr>`
+      }).join('')}</tbody>
+    </table>
+  </body></html>`
+
+  const cargarYExportar = () => {
+    const opt = {
+      margin: [8, 6, 8, 6],
+      filename: `requerimientos_${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: 'jpeg', quality: 0.97 },
+      html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    }
+    const el = document.createElement('div')
+    el.innerHTML = htmlContent
+    document.body.appendChild(el)
+    window.html2pdf().set(opt).from(el).save().then(() => document.body.removeChild(el))
+  }
+  if (window.html2pdf) { cargarYExportar(); return }
+  const script = document.createElement('script')
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+  script.onload = cargarYExportar
+  document.head.appendChild(script)
+}
+
+// ── Exportar a Word ───────────────────────────────────────────────────────
+function exportarWordReq(items) {
+  const fecha = new Date().toLocaleDateString('es-CL')
+  const cols = [
+    { key: 'numero_req', label: 'N° Manual' },
+    { key: 'id',         label: 'N° Req.' },
+    { key: 'fecha',      label: 'Fecha' },
+    { key: 'contenido',  label: 'Contenido' },
+    { key: 'solicitante',label: 'Solicitante' },
+    { key: 'fondo',      label: 'Fondo' },
+    { key: 'accion',     label: 'Acción' },
+    { key: 'monto_solicitado', label: 'Monto Sol.' },
+    { key: 'monto_real', label: 'Monto Real' },
+    { key: 'estado',     label: 'Estado' },
+    { key: 'evidencia',  label: 'Evidencia' },
+  ]
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+    <head><meta charset="utf-8"><style>
+      body { font-family: Calibri, sans-serif; font-size: 9pt; }
+      h1 { font-size: 14pt; color: #1e3a8a; }
+      table { border-collapse: collapse; width: 100%; }
+      th { background: #1e3a8a; color: white; padding: 4px 6px; font-size: 8pt; border: 1px solid #ccc; }
+      td { padding: 3px 6px; font-size: 8pt; border: 1px solid #ddd; }
+      tr:nth-child(even) td { background: #f0f4ff; }
+    </style></head><body>
+      <h1>Requerimientos</h1>
+      <p style="color:#6b7280;font-size:8pt">Generado el ${fecha} · ${items.length} registros</p>
+      <table>
+        <thead><tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+        <tbody>${items.map(r => `<tr>${cols.map(c => {
+          let v = r[c.key] ?? '—'
+          if (c.key === 'id') v = '#' + v
+          return `<td>${v}</td>`
+        }).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </body></html>`
+  const blob = new Blob(['﻿', html], { type: 'application/msword' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `requerimientos_${new Date().toISOString().slice(0, 10)}.doc`
+  a.click(); URL.revokeObjectURL(url)
+}
+
+// ── Exportar a Imagen ─────────────────────────────────────────────────────
+function exportarImagenReq(items) {
+  const fecha = new Date().toLocaleDateString('es-CL')
+  const cols = ['numero_req','id','fecha','contenido','solicitante','fondo','estado','monto_solicitado']
+  const headers = ['N° Manual','N° Req.','Fecha','Contenido','Solicitante','Fondo','Estado','Monto Sol.']
+  const FILA_H = 28, HEAD_H = 70, PAD = 20
+  const colW = [80, 65, 75, 200, 120, 90, 100, 90]
+  const totalW = colW.reduce((a, b) => a + b, 0) + PAD * 2
+  const totalH = HEAD_H + 34 + FILA_H * items.length + PAD * 2
+
+  const canvas = document.createElement('canvas')
+  canvas.width = totalW; canvas.height = totalH
+  const ctx = canvas.getContext('2d')
+
+  ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, totalW, totalH)
+  ctx.fillStyle = '#1e3a8a'; ctx.fillRect(0, 0, totalW, 56)
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 16px Arial'
+  ctx.fillText('Requerimientos', PAD, 32)
+  ctx.font = '11px Arial'; ctx.fillStyle = '#bfdbfe'
+  ctx.fillText(`${fecha}  ·  ${items.length} registros`, PAD, 48)
+
+  let x = PAD, y = HEAD_H
+  ctx.fillStyle = '#1e40af'; ctx.fillRect(0, y, totalW, 34)
+  headers.forEach((h, i) => {
+    ctx.fillStyle = '#e0e7ff'; ctx.font = 'bold 10px Arial'
+    ctx.fillText(h, x + 5, y + 21); x += colW[i]
+  })
+
+  items.forEach((r, ri) => {
+    y = HEAD_H + 34 + ri * FILA_H
+    ctx.fillStyle = ri % 2 === 0 ? '#ffffff' : '#f0f4ff'
+    ctx.fillRect(0, y, totalW, FILA_H)
+    x = PAD
+    cols.forEach((c, i) => {
+      let v = String(r[c] ?? '—').slice(0, 20)
+      if (c === 'id') v = '#' + v
+      if (c === 'monto_solicitado' && r[c]) v = '$' + Number(r[c]).toLocaleString('es-CL')
+      ctx.fillStyle = '#111827'; ctx.font = '10px Arial'
+      ctx.fillText(v, x + 5, y + 17); x += colW[i]
+    })
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 0.5
+    ctx.beginPath(); ctx.moveTo(0, y + FILA_H); ctx.lineTo(totalW, y + FILA_H); ctx.stroke()
+  })
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `requerimientos_${new Date().toISOString().slice(0, 10)}.png`
+    a.click(); URL.revokeObjectURL(url)
+  })
+}
 
 // ── Exportar a Excel ──────────────────────────────────────────────────────
 async function exportarExcel(items) {
@@ -721,6 +909,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   const [form,              setForm]              = useState(FORM_VACIO)
   const [guardando,         setGuardando]         = useState(false)
   const [exportando,        setExportando]        = useState(false)
+  const [menuExportar,      setMenuExportar]      = useState(false)
   const [modalImportar,     setModalImportar]     = useState(false)
   const [busqueda,          setBusqueda]          = useState('')
   const [filtroEstado,      setFiltroEstado]      = useState('')
@@ -852,6 +1041,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
     setGuardando(true)
     setErrorGuardar('')
     const payload = {
+      numero_req:       form.numero_req?.trim() || null,
       fecha:            form.fecha            || null,
       contenido:        form.contenido.trim(),
       solicitante:      form.solicitante,
@@ -1098,9 +1288,47 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
             ⬆ Importar
           </button>
         )}
-        <button className="req-btn-tool" onClick={handleExportar} disabled={exportando}>
-          {exportando ? 'Exportando…' : '⬇ Exportar'}
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button className="req-btn-tool" onClick={() => setMenuExportar(v => !v)}>
+            ⬇ Exportar ▾
+          </button>
+          {menuExportar && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
+                background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', overflow: 'hidden',
+              }}>
+                <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                  Exportar vista actual
+                </p>
+                {[
+                  { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
+                  { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportar(false); try { await exportarExcel(filtrados.length ? filtrados : items) } finally { setExportando(false) } } },
+                  { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
+                  { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
+                  { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
+                ].map(({ icon, label, desc, fn }) => (
+                  <button key={label} onClick={fn} style={{
+                    display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                    padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                    textAlign: 'left', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
         {puedeEditar && (
           <button className="req-btn-nuevo" onClick={abrirNuevo}>+ Nuevo</button>
         )}
@@ -1134,7 +1362,10 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
                 const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
                 return (
                   <tr key={r.id} className="req-row">
-                    <td className="req-num">#{r.id}</td>
+                    <td className="req-num">
+                      {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#1e40af' }}>{r.numero_req}</span>}
+                      <span style={{ color: r.numero_req ? '#9ca3af' : undefined }}>#{r.id}</span>
+                    </td>
                     <td className="req-nowrap">{formatFecha(r.fecha)}</td>
                     <td className="req-contenido">{r.contenido}</td>
                     <td>{r.solicitante || '—'}</td>
@@ -1206,7 +1437,11 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               <button className="req-modal-close" onClick={cerrar}>✕</button>
             </div>
             <div className="req-modal-body">
-              <div className="req-grid-2">
+              <div className="req-grid-3">
+                <label>
+                  <span>N° Manual</span>
+                  <input type="text" value={form.numero_req || ''} onChange={e => setF('numero_req', e.target.value)} placeholder="Ej: 2024-001" disabled={!puedeEditar} />
+                </label>
                 <label>
                   <span>Fecha</span>
                   <input type="date" value={form.fecha || ''} onChange={e => setF('fecha', e.target.value)} disabled={!puedeEditar} />
