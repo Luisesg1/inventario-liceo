@@ -7,17 +7,19 @@ const DEFAULTS = {
   colorPrimario:    '#1a237e',
   colorAcento:      '#d4a017',
   colorBoton:       '#6366f1',
+  pageBg:           '#0b1220',
+  sidebarBg:        '#0a1325',
   nombreSistema:    'Inventario',
   nombreInstitucion:'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
 }
 
 const PALETAS = [
-  { nombre: 'Azul marino',       primario: '#1a237e', acento: '#d4a017', boton: '#6366f1' },
-  { nombre: 'Verde institucional',primario: '#14532d', acento: '#86efac', boton: '#16a34a' },
-  { nombre: 'Borgoña',           primario: '#7f1d1d', acento: '#fca5a5', boton: '#dc2626' },
-  { nombre: 'Gris corporativo',  primario: '#1f2937', acento: '#9ca3af', boton: '#3b82f6' },
-  { nombre: 'Morado real',       primario: '#4c1d95', acento: '#c4b5fd', boton: '#7c3aed' },
-  { nombre: 'Oscuro',            primario: '#0d1628', acento: '#d4a017', boton: '#6366f1' },
+  { nombre: 'Azul marino',        primario: '#1a237e', acento: '#d4a017', boton: '#6366f1', pageBg: '#0b1220', sidebarBg: '#0a1325' },
+  { nombre: 'Verde institucional', primario: '#14532d', acento: '#86efac', boton: '#16a34a', pageBg: '#030f08', sidebarBg: '#020c06' },
+  { nombre: 'Borgoña',            primario: '#7f1d1d', acento: '#fca5a5', boton: '#dc2626', pageBg: '#0d0404', sidebarBg: '#0a0303' },
+  { nombre: 'Gris corporativo',   primario: '#1f2937', acento: '#9ca3af', boton: '#3b82f6', pageBg: '#090c0f', sidebarBg: '#07090c' },
+  { nombre: 'Morado real',        primario: '#4c1d95', acento: '#c4b5fd', boton: '#7c3aed', pageBg: '#0a0514', sidebarBg: '#080412' },
+  { nombre: 'Oscuro',             primario: '#0d1628', acento: '#d4a017', boton: '#6366f1', pageBg: '#060c14', sidebarBg: '#050a11' },
 ]
 
 function hexToRgb(hex) {
@@ -201,6 +203,8 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [colorPrimario,     setColorPrimario]     = useState(DEFAULTS.colorPrimario)
   const [colorAcento,       setColorAcento]       = useState(DEFAULTS.colorAcento)
   const [colorBoton,        setColorBoton]        = useState(DEFAULTS.colorBoton)
+  const [pageBg,            setPageBg]            = useState(DEFAULTS.pageBg)
+  const [sidebarBg,         setSidebarBg]         = useState(DEFAULTS.sidebarBg)
   const [logoPreview,       setLogoPreview]       = useState('/logo-liceo.png')
   const [logoFile,          setLogoFile]          = useState(null)
   const [sinFondo,          setSinFondo]          = useState(false)
@@ -217,10 +221,14 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     const { data } = await supabase.from('configuracion').select('clave, valor')
     if (!data) return
     const cfg = Object.fromEntries(data.map(r => [r.clave, r.valor]))
-    const p = cfg.color_primario || DEFAULTS.colorPrimario
-    const a = cfg.color_acento   || DEFAULTS.colorAcento
-    const b = cfg.color_boton    || DEFAULTS.colorBoton
+    const p  = cfg.color_primario || DEFAULTS.colorPrimario
+    const a  = cfg.color_acento   || DEFAULTS.colorAcento
+    const b  = cfg.color_boton    || DEFAULTS.colorBoton
+    const pg = cfg.page_bg        || DEFAULTS.pageBg
+    const sb = cfg.sidebar_bg     || DEFAULTS.sidebarBg
     setColorPrimario(p); setColorAcento(a); setColorBoton(b)
+    setPageBg(pg); setSidebarBg(sb)
+    aplicarTema({ colorPrimario: p, colorAcento: a, colorBoton: b, pageBg: pg, sidebarBg: sb })
     if (cfg.logo_url)              setLogoPreview(cfg.logo_url)
     if (cfg.logo_sin_fondo === 'true') setSinFondo(true)
     if (cfg.nombre_sistema)        setNombreSistema(cfg.nombre_sistema)
@@ -236,9 +244,11 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     })
   }
 
-  function aplicarPaleta({ primario, acento, boton }) {
+  function aplicarPaleta({ primario, acento, boton, pageBg: pg, sidebarBg: sb }) {
     setColorPrimario(primario); setColorAcento(acento); setColorBoton(boton)
-    aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton })
+    if (pg) setPageBg(pg)
+    if (sb) setSidebarBg(sb)
+    aplicarTema({ colorPrimario: primario, colorAcento: acento, colorBoton: boton, pageBg: pg, sidebarBg: sb })
   }
 
   async function handleLogoFile(e) {
@@ -277,6 +287,8 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
       { clave: 'color_primario',    valor: colorPrimario     },
       { clave: 'color_acento',      valor: colorAcento       },
       { clave: 'color_boton',       valor: colorBoton        },
+      { clave: 'page_bg',           valor: pageBg            },
+      { clave: 'sidebar_bg',        valor: sidebarBg         },
       { clave: 'logo_sin_fondo',    valor: String(sinFondo)  },
       { clave: 'nombre_sistema',    valor: nombreSistema.trim()     || DEFAULTS.nombreSistema     },
       { clave: 'nombre_institucion',valor: nombreInstitucion.trim() || DEFAULTS.nombreInstitucion },
@@ -299,7 +311,9 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     setColorPrimario(DEFAULTS.colorPrimario)
     setColorAcento(DEFAULTS.colorAcento)
     setColorBoton(DEFAULTS.colorBoton)
-    aplicarTema(DEFAULTS)
+    setPageBg(DEFAULTS.pageBg)
+    setSidebarBg(DEFAULTS.sidebarBg)
+    aplicarTema({ colorPrimario: DEFAULTS.colorPrimario, colorAcento: DEFAULTS.colorAcento, colorBoton: DEFAULTS.colorBoton, pageBg: DEFAULTS.pageBg, sidebarBg: DEFAULTS.sidebarBg })
   }
 
   const [r1, g1, b1] = hexToRgb(colorPrimario)

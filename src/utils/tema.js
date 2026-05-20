@@ -7,11 +7,10 @@ function hexToRgb(hex) {
   ]
 }
 
-export function aplicarTema({ colorPrimario, colorAcento, colorBoton }) {
+export function aplicarTema({ colorPrimario, colorAcento, colorBoton, pageBg, sidebarBg }) {
   const root = document.documentElement
 
   const [r, g, b] = hexToRgb(colorPrimario)
-  // Variantes oscuras del primario para los gradientes del sidebar/layout
   const dk = [Math.round(r * 0.45), Math.round(g * 0.45), Math.round(b * 0.45)]
   const md = [Math.round(r * 0.62), Math.round(g * 0.62), Math.round(b * 0.62)]
   root.style.setProperty('--primary-rgb',      `${r}, ${g}, ${b}`)
@@ -20,8 +19,10 @@ export function aplicarTema({ colorPrimario, colorAcento, colorBoton }) {
 
   const [ar, ag, ab] = hexToRgb(colorAcento)
   root.style.setProperty('--acento-rgb', `${ar}, ${ag}, ${ab}`)
-  // Versión más brillante del acento para texto activo en nav
   root.style.setProperty('--acento-bright', `rgb(${Math.min(255, Math.round(ar * 1.13))}, ${Math.min(255, Math.round(ag * 1.3))}, ${Math.min(255, ab + 73)})`)
 
   root.style.setProperty('--color-boton', colorBoton)
+
+  if (pageBg)    root.style.setProperty('--page-bg',    pageBg)
+  if (sidebarBg) root.style.setProperty('--sidebar-bg', sidebarBg)
 }
