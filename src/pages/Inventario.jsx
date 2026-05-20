@@ -1773,12 +1773,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
                   </div>
                 </div>
-                <div className="form-row">
+                <div className="form-row triple">
                   <div className="field">
                     <label>Generación / Versión CPU</label>
                     <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
                   </div>
-                  <div className="field">
+                  <div className="field" style={{ gridColumn: 'span 2' }}>
                     <label>Procesador completo (generado)</label>
                     <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
                   </div>
@@ -1790,18 +1790,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Tipo RAM</label>
-                    <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>DDR3</option>
-                      <option>DDR4</option>
-                      <option>DDR5</option>
-                      <option>LPDDR4</option>
-                      <option>LPDDR5</option>
-                      <option>SO-DIMM DDR4</option>
-                      <option>SO-DIMM DDR5</option>
-                      <option>Unificada (Apple)</option>
-                      <option>Otro</option>
-                    </select>
+                    <ComboField name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange} placeholder="ej: DDR4, DDR5…" maxLength={30} opciones={['DDR3','DDR4','DDR5','LPDDR4','LPDDR5','SO-DIMM DDR4','SO-DIMM DDR5','Unificada (Apple)']} />
                   </div>
                   <div className="field">
                     <label>Slots disponibles</label>
@@ -1819,12 +1808,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Sistema operativo</label>
-                    <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
-                      <option>Windows 11 Pro</option><option>Windows 11 Home</option>
-                      <option>Windows 10 Pro</option><option>Windows 10 Home</option>
-                      <option>Ubuntu</option><option>macOS</option>
-                      <option>Sin sistema</option><option>Otro</option>
-                    </select>
+                    <ComboField name="sistema_operativo" value={form.sistema_operativo ?? ''} onChange={handleChange} placeholder="ej: Windows 11 Pro…" maxLength={40} opciones={['Windows 11 Pro','Windows 11 Home','Windows 10 Pro','Windows 10 Home','Ubuntu','macOS','Sin sistema']} />
                   </div>
                 </div>
                 {specCF.length > 0 && rows3c(specCF).map((row, i) => (
@@ -2298,12 +2282,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <input name="cpu_modelo" value={form.cpu_modelo ?? ''} onChange={handleChange} placeholder="ej: Core i5, Ryzen 5" maxLength={40} />
                   </div>
                 </div>
-                <div className="form-row">
+                <div className="form-row triple">
                   <div className="field">
                     <label>Generación / Versión CPU</label>
                     <input name="cpu_generacion" value={form.cpu_generacion ?? ''} onChange={handleChange} placeholder="ej: 1235U, 5600X, M2" maxLength={40} />
                   </div>
-                  <div className="field">
+                  <div className="field" style={{ gridColumn: 'span 2' }}>
                     <label>Procesador completo (generado)</label>
                     <input value={[form.cpu_marca, form.cpu_modelo, form.cpu_generacion].filter(Boolean).join(' ') || form.cpu || '—'} readOnly className="input-readonly" />
                   </div>
@@ -2315,18 +2299,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Tipo RAM</label>
-                    <select name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>DDR3</option>
-                      <option>DDR4</option>
-                      <option>DDR5</option>
-                      <option>LPDDR4</option>
-                      <option>LPDDR5</option>
-                      <option>SO-DIMM DDR4</option>
-                      <option>SO-DIMM DDR5</option>
-                      <option>Unificada (Apple)</option>
-                      <option>Otro</option>
-                    </select>
+                    <ComboField name="ram_tipo" value={form.ram_tipo ?? ''} onChange={handleChange} placeholder="ej: DDR4, DDR5…" maxLength={30} opciones={['DDR3','DDR4','DDR5','LPDDR4','LPDDR5','SO-DIMM DDR4','SO-DIMM DDR5','Unificada (Apple)']} />
                   </div>
                   <div className="field">
                     <label>Slots disponibles</label>
@@ -2344,12 +2317,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Sistema operativo</label>
-                    <select name="sistema_operativo" value={form.sistema_operativo} onChange={handleChange}>
-                      <option>Windows 11 Pro</option><option>Windows 11 Home</option>
-                      <option>Windows 10 Pro</option><option>Windows 10 Home</option>
-                      <option>Ubuntu</option><option>macOS</option>
-                      <option>Sin sistema</option><option>Otro</option>
-                    </select>
+                    <ComboField name="sistema_operativo" value={form.sistema_operativo ?? ''} onChange={handleChange} placeholder="ej: Windows 11 Pro…" maxLength={40} opciones={['Windows 11 Pro','Windows 11 Home','Windows 10 Pro','Windows 10 Home','Ubuntu','macOS','Sin sistema']} />
                   </div>
                 </div>
                 {specCF.length > 0 && rows3c(specCF).map((row, i) => (
