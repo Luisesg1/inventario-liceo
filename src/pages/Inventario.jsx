@@ -1468,8 +1468,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {/* Barra de búsqueda y filtros */}
       {(() => {
         const camposComp   = [
-          { campo: 'area', label: 'Área' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
-          { campo: 'ram', label: 'RAM' }, { campo: 'sistema_operativo', label: 'S.O.' },
+          { campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' },
           { campo: 'ubicacion', label: 'Ubicación' },
         ]
         const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }, { campo: 'ubicacion', label: 'Ubicación' }]
