@@ -29,6 +29,7 @@ const CAMPOS_PREDET = {
     { id: 'codigo',             nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
     { id: 'estado',             nombre: 'Estado',                   tipo: 'select', _global: true },
     { id: 'ubicacion',          nombre: 'Ubicación',                tipo: 'texto',  _global: true },
+    { id: 'area',               nombre: 'Área',                     tipo: 'texto',  _global: true },
     { id: 'responsable',        nombre: 'Responsable',              tipo: 'texto',  _global: true },
     { id: 'tipo',               nombre: 'Tipo de equipo',           tipo: 'select' },
     { id: 'marca',              nombre: 'Marca',                    tipo: 'texto'  },
@@ -54,6 +55,7 @@ const CAMPOS_PREDET = {
     { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
     { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
     { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
+    { id: 'area',        nombre: 'Área',                    tipo: 'texto',  _global: true },
     { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
     { id: 'tipo',              nombre: 'Tipo',              tipo: 'texto' },
     { id: 'tecnologia',        nombre: 'Tecnología',        tipo: 'texto' },
@@ -388,7 +390,9 @@ export default function CamposCategoria({ usuario }) {
   const [nuevoTipo,       setNuevoTipo]       = useState('texto')
   const [nuevoReq,        setNuevoReq]        = useState(false)
   const [nuevoOpts,       setNuevoOpts]       = useState('')
-  const [editandoCampoId, setEditandoCampoId] = useState(null)
+  const [editandoCampoId,       setEditandoCampoId]       = useState(null)
+  const [confirmBorrarCampo,   setConfirmBorrarCampo]   = useState(null) // campo obj
+  const [confirmActualizarCampo, setConfirmActualizarCampo] = useState(false)
 
   const [camposOcultos,        setCamposOcultos]        = useState([])
   const [sistemaCamposExpanded, setSistemaCamposExpanded] = useState(false)
@@ -845,7 +849,7 @@ export default function CamposCategoria({ usuario }) {
                                   style={{ background: estaEditandoC ? '#fef9c3' : 'none', border: estaEditandoC ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: estaEditandoC ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
                                   onMouseOver={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
                                   onMouseOut={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>✏️</button>
-                                <button onClick={e => { e.stopPropagation(); eliminarCampo(campo.id) }} title="Eliminar campo"
+                                <button onClick={e => { e.stopPropagation(); setConfirmBorrarCampo(campo) }} title="Eliminar campo"
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
                                   onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
                                   onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>✕</button>
@@ -930,7 +934,7 @@ export default function CamposCategoria({ usuario }) {
                         Cancelar
                       </button>
                     )}
-                    <button onClick={agregarOActualizarCampo}
+                    <button onClick={() => editandoCampoId ? setConfirmActualizarCampo(true) : agregarOActualizarCampo()}
                       style={{ padding: '9px 20px', borderRadius: 9, border: 'none',
                         background: editandoCampoId ? 'linear-gradient(135deg,#d97706,#b45309)' : 'linear-gradient(135deg,#6366f1,#4f46e5)',
                         color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
@@ -985,6 +989,64 @@ export default function CamposCategoria({ usuario }) {
           onClose={() => setModalCat(null)}
           onSave={handleGuardarCat}
         />
+      )}
+
+      {/* ── Modal confirmar borrar campo personalizado ── */}
+      {confirmBorrarCampo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+          onClick={() => setConfirmBorrarCampo(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 360, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🗑️</div>
+              <div>
+                <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Eliminar campo "{confirmBorrarCampo.nombre}"?</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+                  Esta acción no puede deshacerse. Los bienes existentes no perderán sus datos, pero el campo dejará de aparecer en el formulario.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmBorrarCampo(null)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { eliminarCampo(confirmBorrarCampo.id); setConfirmBorrarCampo(null) }}
+                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.35)' }}>
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar actualizar campo personalizado ── */}
+      {confirmActualizarCampo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+          onClick={() => setConfirmActualizarCampo(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 360, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef9c3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>✏️</div>
+              <div>
+                <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Guardar cambios en el campo?</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+                  Se actualizará la configuración de este campo para todos los bienes de esta categoría.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmActualizarCampo(false)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { agregarOActualizarCampo(); setConfirmActualizarCampo(false) }}
+                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
+                Sí, actualizar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Modal confirmar borrar categoría ─────────── */}
