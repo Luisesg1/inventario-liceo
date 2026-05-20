@@ -2727,7 +2727,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <th>Nombre</th>
                 {catActual === 'todos'        && <th className="th-hide-mobile">Categoría</th>}
                 {catActual === 'computadores' && <><th className="th-hide-mobile">Tipo</th><th className="th-hide-mobile">Marca / Modelo</th><th className="th-hide-mobile">CPU</th><th className="th-hide-mobile">RAM</th><th className="th-hide-mobile">SO</th></>}
-                {catActual !== 'computadores' && <th className="th-hide-mobile">Cant.</th>}
+                {catActual !== 'computadores' && !esBiblioteca(catActual) && <th className="th-hide-mobile">Cant.</th>}
+                {esBiblioteca(catActual) && <><th className="th-hide-mobile" style={{ textAlign: 'center' }}>Total</th><th className="th-hide-mobile" style={{ textAlign: 'center' }}>Disponible</th></>}
                 <th>Estado</th>
                 <th className="th-hide-mobile">Ubicación</th>
                 <th></th>
@@ -2801,7 +2802,21 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <td className="td-muted td-hide-mobile">{b.sistema_operativo ?? '—'}</td>
                     </>
                   )}
-                  {catActual !== 'computadores' && <td className="td-hide-mobile">{b.cantidad}</td>}
+                  {catActual !== 'computadores' && !esBiblioteca(catActual) && <td className="td-hide-mobile">{b.cantidad}</td>}
+                  {esBiblioteca(catActual) && (() => {
+                    const prestados = bienesConPrestamo.has(b.id) ? 1 : 0
+                    const disponible = Math.max(0, b.cantidad - prestados)
+                    return (
+                      <>
+                        <td className="td-hide-mobile" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>{b.cantidad}</td>
+                        <td className="td-hide-mobile" style={{ textAlign: 'center' }}>
+                          <span style={{ fontWeight: 700, color: disponible === 0 ? '#f87171' : disponible <= 2 ? '#fbbf24' : '#4ade80' }}>
+                            {disponible}
+                          </span>
+                        </td>
+                      </>
+                    )
+                  })()}
                   <td><span className={`badge ${ESTADO_BADGE[b.estado] ?? ''}`}>{b.estado}</span></td>
                   <td className="td-muted td-hide-mobile">{b.ubicacion}</td>
                   <td>
