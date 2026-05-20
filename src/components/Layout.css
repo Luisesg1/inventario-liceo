@@ -29,16 +29,6 @@
   will-change: transform;
 }
 
-/* Desktop: sidebar siempre visible */
-@media (min-width: 769px) {
-  #app-sidebar {
-    transform: translateX(0) !important;
-  }
-  .main { margin-left: 264px; }
-  .btn-hamburger { display: none; }
-  .sidebar-close { display: none; }
-  .sidebar-overlay { display: none !important; }
-}
 
 /* ── Logo ─────────────────────────────────────────────── */
 .sidebar-logo {
