@@ -73,15 +73,7 @@
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.sidebar-close {
-  background: none; border: none;
-  color: rgba(255,255,255,0.35);
-  cursor: pointer;
-  padding: 7px; border-radius: 8px; line-height: 1;
-  flex-shrink: 0; transition: all 0.15s ease;
-  display: flex; align-items: center; justify-content: center;
-}
-.sidebar-close:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); }
+.sidebar-close { display: none; }
 
 /* ── Nav ──────────────────────────────────────────────── */
 .sidebar-nav {
