@@ -224,8 +224,8 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
     const p  = cfg.color_primario || DEFAULTS.colorPrimario
     const a  = cfg.color_acento   || DEFAULTS.colorAcento
     const b  = cfg.color_boton    || DEFAULTS.colorBoton
-    const pg = cfg.page_bg        || DEFAULTS.pageBg
-    const sb = cfg.sidebar_bg     || DEFAULTS.sidebarBg
+    const pg = (!cfg.page_bg    || cfg.page_bg    === '#0b1220') ? DEFAULTS.pageBg    : cfg.page_bg
+    const sb = (!cfg.sidebar_bg || cfg.sidebar_bg === '#0a1325') ? DEFAULTS.sidebarBg : cfg.sidebar_bg
     setColorPrimario(p); setColorAcento(a); setColorBoton(b)
     setPageBg(pg); setSidebarBg(sb)
     aplicarTema({ colorPrimario: p, colorAcento: a, colorBoton: b, pageBg: pg, sidebarBg: sb })
