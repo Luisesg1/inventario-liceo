@@ -183,10 +183,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [historialPrestamos, setHistorialPrestamos] = useState([]) // préstamos devueltos
   const [verHistorial, setVerHistorial]       = useState(false)
   const [cargandoPrestamo, setCargandoPrestamo] = useState(false)
-  const [modalPrestamo, setModalPrestamo]     = useState(null) // bien para el modal de registro
+  const [modalPrestamo, setModalPrestamo]     = useState(null)
   const [formPrestamo, setFormPrestamo]       = useState({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '' })
   const [guardandoPrestamo, setGuardandoPrestamo] = useState(false)
-  const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map()) // Map<id, fecha_prestamo>
+  const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map())
+  const [confirmDevolucion, setConfirmDevolucion] = useState(false)
+  const [notaDevolucion, setNotaDevolucion]     = useState('')
+  const [editandoHistorial, setEditandoHistorial] = useState(null) // id del prestamo en edición
+  const [formEditHistorial, setFormEditHistorial] = useState({})
+  const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
   const [catsVisible, setCatsVisible] = useState(true)
   const [filtrosOpen, setFiltrosOpen] = useState(false)
   const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
@@ -1199,6 +1204,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setModalPrestamo(null)
     setFormPrestamo({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '' })
     setVerHistorial(false)
+    setConfirmDevolucion(false)
+    setNotaDevolucion('')
+    setEditandoHistorial(null)
+    setConfirmBorrarHistorial(null)
   }
 
   const registrarPrestamo = async () => {
@@ -1229,9 +1238,36 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       p_devuelto_por: usuario.nombre,
     })
     if (!error) {
+      if (notaDevolucion.trim()) {
+        await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
+      }
       setPrestamoBien(null)
+      setConfirmDevolucion(false)
+      setNotaDevolucion('')
       const bienId = modalPrestamo?.id ?? verDetalle?.id
       setBienesConPrestamo(prev => { const m = new Map(prev); m.delete(bienId); return m })
+    }
+  }
+
+  const guardarEditHistorial = async (id) => {
+    const { error } = await supabase.from('prestamos').update({
+      prestado_a: formEditHistorial.prestado_a?.trim() || null,
+      cargo: formEditHistorial.cargo?.trim() || null,
+      fecha_prestamo: formEditHistorial.fecha_prestamo || null,
+      notas: formEditHistorial.notas?.trim() || null,
+      nota_devolucion: formEditHistorial.nota_devolucion?.trim() || null,
+    }).eq('id', id)
+    if (!error) {
+      setHistorialPrestamos(prev => prev.map(p => p.id === id ? { ...p, ...formEditHistorial } : p))
+      setEditandoHistorial(null)
+    }
+  }
+
+  const borrarHistorial = async (id) => {
+    const { error } = await supabase.from('prestamos').delete().eq('id', id)
+    if (!error) {
+      setHistorialPrestamos(prev => prev.filter(p => p.id !== id))
+      setConfirmBorrarHistorial(null)
     }
   }
 
@@ -3095,7 +3131,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
       {/* Modal préstamo */}
       {modalPrestamo && (() => {
-        const fmtFecha = s => { if (!s) return null; const d = new Date(String(s).includes('T') ? s : s + 'T12:00:00'); return isNaN(d) ? null : d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) }
+        const fmtFecha = s => {
+          if (!s) return '—'
+          const norm = String(s).replace(' ', 'T').split('.')[0].split('+')[0]
+          const d = new Date(norm.includes('T') ? norm : norm + 'T12:00:00')
+          return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
+        }
+        const inStyle = { width: '100%', padding: '6px 9px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 12, boxSizing: 'border-box' }
         return (
         <div className="modal-overlay" onClick={cerrarModalPrestamo}>
           <div className="modal" style={{ maxWidth: 460, width: '94%' }} onClick={e => e.stopPropagation()}>
@@ -3123,10 +3165,21 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
-                  <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
-                  <button onClick={async () => { await marcarDevuelto(); cerrarModalPrestamo() }} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
-                </div>
+                {confirmDevolucion ? (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#166534', display: 'block', marginBottom: 5 }}>Nota de devolución (opcional)</label>
+                    <input value={notaDevolucion} onChange={e => setNotaDevolucion(e.target.value)} placeholder="ej: Devuelto en buen estado" style={{ ...inStyle, marginBottom: 10 }} autoFocus />
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button onClick={() => { setConfirmDevolucion(false); setNotaDevolucion('') }} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
+                      <button onClick={async () => { await marcarDevuelto(); cerrarModalPrestamo() }} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓ Confirmar devolución</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
+                    <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
+                    <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
+                  </div>
+                )}
               </>
             )}
 
@@ -3166,15 +3219,51 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   📋 Historial de préstamos ({historialPrestamos.length}) {verHistorial ? '▲' : '▼'}
                 </button>
                 {verHistorial && (
-                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
+                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
                     {historialPrestamos.map(p => (
-                      <div key={p.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
-                        <div style={{ fontWeight: 700, color: '#374151' }}>{p.prestado_a}{p.cargo && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 6 }}>· {p.cargo}</span>}</div>
-                        <div style={{ color: '#6b7280', marginTop: 2 }}>
-                          {p.fecha_prestamo && <>Préstamo: <strong>{fmtFecha(p.fecha_prestamo)}</strong></>}
-                          {p.fecha_devolucion_real && <> · Dev.: <strong>{fmtFecha(p.fecha_devolucion_real)}</strong></>}
-                        </div>
-                        {p.notas && <div style={{ color: '#9ca3af', marginTop: 2 }}>📝 {p.notas}</div>}
+                      <div key={p.id} style={{ background: '#f9fafb', border: `1px solid ${confirmBorrarHistorial === p.id ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
+                        {editandoHistorial === p.id ? (
+                          /* ── Modo edición ── */
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                              <div><label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 2 }}>Prestado a</label><input value={formEditHistorial.prestado_a ?? ''} onChange={e => setFormEditHistorial(f => ({ ...f, prestado_a: e.target.value }))} style={inStyle} /></div>
+                              <div><label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 2 }}>Cargo</label><input value={formEditHistorial.cargo ?? ''} onChange={e => setFormEditHistorial(f => ({ ...f, cargo: e.target.value }))} style={inStyle} /></div>
+                              <div><label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 2 }}>Fecha préstamo</label><input type="date" value={formEditHistorial.fecha_prestamo ?? ''} onChange={e => setFormEditHistorial(f => ({ ...f, fecha_prestamo: e.target.value }))} style={inStyle} /></div>
+                              <div><label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 2 }}>Notas préstamo</label><input value={formEditHistorial.notas ?? ''} onChange={e => setFormEditHistorial(f => ({ ...f, notas: e.target.value }))} style={inStyle} /></div>
+                            </div>
+                            <div><label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 2 }}>Nota devolución</label><input value={formEditHistorial.nota_devolucion ?? ''} onChange={e => setFormEditHistorial(f => ({ ...f, nota_devolucion: e.target.value }))} style={inStyle} /></div>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 2 }}>
+                              <button onClick={() => setEditandoHistorial(null)} style={{ padding: '4px 12px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#6b7280' }}>Cancelar</button>
+                              <button onClick={() => guardarEditHistorial(p.id)} style={{ padding: '4px 12px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Guardar</button>
+                            </div>
+                          </div>
+                        ) : confirmBorrarHistorial === p.id ? (
+                          /* ── Confirmar borrado ── */
+                          <div>
+                            <p style={{ margin: '0 0 8px', color: '#dc2626', fontWeight: 600 }}>¿Eliminar este registro?</p>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                              <button onClick={() => setConfirmBorrarHistorial(null)} style={{ padding: '4px 12px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, cursor: 'pointer', fontSize: 11, color: '#6b7280' }}>Cancelar</button>
+                              <button onClick={() => borrarHistorial(p.id)} style={{ padding: '4px 12px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>Sí, eliminar</button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* ── Vista normal ── */
+                          <>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                              <div style={{ fontWeight: 700, color: '#374151' }}>{p.prestado_a}{p.cargo && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 6 }}>· {p.cargo}</span>}</div>
+                              <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                                <button onClick={() => { setEditandoHistorial(p.id); setFormEditHistorial({ prestado_a: p.prestado_a, cargo: p.cargo ?? '', fecha_prestamo: p.fecha_prestamo ? String(p.fecha_prestamo).slice(0,10) : '', notas: p.notas ?? '', nota_devolucion: p.nota_devolucion ?? '' }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Editar">✏️</button>
+                                <button onClick={() => setConfirmBorrarHistorial(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Eliminar">🗑️</button>
+                              </div>
+                            </div>
+                            <div style={{ color: '#6b7280', marginTop: 2 }}>
+                              {p.fecha_prestamo && <>Préstamo: <strong>{fmtFecha(p.fecha_prestamo)}</strong></>}
+                              {p.fecha_devolucion_real && <> · Dev.: <strong>{fmtFecha(p.fecha_devolucion_real)}</strong></>}
+                            </div>
+                            {p.notas && <div style={{ color: '#9ca3af', marginTop: 2 }}>📝 {p.notas}</div>}
+                            {p.nota_devolucion && <div style={{ color: '#9ca3af', marginTop: 2 }}>🔄 {p.nota_devolucion}</div>}
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
