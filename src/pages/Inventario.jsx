@@ -3133,9 +3133,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {modalPrestamo && (() => {
         const fmtFecha = s => {
           if (!s) return '—'
-          const norm = String(s).replace(' ', 'T').split('.')[0].split('+')[0]
-          const d = new Date(norm.includes('T') ? norm : norm + 'T12:00:00')
-          return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
+          const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+          const dateStr = String(s).slice(0, 10)
+          const [y, m, d] = dateStr.split('-').map(Number)
+          if (!y || !m || !d) return '—'
+          return `${d} ${MESES[m - 1]} ${y}`
         }
         const inStyle = { width: '100%', padding: '6px 9px', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 12, boxSizing: 'border-box' }
         return (
