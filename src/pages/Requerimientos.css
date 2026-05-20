@@ -388,11 +388,11 @@
   align-items: center;
   justify-content: center;
   transition: background 0.13s ease, opacity 0.13s ease;
-  opacity: 0.4;
+  opacity: 0.5;
 }
 .req-acciones .btn-ver:hover  { opacity: 1; background: rgba(59,130,246,0.12); color: #60a5fa; }
 .req-acciones .btn-edit:hover { opacity: 1; background: rgba(212,160,23,0.12); color: #fcd34d; }
-.req-acciones .btn-del        { color: #f87171; }
+.req-acciones .btn-del        { color: #ef4444; opacity: 0.75; }
 .req-acciones .btn-del:hover  { opacity: 1; background: rgba(239,68,68,0.12); color: #ef4444; }
 
 .req-modal-detalle {
@@ -914,4 +914,33 @@
   .req-grid-3 { grid-template-columns: 1fr; }
   .req-kpi    { padding: 10px 14px; min-width: 90px; }
   .req-kpi-num { font-size: 18px; }
+
+  .req-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .req-search {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .req-search:first-child {
+    flex: 0 1 100px;
+  }
+  .fsel-trigger { min-width: 0; flex: 1; }
+  .drp-trigger  { flex: 1; white-space: nowrap; }
+
+  .req-acciones .btn-ver,
+  .req-acciones .btn-edit,
+  .req-acciones .btn-del {
+    padding: 6px 5px;
+    opacity: 0.75;
+  }
+  .req-acciones .btn-del { opacity: 0.85; }
+
+  /* Paginación en mobile: compacta */
+  .req-paginacion {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
 }

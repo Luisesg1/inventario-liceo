@@ -977,7 +977,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   const POR_PAG_R    = 20
   const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
   const filtradosPagR = filtrados.slice((paginaR - 1) * POR_PAG_R, paginaR * POR_PAG_R)
-  const pBtnR = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid rgba(255,255,255,0.08)', background: dis ? 'rgba(255,255,255,0.02)' : '#111c2d', color: dis ? 'rgba(148,163,184,0.3)' : '#94a3b8', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'background 0.15s' })
+  const pBtnR = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e2e8f0', background: dis ? '#f9fafb' : '#ffffff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'background 0.15s', boxShadow: dis ? 'none' : '0 1px 2px rgba(0,0,0,0.04)' })
 
   const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
@@ -1419,7 +1419,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
           <button onClick={() => setPaginaR(1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>«</button>
           <button onClick={() => setPaginaR(p => p - 1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>‹ Ant.</button>
-          <span style={{ fontSize: 13, color: '#94a3b8', padding: '0 6px' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} requerimientos</span>
+          <span style={{ fontSize: 13, color: '#475569', padding: '0 6px', whiteSpace: 'nowrap' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} req.</span>
           <button onClick={() => setPaginaR(p => p + 1)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>Sig. ›</button>
           <button onClick={() => setPaginaR(totalPagsR)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>»</button>
         </div>

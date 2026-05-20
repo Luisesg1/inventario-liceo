@@ -2824,7 +2824,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     const disponible = Math.max(0, b.cantidad - prestados)
                     return (
                       <>
-                        <td className="td-hide-mobile" style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>{b.cantidad}</td>
+                        <td className="td-hide-mobile" style={{ textAlign: 'center', color: '#475569' }}>{b.cantidad}</td>
                         <td className="td-hide-mobile" style={{ textAlign: 'center' }}>
                           <span style={{ fontWeight: 700, color: disponible === 0 ? '#f87171' : disponible <= 2 ? '#fbbf24' : '#4ade80' }}>
                             {disponible}
@@ -2890,8 +2890,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               <div className="detalle-titulo-wrap">
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
                 <div className="detalle-titulo-text">
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#0f172a', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
               </div>
               <div className="detalle-header-actions">
