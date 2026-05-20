@@ -1511,9 +1511,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {/* Barra de búsqueda y filtros */}
       {(() => {
         const camposComp   = [
-          { campo: 'area', label: 'Área' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
+          { campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
         ]
-        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }, { campo: 'ubicacion', label: 'Ubicación' }]
+        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' }]
         const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
         const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
         const campos = esComp(catActual) ? camposComp : esTecno(catActual) ? camposTecno : catActual === 'todos' ? camposTodos : camposOtros
