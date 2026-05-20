@@ -1521,10 +1521,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
         const selectStyle = (activo) => ({
           height: '34px', borderRadius: '8px',
-          border: activo ? '1.5px solid #6366f1' : '1px solid #e5e7eb',
+          border: activo ? '1.5px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
           fontSize: '0.82rem', padding: '0 8px',
-          background: activo ? '#eef2ff' : 'white',
-          color: activo ? '#4338ca' : '#6b7280',
+          background: activo ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
+          color: activo ? '#a5b4fc' : 'rgba(255,255,255,0.7)',
           minWidth: '130px', flex: '1',
         })
 
@@ -1589,14 +1589,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
                       <option value="">Todos</option>
                       <option value="prestado">📤 Prestado</option>
-                      <option value="vencido">⚠️ Vencido</option>
                       <option value="disponible">✅ Disponible</option>
                     </select>
                   </div>
                 </div>
                 {hayFiltrosActivos && (
                   <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}); setPaginaInv(1) }}
-                    style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>
+                    style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', fontSize: '0.82rem', color: '#f87171', fontWeight: 600 }}>
                     ✕ Limpiar filtros
                   </button>
                 )}
