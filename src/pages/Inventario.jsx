@@ -55,7 +55,7 @@ const formVacio = {
 }
 
 const formVacioComp = {
-  nombre: '', categoria: 'computadores', codigo: '', cantidad: 1,
+  nombre: '', categoria: 'computadores', codigo: '', codigo_interno: '', cantidad: 1,
   estado: 'Bueno', ubicacion: '', area: '', responsable: '', obs: '',
   tipo: 'Desktop', marca: '', numero_serie: '', modelo: '', pantalla: '', ram_tipo: '', ram_slots: '',
   cpu: '', cpu_marca: '', cpu_modelo: '', cpu_generacion: '',
@@ -1628,10 +1628,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </div>
           )}
           {esComp(form.categoria) ? (
-            <div className="form-row">
+            <div className="form-row triple">
               <div className="field">
                 <label>Código / N° inventario (automático)</label>
                 <input value={form.codigo} readOnly className="input-readonly" />
+              </div>
+              <div className="field">
+                <label>Código interno</label>
+                <input name="codigo_interno" value={form.codigo_interno ?? ''} onChange={handleChange} placeholder="ej: CI-001" maxLength={40} />
               </div>
               <div className="field">
                 <label>Estado</label>
@@ -1762,14 +1766,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Marca CPU</label>
-                    <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>Intel</option>
-                      <option>AMD</option>
-                      <option>Apple</option>
-                      <option>Qualcomm</option>
-                      <option>ARM</option>
-                    </select>
+                    <ComboField name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange} placeholder="ej: Intel, AMD…" maxLength={40} opciones={['Intel','AMD','Apple','Qualcomm','ARM']} />
                   </div>
                   <div className="field">
                     <label>Modelo CPU</label>
@@ -1814,28 +1811,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <div className="form-row triple">
                   <div className="field">
                     <label>Almacenamiento (capacidad)</label>
-                    <select name="memoria" value={form.memoria} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>32 GB</option>
-                      <option>64 GB</option>
-                      <option>128 GB</option>
-                      <option>256 GB</option>
-                      <option>512 GB</option>
-                      <option>1 TB</option>
-                      <option>2 TB</option>
-                      <option>4 TB</option>
-                    </select>
+                    <ComboField name="memoria" value={form.memoria ?? ''} onChange={handleChange} placeholder="ej: 256 GB, 1 TB…" maxLength={20} opciones={['32 GB','64 GB','128 GB','256 GB','512 GB','1 TB','2 TB','4 TB']} />
                   </div>
                   <div className="field">
-                    <label>Tipo tecnología</label>
-                    <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>SSD</option>
-                      <option>HDD</option>
-                      <option>SSD + HDD</option>
-                      <option>NVMe</option>
-                      <option>eMMC</option>
-                    </select>
+                    <label>Tecnología almacenamiento</label>
+                    <ComboField name="tipo_almacenamiento" value={form.tipo_almacenamiento ?? ''} onChange={handleChange} placeholder="ej: SSD, HDD…" maxLength={30} opciones={['SSD','HDD','SSD + HDD','NVMe','eMMC']} />
                   </div>
                   <div className="field">
                     <label>Sistema operativo</label>
@@ -2174,10 +2154,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </div>
           )}
           {esComp(form.categoria) ? (
-            <div className="form-row">
+            <div className="form-row triple">
               <div className="field">
                 <label>Código / N° inventario (automático)</label>
                 <input value={form.codigo} readOnly className="input-readonly" />
+              </div>
+              <div className="field">
+                <label>Código interno</label>
+                <input name="codigo_interno" value={form.codigo_interno ?? ''} onChange={handleChange} placeholder="ej: CI-001" maxLength={40} />
               </div>
               <div className="field">
                 <label>Estado</label>
@@ -2307,14 +2291,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   <div className="field">
                     <label>Marca CPU</label>
-                    <select name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>Intel</option>
-                      <option>AMD</option>
-                      <option>Apple</option>
-                      <option>Qualcomm</option>
-                      <option>ARM</option>
-                    </select>
+                    <ComboField name="cpu_marca" value={form.cpu_marca ?? ''} onChange={handleChange} placeholder="ej: Intel, AMD…" maxLength={40} opciones={['Intel','AMD','Apple','Qualcomm','ARM']} />
                   </div>
                   <div className="field">
                     <label>Modelo CPU</label>
@@ -2359,28 +2336,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <div className="form-row triple">
                   <div className="field">
                     <label>Almacenamiento (capacidad)</label>
-                    <select name="memoria" value={form.memoria} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>32 GB</option>
-                      <option>64 GB</option>
-                      <option>128 GB</option>
-                      <option>256 GB</option>
-                      <option>512 GB</option>
-                      <option>1 TB</option>
-                      <option>2 TB</option>
-                      <option>4 TB</option>
-                    </select>
+                    <ComboField name="memoria" value={form.memoria ?? ''} onChange={handleChange} placeholder="ej: 256 GB, 1 TB…" maxLength={20} opciones={['32 GB','64 GB','128 GB','256 GB','512 GB','1 TB','2 TB','4 TB']} />
                   </div>
                   <div className="field">
-                    <label>Tipo tecnología</label>
-                    <select name="tipo_almacenamiento" value={form.tipo_almacenamiento} onChange={handleChange}>
-                      <option value="">— Seleccionar —</option>
-                      <option>SSD</option>
-                      <option>HDD</option>
-                      <option>SSD + HDD</option>
-                      <option>NVMe</option>
-                      <option>eMMC</option>
-                    </select>
+                    <label>Tecnología almacenamiento</label>
+                    <ComboField name="tipo_almacenamiento" value={form.tipo_almacenamiento ?? ''} onChange={handleChange} placeholder="ej: SSD, HDD…" maxLength={30} opciones={['SSD','HDD','SSD + HDD','NVMe','eMMC']} />
                   </div>
                   <div className="field">
                     <label>Sistema operativo</label>
@@ -2908,7 +2868,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             <div className="detalle-grid-2">
               <div className="detalle-seccion">
                 <p className="detalle-titulo">Identificación</p>
-                <div className="detalle-fila"><span>Código</span><strong>{verDetalle.codigo}</strong></div>
+                <div className="detalle-fila"><span>Código Interno</span><strong>{verDetalle.codigo_interno || 'N/A'}</strong></div>
                 <div className="detalle-fila"><span>Categoría</span><strong>{getCatLabel(verDetalle.categoria)}</strong></div>
                 {!esComp(verDetalle.categoria) && <div className="detalle-fila"><span>Cantidad</span><strong>{verDetalle.cantidad}</strong></div>}
               </div>

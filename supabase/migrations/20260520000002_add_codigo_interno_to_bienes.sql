@@ -1,0 +1,1 @@
+ALTER TABLE bienes ADD COLUMN IF NOT EXISTS codigo_interno TEXT;
