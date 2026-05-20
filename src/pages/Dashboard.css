@@ -476,6 +476,16 @@
   .dash-donut-wrap { flex-direction: column; align-items: center; gap: 12px; }
   .dash-donut-leyenda { width: 100%; align-items: center; }
   .dash-act-pill { display: none; }
-  .dash-stat-pills { gap: 6px; }
+  .dash-stat-pills { gap: 5px; }
+  .dash-stat-pill {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 8px 10px;
+    min-width: 0;
+  }
+  .dash-stat-pill > svg { margin-bottom: 1px; }
+  .dsp-num { font-size: 15px; }
+  .dsp-label { font-size: 9px; white-space: nowrap; }
   .dash-montos-row { grid-template-columns: 1fr; }
 }
