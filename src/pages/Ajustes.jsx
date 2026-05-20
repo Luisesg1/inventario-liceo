@@ -17,6 +17,7 @@ const PALETAS = [
   { nombre: 'Borgoña',           primario: '#7f1d1d', acento: '#fca5a5', boton: '#dc2626' },
   { nombre: 'Gris corporativo',  primario: '#1f2937', acento: '#9ca3af', boton: '#3b82f6' },
   { nombre: 'Morado real',       primario: '#4c1d95', acento: '#c4b5fd', boton: '#7c3aed' },
+  { nombre: 'Oscuro',            primario: '#0d1628', acento: '#d4a017', boton: '#6366f1' },
 ]
 
 function hexToRgb(hex) {
