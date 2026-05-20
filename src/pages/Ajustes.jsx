@@ -304,11 +304,11 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [r1, g1, b1] = hexToRgb(colorPrimario)
   const primDark = `rgb(${Math.round(r1*.45)},${Math.round(g1*.45)},${Math.round(b1*.45)})`
 
-  const card = { background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }
+  const card = { background: '#111c2d', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }
   const sectionHeader = (icon, title, badge) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px 10px', borderBottom: '1px solid #f3f4f6' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
       <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg,${colorPrimario},${primDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icon}</div>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#111827', flex: 1 }}>{title}</p>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#e5e7eb', flex: 1 }}>{title}</p>
       {badge && <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#22c55e', padding: '2px 8px', borderRadius: 20 }}>{badge}</span>}
     </div>
   )
@@ -359,7 +359,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   onMouseOut={e => { e.currentTarget.style.background = `${colorPrimario}0f` }}>
                   <span style={{ fontSize: 14 }}>📁</span> Imagen
                 </button>
-                <p style={{ margin: 0, fontSize: 10, color: '#9ca3af', textAlign: 'center', lineHeight: 1.4 }}>PNG · JPG · SVG<br/>máx. 2 MB</p>
+                <p style={{ margin: 0, fontSize: 10, color: 'rgba(148,163,184,0.5)', textAlign: 'center', lineHeight: 1.4 }}>PNG · JPG · SVG<br/>máx. 2 MB</p>
                 {logoFile && <p style={{ margin: 0, fontSize: 10, color: '#059669', fontWeight: 600, textAlign: 'center', wordBreak: 'break-all', maxWidth: 90 }}>✓ {logoFile.name}</p>}
               </div>
 
@@ -370,20 +370,20 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   { label: 'Institución',  placeholder: 'Ej: Liceo JHJ',  value: nombreInstitucion, setter: setNombreInstitucion, desc: 'Panel de login' },
                 ].map(({ label, placeholder, value, setter, desc }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
                     <input value={value} onChange={e => setter(e.target.value)} placeholder={placeholder} maxLength={60}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#111827', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
-                      onFocus={e => e.target.style.borderColor = colorPrimario}
-                      onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.08)', fontSize: 13, color: '#e5e7eb', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s', background: '#0f1829' }}
+                      onFocus={e => { e.target.style.borderColor = colorPrimario; e.target.style.background = '#162340' }}
+                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.background = '#0f1829' }}
                     />
-                    <p style={{ margin: '3px 0 0', fontSize: 10, color: '#9ca3af' }}>{desc}</p>
+                    <p style={{ margin: '3px 0 0', fontSize: 10, color: 'rgba(148,163,184,0.4)' }}>{desc}</p>
                   </div>
                 ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 9, background: sinFondo ? '#f0fdf4' : '#f9fafb', border: `1.5px solid ${sinFondo ? '#86efac' : '#f0f0f0'}`, transition: 'all 0.15s' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 9, background: sinFondo ? 'rgba(34,197,94,0.08)' : '#0f1829', border: `1.5px solid ${sinFondo ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s' }}>
                   <input type="checkbox" checked={sinFondo} onChange={e => handleSinFondoChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#22c55e', cursor: 'pointer', flexShrink: 0 }} />
                   <div>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#111827' }}>Remover fondo blanco/negro</p>
-                    <p style={{ margin: 0, fontSize: 10, color: '#6b7280' }}>Hace transparente el fondo del logo al subir</p>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#e5e7eb' }}>Remover fondo blanco/negro</p>
+                    <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Hace transparente el fondo del logo al subir</p>
                   </div>
                 </label>
               </div>
@@ -395,47 +395,47 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
           <div style={card}>
             {sectionHeader('🎨', 'Colores del tema')}
             <div style={{ padding: '14px 16px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paletas predefinidas</p>
+              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paletas predefinidas</p>
               <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14, justifyContent: 'center' }}>
                 {PALETAS.map(p => {
                   const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                   return (
                     <button key={p.nombre} className="ajustes-paleta-card"
                       onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton })}
-                      style={{ borderColor: activa ? p.primario : '#e5e7eb', background: activa ? `${p.primario}0d` : '#fff' }}>
+                      style={{ borderColor: activa ? p.primario : 'rgba(255,255,255,0.08)', background: activa ? `${p.primario}18` : '#0f1829' }}>
                       <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
                       <div className="ajustes-paleta-dots">
                         {[p.primario, p.acento, p.boton].map((c, i) => (
                           <div key={i} className="ajustes-paleta-dot" style={{ background: c }} />
                         ))}
                       </div>
-                      <span className="ajustes-paleta-label" style={{ fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#6b7280' }}>{p.nombre}</span>
+                      <span className="ajustes-paleta-label" style={{ fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#94a3b8' }}>{p.nombre}</span>
                     </button>
                   )
                 })}
               </div>
 
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Personalizado</p>
+              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Personalizado</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
                   { label: 'Primario',  desc: 'Sidebar y login',           key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
                   { label: 'Acento',    desc: 'Elementos activos y bordes', key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
                   { label: 'Botones',   desc: 'Acciones en inventario',    key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
                 ].map(({ label, desc, key, value, setter }) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, background: '#f9fafb', border: '1px solid #f0f0f2' }}>
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, background: '#0f1829', border: '1px solid rgba(255,255,255,0.07)' }}>
                     <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 9, background: value, boxShadow: `0 2px 8px ${value}66, inset 0 0 0 1.5px rgba(0,0,0,0.1)` }} />
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: value, boxShadow: `0 2px 8px ${value}55, inset 0 0 0 1.5px rgba(0,0,0,0.2)` }} />
                       <input id={key} type="color" value={value} onChange={e => handleColorChange(setter, key, e.target.value)}
                         style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
                     </label>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{label}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: '#9ca3af' }}>{desc}</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>{desc}</p>
                     </div>
                     <input type="text" value={value} maxLength={7}
                       className="ajustes-hex-input"
                       onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v) }}
-                      onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value); e.target.style.borderColor = '#e5e7eb' }}
+                      onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value); e.target.style.borderColor = 'rgba(255,255,255,0.08)' }}
                       onFocus={e => e.target.style.borderColor = colorPrimario}
                     />
                   </div>
@@ -459,14 +459,14 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                 nombreSistema={nombreSistema}
                 nombreInstitucion={nombreInstitucion}
               />
-              <p style={{ margin: '8px 0 0', fontSize: 10, color: '#9ca3af', textAlign: 'center' }}>
+              <p style={{ margin: '8px 0 0', fontSize: 10, color: 'rgba(148,163,184,0.45)', textAlign: 'center' }}>
                 Haz clic en el menú lateral para navegar · Refleja los cambios antes de guardar
               </p>
 
               {/* Mini botones de acción también en la columna derecha */}
               <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {error}</p>}
-                {exito && <p style={{ margin: 0, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '8px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>✓ Cambios guardados</p>}
+                {error && <p style={{ margin: 0, fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)' }}>⚠️ {error}</p>}
+                {exito && <p style={{ margin: 0, fontSize: 12, color: '#4ade80', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.25)' }}>✓ Cambios guardados</p>}
                 <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
                   style={{ width: '100%', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${colorPrimario}55` }}>
                   {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
@@ -485,8 +485,8 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, pointerEvents: 'none' }} className="ajustes-bar-mobile">
         <div className="ajustes-bar-wrap">
           <div className="ajustes-bar-inner">
-            {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', flex: 1 }}>⚠️ {error}</p>}
-            {exito && <p style={{ margin: 0, fontSize: 12, color: '#059669', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
+            {error && <p style={{ margin: 0, fontSize: 12, color: '#f87171', flex: 1 }}>⚠️ {error}</p>}
+            {exito && <p style={{ margin: 0, fontSize: 12, color: '#4ade80', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
             {!error && !exito && <p className="ajustes-bar-hint">Guarda para que los cambios sean permanentes</p>}
             <button className="ajustes-btn-rest" onClick={restaurar}>Restaurar por defecto</button>
             <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
