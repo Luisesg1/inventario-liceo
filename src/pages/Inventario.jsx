@@ -2736,7 +2736,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             </thead>
             <tbody>
               {filtradosPagInv.map(b => (
-                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={esVencido(b.id) ? { background: '#fff1f2', borderLeft: '3px solid #ef4444' } : bienesConPrestamo.has(b.id) ? { background: '#fff7ed', borderLeft: '3px solid #f97316' } : {}}>
+                <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={esVencido(b.id) ? { background: 'rgba(239,68,68,0.12)', borderLeft: '3px solid #ef4444' } : bienesConPrestamo.has(b.id) ? { background: 'rgba(249,115,22,0.1)', borderLeft: '3px solid #f97316' } : {}}>
                   {modoQR && (
                     <td style={{ textAlign: 'center' }}>
                       <input
