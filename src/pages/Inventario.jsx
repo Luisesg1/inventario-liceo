@@ -1469,7 +1469,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {(() => {
         const camposComp   = [
           { campo: 'area', label: 'Área' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
-          { campo: 'ubicacion', label: 'Ubicación' },
         ]
         const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }, { campo: 'ubicacion', label: 'Ubicación' }]
         const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
