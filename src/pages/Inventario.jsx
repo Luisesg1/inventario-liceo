@@ -2851,7 +2851,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                           onClick={() => setModalPrestamo(b)}
                         >📤</button>
                       )}
-                      {puedeEliminar && !b._pendiente && <button className="btn-del" onClick={() => eliminarBien(b.id)} title="Eliminar">✕</button>}
+                      {puedeEliminar && !b._pendiente && (
+                        <button className="btn-del btn-del--visible" onClick={() => eliminarBien(b.id)} title="Eliminar">🗑️</button>
+                      )}
                       {b._pendiente && (
                         <button className="btn-del" title="Cancelar (quitar pendiente)"
                           onClick={() => { eliminarPendiente(b.id); setBienes(prev => prev.filter(x => x.id !== b.id)) }}>

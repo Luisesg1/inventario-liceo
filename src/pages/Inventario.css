@@ -266,6 +266,16 @@
 .btn-edit:hover { opacity: 1; background: rgba(212,160,23,0.10); color: #92690e; }
 .btn-del        { color: #ef4444; opacity: 0.7; }
 .btn-del:hover  { opacity: 1; background: rgba(239,68,68,0.10); color: #dc2626; }
+.btn-del--visible {
+  opacity: 1 !important;
+  background: rgba(239,68,68,0.08) !important;
+  border: 1px solid rgba(239,68,68,0.20) !important;
+  color: #ef4444 !important;
+}
+.btn-del--visible:hover {
+  background: rgba(239,68,68,0.16) !important;
+  border-color: rgba(239,68,68,0.35) !important;
+}
 
 .btn-danger {
   background: linear-gradient(135deg, #dc2626, #ef4444);

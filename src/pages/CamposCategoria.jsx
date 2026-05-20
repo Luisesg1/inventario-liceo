@@ -627,10 +627,10 @@ export default function CamposCategoria({ usuario }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
 
         {/* ── Lista categorías ──────────────────────────── */}
-        <div style={{ width: 220, flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
+        <div style={{ width: 'min(220px, 100%)', flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Categorías</p>
             {esAdmin && (
@@ -685,12 +685,12 @@ export default function CamposCategoria({ usuario }) {
 
             {/* Header categoría activa */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, border: '1px solid rgba(255,255,255,0.15)' }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, border: '1px solid rgba(99,102,241,0.20)' }}>
                 {catObj.icon || '📦'}
               </div>
               <div>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{catObj.label}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>{catObj.label}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
                   {campos.length === 0 ? 'Sin campos personalizados aún' : `${campos.length} campo${campos.length !== 1 ? 's' : ''} configurado${campos.length !== 1 ? 's' : ''}`}
                 </p>
               </div>

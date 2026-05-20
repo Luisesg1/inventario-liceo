@@ -1953,7 +1953,7 @@ export default function Permisos({ usuario }) {
                     style={{ border: '1px solid #e9edf5', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
 
                     {/* ── Cabecera del usuario (clickeable) ── */}
-                    <div onClick={() => toggleColapso(cardKey)}
+                    <div onClick={() => toggleColapso(cardKey)} className="permisos-user-header"
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderBottom: abierto ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', userSelect: 'none' }}>
                       <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
                         {getInitials(u.nombre ?? '')}
@@ -2009,7 +2009,7 @@ export default function Permisos({ usuario }) {
                           {aus.map((p, idx) => {
                             const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados, p.tipo)
                             return (
-                              <div key={p.id} style={{
+                              <div key={p.id} className="permisos-ausencia-row" style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
                                 padding: '9px 16px 9px 66px',
                                 borderTop: '1px solid #f8fafc',
