@@ -319,9 +319,9 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [r1, g1, b1] = hexToRgb(colorPrimario)
   const primDark = `rgb(${Math.round(r1*.45)},${Math.round(g1*.45)},${Math.round(b1*.45)})`
 
-  const card = { background: '#111c2d', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden' }
+  const card = { background: '#ffffff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', overflow: 'hidden' }
   const sectionHeader = (icon, title, badge) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px 10px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px 10px', borderBottom: '1px solid #e2e8f0' }}>
       <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg,${colorPrimario},${primDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icon}</div>
       <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#e5e7eb', flex: 1 }}>{title}</p>
       {badge && <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#22c55e', padding: '2px 8px', borderRadius: 20 }}>{badge}</span>}
@@ -387,17 +387,17 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   <div key={label}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
                     <input value={value} onChange={e => setter(e.target.value)} placeholder={placeholder} maxLength={60}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid rgba(255,255,255,0.08)', fontSize: 13, color: '#e5e7eb', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s', background: '#0f1829' }}
-                      onFocus={e => { e.target.style.borderColor = colorPrimario; e.target.style.background = '#162340' }}
-                      onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.background = '#0f1829' }}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s', background: '#ffffff' }}
+                      onFocus={e => { e.target.style.borderColor = colorPrimario; e.target.style.background = '#f5f7ff' }}
+                      onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#ffffff' }}
                     />
                     <p style={{ margin: '3px 0 0', fontSize: 10, color: 'rgba(148,163,184,0.4)' }}>{desc}</p>
                   </div>
                 ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 9, background: sinFondo ? 'rgba(34,197,94,0.08)' : '#0f1829', border: `1.5px solid ${sinFondo ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 9, background: sinFondo ? 'rgba(34,197,94,0.08)' : '#f8fafc', border: `1.5px solid ${sinFondo ? 'rgba(34,197,94,0.3)' : '#e2e8f0'}`, transition: 'all 0.15s' }}>
                   <input type="checkbox" checked={sinFondo} onChange={e => handleSinFondoChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#22c55e', cursor: 'pointer', flexShrink: 0 }} />
                   <div>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#e5e7eb' }}>Remover fondo blanco/negro</p>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#0f172a' }}>Remover fondo blanco/negro</p>
                     <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Hace transparente el fondo del logo al subir</p>
                   </div>
                 </label>
@@ -417,7 +417,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   return (
                     <button key={p.nombre} className="ajustes-paleta-card"
                       onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, pageBg: p.pageBg, sidebarBg: p.sidebarBg })}
-                      style={{ borderColor: activa ? p.primario : 'rgba(255,255,255,0.08)', background: activa ? `${p.primario}18` : '#0f1829' }}>
+                      style={{ borderColor: activa ? p.primario : '#e2e8f0', background: activa ? `${p.primario}14` : '#f8fafc' }}>
                       <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
                       <div className="ajustes-paleta-dots">
                         {[p.primario, p.acento, p.boton].map((c, i) => (
@@ -437,7 +437,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   { label: 'Acento',    desc: 'Elementos activos y bordes', key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
                   { label: 'Botones',   desc: 'Acciones en inventario',    key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
                 ].map(({ label, desc, key, value, setter }) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, background: '#0f1829', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                     <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: value, boxShadow: `0 2px 8px ${value}55, inset 0 0 0 1.5px rgba(0,0,0,0.2)` }} />
                       <input id={key} type="color" value={value} onChange={e => handleColorChange(setter, key, e.target.value)}
