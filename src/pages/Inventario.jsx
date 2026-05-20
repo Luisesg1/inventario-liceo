@@ -1540,7 +1540,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   {campos.map(({ campo, label }) => {
                     const opciones = unicos(campo)
-                    if (!opciones.length) return null
+                    if (!opciones.length && campo !== 'area') return null
                     return (
                       <div key={campo} className="filtros-field">
                         <label>{label}</label>
