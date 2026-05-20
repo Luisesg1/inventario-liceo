@@ -1816,17 +1816,18 @@ export default function Permisos({ usuario }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             onAnimationComplete={() => {
-              if (emailNotif) setTimeout(() => setEmailNotif(null), 4000)
+              if (emailNotif) setTimeout(() => setEmailNotif(null), 5000)
             }}
             style={{
-              position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+              position: 'fixed', top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
               zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10,
-              padding: '11px 20px', borderRadius: 10,
+              padding: '16px 24px', borderRadius: 12,
               background: emailNotif === 'ok' ? '#dcfce7' : '#fee2e2',
               border: `1px solid ${emailNotif === 'ok' ? '#86efac' : '#fca5a5'}`,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
               color: emailNotif === 'ok' ? '#15803d' : '#b91c1c',
-              fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap',
+              fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap',
             }}
           >
             <span style={{ fontSize: 16 }}>{emailNotif === 'ok' ? '✅' : '⚠️'}</span>
