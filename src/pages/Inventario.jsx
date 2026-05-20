@@ -1511,9 +1511,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {/* Barra de búsqueda y filtros */}
       {(() => {
         const camposComp   = [
-          { campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
+          { campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' },
         ]
-        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' }]
+        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }]
         const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
         const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
         const campos = esComp(catActual) ? camposComp : esTecno(catActual) ? camposTecno : catActual === 'todos' ? camposTodos : camposOtros
@@ -1571,15 +1571,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <option value="Baja">🗑 Baja</option>
                     </select>
                   </div>
-                  <div className="filtros-field">
-                    <label>Préstamo</label>
-                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
-                      <option value="">Todos</option>
-                      <option value="prestado">📤 Prestado</option>
-                      <option value="vencido">⚠️ Vencido</option>
-                      <option value="disponible">✅ Disponible</option>
-                    </select>
-                  </div>
                   {campos.map(({ campo, label }) => {
                     const opciones = unicos(campo)
                     if (!opciones.length && campo !== 'area') return null
@@ -1593,6 +1584,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       </div>
                     )
                   })}
+                  <div className="filtros-field">
+                    <label>Préstamo</label>
+                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
+                      <option value="">Todos</option>
+                      <option value="prestado">📤 Prestado</option>
+                      <option value="vencido">⚠️ Vencido</option>
+                      <option value="disponible">✅ Disponible</option>
+                    </select>
+                  </div>
                 </div>
                 {hayFiltrosActivos && (
                   <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}); setPaginaInv(1) }}
