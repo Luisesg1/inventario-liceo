@@ -3387,6 +3387,7 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
   const [eliminandoId,   setEliminandoId]   = useState(null)
   const [confirmDelete,  setConfirmDelete]  = useState(null) // { id, titulo }
   const [editandoId,     setEditandoId]     = useState(null)
+  const [historialAbierto, setHistorialAbierto] = useState(true)
 
   const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'editor'
 
@@ -3506,10 +3507,14 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
 
         {/* Lista de incidencias */}
         <div>
-          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Historial ({incidencias.length})
-          </p>
-          {cargando ? (
+          <button onClick={() => setHistorialAbierto(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 8px', width: '100%', textAlign: 'left' }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Historial ({incidencias.length})
+            </span>
+            <span style={{ fontSize: 10, color: '#9ca3af', marginLeft: 2 }}>{historialAbierto ? '▲' : '▼'}</span>
+          </button>
+          {historialAbierto && (cargando ? (
             <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Cargando…</p>
           ) : incidencias.length === 0 ? (
             <p style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Sin incidencias registradas</p>
@@ -3542,7 +3547,7 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </div>
       </div>
 
