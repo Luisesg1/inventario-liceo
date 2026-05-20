@@ -48,7 +48,7 @@ const ICONOS = ['📦','🪑','📚','📖','🖨️','💻','🖥️','🖱️'
 
 const formVacio = {
   nombre: '', categoria: '', codigo: '', cantidad: 1,
-  estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  estado: 'Bueno', ubicacion: '', area: '', responsable: '', obs: '',
   isbn: '', autor: '', genero: '',
   descripcion: '',
   fecha_adquisicion: '', proveedor: '', numero_factura: '', numero_orden: '', fondo: '', garantia: '',
@@ -56,7 +56,7 @@ const formVacio = {
 
 const formVacioComp = {
   nombre: '', categoria: 'computadores', codigo: '', cantidad: 1,
-  estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  estado: 'Bueno', ubicacion: '', area: '', responsable: '', obs: '',
   tipo: 'Desktop', marca: '', numero_serie: '', modelo: '', pantalla: '', ram_tipo: '', ram_slots: '',
   cpu: '', cpu_marca: '', cpu_modelo: '', cpu_generacion: '',
   ram: '', memoria: '', tipo_almacenamiento: 'SSD', sistema_operativo: 'Windows 11 Pro',
@@ -67,7 +67,7 @@ const formVacioComp = {
 
 const formVacioTecno = {
   nombre: '', categoria: '', codigo: '', cantidad: 1,
-  estado: 'Bueno', ubicacion: '', responsable: '', obs: '',
+  estado: 'Bueno', ubicacion: '', area: '', responsable: '', obs: '',
   tipo: '', tecnologia: '', marca: '', modelo: '', numero_serie: '',
   consumible: '', proveedor: '', numero_factura: '', numero_orden: '',
   fecha_adquisicion: '', fondo: '', garantia: '',
@@ -410,7 +410,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   const filtrados = filtradosBase.filter(b => {
     const q = busqueda.toLowerCase()
-    const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.responsable, b.cpu, b.sistema_operativo]
+    const matchBusqueda = !q || [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.area, b.responsable, b.cpu, b.sistema_operativo]
       .some(v => v && String(v).toLowerCase().includes(q))
     const matchEstado = !filtroEstado || b.estado === filtroEstado
     const matchPrestado = !filtroPrestado
@@ -468,6 +468,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       tecnologia:  [...new Set([...TECNO_FIJOS, ...uniqTecno('tecnologia')])],
       marca:       uniqTecno('marca'),
       consumible:  uniqTecno('consumible'),
+      area:        uniq('area'),
       ubicacion:   uniq('ubicacion'),
       responsable: uniq('responsable'),
       proveedor:   uniq('proveedor'),
@@ -894,7 +895,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       const cambiaDeComp = esComp(form.categoria)
       const cambiaATecno = esTecno(value)
       const camiaDeTecno = esTecno(form.categoria)
-      const comun = { nombre: form.nombre, codigo: form.codigo, cantidad: form.cantidad, estado: form.estado, ubicacion: form.ubicacion, responsable: form.responsable, obs: form.obs, categoria: value }
+      const comun = { nombre: form.nombre, codigo: form.codigo, cantidad: form.cantidad, estado: form.estado, ubicacion: form.ubicacion, area: form.area, responsable: form.responsable, obs: form.obs, categoria: value }
       if (cambiaAComp && !cambiaDeComp)                                         setForm({ ...formVacioComp, ...comun })
       else if (cambiaATecno && !camiaDeTecno)                                   setForm({ ...formVacioTecno, ...comun })
       else if (!cambiaAComp && !cambiaATecno && (cambiaDeComp || camiaDeTecno)) setForm({ ...formVacio, ...comun })
@@ -1469,13 +1470,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {/* Barra de búsqueda y filtros */}
       {(() => {
         const camposComp   = [
-          { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
+          { campo: 'area', label: 'Área' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
           { campo: 'ram', label: 'RAM' }, { campo: 'sistema_operativo', label: 'S.O.' },
           { campo: 'ubicacion', label: 'Ubicación' },
         ]
+        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }, { campo: 'ubicacion', label: 'Ubicación' }]
         const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
         const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
-        const campos = esComp(catActual) ? camposComp : catActual === 'todos' ? camposTodos : camposOtros
+        const campos = esComp(catActual) ? camposComp : esTecno(catActual) ? camposTecno : catActual === 'todos' ? camposTodos : camposOtros
         const filtrosActivos = Object.values(filtros).filter(Boolean).length + (filtroEstado ? 1 : 0) + (filtroPrestado ? 1 : 0)
 
         const selectStyle = (activo) => ({
@@ -1660,16 +1662,33 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
             </div>
           )}
-          <div className="form-row">
-            <div className="field">
-              <label>Ubicación</label>
-              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+          {(esComp(form.categoria) || esTecno(form.categoria)) ? (
+            <div className="form-row triple">
+              <div className="field">
+                <label>Área</label>
+                <ComboField name="area" value={form.area ?? ''} onChange={handleChange} placeholder="ej: Ciencias" maxLength={80} opciones={opsBD.area} />
+              </div>
+              <div className="field">
+                <label>Ubicación</label>
+                <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+              </div>
+              <div className="field">
+                <label>Responsable</label>
+                <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+              </div>
             </div>
-            <div className="field">
-              <label>Responsable</label>
-              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+          ) : (
+            <div className="form-row">
+              <div className="field">
+                <label>Ubicación</label>
+                <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+              </div>
+              <div className="field">
+                <label>Responsable</label>
+                <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+              </div>
             </div>
-          </div>
+          )}
 
 {tieneDescripcion(form.categoria) && (
             <div className="form-row single">
@@ -2189,16 +2208,33 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
             </div>
           )}
-          <div className="form-row">
-            <div className="field">
-              <label>Ubicación</label>
-              <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+          {(esComp(form.categoria) || esTecno(form.categoria)) ? (
+            <div className="form-row triple">
+              <div className="field">
+                <label>Área</label>
+                <ComboField name="area" value={form.area ?? ''} onChange={handleChange} placeholder="ej: Ciencias" maxLength={80} opciones={opsBD.area} />
+              </div>
+              <div className="field">
+                <label>Ubicación</label>
+                <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+              </div>
+              <div className="field">
+                <label>Responsable</label>
+                <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+              </div>
             </div>
-            <div className="field">
-              <label>Responsable</label>
-              <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+          ) : (
+            <div className="form-row">
+              <div className="field">
+                <label>Ubicación</label>
+                <ComboField name="ubicacion" value={form.ubicacion} onChange={handleChange} placeholder="ej: Sala 3" maxLength={80} opciones={opsBD.ubicacion} />
+              </div>
+              <div className="field">
+                <label>Responsable</label>
+                <ComboField name="responsable" value={form.responsable} onChange={handleChange} placeholder="ej: Juan Pérez" maxLength={80} opciones={opsBD.responsable} />
+              </div>
             </div>
-          </div>
+          )}
 
           {tieneDescripcion(form.categoria) && (
             <div className="form-row single">
