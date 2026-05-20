@@ -3094,7 +3094,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       )}
 
       {/* Modal préstamo */}
-      {modalPrestamo && (
+      {modalPrestamo && (() => {
+        const fmtFecha = s => { if (!s) return null; const d = new Date(String(s).includes('T') ? s : s + 'T12:00:00'); return isNaN(d) ? null : d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }) }
+        return (
         <div className="modal-overlay" onClick={cerrarModalPrestamo}>
           <div className="modal" style={{ maxWidth: 460, width: '94%' }} onClick={e => e.stopPropagation()}>
             <div style={{ marginBottom: 18 }}>
@@ -3115,7 +3117,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </p>
                   {prestamoBien.fecha_prestamo && (
                     <p style={{ margin: '0 0 4px', fontSize: 13, color: '#78350f' }}>
-                      Prestado el: <strong>{new Date(prestamoBien.fecha_prestamo + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                      Prestado el: <strong>{fmtFecha(prestamoBien.fecha_prestamo)}</strong>
                     </p>
                   )}
                   {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
@@ -3169,8 +3171,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <div key={p.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
                         <div style={{ fontWeight: 700, color: '#374151' }}>{p.prestado_a}{p.cargo && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 6 }}>· {p.cargo}</span>}</div>
                         <div style={{ color: '#6b7280', marginTop: 2 }}>
-                          {p.fecha_prestamo && <>Préstamo: <strong>{new Date(p.fecha_prestamo + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></>}
-                          {p.fecha_devolucion_real && <> · Dev.: <strong>{new Date(p.fecha_devolucion_real).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></>}
+                          {p.fecha_prestamo && <>Préstamo: <strong>{fmtFecha(p.fecha_prestamo)}</strong></>}
+                          {p.fecha_devolucion_real && <> · Dev.: <strong>{fmtFecha(p.fecha_devolucion_real)}</strong></>}
                         </div>
                         {p.notas && <div style={{ color: '#9ca3af', marginTop: 2 }}>📝 {p.notas}</div>}
                       </div>
@@ -3181,7 +3183,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             )}
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Modal aviso */}
       {aviso && (
