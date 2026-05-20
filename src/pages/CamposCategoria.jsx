@@ -206,13 +206,13 @@ function smartMergeOrder(savedOrder, naturalOrder) {
 // Secciones del formulario real de agregar bien, por tipo de categoría
 const PREVIEW_SECTIONS = {
   tecno: [
-    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
+    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'area', 'responsable'], _header: true },
     { label: '🖨️ Datos del equipo', ids: ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible'] },
     { label: '🛒 Adquisición',      ids: ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia'] },
     { label: null, ids: ['obs'], _footer: true },
   ],
   comp: [
-    { label: null, ids: ['numero_serie', 'codigo', 'estado', 'ubicacion', 'responsable'], _header: true },
+    { label: null, ids: ['numero_serie', 'codigo', 'estado', 'ubicacion', 'area', 'responsable'], _header: true },
     { label: '💻 Especificaciones',  ids: ['tipo', 'marca', 'modelo', 'pantalla', 'cpu_marca', 'cpu_modelo', 'cpu_generacion', 'ram', 'ram_tipo', 'ram_slots', 'memoria', 'tipo_almacenamiento', 'sistema_operativo'] },
     { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia'] },
     { label: null, ids: ['obs'], _footer: true },
@@ -393,6 +393,7 @@ export default function CamposCategoria({ usuario }) {
   const [editandoCampoId,       setEditandoCampoId]       = useState(null)
   const [confirmBorrarCampo,   setConfirmBorrarCampo]   = useState(null) // campo obj
   const [confirmActualizarCampo, setConfirmActualizarCampo] = useState(false)
+  const [camposPanelAbierto,   setCamposPanelAbierto]   = useState(true)
 
   const [camposOcultos,        setCamposOcultos]        = useState([])
   const [sistemaCamposExpanded, setSistemaCamposExpanded] = useState(false)
@@ -730,11 +731,18 @@ export default function CamposCategoria({ usuario }) {
                         </span>
                       )}
                       <span style={{ fontSize: 10, color: '#94a3b8' }}>{_allFields.length} total</span>
+                      <button
+                        onClick={() => setCamposPanelAbierto(v => !v)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#94a3b8', fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+                        title={camposPanelAbierto ? 'Contraer campos' : 'Expandir campos'}
+                      >
+                        {camposPanelAbierto ? '▲' : '▼'}
+                      </button>
                     </div>
                   </div>
 
                   {/* Lista */}
-                  <div>
+                  {camposPanelAbierto && <div>
                     {unifiedSortedFields.map((campo, idx) => {
                       const isSistema      = campo._tipo === 'sistema'
                       const oculto         = isSistema && !campo._global && camposOcultos.includes(campo.id)
@@ -859,7 +867,7 @@ export default function CamposCategoria({ usuario }) {
                         </div>
                       )
                     })}
-                  </div>
+                  </div>}
                 </div>
               )
             })()}
