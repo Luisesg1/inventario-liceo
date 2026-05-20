@@ -134,20 +134,20 @@ const ALIAS_IMPORT = {
 }
 
 const ESTADO_STYLE = {
-  'Comprado':                   { bg: '#dcfce7', color: '#16a34a' },
-  'Contratado':                 { bg: '#dcfce7', color: '#16a34a' },
-  'En ejecución':               { bg: '#dcfce7', color: '#16a34a' },
-  'Enviado al DAEM':            { bg: '#dbeafe', color: '#1d4ed8' },
-  'Reenviado':                  { bg: '#ede9fe', color: '#6d28d9' },
-  'En proceso':                 { bg: '#fef9c3', color: '#854d0e' },
-  'Revisión DAEM':              { bg: '#fef9c3', color: '#854d0e' },
-  'En adquisiciones':           { bg: '#fef9c3', color: '#854d0e' },
-  'A la espera de presupuesto': { bg: '#f3f4f6', color: '#6b7280' },
-  'No comprado':                { bg: '#fee2e2', color: '#b91c1c' },
-  'No contratado':              { bg: '#fee2e2', color: '#b91c1c' },
-  'Rechazado por DAEM':         { bg: '#fee2e2', color: '#b91c1c' },
-  'Rechazado por Liceo':        { bg: '#fee2e2', color: '#b91c1c' },
-  'Devuelto':                   { bg: '#ffedd5', color: '#c2410c' },
+  'Comprado':                   { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
+  'Contratado':                 { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
+  'En ejecución':               { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
+  'Enviado al DAEM':            { bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa' },
+  'Reenviado':                  { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa' },
+  'En proceso':                 { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
+  'Revisión DAEM':              { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
+  'En adquisiciones':           { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
+  'A la espera de presupuesto': { bg: 'rgba(148,163,184,0.1)',  color: '#94a3b8' },
+  'No comprado':                { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  'No contratado':              { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  'Rechazado por DAEM':         { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  'Rechazado por Liceo':        { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
+  'Devuelto':                   { bg: 'rgba(234,88,12,0.15)',   color: '#fb923c' },
 }
 
 const FORM_VACIO = {
@@ -217,7 +217,7 @@ function cargarHtml2pdf() {
 
 function DetalleReqContenido({ r }) {
   const imgs = parseObsImagenes(r.observacion_imagenes)
-  const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
+  const st = ESTADO_STYLE[r.estado] || { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8' }
   return (
     <>
       <div className="req-detalle-grid-2">
@@ -951,10 +951,6 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   }
 
   const filtrados = useMemo(() => items.filter(r => {
-    if (filtroNumero.trim()) {
-      const q = filtroNumero.trim().replace(/^#/, '')
-      if (!String(r.id).includes(q) && !(r.numero_req ?? '').toLowerCase().includes(q.toLowerCase())) return false
-    }
     if (filtroEstado && r.estado !== filtroEstado) return false
     if (filtroFondo  && r.fondo  !== filtroFondo)  return false
     if (filtroFechaDesde && r.fecha && r.fecha < filtroFechaDesde) return false
@@ -981,7 +977,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   const POR_PAG_R    = 20
   const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
   const filtradosPagR = filtrados.slice((paginaR - 1) * POR_PAG_R, paginaR * POR_PAG_R)
-  const pBtnR = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
+  const pBtnR = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid rgba(255,255,255,0.08)', background: dis ? 'rgba(255,255,255,0.02)' : '#111c2d', color: dis ? 'rgba(148,163,184,0.3)' : '#94a3b8', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit', transition: 'background 0.15s' })
 
   const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
@@ -1317,10 +1313,10 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
               <div style={{
                 position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
-                background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', overflow: 'hidden',
+                background: '#0d1628', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.45)', minWidth: '200px', overflow: 'hidden',
               }}>
-                <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
                   Exportar vista actual
                 </p>
                 {[
@@ -1333,15 +1329,15 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
                   <button key={label} onClick={fn} style={{
                     display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
                     padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-                    textAlign: 'left', transition: 'background 0.15s',
+                    textAlign: 'left', transition: 'background 0.15s', fontFamily: 'inherit',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(27,43,69,0.6)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}
                   >
                     <span style={{ fontSize: '1.1rem' }}>{icon}</span>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#e5e7eb' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8' }}>{desc}</p>
                     </div>
                   </button>
                 ))}
@@ -1379,12 +1375,12 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
             </thead>
             <tbody>
               {filtradosPagR.map(r => {
-                const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
+                const st = ESTADO_STYLE[r.estado] || { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8' }
                 return (
                   <tr key={r.id} className="req-row">
                     <td className="req-num">
-                      {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#1e40af' }}>{r.numero_req}</span>}
-                      <span style={{ color: r.numero_req ? '#9ca3af' : undefined }}>#{r.id}</span>
+                      {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#60a5fa' }}>{r.numero_req}</span>}
+                      <span style={{ color: r.numero_req ? 'rgba(148,163,184,0.5)' : undefined }}>#{r.id}</span>
                     </td>
                     <td className="req-nowrap">{formatFecha(r.fecha)}</td>
                     <td className="req-contenido">{r.contenido}</td>
@@ -1423,7 +1419,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
           <button onClick={() => setPaginaR(1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>«</button>
           <button onClick={() => setPaginaR(p => p - 1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>‹ Ant.</button>
-          <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} requerimientos</span>
+          <span style={{ fontSize: 13, color: '#94a3b8', padding: '0 6px' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} requerimientos</span>
           <button onClick={() => setPaginaR(p => p + 1)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>Sig. ›</button>
           <button onClick={() => setPaginaR(totalPagsR)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>»</button>
         </div>
