@@ -846,7 +846,7 @@ tr.fila-editando td { background: rgba(212,160,23,0.05); }
   .badge { font-size: 10px; padding: 2px 8px; }
   .iconos-grid { grid-template-columns: repeat(7,1fr); }
   .filtros-row { flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 4px; }
-  .acciones { gap: 0; }
+  .acciones { gap: 0; flex-wrap: wrap; max-width: 62px; justify-content: flex-end; }
   .btn-ver, .btn-edit, .btn-del { padding: 4px 4px; }
   .filtros-field { min-width: 100%; flex: none; }
   .modal-detalle { padding: 14px; }

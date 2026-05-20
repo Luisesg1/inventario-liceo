@@ -575,7 +575,6 @@
     gap: 6px;
   }
   .permisos-user-header .permisos-badge--rol {
-    order: -1;
     font-size: 10px;
   }
 }

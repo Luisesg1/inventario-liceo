@@ -237,7 +237,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       </div>}
 
       {/* Fila buscador + botón nuevo */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: '0.9rem', alignItems: 'center' }}>
+      <div className="tickets-toolbar-row" style={{ display: 'flex', gap: 10, marginBottom: '0.9rem', alignItems: 'center' }}>
         <div className="tickets-search-wrap" style={{ flex: 1, marginBottom: 0 }}>
           <span className="tickets-search-icon">🔍</span>
           <input
