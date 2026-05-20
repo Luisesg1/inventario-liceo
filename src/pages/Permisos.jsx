@@ -1674,18 +1674,27 @@ export default function Permisos({ usuario }) {
     if (!datos.id && datos.tipoPermiso === 'permiso_administrativo') {
       const correo = u?.isExterno ? (u.email ?? null) : (u?.email ?? null)
       if (correo) {
+        // Obtener días usados actualizados (ya incluye el permiso recién insertado)
+        let diasRestantes = null
+        try {
+          const diasUsados = await handleGetPermisosUsados(u?.id ?? null, u?.rut ?? null)
+          diasRestantes = Math.max(MAX_AUSENCIAS - diasUsados, 0)
+        } catch { /* si falla, se envía el correo igual sin el dato */ }
+
         try {
           const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
             body: {
               correo,
-              nombre:      u?.nombre ?? null,
-              fechaInicio: datos.fechaInicio,
-              fechaFin:    datos.fechaFin,
-              jornada:     datos.jornada,
-              periodo:     datos.periodo ?? null,
-              horaInicio:  datos.horaInicio ?? null,
-              horaFin:     datos.horaFin ?? null,
-              notas:       datos.notas ?? null,
+              nombre:        u?.nombre ?? null,
+              fechaInicio:   datos.fechaInicio,
+              fechaFin:      datos.fechaFin,
+              jornada:       datos.jornada,
+              periodo:       datos.periodo ?? null,
+              horaInicio:    datos.horaInicio ?? null,
+              horaFin:       datos.horaFin ?? null,
+              notas:         datos.notas ?? null,
+              diasRestantes,
+              maxDias:       MAX_AUSENCIAS,
             },
           })
           setEmailNotif(fnError ? 'error' : 'ok')

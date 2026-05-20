@@ -31,7 +31,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
-    const { correo, nombre, fechaInicio, fechaFin, jornada, periodo, horaInicio, horaFin, notas } = await req.json()
+    const { correo, nombre, fechaInicio, fechaFin, jornada, periodo, horaInicio, horaFin, notas, diasRestantes, maxDias } = await req.json()
 
     if (!correo) return new Response('Sin correo', { status: 400, headers: cors })
 
@@ -100,6 +100,22 @@ serve(async (req) => {
           </div>
 
           ${notasHtml}
+
+          ${diasRestantes !== null && diasRestantes !== undefined ? (() => {
+            const agotado  = diasRestantes <= 0
+            const bajo     = diasRestantes === 1
+            const bg       = agotado ? '#fee2e2' : bajo ? '#ffedd5' : '#f0fdf4'
+            const border   = agotado ? '#fca5a5' : bajo ? '#fdba74' : '#86efac'
+            const color    = agotado ? '#b91c1c' : bajo ? '#c2410c' : '#15803d'
+            const icon     = agotado ? '🔴' : bajo ? '🟠' : '🟢'
+            const mensaje  = agotado
+              ? `Has agotado tu cuota de permisos administrativos (${maxDias ?? 6} días en el año).`
+              : `Te quedan <strong>${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}</strong> de permiso administrativo disponible${diasRestantes !== 1 ? 's' : ''} en el año (cuota: ${maxDias ?? 6} días).`
+            return `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:flex-start;gap:10px">
+              <span style="font-size:18px;line-height:1">${icon}</span>
+              <p style="margin:0;font-size:14px;color:${color};font-weight:600">${mensaje}</p>
+            </div>`
+          })() : ''}
 
           <p style="margin-top:24px;font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:16px">
             Este es un correo automático de respaldo. Si los datos no son correctos, comunícate con el encargado de permisos del establecimiento.
