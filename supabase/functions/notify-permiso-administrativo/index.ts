@@ -74,7 +74,7 @@ serve(async (req) => {
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
           <h2 style="color:#f0d060;margin:0;font-size:18px">📋 Permiso administrativo registrado</h2>
-          <p style="color:rgba(255,255,255,0.65);margin:4px 0 0;font-size:13px">Liceo Joaquín Huete Jiménez</p>
+          <p style="color:rgba(255,255,255,0.65);margin:4px 0 0;font-size:13px">Liceo Juvenal Hernández Jaque</p>
         </div>
         <div style="padding:24px">
 
