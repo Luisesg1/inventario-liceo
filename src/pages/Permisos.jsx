@@ -1668,6 +1668,27 @@ export default function Permisos({ usuario }) {
       ;({ error } = await supabase.from('ausencias').insert(payload))
     }
     if (error) throw error
+
+    // Enviar correo de respaldo solo en permisos administrativos nuevos
+    if (!datos.id && datos.tipoPermiso === 'permiso_administrativo') {
+      const correo = u?.isExterno ? (u.email ?? null) : (u?.email ?? null)
+      if (correo) {
+        supabase.functions.invoke('notify-permiso-administrativo', {
+          body: {
+            correo,
+            nombre:      u?.nombre ?? null,
+            fechaInicio: datos.fechaInicio,
+            fechaFin:    datos.fechaFin,
+            jornada:     datos.jornada,
+            periodo:     datos.periodo ?? null,
+            horaInicio:  datos.horaInicio ?? null,
+            horaFin:     datos.horaFin ?? null,
+            notas:       datos.notas ?? null,
+          },
+        }).catch(e => console.warn('notify-permiso-administrativo:', e))
+      }
+    }
+
     await cargarDatos()
   }
 
