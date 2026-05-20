@@ -7,19 +7,19 @@ const DEFAULTS = {
   colorPrimario:    '#1a237e',
   colorAcento:      '#d4a017',
   colorBoton:       '#6366f1',
-  pageBg:           '#0b1220',
-  sidebarBg:        '#0a1325',
+  pageBg:           '#f1f5f9',
+  sidebarBg:        '#1a237e',
   nombreSistema:    'Inventario',
   nombreInstitucion:'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
 }
 
 const PALETAS = [
-  { nombre: 'Azul marino',        primario: '#1a237e', acento: '#d4a017', boton: '#6366f1', pageBg: '#0b1220', sidebarBg: '#0a1325' },
-  { nombre: 'Verde institucional', primario: '#14532d', acento: '#86efac', boton: '#16a34a', pageBg: '#030f08', sidebarBg: '#020c06' },
-  { nombre: 'Borgoña',            primario: '#7f1d1d', acento: '#fca5a5', boton: '#dc2626', pageBg: '#0d0404', sidebarBg: '#0a0303' },
-  { nombre: 'Gris corporativo',   primario: '#1f2937', acento: '#9ca3af', boton: '#3b82f6', pageBg: '#090c0f', sidebarBg: '#07090c' },
-  { nombre: 'Morado real',        primario: '#4c1d95', acento: '#c4b5fd', boton: '#7c3aed', pageBg: '#0a0514', sidebarBg: '#080412' },
-  { nombre: 'Oscuro',             primario: '#0d1628', acento: '#d4a017', boton: '#6366f1', pageBg: '#060c14', sidebarBg: '#050a11' },
+  { nombre: 'Azul institucional', primario: '#1a237e', acento: '#d4a017', boton: '#6366f1', pageBg: '#f1f5f9', sidebarBg: '#1a237e' },
+  { nombre: 'Verde institucional', primario: '#14532d', acento: '#86efac', boton: '#16a34a', pageBg: '#f0fdf4', sidebarBg: '#14532d' },
+  { nombre: 'Borgoña',            primario: '#7f1d1d', acento: '#fca5a5', boton: '#dc2626', pageBg: '#fff1f2', sidebarBg: '#7f1d1d' },
+  { nombre: 'Gris corporativo',   primario: '#1f2937', acento: '#9ca3af', boton: '#3b82f6', pageBg: '#f8fafc', sidebarBg: '#1f2937' },
+  { nombre: 'Morado real',        primario: '#4c1d95', acento: '#c4b5fd', boton: '#7c3aed', pageBg: '#faf5ff', sidebarBg: '#4c1d95' },
+  { nombre: 'Oscuro',             primario: '#0d1628', acento: '#d4a017', boton: '#6366f1', pageBg: '#0b1220', sidebarBg: '#0a1325' },
 ]
 
 function hexToRgb(hex) {

@@ -41,14 +41,14 @@
 .tickets-page-title {
   font-size: 22px;
   font-weight: 700;
-  color: #e5e7eb;
+  color: #0f172a;
   margin: 0 0 6px;
   letter-spacing: -0.03em;
   line-height: 1.2;
 }
 .tickets-page-sub {
   font-size: 13px;
-  color: rgba(148,163,184,0.5);
+  color: #64748b;
   margin: 0;
 }
 

@@ -101,6 +101,8 @@ export default function App() {
         colorPrimario: cfg.color_primario || '#1a237e',
         colorAcento:   cfg.color_acento   || '#d4a017',
         colorBoton:    cfg.color_boton    || '#6366f1',
+        pageBg:        cfg.page_bg        || '#f1f5f9',
+        sidebarBg:     cfg.sidebar_bg     || '#1a237e',
       })
     }
     cargarConfig()

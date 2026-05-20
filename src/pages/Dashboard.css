@@ -14,14 +14,14 @@
 }
 .dash-welcome h2 {
   font-size: 22px; font-weight: 700;
-  color: #fff;
+  color: #0f172a;
   margin: 0; letter-spacing: -0.03em; line-height: 1.2;
 }
 .dash-welcome p {
-  font-size: 13.5px; color: rgba(255,255,255,.42);
+  font-size: 13.5px; color: #64748b;
   margin: 6px 0 0; font-weight: 400;
 }
-.dash-welcome-accent { color: #f0d060; }
+.dash-welcome-accent { color: #92690e; }
 
 /* ── KPI grid ─────────────────────────────────────────── */
 .dash-kpis {
@@ -185,7 +185,7 @@
 }
 .dash-main-spin {
   width: 32px; height: 32px;
-  border: 3px solid rgba(255,255,255,.15);
+  border: 3px solid rgba(var(--primary-rgb), 0.12);
   border-top-color: #d4a017;
   margin: 0 auto 12px;
 }

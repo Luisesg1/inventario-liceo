@@ -20,11 +20,11 @@
   flex-wrap: wrap;
 }
 .permisos-title {
-  font-size: 22px; font-weight: 800; color: #e5e7eb;
+  font-size: 22px; font-weight: 800; color: #0f172a;
   letter-spacing: -0.025em; margin: 0 0 4px;
 }
 .permisos-subtitle {
-  font-size: 13.5px; color: rgba(255,255,255,0.45); margin: 0; font-weight: 400;
+  font-size: 13.5px; color: #64748b; margin: 0; font-weight: 400;
 }
 
 /* ── Card página ────────────────────────────────────── */
