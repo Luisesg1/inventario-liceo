@@ -1486,6 +1486,7 @@ export default function Permisos({ usuario }) {
   const [diasAdmin,          setDiasAdmin]          = useState([])   // rows de DB
   const [cargandoAPI,        setCargandoAPI]        = useState(false)
   const [modalInhabilitados, setModalInhabilitados] = useState(false)
+  const [emailNotif,         setEmailNotif]         = useState(null) // null | 'ok' | 'error'
 
   function toggleColapso(key) {
     setColapsados(prev => {
@@ -1673,19 +1674,24 @@ export default function Permisos({ usuario }) {
     if (!datos.id && datos.tipoPermiso === 'permiso_administrativo') {
       const correo = u?.isExterno ? (u.email ?? null) : (u?.email ?? null)
       if (correo) {
-        supabase.functions.invoke('notify-permiso-administrativo', {
-          body: {
-            correo,
-            nombre:      u?.nombre ?? null,
-            fechaInicio: datos.fechaInicio,
-            fechaFin:    datos.fechaFin,
-            jornada:     datos.jornada,
-            periodo:     datos.periodo ?? null,
-            horaInicio:  datos.horaInicio ?? null,
-            horaFin:     datos.horaFin ?? null,
-            notas:       datos.notas ?? null,
-          },
-        }).catch(e => console.warn('notify-permiso-administrativo:', e))
+        try {
+          const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
+            body: {
+              correo,
+              nombre:      u?.nombre ?? null,
+              fechaInicio: datos.fechaInicio,
+              fechaFin:    datos.fechaFin,
+              jornada:     datos.jornada,
+              periodo:     datos.periodo ?? null,
+              horaInicio:  datos.horaInicio ?? null,
+              horaFin:     datos.horaFin ?? null,
+              notas:       datos.notas ?? null,
+            },
+          })
+          setEmailNotif(fnError ? 'error' : 'ok')
+        } catch {
+          setEmailNotif('error')
+        }
       }
     }
 
@@ -1800,6 +1806,41 @@ export default function Permisos({ usuario }) {
 
   return (
     <div className="permisos-page">
+
+      {/* Toast email */}
+      <AnimatePresence>
+        {emailNotif && (
+          <motion.div
+            key="email-notif"
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            onAnimationComplete={() => {
+              if (emailNotif) setTimeout(() => setEmailNotif(null), 4000)
+            }}
+            style={{
+              position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+              zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10,
+              padding: '11px 20px', borderRadius: 10,
+              background: emailNotif === 'ok' ? '#dcfce7' : '#fee2e2',
+              border: `1px solid ${emailNotif === 'ok' ? '#86efac' : '#fca5a5'}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+              color: emailNotif === 'ok' ? '#15803d' : '#b91c1c',
+              fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>{emailNotif === 'ok' ? '✅' : '⚠️'}</span>
+            {emailNotif === 'ok'
+              ? 'Correo enviado correctamente'
+              : 'No se pudo enviar el correo'}
+            <button
+              onClick={() => setEmailNotif(null)}
+              style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer',
+                color: 'inherit', fontSize: 14, opacity: 0.6, padding: 0, lineHeight: 1 }}
+            >✕</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="permisos-header">
         <div>
