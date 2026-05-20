@@ -154,6 +154,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [cargando, setCargando]       = useState(true)
   const [catActual, setCatActual]     = useState(() => localStorage.getItem('inv_catActual') || 'todos')
   const [verTodosTodos, setVerTodosTodos] = useState(false)
+  const [paginaInv, setPaginaInv] = useState(1)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm]               = useState(formVacio)
   const [camposExtra, setCamposExtra] = useState({})
@@ -424,6 +425,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const hoy = new Date().toISOString().slice(0, 10)
   const esVencido = (id) => { const f = bienesConPrestamo.get(id); return !!f && f < hoy }
 
+  const POR_PAG_INV    = 25
+  const totalPagsInv   = Math.ceil(filtrados.length / POR_PAG_INV)
+  const filtradosPagInv = filtrados.slice((paginaInv - 1) * POR_PAG_INV, paginaInv * POR_PAG_INV)
+  const pBtnInv = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 12, fontWeight: 600 })
+
   // Valores únicos para dropdowns dinámicos
   const unicos = (campo) => [...new Set(filtradosBase.map(b => b[campo]).filter(Boolean))].sort()
   const getCatLabel = (id) => categorias.find(c => c.id === id)?.label ?? id
@@ -477,7 +483,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     }
   }, [bienes, categorias])
 
-  const seleccionarCat = (id) => { setCatActual(id); localStorage.setItem('inv_catActual', id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}) }
+  const seleccionarCat = (id) => { setCatActual(id); localStorage.setItem('inv_catActual', id); cancelarForm(); setVerDetalle(null); setBusqueda(''); setFiltroEstado(''); setSeleccion(new Set()); setFiltros({}); setPaginaInv(1) }
 
   const pedirConfirmacion = (mensaje, onOk) => setConfirmar({ mensaje, onOk })
 
@@ -1362,18 +1368,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       <div className="section-header">
         <span className="section-title section-title-desktop">
           {catInfo ? `${catInfo.icon} ${catInfo.label}` : 'Todos'} ({filtrados.length})
-          {catActual === 'todos' && !hayFiltrosActivos && bienesPermitidos.length > 25 && (
-            <>
-              <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
-                {verTodosTodos ? `todos (${bienesPermitidos.length})` : `últimos 25 de ${bienesPermitidos.length}`}
-              </span>
-              <button
-                onClick={() => setVerTodosTodos(v => !v)}
-                style={{ marginLeft: 8, fontSize: '0.72rem', padding: '2px 10px', border: '1px solid #d1d5db', borderRadius: 99, background: '#fff', color: '#374151', cursor: 'pointer', fontWeight: 500 }}
-              >
-                {verTodosTodos ? 'Ver últimos 25' : 'Ver todos'}
-              </button>
-            </>
+          {totalPagsInv > 1 && (
+            <span style={{ fontSize: '0.72rem', fontWeight: 400, color: '#9ca3af', marginLeft: 8 }}>
+              pág. {paginaInv}/{totalPagsInv}
+            </span>
           )}
         </span>
         <div className="section-actions">
@@ -1556,7 +1554,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   })}
                 </div>
                 {hayFiltrosActivos && (
-                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}) }}
+                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}); setPaginaInv(1) }}
                     style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid #fca5a5', background: '#fff1f2', cursor: 'pointer', fontSize: '0.82rem', color: '#ef4444', fontWeight: 600 }}>
                     ✕ Limpiar filtros
                   </button>
@@ -2768,7 +2766,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(b => (
+              {filtradosPagInv.map(b => (
                 <tr key={b.id} className={`${editandoId === b.id ? 'fila-editando' : ''} ${seleccion.has(b.id) ? 'fila-seleccionada' : ''} ${seleccionQR.has(b.id) ? 'fila-seleccionada' : ''}`} style={esVencido(b.id) ? { background: '#fff1f2', borderLeft: '3px solid #ef4444' } : bienesConPrestamo.has(b.id) ? { background: '#fff7ed', borderLeft: '3px solid #f97316' } : {}}>
                   {modoQR && (
                     <td style={{ textAlign: 'center' }}>
@@ -2867,6 +2865,17 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Paginación inventario */}
+      {totalPagsInv > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0', flexWrap: 'wrap' }}>
+          <button onClick={() => setPaginaInv(1)} disabled={paginaInv === 1} style={pBtnInv(paginaInv === 1)}>«</button>
+          <button onClick={() => setPaginaInv(p => p - 1)} disabled={paginaInv === 1} style={pBtnInv(paginaInv === 1)}>‹ Ant.</button>
+          <span style={{ fontSize: 12, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaInv} / {totalPagsInv} · {filtrados.length} bienes</span>
+          <button onClick={() => setPaginaInv(p => p + 1)} disabled={paginaInv >= totalPagsInv} style={pBtnInv(paginaInv >= totalPagsInv)}>Sig. ›</button>
+          <button onClick={() => setPaginaInv(totalPagsInv)} disabled={paginaInv >= totalPagsInv} style={pBtnInv(paginaInv >= totalPagsInv)}>»</button>
         </div>
       )}
 

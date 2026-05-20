@@ -954,6 +954,7 @@ export default function Usuarios({ usuario }) {
   const [errorMsg, setErrorMsg] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [filtroRol, setFiltroRol] = useState('todos')
+  const [paginaU, setPaginaU] = useState(1)
   const [modalCrear, setModalCrear] = useState(false)
 
   // Eliminación
@@ -1024,6 +1025,7 @@ export default function Usuarios({ usuario }) {
   }, [])
 
   useEffect(() => { cargarUsuarios(); if (esAdmin) cargarCodigo() }, [cargarUsuarios, cargarCodigo, esAdmin])
+  useEffect(() => { setPaginaU(1) }, [busqueda, filtroRol])
 
   // RUTs que aparecen en más de una cuenta
   const rutsDuplicados = (() => {
@@ -1046,6 +1048,11 @@ export default function Usuarios({ usuario }) {
       if (!aEsYo && bEsYo) return 1
       return (a.nombre ?? '').localeCompare((b.nombre ?? ''), 'es', { sensitivity: 'base' })
     })
+
+  const POR_PAG_U    = 15
+  const totalPagsU   = Math.ceil(usuariosFiltrados.length / POR_PAG_U)
+  const usuariosPagU = usuariosFiltrados.slice((paginaU - 1) * POR_PAG_U, paginaU * POR_PAG_U)
+  const pBtnU = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
 
   function togglePanel(userId, modo) {
     if (panelActivo?.id === userId && panelActivo?.modo === modo) {
@@ -1356,7 +1363,7 @@ export default function Usuarios({ usuario }) {
 
       {/* Lista */}
       <div className="usuarios-lista">
-        {usuariosFiltrados.map((u) => {
+        {usuariosPagU.map((u) => {
           const esYo        = u.id === usuario?.id
           const colores     = ROL_COLORES[u.rol] ?? ROL_COLORES.encargado
           const eliminando  = eliminandoId === u.id
@@ -1397,6 +1404,11 @@ export default function Usuarios({ usuario }) {
                     </div>
                   )}
                   <div className="usuario-email">{u.email}</div>
+                  {u.created_at && (
+                    <div style={{ fontSize: 10.5, color: '#9ca3af', marginTop: 1 }}>
+                      Registrado el {new Date(u.created_at).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  )}
                 </div>
 
                 {esAdmin && !esYo ? (
@@ -1636,6 +1648,17 @@ export default function Usuarios({ usuario }) {
           </div>
         )}
       </div>
+
+      {/* Paginación usuarios */}
+      {totalPagsU > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
+          <button onClick={() => setPaginaU(1)} disabled={paginaU === 1} style={pBtnU(paginaU === 1)}>«</button>
+          <button onClick={() => setPaginaU(p => p - 1)} disabled={paginaU === 1} style={pBtnU(paginaU === 1)}>‹ Ant.</button>
+          <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaU} / {totalPagsU} · {usuariosFiltrados.length} usuarios</span>
+          <button onClick={() => setPaginaU(p => p + 1)} disabled={paginaU >= totalPagsU} style={pBtnU(paginaU >= totalPagsU)}>Sig. ›</button>
+          <button onClick={() => setPaginaU(totalPagsU)} disabled={paginaU >= totalPagsU} style={pBtnU(paginaU >= totalPagsU)}>»</button>
+        </div>
+      )}
 
       {/* Modal crear usuario */}
       {modalCrear && (

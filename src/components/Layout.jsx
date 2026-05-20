@@ -325,7 +325,7 @@ export default function Layout({
     dashboard:  'Inicio',
     inventario: 'Inventario de Bienes',
     usuarios:   'Gestión de Usuarios',
-    auditoria:  'Auditoría de Cambios',
+    auditoria:  'Auditoría de Cambios Inventario',
     auditoria_requerimientos: 'Auditoría de Requerimientos',
     auditoria_permisos:       'Auditoría de Permisos',
     requerimientos: 'Requerimientos',

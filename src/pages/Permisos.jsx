@@ -1478,6 +1478,7 @@ export default function Permisos({ usuario }) {
   const [filtroTipo,      setFiltroTipo]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')
   const [colapsados,      setColapsados]      = useState(new Set()) // keys de grupos cerrados
+  const [paginaP,         setPaginaP]         = useState(1)
 
   // ── Días inhabilitados (feriados + puentes) ────────────────────────────
   const [diasInhabilitados,  setDiasInhabilitados]  = useState(new Set())
@@ -1769,6 +1770,13 @@ export default function Permisos({ usuario }) {
     return order.map(k => map[k])
   })()
 
+  useEffect(() => { setPaginaP(1) }, [permisosFiltrados.length])
+
+  const POR_PAG_P    = 10
+  const totalPagsP   = Math.ceil(grupos.length / POR_PAG_P)
+  const gruposPagP   = grupos.slice((paginaP - 1) * POR_PAG_P, paginaP * POR_PAG_P)
+  const pBtnP = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
+
   return (
     <div className="permisos-page">
 
@@ -1851,7 +1859,7 @@ export default function Permisos({ usuario }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 16 }}>
-              {grupos.map(({ usuario: u, ausencias: aus }) => {
+              {gruposPagP.map(({ usuario: u, ausencias: aus }) => {
                 const rut      = u.rut ?? u.externo_rut
                 const statsKey = rut ? normRut(rut) : (u.id ?? 'unknown')
                 const cardKey  = u.id ?? rut ?? u.nombre
@@ -1965,6 +1973,17 @@ export default function Permisos({ usuario }) {
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {/* Paginación ausencias */}
+          {totalPagsP > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 16px', flexWrap: 'wrap' }}>
+              <button onClick={() => setPaginaP(1)} disabled={paginaP === 1} style={pBtnP(paginaP === 1)}>«</button>
+              <button onClick={() => setPaginaP(p => p - 1)} disabled={paginaP === 1} style={pBtnP(paginaP === 1)}>‹ Ant.</button>
+              <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaP} / {totalPagsP} · {grupos.length} personas</span>
+              <button onClick={() => setPaginaP(p => p + 1)} disabled={paginaP >= totalPagsP} style={pBtnP(paginaP >= totalPagsP)}>Sig. ›</button>
+              <button onClick={() => setPaginaP(totalPagsP)} disabled={paginaP >= totalPagsP} style={pBtnP(paginaP >= totalPagsP)}>»</button>
             </div>
           )}
         </div>

@@ -50,8 +50,10 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const [confirmandoBulk, setConfirmandoBulk] = useState(false)
   const [busqueda,        setBusqueda]        = useState('')
   const [exito,           setExito]           = useState(false)
+  const [paginaT,         setPaginaT]         = useState(1)
 
   useEffect(() => { cargar() }, [])
+  useEffect(() => { setPaginaT(1) }, [filtroEstado, filtroPrioridad, filtroArea, filtroRol, busqueda])
 
   const cargar = async () => {
     setCargando(true)
@@ -78,6 +80,11 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
     }
     return true
   })
+
+  const POR_PAG_T   = 15
+  const totalPagsT  = Math.ceil(filtrados.length / POR_PAG_T)
+  const filtradosPagT = filtrados.slice((paginaT - 1) * POR_PAG_T, paginaT * POR_PAG_T)
+  const pBtnT = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
 
   const abrirNuevo = () => {
     const [nombre = '', ...rest] = (usuario.nombre || '').split(' ')
@@ -331,7 +338,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
         </div>
       ) : (
         <div className="tickets-lista">
-          {filtrados.map(t => {
+          {filtradosPagT.map(t => {
             const e = ESTADO[t.estado]
             const p = t.prioridad ? PRIORIDAD[t.prioridad] : null
             return (
@@ -357,6 +364,17 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Paginación tickets */}
+      {totalPagsT > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
+          <button onClick={() => setPaginaT(1)} disabled={paginaT === 1} style={pBtnT(paginaT === 1)}>«</button>
+          <button onClick={() => setPaginaT(p => p - 1)} disabled={paginaT === 1} style={pBtnT(paginaT === 1)}>‹ Ant.</button>
+          <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaT} / {totalPagsT} · {filtrados.length} tickets</span>
+          <button onClick={() => setPaginaT(p => p + 1)} disabled={paginaT >= totalPagsT} style={pBtnT(paginaT >= totalPagsT)}>Sig. ›</button>
+          <button onClick={() => setPaginaT(totalPagsT)} disabled={paginaT >= totalPagsT} style={pBtnT(paginaT >= totalPagsT)}>»</button>
         </div>
       )}
 

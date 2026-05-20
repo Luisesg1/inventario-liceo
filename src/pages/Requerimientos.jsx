@@ -918,6 +918,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   const [filtroFechaDesde,  setFiltroFechaDesde]  = useState('')
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const [paginaR, setPaginaR] = useState(1)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
   const [imagenesNuevas,     setImagenesNuevas]     = useState([])
   const [errorGuardar,       setErrorGuardar]       = useState('')
@@ -969,6 +970,13 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
     }
     return true
   }), [items, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+
+  useEffect(() => { setPaginaR(1) }, [filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+
+  const POR_PAG_R    = 20
+  const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
+  const filtradosPagR = filtrados.slice((paginaR - 1) * POR_PAG_R, paginaR * POR_PAG_R)
+  const pBtnR = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
 
   const toggleKpi = (key) => setFiltroKpi(prev => prev === key ? null : key)
 
@@ -1358,7 +1366,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(r => {
+              {filtradosPagR.map(r => {
                 const st = ESTADO_STYLE[r.estado] || { bg: '#f3f4f6', color: '#6b7280' }
                 return (
                   <tr key={r.id} className="req-row">
@@ -1395,6 +1403,17 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Paginación requerimientos */}
+      {totalPagsR > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
+          <button onClick={() => setPaginaR(1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>«</button>
+          <button onClick={() => setPaginaR(p => p - 1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>‹ Ant.</button>
+          <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} requerimientos</span>
+          <button onClick={() => setPaginaR(p => p + 1)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>Sig. ›</button>
+          <button onClick={() => setPaginaR(totalPagsR)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>»</button>
         </div>
       )}
 
