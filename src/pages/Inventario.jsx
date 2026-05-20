@@ -430,7 +430,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   })
 
   const hoy = new Date().toISOString().slice(0, 10)
-  const esVencido = (id) => { const f = bienesConPrestamo.get(id); return !!f && f < hoy }
+  const esVencido = (id) => { const f = bienesConPrestamo.get(id); return !!f && f.fecha < hoy }
 
   const POR_PAG_INV    = 25
   const totalPagsInv   = Math.ceil(filtrados.length / POR_PAG_INV)
@@ -521,7 +521,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   // ── Cargar IDs de bienes con préstamo activo (para badge en tabla) ────────
   const cargarBienesConPrestamo = async () => {
     const { data } = await supabase.from('prestamos').select('bien_id, fecha_devolucion_esperada').is('fecha_devolucion_real', null)
-    setBienesConPrestamo(new Map((data ?? []).map(p => [p.bien_id, p.fecha_devolucion_esperada])))
+    const map = new Map()
+    for (const p of (data ?? [])) {
+      if (!map.has(p.bien_id)) map.set(p.bien_id, { count: 0, fecha: p.fecha_devolucion_esperada })
+      map.get(p.bien_id).count++
+    }
+    setBienesConPrestamo(map)
   }
   useEffect(() => { cargarBienesConPrestamo() }, [])
 
@@ -1224,7 +1229,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       registrado_por_nombre: usuario.nombre,
     }).select().single()
     if (!error && data) {
-      setBienesConPrestamo(prev => new Map([...prev, [bien.id, formPrestamo.fecha_prestamo]]))
+      setBienesConPrestamo(prev => {
+        const m = new Map(prev)
+        const ex = m.get(bien.id)
+        m.set(bien.id, { count: (ex?.count ?? 0) + 1, fecha: formPrestamo.fecha_prestamo })
+        return m
+      })
       if (verDetalle?.id === bien.id) setPrestamoBien(data)
       cerrarModalPrestamo()
     }
@@ -1245,7 +1255,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       setConfirmDevolucion(false)
       setNotaDevolucion('')
       const bienId = modalPrestamo?.id ?? verDetalle?.id
-      setBienesConPrestamo(prev => { const m = new Map(prev); m.delete(bienId); return m })
+      setBienesConPrestamo(prev => {
+        const m = new Map(prev)
+        const ex = m.get(bienId)
+        if (ex && ex.count > 1) m.set(bienId, { count: ex.count - 1, fecha: ex.fecha })
+        else m.delete(bienId)
+        return m
+      })
     }
   }
 
@@ -2804,7 +2820,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   )}
                   {catActual !== 'computadores' && !esBiblioteca(catActual) && <td className="td-hide-mobile">{b.cantidad}</td>}
                   {esBiblioteca(catActual) && (() => {
-                    const prestados = bienesConPrestamo.has(b.id) ? 1 : 0
+                    const prestados = bienesConPrestamo.get(b.id)?.count ?? 0
                     const disponible = Math.max(0, b.cantidad - prestados)
                     return (
                       <>
