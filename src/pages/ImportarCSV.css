@@ -9,27 +9,27 @@
 
 /* ── Drop Zone ────────────────────────────────────────── */
 .drop-zone {
-  border: 2px dashed rgba(255,255,255,0.2);
+  border: 2px dashed #c7d2fe;
   border-radius: 20px;
   padding: 3.5rem 2rem;
   text-align: center;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
-  background: rgba(255,255,255,0.05);
+  background: #f8faff;
 }
 .drop-zone:hover,
 .drop-zone.dragging {
-  border-color: rgba(var(--acento-rgb), 0.6);
-  background: rgba(var(--acento-rgb), 0.06);
+  border-color: #6366f1;
+  background: #f0f4ff;
 }
 .drop-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
 .drop-title {
-  font-size: 15px; font-weight: 700; color: #fff;
+  font-size: 15px; font-weight: 700; color: #1e2d6e;
   margin: 0 0 6px; letter-spacing: -0.01em;
 }
-.drop-sub { font-size: 13px; color: rgba(255,255,255,0.5); margin: 0 0 6px; }
-.drop-formats { font-size: 12px; color: rgba(255,255,255,0.3); margin: 0; letter-spacing: 0.02em; }
-.drop-error { margin-top: 12px; color: #fca5a5; font-size: 13px; font-weight: 500; }
+.drop-sub { font-size: 13px; color: #64748b; margin: 0 0 6px; }
+.drop-formats { font-size: 12px; color: #94a3b8; margin: 0; letter-spacing: 0.02em; }
+.drop-error { margin-top: 12px; color: #ef4444; font-size: 13px; font-weight: 500; }
 
 /* ── Preview Panel ────────────────────────────────────── */
 .preview-panel {
@@ -155,14 +155,12 @@
 
 /* ── Resultado ────────────────────────────────────────── */
 .resultado-panel {
-  background: rgba(255,255,255,0.97);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  border: 1px solid rgba(255,255,255,0.75);
+  background: #ffffff;
+  border: 1.5px solid #e8ecf4;
   border-radius: 20px;
   padding: 2.5rem 2rem;
   text-align: center;
-  box-shadow: 0 10px 36px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
+  box-shadow: 0 4px 20px rgba(26,35,126,0.06);
 }
 .resultado-icon { font-size: 2.8rem; margin-bottom: 8px; }
 .resultado-title {
