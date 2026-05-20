@@ -1468,7 +1468,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       {/* Barra de búsqueda y filtros */}
       {(() => {
         const camposComp   = [
-          { campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' },
+          { campo: 'area', label: 'Área' }, { campo: 'marca', label: 'Marca' }, { campo: 'tipo', label: 'Tipo' },
           { campo: 'ubicacion', label: 'Ubicación' },
         ]
         const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }, { campo: 'ubicacion', label: 'Ubicación' }]
@@ -1540,7 +1540,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                   {campos.map(({ campo, label }) => {
                     const opciones = unicos(campo)
-                    if (opciones.length < 2) return null
+                    if (!opciones.length) return null
                     return (
                       <div key={campo} className="filtros-field">
                         <label>{label}</label>
