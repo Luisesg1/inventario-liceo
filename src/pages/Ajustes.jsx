@@ -416,7 +416,7 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
                   const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                   return (
                     <button key={p.nombre} className="ajustes-paleta-card"
-                      onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton })}
+                      onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, pageBg: p.pageBg, sidebarBg: p.sidebarBg })}
                       style={{ borderColor: activa ? p.primario : 'rgba(255,255,255,0.08)', background: activa ? `${p.primario}18` : '#0f1829' }}>
                       <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
                       <div className="ajustes-paleta-dots">
