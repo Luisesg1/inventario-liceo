@@ -1810,36 +1810,41 @@ export default function Permisos({ usuario }) {
       {/* Toast email */}
       <AnimatePresence>
         {emailNotif && (
-          <motion.div
-            key="email-notif"
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            onAnimationComplete={() => {
-              if (emailNotif) setTimeout(() => setEmailNotif(null), 5000)
-            }}
-            style={{
-              position: 'fixed', top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 9999, display: 'flex', alignItems: 'center', gap: 10,
-              padding: '16px 24px', borderRadius: 12,
-              background: emailNotif === 'ok' ? '#dcfce7' : '#fee2e2',
-              border: `1px solid ${emailNotif === 'ok' ? '#86efac' : '#fca5a5'}`,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-              color: emailNotif === 'ok' ? '#15803d' : '#b91c1c',
-              fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap',
-            }}
-          >
-            <span style={{ fontSize: 16 }}>{emailNotif === 'ok' ? '✅' : '⚠️'}</span>
-            {emailNotif === 'ok'
-              ? 'Correo enviado correctamente'
-              : 'No se pudo enviar el correo'}
-            <button
-              onClick={() => setEmailNotif(null)}
-              style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer',
-                color: 'inherit', fontSize: 14, opacity: 0.6, padding: 0, lineHeight: 1 }}
-            >✕</button>
-          </motion.div>
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <motion.div
+              key="email-notif"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.92 }}
+              onAnimationComplete={() => {
+                if (emailNotif) setTimeout(() => setEmailNotif(null), 5000)
+              }}
+              style={{
+                pointerEvents: 'auto',
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '16px 24px', borderRadius: 12,
+                background: emailNotif === 'ok' ? '#dcfce7' : '#fee2e2',
+                border: `1px solid ${emailNotif === 'ok' ? '#86efac' : '#fca5a5'}`,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                color: emailNotif === 'ok' ? '#15803d' : '#b91c1c',
+                fontWeight: 600, fontSize: 15, whiteSpace: 'nowrap',
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{emailNotif === 'ok' ? '✅' : '⚠️'}</span>
+              {emailNotif === 'ok'
+                ? 'Correo enviado correctamente'
+                : 'No se pudo enviar el correo'}
+              <button
+                onClick={() => setEmailNotif(null)}
+                style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'inherit', fontSize: 14, opacity: 0.6, padding: 0, lineHeight: 1 }}
+              >✕</button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
