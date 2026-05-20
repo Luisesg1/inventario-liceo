@@ -2853,15 +2853,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         <div className="modal-overlay" onClick={() => setVerDetalle(null)}>
           <div className="modal modal-detalle" onClick={e => e.stopPropagation()}>
 
-            <div id="detalle-pdf-content" style={{ background: '#ffffff' }}>
+            <div id="detalle-pdf-content">
 
             {/* Header */}
             <div className="detalle-header-modal">
               <div className="detalle-titulo-wrap">
                 <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{categorias.find(c => c.id === verDetalle.categoria)?.icon}</span>
                 <div className="detalle-titulo-text">
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#111827', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.92)', overflowWrap: 'break-word', wordBreak: 'break-word' }}>{verDetalle.nombre}</p>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>{verDetalle.codigo} · {getCatLabel(verDetalle.categoria)}</p>
                 </div>
               </div>
               <div className="detalle-header-actions">
