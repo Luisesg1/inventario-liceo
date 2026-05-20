@@ -917,6 +917,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   const [filtroKpi,         setFiltroKpi]         = useState(filtroInicial)
   const [filtroFechaDesde,  setFiltroFechaDesde]  = useState('')
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
+  const [filtroNumero,      setFiltroNumero]      = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
   const [paginaR, setPaginaR] = useState(1)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
@@ -950,6 +951,10 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   }
 
   const filtrados = useMemo(() => items.filter(r => {
+    if (filtroNumero.trim()) {
+      const q = filtroNumero.trim().replace(/^#/, '')
+      if (!String(r.id).includes(q) && !(r.numero_req ?? '').toLowerCase().includes(q.toLowerCase())) return false
+    }
     if (filtroEstado && r.estado !== filtroEstado) return false
     if (filtroFondo  && r.fondo  !== filtroFondo)  return false
     if (filtroFechaDesde && r.fecha && r.fecha < filtroFechaDesde) return false
@@ -969,9 +974,9 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
       if (!hay(r.contenido) && !hay(r.solicitante) && !hay(r.accion) && !hay(r.orden_compra) && !hay(r.numero_factura)) return false
     }
     return true
-  }), [items, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+  }), [items, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
-  useEffect(() => { setPaginaR(1) }, [filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+  useEffect(() => { setPaginaR(1) }, [filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
   const POR_PAG_R    = 20
   const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
@@ -1181,7 +1186,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
   }, [items])
 
   const kpiFiltrados = useMemo(() => {
-    const hayFiltro = filtroEstado || filtroFondo || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim()
+    const hayFiltro = filtroEstado || filtroFondo || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
     if (!hayFiltro) return null
     const conMonto     = filtrados.filter(r => Number(r.monto_solicitado) > 0)
     const conMontoReal = filtrados.filter(r => Number(r.monto_real) > 0)
@@ -1192,7 +1197,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
       conMonto:       conMonto.length,
       conMontoReal:   conMontoReal.length,
     }
-  }, [filtrados, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda])
+  }, [filtrados, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
   return (
     <div className="req-page">
@@ -1258,7 +1263,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
             className="req-filtro-banner__limpiar"
             onClick={() => {
               setBusqueda(''); setFiltroEstado(''); setFiltroFondo('');
-              setFiltroKpi(null); setFiltroFechaDesde(''); setFiltroFechaHasta('')
+              setFiltroKpi(null); setFiltroFechaDesde(''); setFiltroFechaHasta(''); setFiltroNumero('')
             }}
           >✕ Limpiar filtros</button>
         </div>
@@ -1266,6 +1271,13 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
 
       {/* Toolbar */}
       <div className="req-toolbar">
+        <input
+          style={{ width: 110, flexShrink: 0 }}
+          className="req-search"
+          placeholder="N° req..."
+          value={filtroNumero}
+          onChange={e => setFiltroNumero(e.target.value)}
+        />
         <input
           className="req-search"
           placeholder="Buscar por contenido, solicitante, acción..."
