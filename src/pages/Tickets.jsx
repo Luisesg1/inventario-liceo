@@ -152,11 +152,11 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const totalPagsT  = Math.ceil(filtrados.length / POR_PAG_T)
   const filtradosPagT = filtrados.slice((paginaT - 1) * POR_PAG_T, paginaT * POR_PAG_T)
 
-  // Estadísticas de la semana actual
-  const inicioSemana = new Date()
-  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay())
-  inicioSemana.setHours(0, 0, 0, 0)
-  const semanaResueltos = tickets.filter(t => t.estado === 'Resuelto' && new Date(t.creado_en) >= inicioSemana).length
+  // Estadísticas: ventana rodante de 7 días (no la semana de calendario)
+  const hace7Dias = new Date()
+  hace7Dias.setDate(hace7Dias.getDate() - 7)
+  hace7Dias.setHours(0, 0, 0, 0)
+  const semanaResueltos = tickets.filter(t => t.estado === 'Resuelto' && new Date(t.creado_en) >= hace7Dias).length
 
   const hoy = new Date()
   const sparkData = Array.from({ length: 7 }, (_, idx) => {
@@ -343,7 +343,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             </div>
             <div className="tickets-kpi-content">
               <p className="tickets-kpi-val">{semanaResueltos}</p>
-              <p className="tickets-kpi-lbl">Esta semana</p>
+              <p className="tickets-kpi-lbl">Últ. 7 días</p>
               <div className="tickets-kpi-spark">
                 <svg width="64" height="20" viewBox="0 0 64 20" className="tk-spark-svg">
                   {sparkData.map((v, idx) => {
