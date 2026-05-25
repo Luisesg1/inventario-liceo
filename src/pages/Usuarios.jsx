@@ -981,7 +981,12 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
 // ══════════════════════════════════════════════════════════════════════════
 // Componente principal
 // ══════════════════════════════════════════════════════════════════════════
-export default function Usuarios({ usuario }) {
+export default function Usuarios({ usuario, permisosAdmin = {} }) {
+  const esAdminReal     = usuario.rol === 'admin'
+  const puedeInvitar    = esAdminReal || !!permisosAdmin.invitarUsuario
+  const puedeEditar     = esAdminReal || !!permisosAdmin.editarUsuario
+  const puedeEliminar   = esAdminReal || !!permisosAdmin.eliminarUsuario
+
   const [usuarios, setUsuarios] = useState([])
   const [estado, setEstado]     = useState('cargando')
   const [errorMsg, setErrorMsg] = useState('')
@@ -1245,7 +1250,7 @@ export default function Usuarios({ usuario }) {
       {/* Header */}
       <div className="usuarios-header">
         <h2 className="usuarios-titulo">Usuarios</h2>
-        {esAdmin && (
+        {puedeInvitar && (
           <button className="btn-nuevo-usuario" onClick={() => setModalCrear(true)}>
             + Invitar usuario
           </button>
@@ -1253,7 +1258,7 @@ export default function Usuarios({ usuario }) {
       </div>
 
       {/* Código de invitación */}
-      {esAdmin && (
+      {puedeInvitar && (
         <div style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 12, padding: '16px 20px', marginBottom: 18 }}>
           <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: 'center' }}>
             🔑 Código de invitación para docentes
@@ -1263,21 +1268,35 @@ export default function Usuarios({ usuario }) {
           </p>
 
           {!editandoCodigo ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 800, color: '#1a237e', letterSpacing: '0.12em', background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 8, padding: '7px 16px', userSelect: 'all' }}>
-                {verCodigo ? codigoActual : '••••••••'}
-              </span>
-              <button onClick={() => setVerCodigo(!verCodigo)} title={verCodigo ? 'Ocultar' : 'Mostrar'}
-                style={{ background: '#fff', border: '1.5px solid #e0e7ff', borderRadius: 8, cursor: 'pointer', fontSize: 15, padding: '7px 10px', lineHeight: 1 }}>
-                {verCodigo ? '🙈' : '👁️'}
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {/* Campo estilo login */}
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <span style={{
+                  fontFamily: 'monospace', fontSize: 16, fontWeight: 800,
+                  color: '#1a237e', letterSpacing: verCodigo ? '0.12em' : '0.2em',
+                  background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 10,
+                  padding: '9px 44px 9px 16px', userSelect: 'all', display: 'block',
+                  minWidth: 160, textAlign: 'center',
+                }}>
+                  {verCodigo ? codigoActual : '••••••••'}
+                </span>
+                <button onClick={() => setVerCodigo(!verCodigo)} title={verCodigo ? 'Ocultar' : 'Mostrar'}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                  {verCodigo
+                    ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+              {/* Copiar */}
               <button onClick={() => navigator.clipboard.writeText(codigoActual).then(() => { setMensajeCodigo('¡Copiado!'); setTimeout(() => setMensajeCodigo(''), 2000) })}
                 title="Copiar al portapapeles"
-                style={{ background: '#fff', border: '1.5px solid #e0e7ff', borderRadius: 8, cursor: 'pointer', fontSize: 15, padding: '7px 10px', lineHeight: 1 }}>
-                📋
+                style={{ background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 10, cursor: 'pointer', color: '#6366f1', padding: '9px 12px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
+              {/* Cambiar */}
               <button onClick={() => { setEditandoCodigo(true); setNuevoCodigo(codigoActual) }}
-                style={{ padding: '7px 16px', borderRadius: 8, border: '1.5px solid #6366f1', background: '#fff', color: '#6366f1', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginLeft: 4 }}>
+                style={{ padding: '9px 16px', borderRadius: 10, border: '1.5px solid #6366f1', background: '#fff', color: '#6366f1', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 Cambiar
               </button>
             </div>
@@ -1444,7 +1463,7 @@ export default function Usuarios({ usuario }) {
                   )}
                 </div>
 
-                {esAdmin && !esYo ? (
+                {puedeEditar && !esYo ? (
                   <select className="rol-select"
                     style={{ backgroundColor: colores.bg, color: colores.color }}
                     value={u.rol}
@@ -1467,32 +1486,38 @@ export default function Usuarios({ usuario }) {
                   </span>
                 )}
 
-                {esAdmin && !confirmando && (
+                {(puedeEditar || puedeEliminar) && !confirmando && (
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                    <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
-                      background: editando ? '#e8eaf6' : 'none',
-                      border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
-                      color: editando ? '#1a237e' : '#9ca3af',
-                      borderRadius: 6, padding: '5px 9px',
-                      fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                    }}>✏️</button>
+                    {puedeEditar && (
+                      <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
+                        background: editando ? '#e8eaf6' : 'none',
+                        border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
+                        color: editando ? '#1a237e' : '#9ca3af',
+                        borderRadius: 6, padding: '5px 9px',
+                        fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                      }}>✏️</button>
+                    )}
                     {!esYo && (
                       <>
-                        <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
-                          background: permisosOpen ? '#fffbeb' : 'none',
-                          border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
-                          color: permisosOpen ? '#92700a' : '#9ca3af',
-                          borderRadius: 6, padding: '5px 9px',
-                          fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                        }}>🔐</button>
-                        <button className="btn-eliminar-icono" title="Eliminar"
-                          onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                        {esAdminReal && (
+                          <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
+                            background: permisosOpen ? '#fffbeb' : 'none',
+                            border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                            color: permisosOpen ? '#92700a' : '#9ca3af',
+                            borderRadius: 6, padding: '5px 9px',
+                            fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                          }}>🔐</button>
+                        )}
+                        {puedeEliminar && (
+                          <button className="btn-eliminar-icono" title="Eliminar"
+                            onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                        )}
                       </>
                     )}
                   </div>
                 )}
 
-                {esAdmin && !esYo && confirmando && (
+                {puedeEliminar && !esYo && confirmando && (
                   <div className="confirm-eliminar">
                     <button className="btn-confirmar-eliminar"
                       onClick={() => eliminarUsuario(u.id)} disabled={eliminando}>
