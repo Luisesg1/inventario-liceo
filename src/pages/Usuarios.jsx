@@ -49,9 +49,10 @@ const ACCIONES = [
   { key: 'ver_ausencias',         label: 'Ver ausencias del personal', labelCorto: 'Ver aus.' },
   { key: 'gestionar_ausencias',   label: 'Registrar/editar ausencias', labelCorto: 'Gest. aus.' },
   { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias', labelCorto: 'Aud. Aus.' },
-  { key: 'invitar_usuario',       label: 'Invitar usuarios',           labelCorto: 'Invitar' },
-  { key: 'editar_usuario',        label: 'Editar usuarios',            labelCorto: 'Editar usr.' },
-  { key: 'eliminar_usuario',      label: 'Eliminar usuarios',          labelCorto: 'Elim. usr.' },
+  { key: 'invitar_usuario',             label: 'Invitar usuarios',              labelCorto: 'Invitar' },
+  { key: 'editar_usuario',             label: 'Editar usuarios',               labelCorto: 'Editar usr.' },
+  { key: 'eliminar_usuario',           label: 'Eliminar usuarios',             labelCorto: 'Elim. usr.' },
+  { key: 'notificar_ausencia_correo',  label: 'Notificar ausencia por correo', labelCorto: 'Notif. correo' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -83,7 +84,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
-    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario'],
+    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo'],
   },
 ]
 
@@ -355,8 +356,8 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
           const items = [
             <div
               key={`s${s.n}`}
-              onClick={() => esCompletado && setPaso(s.n)}
-              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: esCompletado ? 'pointer' : 'default' }}
+              onClick={() => !esActivo && setPaso(s.n)}
+              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: esActivo ? 'default' : 'pointer' }}
             >
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
