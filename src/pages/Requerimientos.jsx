@@ -166,20 +166,20 @@ const ALIAS_IMPORT = {
 }
 
 const ESTADO_STYLE = {
-  'Comprado':                   { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
-  'Contratado':                 { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
-  'En ejecución':               { bg: 'rgba(22,163,74,0.15)',   color: '#4ade80' },
-  'Enviado al DAEM':            { bg: 'rgba(59,130,246,0.15)',  color: '#60a5fa' },
-  'Reenviado':                  { bg: 'rgba(139,92,246,0.15)',  color: '#a78bfa' },
-  'En proceso':                 { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
-  'Revisión DAEM':              { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
-  'En adquisiciones':           { bg: 'rgba(217,119,6,0.15)',   color: '#fbbf24' },
-  'A la espera de presupuesto': { bg: 'rgba(148,163,184,0.1)',  color: '#94a3b8' },
-  'No comprado':                { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  'No contratado':              { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  'Rechazado por DAEM':         { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  'Rechazado por Liceo':        { bg: 'rgba(239,68,68,0.15)',   color: '#f87171' },
-  'Devuelto':                   { bg: 'rgba(234,88,12,0.15)',   color: '#fb923c' },
+  'Comprado':                   { bg: 'rgba(21,128,61,0.1)',    color: '#15803d' },
+  'Contratado':                 { bg: 'rgba(21,128,61,0.1)',    color: '#15803d' },
+  'En ejecución':               { bg: 'rgba(21,128,61,0.1)',    color: '#15803d' },
+  'Enviado al DAEM':            { bg: 'rgba(29,78,216,0.09)',   color: '#1d4ed8' },
+  'Reenviado':                  { bg: 'rgba(109,40,217,0.09)',  color: '#7c3aed' },
+  'En proceso':                 { bg: 'rgba(180,83,9,0.09)',    color: '#b45309' },
+  'Revisión DAEM':              { bg: 'rgba(180,83,9,0.09)',    color: '#b45309' },
+  'En adquisiciones':           { bg: 'rgba(180,83,9,0.09)',    color: '#b45309' },
+  'A la espera de presupuesto': { bg: 'rgba(71,85,105,0.08)',   color: '#475569' },
+  'No comprado':                { bg: 'rgba(185,28,28,0.09)',   color: '#b91c1c' },
+  'No contratado':              { bg: 'rgba(185,28,28,0.09)',   color: '#b91c1c' },
+  'Rechazado por DAEM':         { bg: 'rgba(185,28,28,0.09)',   color: '#b91c1c' },
+  'Rechazado por Liceo':        { bg: 'rgba(185,28,28,0.09)',   color: '#b91c1c' },
+  'Devuelto':                   { bg: 'rgba(194,65,12,0.09)',   color: '#c2410c' },
 }
 
 const FORM_VACIO = {
@@ -1546,16 +1546,16 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                 return (
                   <tr key={r.id} className="req-row">
                     <td className="req-num">
-                      {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#60a5fa' }}>{r.numero_req}</span>}
-                      <span style={{ color: r.numero_req ? 'rgba(148,163,184,0.5)' : undefined }}>#{r.id}</span>
+                      {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6366f1' }}>{r.numero_req}</span>}
+                      <span style={{ color: r.numero_req ? '#94a3b8' : undefined }}>#{r.id}</span>
                     </td>
                     <td className="req-nowrap">{formatFecha(r.fecha)}</td>
                     <td className="req-contenido">{r.contenido}</td>
                     <td>{r.solicitante || '—'}</td>
                     <td className="req-nowrap">{r.fondo || '—'}</td>
                     <td className="req-accion">{r.accion || '—'}</td>
-                    <td className="req-nowrap">{formatMonto(r.monto_solicitado)}</td>
-                    <td className="req-nowrap">{formatMonto(r.monto_real)}</td>
+                    <td className="req-monto">{formatMonto(r.monto_solicitado)}</td>
+                    <td className="req-monto" style={{ color: r.monto_real ? '#0f172a' : '#94a3b8' }}>{formatMonto(r.monto_real)}</td>
                     <td>
                       <span className="req-badge" style={{ background: st.bg, color: st.color }}>
                         {r.estado}
