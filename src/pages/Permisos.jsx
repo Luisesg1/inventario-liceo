@@ -1791,11 +1791,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   // ── Stats para KPI header ────────────────────────────────────────────────
   const hoy = new Date().toISOString().slice(0, 10)
   const mesActualPrefix = hoy.slice(0, 7)
-  const ausenciasActivas = permisos.filter(p => p.fecha_inicio <= hoy && p.fecha_fin >= hoy)
-  const proximasAVencer = permisos.filter(p => {
-    if (!p.fecha_fin || p.fecha_fin < hoy) return false
-    return Math.round((new Date(p.fecha_fin + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000) <= 7
-  })
+  const licenciasMedicas = permisos.filter(p => p.tipo === 'licencia_medica')
+  const permisosAdmin    = permisos.filter(p => p.tipo === 'permiso_administrativo')
   const diasMesTotal = Math.round(calcDiasTotales(
     permisos.filter(p => p.fecha_inicio?.startsWith(mesActualPrefix)), false, diasInhabilitados
   ))
@@ -1918,20 +1915,20 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
         <div className="aus-stats-grid">
           {[
             {
-              label: 'Ausencias activas',
-              value: ausenciasActivas.length,
-              sub: 'En curso hoy',
-              icon: <CalendarCheck size={16} strokeWidth={2} />,
-              iconBg: 'rgba(99,102,241,0.10)',
-              iconColor: '#6366f1',
+              label: 'Licencias médicas',
+              value: licenciasMedicas.length,
+              sub: `${licenciasMedicas.length === 1 ? '1 registro' : `${licenciasMedicas.length} registros`} totales`,
+              icon: <AlertTriangle size={16} strokeWidth={2} />,
+              iconBg: 'rgba(29,78,216,0.10)',
+              iconColor: '#1d4ed8',
             },
             {
-              label: 'Próximas a vencer',
-              value: proximasAVencer.length,
-              sub: 'Terminan en 7 días',
-              icon: <AlertCircle size={16} strokeWidth={2} />,
-              iconBg: proximasAVencer.length > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(0,0,0,0.04)',
-              iconColor: proximasAVencer.length > 0 ? '#f59e0b' : '#94a3b8',
+              label: 'Permisos administrativos',
+              value: permisosAdmin.length,
+              sub: `${permisosAdmin.length === 1 ? '1 registro' : `${permisosAdmin.length} registros`} totales`,
+              icon: <CalendarCheck size={16} strokeWidth={2} />,
+              iconBg: 'rgba(133,77,14,0.10)',
+              iconColor: '#854d0e',
             },
             {
               label: 'Días este mes',
