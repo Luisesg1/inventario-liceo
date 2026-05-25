@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Package2, FolderOpen, TrendingUp, Archive,
   PlusCircle, Pencil, Wrench,
@@ -57,6 +57,51 @@ function traducirClaves(claves, allCats) {
     const claveNorm = norm(clave.replace(/_/g,' '))
     return allCats.find(c => norm(c.label) === claveNorm)?.id ?? null
   }).filter(Boolean)
+}
+
+/* ── KpiNumber — conteo animado ─────────────────────────── */
+function KpiNumber({ value, rm }) {
+  const pctSuffix = typeof value === 'string' && value.endsWith('%')
+  const target    = pctSuffix ? parseInt(value) : (typeof value === 'number' ? value : null)
+  const [count, setCount] = useState(0)
+  const rafRef = useRef(null)
+
+  useEffect(() => {
+    if (target === null) return
+    if (rm) { setCount(target); return }
+    setCount(0)
+    const start = performance.now()
+    const tick = (now) => {
+      const p = Math.min((now - start) / 650, 1)
+      setCount(Math.round(target * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
+  }, [target, rm])
+
+  if (target === null) return value
+  return pctSuffix ? `${count}%` : count
+}
+
+/* ── DashboardSkeleton ───────────────────────────────────── */
+function DashboardSkeleton() {
+  return (
+    <div className="dash-wrap">
+      <div className="dash-skel dash-skel-welcome" />
+      <div className="dash-kpis">
+        {[0,1,2,3].map(i => <div key={i} className="dash-skel dash-skel-kpi" />)}
+      </div>
+      <div className="dash-charts">
+        <div className="dash-skel dash-skel-chartcard" />
+        <div className="dash-skel dash-skel-chartcard" />
+      </div>
+      <div className="dash-bottom-grid" style={{ marginTop: 14 }}>
+        <div className="dash-skel dash-skel-bottomcard" />
+        <div className="dash-skel dash-skel-bottomcard" />
+      </div>
+    </div>
+  )
 }
 
 /* ── SectionTitle ───────────────────────────────────────── */
@@ -123,7 +168,7 @@ function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
 }
 
 /* ── ActividadReciente ──────────────────────────────────── */
-function ActividadReciente({ actividades }) {
+function ActividadReciente({ actividades, rm }) {
   return (
     <div className="dash-card dash-actividad">
       <SectionTitle icon={Activity} label="Actividad reciente" />
@@ -139,34 +184,37 @@ function ActividadReciente({ actividades }) {
         </div>
       ) : (
         <div className="dash-act-list">
-          {actividades.map((a, i) => {
-            const meta = ACCION_META[a.accion] ?? ACCION_META.actualizar
-            return (
-              <motion.div
-                key={a.id}
-                className="dash-act-item"
-                style={{ borderLeftColor: meta.color }}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.06, duration: 0.28, ease: 'easeOut' }}
-              >
-                <div className="dash-act-badge" style={{ background: meta.bg, color: meta.color }}>
-                  <meta.Icon size={14} strokeWidth={2.5} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p className="dash-act-desc">
-                    <strong>{a.usuario_nombre}</strong>
-                    {' '}<span style={{ color:'#94a3b8' }}>{meta.verbo}</span>{' '}
-                    <span style={{ color:'#111827', fontWeight:600 }}>{a.bien_nombre}</span>
-                  </p>
-                  <p className="dash-act-time">{tiempoRelativo(a.created_at)}</p>
-                </div>
-                <span className="dash-act-pill" style={{ background: meta.bg, color: meta.color }}>
-                  {meta.label}
-                </span>
-              </motion.div>
-            )
-          })}
+          <AnimatePresence initial={false}>
+            {actividades.map((a, i) => {
+              const meta = ACCION_META[a.accion] ?? ACCION_META.actualizar
+              return (
+                <motion.div
+                  key={a.id}
+                  className="dash-act-item"
+                  style={{ borderLeftColor: meta.color }}
+                  initial={rm ? false : { opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={rm ? {} : { opacity: 0, x: -10, transition: { duration: 0.18 } }}
+                  transition={{ delay: i * 0.06, duration: 0.28, ease: 'easeOut' }}
+                >
+                  <div className="dash-act-badge" style={{ background: meta.bg, color: meta.color }}>
+                    <meta.Icon size={14} strokeWidth={2.5} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p className="dash-act-desc">
+                      <strong>{a.usuario_nombre}</strong>
+                      {' '}<span style={{ color:'#94a3b8' }}>{meta.verbo}</span>{' '}
+                      <span style={{ color:'#111827', fontWeight:600 }}>{a.bien_nombre}</span>
+                    </p>
+                    <p className="dash-act-time">{tiempoRelativo(a.created_at)}</p>
+                  </div>
+                  <span className="dash-act-pill" style={{ background: meta.bg, color: meta.color }}>
+                    {meta.label}
+                  </span>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
         </div>
       )}
     </div>
@@ -177,6 +225,8 @@ function ActividadReciente({ actividades }) {
    DASHBOARD PRINCIPAL
    ══════════════════════════════════════════════════════════ */
 export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }) {
+  const rm = useReducedMotion()
+
   const esAdmin   = usuario?.rol === 'admin'
   const esSoporte = usuario?.rol === 'soporte'
   const esGestor  = esAdmin || esSoporte
@@ -247,14 +297,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
     return () => supabase.removeChannel(ch)
   }, [])
 
-  if (cargando) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh', color:'rgba(255,255,255,0.5)', fontSize:14 }}>
-      <div style={{ textAlign:'center' }}>
-        <div className="dash-main-spin" />
-        Cargando estadísticas...
-      </div>
-    </div>
-  )
+  if (cargando) return <DashboardSkeleton />
 
   /* ── Filtros inventario ──────────────────────────────── */
   const tieneAccesoCat = (catId) =>
@@ -283,7 +326,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
     .sort((a, b) => b.count - a.count)
   const catActiva = categorias.find(c => c.id === categoriaFiltro)
 
-  const toggleEstado    = e  => setEstadoFiltro(prev => prev === e ? null : e)
+  const toggleEstado = e => setEstadoFiltro(prev => prev === e ? null : e)
 
   const KPI_CONFIG = [
     { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          Icon: Package2,   color: '#1a237e', bg: '#eef0ff', iconBg: '#e8eaf6' },
@@ -317,12 +360,17 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
 
   /* ── Render ──────────────────────────────────────────── */
   return (
-    <div className="dash-wrap">
+    <motion.div
+      className="dash-wrap"
+      initial={rm ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+    >
 
       {/* Welcome */}
       <motion.div
         className="dash-welcome"
-        initial={{ opacity: 0, y: -8 }}
+        initial={rm ? false : { opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
@@ -339,13 +387,15 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             key={i}
             className="dash-kpi-card"
             style={{ '--kpi-color': kpi.color }}
-            initial={{ opacity: 0, y: 16 }}
+            initial={rm ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, duration: 0.32, ease: 'easeOut' }}
-            whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+            whileHover={rm ? {} : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
           >
             <div className="kpi-body">
-              <div className="kpi-valor" style={{ color: kpi.color }}>{kpi.valor}</div>
+              <div className="kpi-valor" style={{ color: kpi.color }}>
+                <KpiNumber value={kpi.valor} rm={rm} />
+              </div>
               <div className="kpi-label">{kpi.label}</div>
             </div>
             <div className="kpi-icon-chip" style={{ background: kpi.iconBg }}>
@@ -359,7 +409,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       <div className="dash-charts">
         <motion.div
           className="dash-card"
-          initial={{ opacity: 0, y: 12 }}
+          initial={rm ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.3 }}
         >
@@ -398,11 +448,11 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={rm ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.36, duration: 0.3 }}
         >
-          <ActividadReciente actividades={actividades} />
+          <ActividadReciente actividades={actividades} rm={rm} />
         </motion.div>
       </div>
 
@@ -412,7 +462,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         {/* Tickets */}
         <motion.div
           className="dash-card"
-          initial={{ opacity: 0, y: 14 }}
+          initial={rm ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.42, duration: 0.3 }}
         >
@@ -462,7 +512,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
                 <motion.div
                   key={t.id ?? i}
                   className="dash-mini-item"
-                  initial={{ opacity: 0, x: -6 }}
+                  initial={rm ? false : { opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.45 + i * 0.05 }}
                 >
@@ -498,7 +548,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         {/* Requerimientos */}
         <motion.div
           className="dash-card"
-          initial={{ opacity: 0, y: 14 }}
+          initial={rm ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.48, duration: 0.3 }}
         >
@@ -569,6 +619,6 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         </motion.div>
 
       </div>
-    </div>
+    </motion.div>
   )
 }
