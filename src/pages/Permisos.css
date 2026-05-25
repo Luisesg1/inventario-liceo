@@ -575,7 +575,7 @@
 /* ── KPI Stats Grid ─────────────────────────────────── */
 .aus-stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 .aus-stat-card {
@@ -704,10 +704,9 @@
 .inh-row-name { color: #475569 !important; }
 
 /* ── Responsive ─────────────────────────────────────── */
-@media (max-width: 900px) { .aus-stats-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   .aus-stats-grid { grid-template-columns: 1fr 1fr; }
   .permisos-user-header { grid-template-columns: auto 1fr !important; }
   .aus-user-right { display: none !important; }
 }
-@media (max-width: 380px) { .aus-stats-grid { grid-template-columns: 1fr; } }
+@media (max-width: 420px) { .aus-stats-grid { grid-template-columns: 1fr; } }

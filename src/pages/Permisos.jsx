@@ -1793,12 +1793,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const mesActualPrefix = hoy.slice(0, 7)
   const licenciasMedicas = permisos.filter(p => p.tipo === 'licencia_medica')
   const permisosAdmin    = permisos.filter(p => p.tipo === 'permiso_administrativo')
+  const usuariosConAus   = new Set(permisos.map(p => { const u = resolveUser(p); return u?.rut ?? u?.id }).filter(Boolean)).size
   const diasMesTotal = Math.round(calcDiasTotales(
     permisos.filter(p => p.fecha_inicio?.startsWith(mesActualPrefix)), false, diasInhabilitados
   ))
-  const usuariosConAus = new Set(permisos.map(p => {
-    const u = resolveUser(p); return u?.rut ?? u?.id
-  }).filter(Boolean)).size
   const totalDiasInhab = feriadosAPI.length + diasAdmin.length
 
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
@@ -1937,14 +1935,6 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
               icon: <CalendarRange size={16} strokeWidth={2} />,
               iconBg: 'rgba(16,185,129,0.10)',
               iconColor: '#10b981',
-            },
-            {
-              label: 'Personas con ausencias',
-              value: usuariosConAus,
-              sub: `${permisos.length} registros totales`,
-              icon: <UserPlus size={16} strokeWidth={2} />,
-              iconBg: 'rgba(212,160,23,0.12)',
-              iconColor: '#d4a017',
             },
           ].map((s, i) => (
             <motion.div key={i} className="aus-stat-card"
