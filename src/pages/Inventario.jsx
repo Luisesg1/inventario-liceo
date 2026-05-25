@@ -2835,7 +2835,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   })()}
                   <td><span className={`badge ${ESTADO_BADGE[b.estado] ?? ''}`}>{b.estado}</span></td>
                   <td className="td-muted td-hide-mobile">{b.ubicacion}</td>
-                  <td>
+                  <td className="td-acciones">
                     <div className="acciones">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}

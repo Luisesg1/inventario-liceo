@@ -253,7 +253,7 @@
 }
 
 .acciones { display: flex; gap: 1px; align-items: center; flex-wrap: nowrap; }
-td:has(.acciones) { padding-right: 4px; padding-left: 4px; width: 1%; white-space: nowrap; }
+.td-acciones { padding-right: 6px !important; padding-left: 4px !important; width: 1%; white-space: nowrap; }
 
 .btn-ver, .btn-edit, .btn-del {
   background: transparent; border: none;
