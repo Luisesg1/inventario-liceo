@@ -1,5 +1,6 @@
 // src/pages/Usuarios.jsx
 import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Usuarios.css'
 
@@ -978,10 +979,37 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   )
 }
 
+// ── Skeleton card ──────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton-avatar" />
+      <div className="skeleton-info">
+        <div className="skeleton-line" style={{ width: '55%', height: 13 }} />
+        <div className="skeleton-line" style={{ width: '35%', height: 10, marginTop: 6 }} />
+        <div className="skeleton-line" style={{ width: '65%', height: 10, marginTop: 4 }} />
+      </div>
+      <div className="skeleton-badge" />
+    </div>
+  )
+}
+
+// ── Variants ───────────────────────────────────────────────────────────────
+const pageVariants = {
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: 'easeOut' } },
+}
+const cardVariants = {
+  hidden:  { opacity: 0, y: 7 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: 'easeOut' } },
+  exit:    { opacity: 0, scale: 0.98, transition: { duration: 0.15 } },
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Componente principal
 // ══════════════════════════════════════════════════════════════════════════
 export default function Usuarios({ usuario, permisosAdmin = {} }) {
+  const shouldReduce    = useReducedMotion()
   const esAdminReal     = usuario.rol === 'admin'
   const puedeInvitar    = esAdminReal || !!permisosAdmin.invitarUsuario
   const puedeEditar     = esAdminReal || !!permisosAdmin.editarUsuario
@@ -1241,11 +1269,25 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     setGuardandoEdit(false)
   }
 
-  if (estado === 'cargando') return <div className="usuarios-estado">Cargando usuarios…</div>
-  if (estado === 'error')    return <div className="usuarios-estado error">{errorMsg}</div>
+  if (estado === 'cargando') return (
+    <div className="usuarios-page">
+      <div className="usuarios-header">
+        <h2 className="usuarios-titulo">Usuarios</h2>
+      </div>
+      <div className="usuarios-lista">
+        {[1,2,3,4].map(i => <SkeletonCard key={i} />)}
+      </div>
+    </div>
+  )
+  if (estado === 'error') return <div className="usuarios-estado error">{errorMsg}</div>
 
   return (
-    <div className="usuarios-page">
+    <motion.div
+      className="usuarios-page"
+      variants={pageVariants}
+      initial={shouldReduce ? false : 'hidden'}
+      animate="visible"
+    >
 
       {/* Header */}
       <div className="usuarios-header">
@@ -1289,11 +1331,18 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                 </button>
               </div>
               {/* Copiar */}
-              <button onClick={() => navigator.clipboard.writeText(codigoActual).then(() => { setMensajeCodigo('¡Copiado!'); setTimeout(() => setMensajeCodigo(''), 2000) })}
+              <motion.button
+                onClick={() => navigator.clipboard.writeText(codigoActual).then(() => { setMensajeCodigo('¡Copiado!'); setTimeout(() => setMensajeCodigo(''), 2000) })}
                 title="Copiar al portapapeles"
-                style={{ background: '#fff', border: '1.5px solid #c7d2fe', borderRadius: 10, cursor: 'pointer', color: '#6366f1', padding: '9px 12px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
+                whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                animate={mensajeCodigo === '¡Copiado!' ? { background: '#dcfce7', borderColor: '#86efac', color: '#16a34a' } : { background: '#fff', borderColor: '#c7d2fe', color: '#6366f1' }}
+                transition={{ duration: 0.18 }}
+                style={{ border: '1.5px solid #c7d2fe', borderRadius: 10, cursor: 'pointer', color: '#6366f1', padding: '9px 12px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                {mensajeCodigo === '¡Copiado!'
+                  ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                }
+              </motion.button>
               {/* Cambiar */}
               <button onClick={() => { setEditandoCodigo(true); setNuevoCodigo(codigoActual) }}
                 style={{ padding: '9px 16px', borderRadius: 10, border: '1.5px solid #6366f1', background: '#fff', color: '#6366f1', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
@@ -1363,18 +1412,10 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           }}>🔍</span>
           <input
             type="text"
+            className="usuarios-search-input"
             placeholder="Buscar por nombre, RUT o email…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '9px 36px 9px 36px',
-              border: '1px solid #d1d5db', borderRadius: 8,
-              fontSize: 14, color: '#111827', background: '#fff',
-              outline: 'none',
-            }}
-            onFocus={(e) => { e.target.style.borderColor = '#1a237e'; e.target.style.boxShadow = '0 0 0 3px rgba(26,35,126,0.12)' }}
-            onBlur={(e)  => { e.target.style.borderColor = '#d1d5db'; e.target.style.boxShadow = 'none' }}
           />
           {busqueda && (
             <button onClick={() => setBusqueda('')} style={{
@@ -1385,19 +1426,9 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           )}
         </div>
         <select
+          className="usuarios-filter-select"
           value={filtroRol}
           onChange={(e) => setFiltroRol(e.target.value)}
-          style={{
-            width: '100%',
-            boxSizing: 'border-box',
-            padding: '9px 10px',
-            border: '1px solid #d1d5db',
-            borderRadius: 8,
-            fontSize: 13,
-            color: '#111827',
-            background: '#fff',
-            outline: 'none',
-          }}
           title="Filtrar por rol"
         >
           <option value="todos">Todos los roles</option>
@@ -1418,7 +1449,8 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
       {/* Lista */}
       <div className="usuarios-lista">
-        {usuariosPagU.map((u) => {
+        <AnimatePresence mode="popLayout">
+        {usuariosPagU.map((u, _idx) => {
           const esYo        = u.id === usuario?.id
           const colores     = ROL_COLORES[u.rol] ?? ROL_COLORES.encargado
           const eliminando  = eliminandoId === u.id
@@ -1427,21 +1459,35 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           const permisosOpen= panelActivo?.id === u.id && panelActivo?.modo === 'permisos'
 
           return (
-            <div key={u.id} style={{
-              borderRadius: 10, overflow: 'hidden',
-              border: `1px solid ${(permisosOpen || editando) ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
-              background: '#fff',
-              boxShadow: (editando || permisosOpen) ? '0 4px 16px rgba(212,160,23,0.1)' : undefined,
-              transition: 'border-color 0.2s',
-            }}>
+            <motion.div
+              key={u.id}
+              variants={cardVariants}
+              initial={shouldReduce ? false : 'hidden'}
+              animate="visible"
+              exit="exit"
+              layout
+              transition={{ delay: shouldReduce ? 0 : _idx * 0.04 }}
+              style={{
+                borderRadius: 10, overflow: 'hidden',
+                border: `1px solid ${(permisosOpen || editando) ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                background: '#fff',
+                boxShadow: (editando || permisosOpen) ? '0 4px 16px rgba(212,160,23,0.1)' : undefined,
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+              }}
+            >
 
               {/* Fila principal */}
               <div className={`usuario-card${eliminando ? ' eliminando' : ''}`}
                 style={{ border: 'none', borderRadius: 0 }}>
 
-                <div className="usuario-avatar" style={{ background: colores.bg, color: colores.color }}>
+                <motion.div
+                  className="usuario-avatar"
+                  style={{ background: colores.bg, color: colores.color }}
+                  whileHover={shouldReduce ? {} : { scale: 1.07 }}
+                  transition={{ duration: 0.15 }}
+                >
                   {u.nombre?.[0]?.toUpperCase() ?? '?'}
-                </div>
+                </motion.div>
                 <div className="usuario-info">
                   <div className="usuario-nombre">
                     {u.nombre}
@@ -1492,28 +1538,33 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                 {(puedeEditar || puedeEliminar) && !confirmando && (
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                     {puedeEditar && (
-                      <button title="Editar" onClick={() => togglePanel(u.id, 'editar')} style={{
-                        background: editando ? '#e8eaf6' : 'none',
-                        border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
-                        color: editando ? '#1a237e' : '#9ca3af',
-                        borderRadius: 6, padding: '5px 9px',
-                        fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                      }}>✏️</button>
+                      <motion.button title="Editar" onClick={() => togglePanel(u.id, 'editar')}
+                        whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                        style={{
+                          background: editando ? '#e8eaf6' : 'none',
+                          border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
+                          color: editando ? '#1a237e' : '#9ca3af',
+                          borderRadius: 6, padding: '5px 9px',
+                          fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                        }}>✏️</motion.button>
                     )}
                     {!esYo && (
                       <>
                         {esAdminReal && (
-                          <button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')} style={{
-                            background: permisosOpen ? '#fffbeb' : 'none',
-                            border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
-                            color: permisosOpen ? '#92700a' : '#9ca3af',
-                            borderRadius: 6, padding: '5px 9px',
-                            fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
-                          }}>🔐</button>
+                          <motion.button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')}
+                            whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                            style={{
+                              background: permisosOpen ? '#fffbeb' : 'none',
+                              border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                              color: permisosOpen ? '#92700a' : '#9ca3af',
+                              borderRadius: 6, padding: '5px 9px',
+                              fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                            }}>🔐</motion.button>
                         )}
                         {puedeEliminar && (
-                          <button className="btn-eliminar-icono" title="Eliminar"
-                            onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</button>
+                          <motion.button className="btn-eliminar-icono" title="Eliminar"
+                            whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                            onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</motion.button>
                         )}
                       </>
                     )}
@@ -1699,9 +1750,10 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               {permisosOpen && (
                 <PanelPermisos usuario={u} onCerrar={() => setPanelActivo(null)} />
               )}
-            </div>
+            </motion.div>
           )
         })}
+        </AnimatePresence>
 
         {usuariosFiltrados.length === 0 && (
           <div className="usuarios-estado">
@@ -1797,7 +1849,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           </div>
         )
       })()}
-    </div>
+    </motion.div>
   )
 }
 
