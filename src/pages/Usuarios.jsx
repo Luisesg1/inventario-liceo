@@ -1465,7 +1465,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               initial={shouldReduce ? false : 'hidden'}
               animate="visible"
               exit="exit"
-              layout
               transition={{ delay: shouldReduce ? 0 : _idx * 0.04 }}
               style={{
                 borderRadius: 10, overflow: 'hidden',
