@@ -1100,12 +1100,17 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     return new Set(Object.entries(counts).filter(([, n]) => n > 1).map(([r]) => r))
   })()
 
+  const rutBusqueda = busqueda.replace(/[^0-9kK]/gi, '')
   const usuariosFiltrados = usuarios
-    .filter((u) =>
-      u.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      u.email?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      (u.rut && u.rut.replace(/[^0-9kK]/gi, '').includes(busqueda.replace(/[^0-9kK]/gi, '')))
-    )
+    .filter((u) => {
+      if (!busqueda) return true
+      const q = busqueda.toLowerCase()
+      return (
+        u.nombre?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        (rutBusqueda && u.rut && u.rut.replace(/[^0-9kK]/gi, '').includes(rutBusqueda))
+      )
+    })
     .filter((u) => (filtroRol === 'todos' ? true : u.rol === filtroRol))
     .sort((a, b) => {
       const aEsYo = a.id === usuario?.id
