@@ -1917,11 +1917,6 @@ export default function Permisos({ usuario }) {
               <X size={12} strokeWidth={2.5} /> Limpiar
             </button>
           )}
-          {permisosFiltrados.length !== permisos.length && (
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>
-              {permisosFiltrados.length} de {permisos.length}
-            </span>
-          )}
         </div>
 
         <div className="permisos-table-wrap">
