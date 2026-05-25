@@ -1794,9 +1794,21 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const licenciasMedicas = permisos.filter(p => p.tipo === 'licencia_medica')
   const permisosAdmin    = permisos.filter(p => p.tipo === 'permiso_administrativo')
   const usuariosConAus   = new Set(permisos.map(p => { const u = resolveUser(p); return u?.rut ?? u?.id }).filter(Boolean)).size
-  const diasMesTotal = Math.round(calcDiasTotales(
-    permisos.filter(p => p.fecha_inicio?.startsWith(mesActualPrefix)), false, diasInhabilitados
-  ))
+  // Días este mes: cuenta solo días hábiles para TODOS los tipos (excluye feriados/inhabilitados)
+  const diasMesTotal = Math.round(
+    permisos
+      .filter(p => p.fecha_inicio?.startsWith(mesActualPrefix))
+      .reduce((acc, p) => {
+        if (p.jornada === 'medio_dia') return acc + 0.5
+        if (p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin) {
+          const [sh, sm] = p.hora_inicio.split(':').map(Number)
+          const [eh, em] = p.hora_fin.split(':').map(Number)
+          return acc + Math.max(0, ((eh * 60 + em) - (sh * 60 + sm)) / 60 / 8)
+        }
+        if (p.fecha_inicio && p.fecha_fin) return acc + diasHabiles(p.fecha_inicio, p.fecha_fin, diasInhabilitados)
+        return acc
+      }, 0)
+  )
   const totalDiasInhab = feriadosAPI.length + diasAdmin.length
 
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
