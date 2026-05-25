@@ -1954,48 +1954,56 @@ export default function Permisos({ usuario }) {
 
                     {/* ── Cabecera del usuario (clickeable) ── */}
                     <div onClick={() => toggleColapso(cardKey)} className="permisos-user-header"
-                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#f8fafc', borderBottom: abierto ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', userSelect: 'none' }}>
-                      <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 14px', background: '#f8fafc', borderBottom: abierto ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', userSelect: 'none' }}>
+                      <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 36, height: 36, fontSize: 13, flexShrink: 0, marginTop: 1 }}>
                         {getInitials(u.nombre ?? '')}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: 13.5, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {u.nombre ?? '—'}
+                        {/* Fila 1: nombre + chevron */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                          <span style={{ fontWeight: 600, fontSize: 13.5, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.nombre ?? '—'}
+                          </span>
+                          <ChevronDown size={14} strokeWidth={2.5}
+                            style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform 0.2s', transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
                         </div>
-                        <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 1 }}>
-                          {u.rut ?? ''}
-                          {u.email ? <span style={{ marginLeft: u.rut ? 6 : 0 }}>{u.email}</span> : null}
+                        {/* Fila 2: badge de rol + RUT */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                          <span className="permisos-badge permisos-badge--rol">{rolLabel}</span>
+                          {u.rut && <span style={{ fontSize: 11.5, color: '#94a3b8' }}>{u.rut}</span>}
+                        </div>
+                        {/* Fila 3: email */}
+                        {u.email && (
+                          <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.email}
+                          </div>
+                        )}
+                        {/* Fila 4: dots + estado cuota */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                          <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                            {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => {
+                              const filled = Math.min(Math.max(stats.dias - i, 0), 1)
+                              const bg = filled >= 1
+                                ? dotColor
+                                : filled > 0
+                                  ? `linear-gradient(90deg, ${dotColor} ${filled*100}%, #e2e8f0 ${filled*100}%)`
+                                  : '#e2e8f0'
+                              return <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: bg }} />
+                            })}
+                          </div>
+                          <span style={{ fontSize: 11.5, color: textColor, fontWeight: agotada || restantes <= 2 ? 700 : 400 }}>
+                            {agotada
+                              ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
+                              : restantes <= 1
+                                ? `⚠️ Usó ${diasFmt}d — queda 1 día`
+                                : restantes <= 2
+                                  ? `⚠️ Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`
+                                  : stats.dias === 0
+                                    ? `${MAX_AUSENCIAS} días disponibles`
+                                    : `Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`}
+                          </span>
                         </div>
                       </div>
-                      <span className="permisos-badge permisos-badge--rol" style={{ flexShrink: 0 }}>{rolLabel}</span>
-                      {/* Stats dots */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
-                        <div style={{ display: 'flex', gap: 3 }}>
-                          {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => {
-                            const filled = Math.min(Math.max(stats.dias - i, 0), 1)
-                            const bg = filled >= 1
-                              ? dotColor
-                              : filled > 0
-                                ? `linear-gradient(90deg, ${dotColor} ${filled*100}%, #e2e8f0 ${filled*100}%)`
-                                : '#e2e8f0'
-                            return <span key={i} style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', flexShrink: 0, background: bg }} />
-                          })}
-                        </div>
-                        <span style={{ fontSize: 11, color: textColor, fontWeight: agotada || restantes <= 2 ? 700 : 400, whiteSpace: 'nowrap' }}>
-                          {agotada
-                            ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
-                            : restantes <= 1
-                              ? `⚠️ Usó ${diasFmt}d — queda 1 día`
-                              : restantes <= 2
-                                ? `⚠️ Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`
-                                : stats.dias === 0
-                                  ? `${MAX_AUSENCIAS} días disponibles`
-                                  : `Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`}
-                        </span>
-                      </div>
-                      {/* Chevron */}
-                      <ChevronDown size={15} strokeWidth={2.5}
-                        style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform 0.2s', transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
                     </div>
 
                     {/* ── Filas de ausencias (colapsables) ── */}
