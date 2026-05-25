@@ -214,11 +214,14 @@ export default function App() {
     ver:          esAdmin || !!p.ver_ausencias,
     gestionar:    esAdmin || !!p.gestionar_ausencias,
     verAuditoria: esAdmin || !!p.ver_auditoria_permisos,
-    gestionarUsuarios: esAdmin || !!p.gestionar_usuarios,
+    invitarUsuario:    esAdmin || !!p.invitar_usuario,
+    editarUsuario:     esAdmin || !!p.editar_usuario,
+    eliminarUsuario:   esAdmin || !!p.eliminar_usuario,
   }
 
   const paginasVisorReq = ['requerimientos', 'tickets']
-  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+  const puedeAccederUsuarios = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
+  const soloAdmin  = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
     || (pagina === 'permisos' && !permisosAusencia.ver)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
