@@ -253,6 +253,7 @@
 }
 
 .acciones { display: flex; gap: 1px; align-items: center; flex-wrap: nowrap; }
+td:has(.acciones) { padding-right: 4px; padding-left: 4px; width: 1%; white-space: nowrap; }
 
 .btn-ver, .btn-edit, .btn-del {
   background: transparent; border: none;
@@ -262,7 +263,7 @@
   display: flex; align-items: center; justify-content: center;
   transition: background 0.13s ease, opacity 0.13s ease;
   opacity: 0.35;
-  min-width: 26px; height: 26px;
+  min-width: 24px; height: 24px;
 }
 .btn-ver:hover  { opacity: 1; background: rgba(59,130,246,0.10); }
 .btn-edit:hover { opacity: 1; background: rgba(212,160,23,0.10); }
