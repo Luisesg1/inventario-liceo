@@ -1301,7 +1301,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
       {/* Código de invitación */}
       {puedeInvitar && (
-        <div style={{ background: '#f0f4ff', border: '1.5px solid #c7d2fe', borderRadius: 12, padding: '16px 20px', marginBottom: 18 }}>
+        <div className="invitacion-card">
           <p style={{ margin: '0 0 2px', fontSize: 11, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: 'center' }}>
             🔑 Código de invitación para docentes
           </p>
@@ -1332,22 +1332,28 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               </div>
               {/* Copiar */}
               <motion.button
+                className="btn-inv"
                 onClick={() => navigator.clipboard.writeText(codigoActual).then(() => { setMensajeCodigo('¡Copiado!'); setTimeout(() => setMensajeCodigo(''), 2000) })}
                 title="Copiar al portapapeles"
-                whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                whileHover={shouldReduce ? {} : { scale: 1.05 }}
+                whileTap={shouldReduce ? {} : { scale: 0.9 }}
                 animate={mensajeCodigo === '¡Copiado!' ? { background: '#dcfce7', borderColor: '#86efac', color: '#16a34a' } : { background: '#fff', borderColor: '#c7d2fe', color: '#6366f1' }}
                 transition={{ duration: 0.18 }}
-                style={{ border: '1.5px solid #c7d2fe', borderRadius: 10, cursor: 'pointer', color: '#6366f1', padding: '9px 12px', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                style={{ padding: '9px 12px', lineHeight: 1 }}>
                 {mensajeCodigo === '¡Copiado!'
                   ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 }
               </motion.button>
               {/* Cambiar */}
-              <button onClick={() => { setEditandoCodigo(true); setNuevoCodigo(codigoActual) }}
-                style={{ padding: '9px 16px', borderRadius: 10, border: '1.5px solid #6366f1', background: '#fff', color: '#6366f1', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <motion.button
+                className="btn-inv"
+                onClick={() => { setEditandoCodigo(true); setNuevoCodigo(codigoActual) }}
+                whileHover={shouldReduce ? {} : { scale: 1.04 }}
+                whileTap={shouldReduce ? {} : { scale: 0.93 }}
+                style={{ padding: '9px 16px', color: '#6366f1', fontSize: 13, fontWeight: 700, borderColor: '#6366f1' }}>
                 Cambiar
-              </button>
+              </motion.button>
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -1533,33 +1539,36 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                 )}
 
                 {(puedeEditar || puedeEliminar) && !confirmando && (
-                  <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                  <div className="acciones-usuario" style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                     {puedeEditar && (
                       <motion.button title="Editar" onClick={() => togglePanel(u.id, 'editar')}
+                        whileHover={shouldReduce ? {} : { scale: 1.1 }}
                         whileTap={shouldReduce ? {} : { scale: 0.88 }}
                         style={{
                           background: editando ? '#e8eaf6' : 'none',
                           border: `1px solid ${editando ? 'rgba(26,35,126,0.4)' : '#e5e7eb'}`,
                           color: editando ? '#1a237e' : '#9ca3af',
                           borderRadius: 6, padding: '5px 9px',
-                          fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                          fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                         }}>✏️</motion.button>
                     )}
                     {!esYo && (
                       <>
                         {esAdminReal && (
                           <motion.button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')}
+                            whileHover={shouldReduce ? {} : { scale: 1.1 }}
                             whileTap={shouldReduce ? {} : { scale: 0.88 }}
                             style={{
                               background: permisosOpen ? '#fffbeb' : 'none',
                               border: `1px solid ${permisosOpen ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
                               color: permisosOpen ? '#92700a' : '#9ca3af',
                               borderRadius: 6, padding: '5px 9px',
-                              fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'all 0.15s',
+                              fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                             }}>🔐</motion.button>
                         )}
                         {puedeEliminar && (
                           <motion.button className="btn-eliminar-icono" title="Eliminar"
+                            whileHover={shouldReduce ? {} : { scale: 1.1 }}
                             whileTap={shouldReduce ? {} : { scale: 0.88 }}
                             onClick={() => setConfirmandoId(u.id)} disabled={eliminando}>🗑</motion.button>
                         )}
