@@ -1703,37 +1703,65 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     }
     if (error) throw error
 
-    // Enviar correo de respaldo solo en permisos administrativos nuevos
-    if (!datos.id && datos.tipoPermiso === 'permiso_administrativo') {
+    // Correos en ausencias nuevas
+    if (!datos.id) {
       const correo = u?.isExterno ? (u.email ?? null) : (u?.email ?? null)
       if (correo) {
-        // Obtener días usados actualizados (ya incluye el permiso recién insertado)
-        let diasRestantes = null
-        try {
-          const diasUsados = await handleGetPermisosUsados(u?.id ?? null, u?.rut ?? null)
-          diasRestantes = Math.max(MAX_AUSENCIAS - diasUsados, 0)
-        } catch { /* si falla, se envía el correo igual sin el dato */ }
+        // Permiso administrativo: correo de respaldo con días restantes
+        if (datos.tipoPermiso === 'permiso_administrativo') {
+          let diasRestantes = null
+          try {
+            const diasUsados = await handleGetPermisosUsados(u?.id ?? null, u?.rut ?? null)
+            diasRestantes = Math.max(MAX_AUSENCIAS - diasUsados, 0)
+          } catch { /* si falla, se envía igual */ }
 
-        try {
-          const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
-            body: {
-              correo,
-              nombre:        u?.nombre ?? null,
-              fechaInicio:   datos.fechaInicio,
-              fechaFin:      datos.fechaFin,
-              jornada:       datos.jornada,
-              periodo:       datos.periodo ?? null,
-              horaInicio:    datos.horaInicio ?? null,
-              horaFin:       datos.horaFin ?? null,
-              notas:         datos.notas ?? null,
-              diasRestantes,
-              maxDias:       MAX_AUSENCIAS,
-            },
-          })
-          setEmailNotif(fnError ? 'error' : 'ok')
-        } catch {
-          setEmailNotif('error')
+          try {
+            const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
+              body: {
+                correo,
+                nombre:      u?.nombre ?? null,
+                fechaInicio: datos.fechaInicio,
+                fechaFin:    datos.fechaFin,
+                jornada:     datos.jornada,
+                periodo:     datos.periodo ?? null,
+                horaInicio:  datos.horaInicio ?? null,
+                horaFin:     datos.horaFin ?? null,
+                notas:       datos.notas ?? null,
+                diasRestantes,
+                maxDias:     MAX_AUSENCIAS,
+              },
+            })
+            setEmailNotif(fnError ? 'error' : 'ok')
+          } catch { setEmailNotif('error') }
         }
+
+        // Notificación general: solo si el usuario tiene notificar_ausencia_correo activado
+        try {
+          const uid = u?.isExterno ? null : (u?.id ?? null)
+          if (uid) {
+            const { data: perm } = await supabase
+              .from('permisos_usuario')
+              .select('permisos')
+              .eq('usuario_id', uid)
+              .maybeSingle()
+            if (perm?.permisos?.notificar_ausencia_correo) {
+              await supabase.functions.invoke('notify-ausencia', {
+                body: {
+                  correo,
+                  nombre:      u?.nombre ?? null,
+                  tipo:        datos.tipoPermiso,
+                  fechaInicio: datos.fechaInicio,
+                  fechaFin:    datos.fechaFin,
+                  jornada:     datos.jornada,
+                  periodo:     datos.periodo ?? null,
+                  horaInicio:  datos.horaInicio ?? null,
+                  horaFin:     datos.horaFin ?? null,
+                  notas:       datos.notas ?? null,
+                },
+              })
+            }
+          }
+        } catch { /* silencioso */ }
       }
     }
 
