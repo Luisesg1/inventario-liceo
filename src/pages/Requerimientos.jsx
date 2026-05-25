@@ -958,6 +958,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [filtroNumero,      setFiltroNumero]      = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const [confirmDelId,      setConfirmDelId]      = useState(null)
   const [paginaR, setPaginaR] = useState(1)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
   const [imagenesNuevas,     setImagenesNuevas]     = useState([])
@@ -1170,7 +1171,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   }
 
   const eliminarDesdeTabla = (r) => {
-    if (!window.confirm(`¿Eliminar el requerimiento #${r.id}?`)) return
+    setConfirmDelId(null)
     eliminarRegistro(r).catch(err => {
       window.alert(err?.message || 'No se pudo eliminar.')
     })
@@ -1457,11 +1458,30 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                         {puedeEditar && (
                           <button type="button" className="btn-edit" onClick={() => abrirEditar(r)} title="Editar">✏️</button>
                         )}
-                        {puedeEliminar && (
-                          <button type="button" className="btn-del" onClick={() => eliminarDesdeTabla(r)} title="Eliminar">✕</button>
-                        )}
-                        {esAdmin && (
-                          <button type="button" className="btn-del" onClick={() => eliminarDesdeTabla(r)} title="Eliminar">✕</button>
+                        {(puedeEliminar || esAdmin) && (
+                          confirmDelId === r.id ? (
+                            <span className="req-confirm-inline">
+                              <button
+                                type="button"
+                                className="req-confirm-si"
+                                title="Confirmar eliminación"
+                                onClick={() => eliminarDesdeTabla(r)}
+                              >✓</button>
+                              <button
+                                type="button"
+                                className="req-confirm-no"
+                                title="Cancelar"
+                                onClick={() => setConfirmDelId(null)}
+                              >✕</button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-del"
+                              onClick={() => setConfirmDelId(r.id)}
+                              title="Eliminar"
+                            >✕</button>
+                          )
                         )}
                       </div>
                     </td>

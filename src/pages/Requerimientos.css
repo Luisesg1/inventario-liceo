@@ -754,6 +754,46 @@
 }
 .req-confirm-del { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #f87171; }
 
+/* ── Confirmación inline en tabla ── */
+.req-confirm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.req-confirm-si,
+.req-confirm-no {
+  border: none;
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.13s, transform 0.1s;
+}
+.req-confirm-si {
+  background: rgba(239,68,68,0.12);
+  color: #ef4444;
+}
+.req-confirm-si:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: scale(1.1);
+}
+.req-confirm-no {
+  background: rgba(148,163,184,0.1);
+  color: #94a3b8;
+}
+.req-confirm-no:hover {
+  background: rgba(148,163,184,0.2);
+  color: #0f172a;
+  transform: scale(1.1);
+}
+
 /* ── Importar ── */
 .req-drop-zone {
   border: 2px dashed rgba(255,255,255,0.1);
