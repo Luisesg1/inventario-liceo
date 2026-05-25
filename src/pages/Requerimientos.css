@@ -9,16 +9,17 @@
 /* ── KPIs ── */
 .req-kpis {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
 .req-kpi {
   background: #ffffff;
   border: 1px solid rgba(0,0,0,0.06);
-  border-left: 3px solid rgba(148,163,184,0.3);
-  border-radius: 10px;
-  padding: 14px 20px;
+  border-top: 3px solid rgba(148,163,184,0.25);
+  border-left: none;
+  border-radius: 12px;
+  padding: 16px 20px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,56 +27,53 @@
   min-width: 120px;
   flex: 1;
   max-width: 200px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04);
+  transition: box-shadow 0.22s ease, background 0.18s ease;
 }
-.req-kpi--proceso    { border-left-color: #d97706; }
-.req-kpi--ok         { border-left-color: #16a34a; }
-.req-kpi--mal        { border-left-color: #dc2626; }
-.req-kpi--monto      { border-left-color: #3b82f6; max-width: 260px; flex: 1.35; }
-.req-kpi--monto-real { border-left-color: #059669; max-width: 260px; flex: 1.35; }
+.req-kpi--proceso    { border-top-color: #d97706; }
+.req-kpi--ok         { border-top-color: #16a34a; }
+.req-kpi--mal        { border-top-color: #dc2626; }
+.req-kpi--monto      { border-top-color: #3b82f6; max-width: 260px; flex: 1.35; }
+.req-kpi--monto-real { border-top-color: #059669; max-width: 260px; flex: 1.35; }
 
-.req-kpi--resumen {
-  cursor: default;
-  opacity: 1;
-}
+.req-kpi--resumen { cursor: default; }
 
 .req-kpi--clickable {
   cursor: pointer;
-  transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
   user-select: none;
 }
 .req-kpi--clickable:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-  background: #f0f4ff;
-}
-.req-kpi--clickable:not(.req-kpi--active) {
-  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05);
+  background: #fafbff;
 }
 .req-kpi--clickable:not(.req-kpi--active) .req-kpi-num {
-  color: #94a3b8;
+  color: #64748b;
 }
 .req-kpi--active {
-  border-left-width: 5px;
+  border-top-width: 4px;
   background: #eef2ff;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.12), 0 1px 4px rgba(0,0,0,0.04);
 }
 .req-kpi-num {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: #0f172a;
-  line-height: 1.15;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 .req-kpi-num--monto {
-  font-size: clamp(15px, 1.8vw, 20px);
+  font-size: clamp(14px, 1.7vw, 19px);
   letter-spacing: -0.02em;
 }
 .req-kpi-label {
   font-size: 11px;
   color: #94a3b8;
-  font-weight: 500;
+  font-weight: 600;
   text-align: center;
   line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .req-kpi-hint {
   font-size: 10px;
@@ -942,5 +940,104 @@
   .req-paginacion {
     flex-wrap: wrap;
     gap: 4px;
+  }
+}
+
+/* ── Paginación ── */
+.req-paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0 2px;
+  flex-shrink: 0;
+}
+.req-pag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(0,0,0,0.07);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 0.14s, border-color 0.14s, color 0.14s, box-shadow 0.14s;
+}
+.req-pag-btn:hover:not(:disabled) {
+  background: #f0f4ff;
+  border-color: rgba(99,102,241,0.3);
+  color: #6366f1;
+}
+.req-pag-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.req-pag-btn--active {
+  background: #eef2ff;
+  border-color: rgba(99,102,241,0.4);
+  color: #6366f1;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.1);
+}
+.req-pag-info {
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 0 6px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Skeleton loading ── */
+@keyframes req-shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position:  400px 0; }
+}
+.req-skeleton-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.req-skeleton-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.req-skeleton-block {
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8edf5 50%, #f1f5f9 75%);
+  background-size: 800px 100%;
+  animation: req-shimmer 1.4s infinite linear;
+  flex: 1;
+}
+.req-skeleton-cell {
+  height: 14px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e8edf5 50%, #f1f5f9 75%);
+  background-size: 800px 100%;
+  animation: req-shimmer 1.4s infinite linear;
+  display: block;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .req-skeleton-block,
+  .req-skeleton-cell {
+    animation: none;
+    background: #f1f5f9;
+  }
+  .req-kpi,
+  .req-pag-btn,
+  .req-btn-nuevo,
+  .req-btn-tool {
+    transition: none;
   }
 }

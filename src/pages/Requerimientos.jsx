@@ -1,6 +1,38 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Requerimientos.css'
+
+// ── Skeleton table ─────────────────────────────────────────────────────────
+function SkeletonReqs() {
+  return (
+    <div className="req-skeleton-wrap">
+      <div className="req-skeleton-toolbar">
+        {[1,2,3].map(i => <div key={i} className="req-skeleton-block" style={{ height: 34, flex: i === 2 ? 2 : 1 }} />)}
+      </div>
+      <div className="req-table-wrap">
+        <table className="req-table">
+          <thead><tr>{['N°','Fecha','Contenido','Solicitante','Fondo','Acción','Monto','Estado',''].map((h,i) => <th key={i}>{h}</th>)}</tr></thead>
+          <tbody>
+            {[1,2,3,4,5,6].map(i => (
+              <tr key={i} className="req-row">
+                {[80,70,180,120,90,150,80,90,60].map((w,j) => (
+                  <td key={j}><div className="req-skeleton-cell" style={{ width: w }} /></td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── Animation variants ─────────────────────────────────────────────────────
+const pageVariants = {
+  hidden:  { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.26, ease: 'easeOut' } },
+}
 
 const FONDOS = ['S.E.P.', 'P.I.E.', 'Sub. General', 'Mantenimiento', 'F.A.E.P.', 'Complementario TP', 'Aporte Municipal', 'Otro']
 const DIMENSIONES = ['Gestión Pedagógica', 'Liderazgo', 'Convivencia Escolar', 'Recursos']
@@ -909,6 +941,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const puedeExportar = permisos.exportar !== undefined ? permisos.exportar : _legacyEdit
 
   const [items,             setItems]             = useState([])
+  const shouldReduce = useReducedMotion()
   const [cargando,          setCargando]          = useState(true)
   const [modal,             setModal]             = useState(false)
   const [verDetalle,        setVerDetalle]        = useState(null)
@@ -1201,60 +1234,77 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
     }
   }, [filtrados, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
+  const kpiAnim = (i) => ({
+    initial: shouldReduce ? false : { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: shouldReduce ? 0 : i * 0.07, duration: 0.24, ease: 'easeOut' },
+    whileHover: shouldReduce ? {} : { y: -3, transition: { duration: 0.18 } },
+  })
+
   return (
-    <div className="req-page">
+    <motion.div
+      className="req-page"
+      variants={pageVariants}
+      initial={shouldReduce ? false : 'hidden'}
+      animate="visible"
+    >
 
       {/* KPIs */}
       <div className="req-kpis">
-        <div
+        <motion.div
           className={`req-kpi req-kpi--clickable ${filtroKpi === null ? 'req-kpi--active' : ''}`}
           onClick={() => setFiltroKpi(null)}
+          {...kpiAnim(0)}
         >
           <span className="req-kpi-num">{kpis.total}</span>
           {kpiFiltrados && <span className="req-kpi-sub">{kpiFiltrados.total} filtrados</span>}
           <span className="req-kpi-label">Total</span>
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className={`req-kpi req-kpi--proceso req-kpi--clickable ${filtroKpi === 'proceso' ? 'req-kpi--active' : ''}`}
           onClick={() => toggleKpi('proceso')}
+          {...kpiAnim(1)}
         >
           <span className="req-kpi-num">{kpis.enProceso}</span>
           {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length} filtrados</span>}
           <span className="req-kpi-label">En proceso</span>
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className={`req-kpi req-kpi--ok req-kpi--clickable ${filtroKpi === 'comprados' ? 'req-kpi--active' : ''}`}
           onClick={() => toggleKpi('comprados')}
+          {...kpiAnim(2)}
         >
           <span className="req-kpi-num">{kpis.comprados}</span>
           {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length} filtrados</span>}
           <span className="req-kpi-label">Comprados</span>
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className={`req-kpi req-kpi--mal req-kpi--clickable ${filtroKpi === 'rechazados' ? 'req-kpi--active' : ''}`}
           onClick={() => toggleKpi('rechazados')}
+          {...kpiAnim(3)}
         >
           <span className="req-kpi-num">{kpis.rechazados}</span>
           {kpiFiltrados && <span className="req-kpi-sub">{filtrados.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length} filtrados</span>}
           <span className="req-kpi-label">Rechazados</span>
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className="req-kpi req-kpi--monto req-kpi--resumen"
           title="Suma de todos los montos solicitados registrados (no filtra la tabla)"
+          {...kpiAnim(4)}
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto solicitado (total)</span>
-          
-        </div>
-        <div
+        </motion.div>
+        <motion.div
           className="req-kpi req-kpi--monto-real req-kpi--resumen"
           title="Suma de todos los montos reales registrados (no filtra la tabla)"
+          {...kpiAnim(5)}
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto real (total)</span>
-        </div>
+        </motion.div>
       </div>
 
       {/* Botón limpiar filtros */}
@@ -1358,7 +1408,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
 
       {/* Tabla */}
       {cargando ? (
-        <div className="req-empty">Cargando...</div>
+        <SkeletonReqs />
       ) : filtrados.length === 0 ? (
         <div className="req-empty">No hay requerimientos registrados.</div>
       ) : (
@@ -1425,12 +1475,12 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
 
       {/* Paginación requerimientos */}
       {totalPagsR > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
-          <button onClick={() => setPaginaR(1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>«</button>
-          <button onClick={() => setPaginaR(p => p - 1)} disabled={paginaR === 1} style={pBtnR(paginaR === 1)}>‹ Ant.</button>
-          <span style={{ fontSize: 13, color: '#475569', padding: '0 6px', whiteSpace: 'nowrap' }}>Pág. {paginaR} / {totalPagsR} · {filtrados.length} req.</span>
-          <button onClick={() => setPaginaR(p => p + 1)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>Sig. ›</button>
-          <button onClick={() => setPaginaR(totalPagsR)} disabled={paginaR >= totalPagsR} style={pBtnR(paginaR >= totalPagsR)}>»</button>
+        <div className="req-paginacion">
+          <button className="req-pag-btn" onClick={() => setPaginaR(1)} disabled={paginaR === 1}>«</button>
+          <button className="req-pag-btn" onClick={() => setPaginaR(p => p - 1)} disabled={paginaR === 1}>‹ Ant.</button>
+          <span className="req-pag-info">Pág. {paginaR} / {totalPagsR} · {filtrados.length} req.</span>
+          <button className="req-pag-btn" onClick={() => setPaginaR(p => p + 1)} disabled={paginaR >= totalPagsR}>Sig. ›</button>
+          <button className="req-pag-btn" onClick={() => setPaginaR(totalPagsR)} disabled={paginaR >= totalPagsR}>»</button>
         </div>
       )}
 
@@ -1655,6 +1705,6 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           onCerrar={() => setModalImportar(false)}
         />
       )}
-    </div>
+    </motion.div>
   )
 }
