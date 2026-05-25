@@ -328,7 +328,8 @@ export default function Layout({
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios Inventario',
     auditoria_requerimientos: 'Auditoría de Requerimientos',
-    auditoria_permisos:       'Auditoría de Permisos',
+    permisos:                 'Ausencias',
+    auditoria_permisos:       'Auditoría de Ausencias',
     requerimientos: 'Requerimientos',
     tickets:        'Tickets',
     ajustes:    'Personalizar',
@@ -560,7 +561,7 @@ export default function Layout({
                 <span className="nav-icon">
                   <ShieldCheck size={15} strokeWidth={2} />
                 </span>
-                Permisos
+                Ausencias
                 <span className={`nav-chevron ${permisosAbierto ? 'nav-chevron--open' : ''}`}>
                   <ChevronRight size={13} strokeWidth={2.5} />
                 </span>
@@ -580,7 +581,7 @@ export default function Layout({
                       onClick={() => handleNav('permisos')}
                     >
                       <span className="nav-subitem-dot" />
-                      Ver permisos
+                      Ver ausencias
                     </div>
                     <div
                       className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}

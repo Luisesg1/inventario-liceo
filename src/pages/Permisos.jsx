@@ -30,6 +30,15 @@ const ROL_LABEL = {
   visor_requerimientos:'Visor requerimientos',
 }
 
+const ROLES_ACTIVOS = [
+  { value: 'admin',          label: 'Administrador' },
+  { value: 'directivo',      label: 'Directivo' },
+  { value: 'coordinador',    label: 'Coordinador' },
+  { value: 'docente',        label: 'Docente' },
+  { value: 'asistente',      label: 'Asistente de la educación' },
+  { value: 'administrativo', label: 'Administrativo' },
+]
+
 const TIPOS_PERMISO = [
   { value: 'licencia_medica',        label: 'Licencia médica' },
   { value: 'permiso_administrativo', label: 'Permiso administrativo' },
@@ -955,8 +964,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                       style={nuevoFE.rol ? { borderColor: '#dc2626' } : {}}
                                       onChange={e => { setRolNuevo(e.target.value); clearNFE('rol') }}>
                                       <option value="">Seleccionar rol *</option>
-                                      {Object.entries(ROL_LABEL).map(([v, l]) => (
-                                        <option key={v} value={v}>{l}</option>
+                                      {ROLES_ACTIVOS.map(({ value, label }) => (
+                                        <option key={value} value={value}>{label}</option>
                                       ))}
                                     </select>
                                     {nuevoFE.rol && <span style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'block' }}>{nuevoFE.rol}</span>}
@@ -1913,7 +1922,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           <select value={filtroRol} onChange={e => setFiltroRol(e.target.value)}
             style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
             <option value="">Todos los roles</option>
-            {Object.entries(ROL_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
           </select>
           {(busqueda || filtroTipo || filtroRol) && (
             <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol('') }}
