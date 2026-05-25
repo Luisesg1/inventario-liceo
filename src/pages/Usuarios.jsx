@@ -57,7 +57,7 @@ const ACCIONES = [
 // Grupos de permisos por módulo (para el wizard de asignación)
 const GRUPOS_PERMISOS = [
   {
-    key: 'inventario', label: 'Inventario', paso: 3, soloPersonalizado: true,
+    key: 'inventario', label: 'Inventario', paso: 3, soloPersonalizado: false,
     descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
     permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
                'eliminar_lote', 'importar_csv', 'exportar',
