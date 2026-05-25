@@ -48,7 +48,7 @@ const ACCIONES = [
   { key: 'ver_ausencias',         label: 'Ver ausencias del personal', labelCorto: 'Ver aus.' },
   { key: 'gestionar_ausencias',   label: 'Registrar/editar ausencias', labelCorto: 'Gest. aus.' },
   { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias', labelCorto: 'Aud. Aus.' },
-  { key: 'gestionar_usuarios',    label: 'Gestionar usuarios',         labelCorto: 'Usuarios' },
+  { key: 'gestionar_usuarios',    label: 'Invitar, editar y eliminar usuarios', labelCorto: 'Usuarios' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -79,7 +79,7 @@ const GRUPOS_PERMISOS = [
   },
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
-    descripcion: 'Permite invitar y administrar cuentas de otros usuarios del sistema.',
+    descripcion: 'Acceso completo a la gestión de usuarios: invitar nuevos usuarios, editar datos y rol, asignar permisos personalizados y eliminar cuentas.',
     permisos: ['gestionar_usuarios'],
   },
 ]
