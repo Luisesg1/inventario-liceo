@@ -348,7 +348,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
                   {esGestor && (
                     <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
                       onClick={e => e.stopPropagation()}
-                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', alignSelf: 'center', accentColor: '#1a237e' }} />
+                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', alignSelf: 'flex-start', marginTop: 3, accentColor: '#1a237e' }} />
                   )}
                   <div className="ticket-card-info">
                     <p className="ticket-titulo">{areaLabel(t)}</p>
