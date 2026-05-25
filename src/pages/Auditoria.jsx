@@ -18,7 +18,7 @@ const CAMPO_LABEL = {
   numero_factura: 'N° Factura', numero_orden: 'N° Orden', fondo: 'Fondo', garantia: 'Garantía',
 }
 
-const POR_PAGINA = 50
+const POR_PAGINA = 15
 
 const secTitle = {
   fontSize: 11, fontWeight: 700, color: '#d4a017',
@@ -409,15 +409,57 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
       )}
 
       {/* ── Paginación ── */}
-      {totalPaginas > 1 && (
-        <div className="audit-paginacion">
-          <button className="audit-page-btn" onClick={() => setPagina(0)} disabled={pagina === 0}>«</button>
-          <button className="audit-page-btn" onClick={() => setPagina(p => Math.max(0, p - 1))} disabled={pagina === 0}>← Anterior</button>
-          <span className="audit-page-label">Página {pagina + 1} de {totalPaginas}</span>
-          <button className="audit-page-btn" onClick={() => setPagina(p => Math.min(totalPaginas - 1, p + 1))} disabled={pagina >= totalPaginas - 1}>Siguiente →</button>
-          <button className="audit-page-btn" onClick={() => setPagina(totalPaginas - 1)} disabled={pagina >= totalPaginas - 1}>»</button>
-        </div>
-      )}
+      {totalPaginas > 1 && (() => {
+        // Ventana de hasta 5 números de página centrada en la actual
+        const ventana = 2
+        let inicio = Math.max(0, pagina - ventana)
+        let fin    = Math.min(totalPaginas - 1, pagina + ventana)
+        if (fin - inicio < 4) {
+          if (inicio === 0) fin = Math.min(totalPaginas - 1, 4)
+          else              inicio = Math.max(0, fin - 4)
+        }
+        const paginas = []
+        for (let i = inicio; i <= fin; i++) paginas.push(i)
+
+        const desde = pagina * POR_PAGINA + 1
+        const hasta = Math.min((pagina + 1) * POR_PAGINA, total)
+
+        return (
+          <div className="audit-paginacion">
+            <button className="audit-page-btn" onClick={() => setPagina(0)} disabled={pagina === 0} title="Primera página">«</button>
+            <button className="audit-page-btn" onClick={() => setPagina(p => Math.max(0, p - 1))} disabled={pagina === 0}>‹</button>
+
+            {inicio > 0 && (
+              <>
+                <button className="audit-page-btn" onClick={() => setPagina(0)}>1</button>
+                {inicio > 1 && <span className="audit-page-dots">…</span>}
+              </>
+            )}
+
+            {paginas.map(p => (
+              <button
+                key={p}
+                className={`audit-page-btn ${p === pagina ? 'audit-page-btn-active' : ''}`}
+                onClick={() => setPagina(p)}
+              >
+                {p + 1}
+              </button>
+            ))}
+
+            {fin < totalPaginas - 1 && (
+              <>
+                {fin < totalPaginas - 2 && <span className="audit-page-dots">…</span>}
+                <button className="audit-page-btn" onClick={() => setPagina(totalPaginas - 1)}>{totalPaginas}</button>
+              </>
+            )}
+
+            <button className="audit-page-btn" onClick={() => setPagina(p => Math.min(totalPaginas - 1, p + 1))} disabled={pagina >= totalPaginas - 1}>›</button>
+            <button className="audit-page-btn" onClick={() => setPagina(totalPaginas - 1)} disabled={pagina >= totalPaginas - 1} title="Última página">»</button>
+
+            <span className="audit-page-label">{desde}–{hasta} de {total.toLocaleString('es-CL')}</span>
+          </div>
+        )
+      })()}
 
       {aviso && (
         <div className="audit-aviso">

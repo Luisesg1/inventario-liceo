@@ -261,9 +261,12 @@
   cursor: pointer; transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .audit-page-btn:hover:not(:disabled) { background: rgba(var(--primary-rgb),0.08); border-color: #e2e8f0; color: #0f172a; }
-.audit-page-btn:disabled { color: rgba(148,163,184,0.3); cursor: default; background: rgba(255,255,255,0.02); }
+.audit-page-btn:disabled { color: rgba(148,163,184,0.3); cursor: default; background: rgba(255,255,255,0.02); border-color: transparent; }
+.audit-page-btn-active { background: #1a237e !important; color: #fff !important; border-color: #1a237e !important; font-weight: 700; }
+.audit-page-btn-active:hover { background: #283593 !important; }
+.audit-page-dots { font-size: 13px; color: #94a3b8; padding: 0 2px; user-select: none; }
 
-.audit-page-label { font-size: 13px; color: #94a3b8; padding: 0 6px; }
+.audit-page-label { font-size: 12px; color: #94a3b8; padding: 0 6px; white-space: nowrap; }
 
 /* ── Aviso flotante ───────────────────────────────────── */
 .audit-aviso {
