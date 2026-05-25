@@ -1302,19 +1302,22 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
             </div>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-              <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value.toUpperCase())}
-                style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, padding: '7px 12px', borderRadius: 8, border: '1.5px solid #6366f1', outline: 'none', width: 170, letterSpacing: '0.08em' }}
-                autoFocus onKeyDown={e => e.key === 'Enter' && nuevoCodigo.trim() && setConfirmarCodigo(true)} />
-              <button onClick={() => setNuevoCodigo(generarCodigoAleatorio())} title="Generar aleatorio"
-                style={{ padding: '7px 11px', borderRadius: 8, border: '1.5px solid #6366f1', background: '#f0f4ff', color: '#6366f1', fontSize: 15, cursor: 'pointer', lineHeight: 1 }}>
-                🎲
-              </button>
+              {/* Input estilo login */}
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <input value={nuevoCodigo} onChange={e => setNuevoCodigo(e.target.value.toUpperCase())}
+                  style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 700, padding: '9px 44px 9px 16px', borderRadius: 10, border: '1.5px solid #6366f1', outline: 'none', width: 170, letterSpacing: '0.08em', background: '#fff' }}
+                  autoFocus onKeyDown={e => e.key === 'Enter' && nuevoCodigo.trim() && setConfirmarCodigo(true)} />
+                <button onClick={() => setNuevoCodigo(generarCodigoAleatorio())} title="Generar aleatorio"
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                </button>
+              </div>
               <button onClick={() => nuevoCodigo.trim() && setConfirmarCodigo(true)} disabled={guardandoCodigo || !nuevoCodigo.trim()}
-                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 {guardandoCodigo ? '…' : 'Guardar'}
               </button>
               <button onClick={() => { setEditandoCodigo(false); setNuevoCodigo(''); setConfirmarCodigo(false) }}
-                style={{ padding: '7px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer' }}>
+                style={{ padding: '9px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
