@@ -1449,7 +1449,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
       {/* Lista */}
       <div className="usuarios-lista">
-        <AnimatePresence mode="popLayout">
         {usuariosPagU.map((u, _idx) => {
           const esYo        = u.id === usuario?.id
           const colores     = ROL_COLORES[u.rol] ?? ROL_COLORES.encargado
@@ -1464,7 +1463,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               variants={cardVariants}
               initial={shouldReduce ? false : 'hidden'}
               animate="visible"
-              exit="exit"
               transition={{ delay: shouldReduce ? 0 : _idx * 0.04 }}
               style={{
                 borderRadius: 10, overflow: 'hidden',
@@ -1752,7 +1750,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
             </motion.div>
           )
         })}
-        </AnimatePresence>
 
         {usuariosFiltrados.length === 0 && (
           <div className="usuarios-estado">
