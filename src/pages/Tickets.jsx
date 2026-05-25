@@ -1,18 +1,74 @@
 import { useState, useEffect } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Tickets.css'
 
 const PRIORIDAD = {
-  alta:  { bg: '#fee2e2', color: '#b91c1c', label: '🔴 Alta' },
-  media: { bg: '#fef9c3', color: '#854d0e', label: '🟡 Media' },
-  baja:  { bg: '#dcfce7', color: '#166534', label: '🟢 Baja' },
+  alta:  { bg: 'rgba(185,28,28,0.09)',  color: '#b91c1c', label: '🔴 Alta' },
+  media: { bg: 'rgba(180,83,9,0.09)',   color: '#b45309', label: '🟡 Media' },
+  baja:  { bg: 'rgba(21,128,61,0.09)',  color: '#15803d', label: '🟢 Baja' },
 }
 const ESTADO = {
-  'Abierto':    { bg: '#dbeafe', color: '#1d4ed8', icon: '🔵' },
-  'En proceso': { bg: '#fef9c3', color: '#854d0e', icon: '🟡' },
-  'Resuelto':   { bg: '#dcfce7', color: '#166534', icon: '🟢' },
+  'Abierto':    { bg: 'rgba(29,78,216,0.09)',  color: '#1d4ed8', icon: '🔵' },
+  'En proceso': { bg: 'rgba(180,83,9,0.09)',   color: '#b45309', icon: '🟡' },
+  'Resuelto':   { bg: 'rgba(21,128,61,0.09)',  color: '#15803d', icon: '🟢' },
 }
 const KPI_BORDER = { 'Abierto': '#2563eb', 'En proceso': '#d97706', 'Resuelto': '#16a34a' }
+
+const KPI_ICONS = {
+  'Abierto': (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  ),
+  'En proceso': (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  'Resuelto': (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  ),
+  semana: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 1 18"/><polyline points="15 7 22 7 22 14"/>
+    </svg>
+  ),
+}
+
+const pageVariants = {
+  hidden:  { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.26, ease: 'easeOut' } },
+}
+
+function SkeletonTickets() {
+  return (
+    <div className="tk-skeleton-wrap">
+      <div className="tickets-kpis">
+        {[0,1,2,3].map(i => (
+          <div key={i} className="tickets-kpi" style={{ cursor: 'default', pointerEvents: 'none' }}>
+            <div className="tk-skeleton-line" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="tk-skeleton-line" style={{ width: '45%', height: 22 }} />
+              <div className="tk-skeleton-line" style={{ width: '70%', height: 10 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {[1,2,3,4,5].map(i => (
+          <div key={i} className="tk-skeleton-card">
+            <div className="tk-skeleton-line" style={{ width: '55%', height: 16 }} />
+            <div className="tk-skeleton-line" style={{ width: '35%', height: 12 }} />
+            <div className="tk-skeleton-line" style={{ width: '80%', height: 12 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const AREAS = ['Proyector', 'Conector HDMI Muro', 'Conector HDMI Proyector', 'Notebook',
   'Computador de escritorio', 'Impresora', 'Red de Internet', 'Teclado', 'Mouse', 'Otro']
@@ -34,6 +90,14 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const esGestor    = permisos.gestionar ?? (esAdmin || esSoporte)
   const puedeCrear  = permisos.crear     ?? true   // cualquiera puede crear por defecto
   const puedeElim   = permisos.eliminar  ?? (esAdmin || esSoporte)
+  const shouldReduce = useReducedMotion()
+  const kpiAnim = (i) => ({
+    initial: shouldReduce ? false : { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: shouldReduce ? 0 : 0.04 + i * 0.07, duration: 0.24, ease: 'easeOut' },
+    whileHover: shouldReduce ? {} : { y: -3, transition: { duration: 0.18 } },
+  })
+
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState(filtroInicial)
@@ -87,7 +151,21 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const POR_PAG_T   = 15
   const totalPagsT  = Math.ceil(filtrados.length / POR_PAG_T)
   const filtradosPagT = filtrados.slice((paginaT - 1) * POR_PAG_T, paginaT * POR_PAG_T)
-  const pBtnT = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 13, fontWeight: 600 })
+
+  // Estadísticas de la semana actual
+  const inicioSemana = new Date()
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay())
+  inicioSemana.setHours(0, 0, 0, 0)
+  const semanaResueltos = tickets.filter(t => t.estado === 'Resuelto' && new Date(t.creado_en) >= inicioSemana).length
+
+  const hoy = new Date()
+  const sparkData = Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date(hoy)
+    d.setDate(hoy.getDate() - (6 - idx))
+    const dStr = d.toISOString().slice(0, 10)
+    return tickets.filter(t => t.estado === 'Resuelto' && t.creado_en?.slice(0, 10) === dStr).length
+  })
+  const sparkMax = Math.max(...sparkData, 1)
 
   const abrirNuevo = () => {
     const [nombre = '', ...rest] = (usuario.nombre || '').split(' ')
@@ -210,34 +288,78 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const fmt = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
 
   if (cargando) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
-      <div style={{ width: 36, height: 36, border: '3px solid #e5e7eb', borderTopColor: '#1a237e', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Cargando tickets…</p>
+    <div className="tickets-wrap">
+      <SkeletonTickets />
     </div>
   )
 
   return (
-    <div className="tickets-wrap">
+    <motion.div
+      className="tickets-wrap"
+      variants={pageVariants}
+      initial={shouldReduce ? false : 'hidden'}
+      animate="visible"
+    >
 
       <div className="tickets-page-header">
-        <p className="tickets-page-title">🎫 Tickets de soporte</p>
-        <p className="tickets-page-sub">{esGestor ? 'Gestiona y resuelve los reportes del equipo' : 'Reporta fallas o incidencias del establecimiento'}</p>
+        <div className="tickets-page-header-left">
+          <p className="tickets-page-title">Tickets de soporte</p>
+          <p className="tickets-page-sub">{esGestor ? 'Gestiona y resuelve los reportes del equipo' : 'Reporta fallas o incidencias del establecimiento'}</p>
+        </div>
       </div>
 
       {/* KPIs — gestores (admin y soporte) */}
-      {esGestor && <div className="tickets-kpis">
-        {['Abierto', 'En proceso', 'Resuelto'].map(e => {
-          const n = tickets.filter(t => t.estado === e).length
-          const est = ESTADO[e]
-          return (
-            <div key={e} className={`tickets-kpi ${filtroEstado === e ? 'activo' : ''}`}
-              onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}>
-              <span className="tickets-kpi-icon">{est.icon}</span>
-              <div><p className="tickets-kpi-val">{n}</p><p className="tickets-kpi-lbl">{e}</p></div>
+      {esGestor && (
+        <div className="tickets-kpis">
+          {['Abierto', 'En proceso', 'Resuelto'].map((e, i) => {
+            const n = tickets.filter(t => t.estado === e).length
+            const total = tickets.length || 1
+            const pct = Math.round((n / total) * 100)
+            return (
+              <motion.div
+                key={e}
+                className={`tickets-kpi${filtroEstado === e ? ' activo' : ''}`}
+                style={{ '--kpi-border': KPI_BORDER[e] }}
+                {...kpiAnim(i)}
+                onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}
+              >
+                <div className="tickets-kpi-icon-wrap" style={{ color: KPI_BORDER[e] }}>
+                  {KPI_ICONS[e]}
+                </div>
+                <div className="tickets-kpi-content">
+                  <p className="tickets-kpi-val">{n}</p>
+                  <p className="tickets-kpi-lbl">{e}</p>
+                  <div className="tickets-kpi-bar">
+                    <div className="tickets-kpi-bar-fill" style={{ width: `${pct}%`, background: KPI_BORDER[e] }} />
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })}
+          {/* Esta semana */}
+          <motion.div className="tickets-kpi tickets-kpi--semana" {...kpiAnim(3)}>
+            <div className="tickets-kpi-icon-wrap" style={{ color: '#6366f1' }}>
+              {KPI_ICONS.semana}
             </div>
-          )
-        })}
-      </div>}
+            <div className="tickets-kpi-content">
+              <p className="tickets-kpi-val">{semanaResueltos}</p>
+              <p className="tickets-kpi-lbl">Esta semana</p>
+              <div className="tickets-kpi-spark">
+                <svg width="64" height="20" viewBox="0 0 64 20" className="tk-spark-svg">
+                  {sparkData.map((v, idx) => {
+                    const h = Math.max(Math.round((v / sparkMax) * 16), 2)
+                    return (
+                      <rect key={idx} x={idx * 10} y={20 - h} width="8" height={h} rx="2"
+                        fill={idx === 6 ? '#6366f1' : 'rgba(99,102,241,0.25)'} />
+                    )
+                  })}
+                </svg>
+                <span className="tickets-kpi-spark-lbl">últ. 7 días</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Fila buscador + botón nuevo */}
       <div className="tickets-toolbar-row" style={{ display: 'flex', gap: 10, marginBottom: '0.9rem', alignItems: 'center' }}>
@@ -293,13 +415,16 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       {esGestor && seleccionados.size > 0 && filtrados.length > 0 && (
         <div className={`tickets-sel-bar ${seleccionados.size > 0 ? 'tickets-sel-bar--activa' : ''}`}>
           <label className="tickets-sel-label">
-            <input
-              type="checkbox"
-              checked={seleccionados.size === filtrados.length && filtrados.length > 0}
-              ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
-              onChange={toggleTodos}
-              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#1a237e', flexShrink: 0 }}
-            />
+            <label className="tk-check-wrap">
+              <input
+                type="checkbox"
+                className="tk-check-input"
+                checked={seleccionados.size === filtrados.length && filtrados.length > 0}
+                ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && seleccionados.size < filtrados.length }}
+                onChange={toggleTodos}
+              />
+              <span className="tk-check-box" />
+            </label>
             {seleccionados.size > 0
               ? <><span className="tickets-sel-count">{seleccionados.size}</span> Seleccionado{seleccionados.size !== 1 ? 's' : ''}</>
               : <>Seleccionar todos <span className="tickets-sel-total">({filtrados.length})</span></>
@@ -344,14 +469,23 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
           {filtradosPagT.map(t => {
             const e = ESTADO[t.estado]
             const p = t.prioridad ? PRIORIDAD[t.prioridad] : null
+            const prioClass = t.prioridad ? ` ticket-card--${t.prioridad}` : ''
+            const selClass  = seleccionados.has(t.id) ? ' ticket-card-sel' : ''
             return (
-              <div key={t.id} className={`ticket-card ${seleccionados.has(t.id) ? 'ticket-card-sel' : ''}`}
-                onClick={() => abrirDetalle(t)}>
+              <motion.div
+                key={t.id}
+                className={`ticket-card${prioClass}${selClass}`}
+                onClick={() => abrirDetalle(t)}
+                whileHover={shouldReduce ? {} : { y: -2, transition: { duration: 0.16 } }}
+              >
                 <div className="ticket-card-body">
                   {esGestor && (
-                    <input type="checkbox" checked={seleccionados.has(t.id)} onChange={() => toggleSeleccion(t.id)}
-                      onClick={e => e.stopPropagation()}
-                      style={{ width: 16, height: 16, flexShrink: 0, cursor: 'pointer', alignSelf: 'flex-start', marginTop: 3, accentColor: '#1a237e' }} />
+                    <label className="tk-check-wrap" onClick={ev => ev.stopPropagation()}>
+                      <input type="checkbox" className="tk-check-input"
+                        checked={seleccionados.has(t.id)}
+                        onChange={() => toggleSeleccion(t.id)} />
+                      <span className="tk-check-box" />
+                    </label>
                   )}
                   <div className="ticket-card-info">
                     <p className="ticket-titulo">{areaLabel(t)}</p>
@@ -364,7 +498,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
                     {p && <span className="badge-prio" style={{ background: p.bg, color: p.color }}>{p.label}</span>}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )
           })}
         </div>
@@ -372,12 +506,12 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
 
       {/* Paginación tickets */}
       {totalPagsT > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '14px 0', flexWrap: 'wrap' }}>
-          <button onClick={() => setPaginaT(1)} disabled={paginaT === 1} style={pBtnT(paginaT === 1)}>«</button>
-          <button onClick={() => setPaginaT(p => p - 1)} disabled={paginaT === 1} style={pBtnT(paginaT === 1)}>‹ Ant.</button>
-          <span style={{ fontSize: 13, color: '#6b7280', padding: '0 6px' }}>Pág. {paginaT} / {totalPagsT} · {filtrados.length} tickets</span>
-          <button onClick={() => setPaginaT(p => p + 1)} disabled={paginaT >= totalPagsT} style={pBtnT(paginaT >= totalPagsT)}>Sig. ›</button>
-          <button onClick={() => setPaginaT(totalPagsT)} disabled={paginaT >= totalPagsT} style={pBtnT(paginaT >= totalPagsT)}>»</button>
+        <div className="tk-pag-wrap">
+          <button className="tk-pag-btn" onClick={() => setPaginaT(1)} disabled={paginaT === 1}>«</button>
+          <button className="tk-pag-btn" onClick={() => setPaginaT(p => p - 1)} disabled={paginaT === 1}>‹ Ant.</button>
+          <span className="tk-pag-info">Pág. {paginaT} / {totalPagsT} · {filtrados.length} tickets</span>
+          <button className="tk-pag-btn" onClick={() => setPaginaT(p => p + 1)} disabled={paginaT >= totalPagsT}>Sig. ›</button>
+          <button className="tk-pag-btn" onClick={() => setPaginaT(totalPagsT)} disabled={paginaT >= totalPagsT}>»</button>
         </div>
       )}
 
@@ -593,6 +727,6 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }
