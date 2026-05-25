@@ -403,6 +403,12 @@
   border-color: rgb(var(--primary-rgb));
   box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.10);
 }
+.filtros-field select.activo {
+  border-color: rgb(var(--primary-rgb));
+  background: rgba(var(--primary-rgb), 0.06);
+  color: rgb(var(--primary-rgb));
+  font-weight: 600;
+}
 .filtros-field select option {
   background: #ffffff;
   color: #0f172a;

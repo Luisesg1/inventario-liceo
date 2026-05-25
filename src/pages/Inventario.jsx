@@ -1581,7 +1581,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <div className="filtros-panel-grid">
                   <div className="filtros-field">
                     <label>Estado</label>
-                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={selectStyle(!!filtroEstado)}>
+                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={filtroEstado ? 'activo' : ''}>
                       <option value="">Todos</option>
                       <option value="Bueno">✅ Bueno</option>
                       <option value="Regular">⚠️ Regular</option>
@@ -1595,7 +1595,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     return (
                       <div key={campo} className="filtros-field">
                         <label>{label}</label>
-                        <select value={filtros[campo] || ''} onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))} style={selectStyle(!!filtros[campo])}>
+                        <select value={filtros[campo] || ''} onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))} className={filtros[campo] ? 'activo' : ''}>
                           <option value="">Todos</option>
                           {opciones.map(v => <option key={v} value={v}>{v}</option>)}
                         </select>
@@ -1604,7 +1604,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   })}
                   <div className="filtros-field">
                     <label>Préstamo</label>
-                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} style={selectStyle(!!filtroPrestado)}>
+                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} className={filtroPrestado ? 'activo' : ''}>
                       <option value="">Todos</option>
                       <option value="prestado">📤 Prestado</option>
                       <option value="disponible">✅ Disponible</option>
