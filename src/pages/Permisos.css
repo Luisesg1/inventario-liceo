@@ -568,13 +568,146 @@
   }
 }
 
-/* User card header: evitar overflow en móvil */
-@media (max-width: 500px) {
-  .permisos-user-header {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .permisos-user-header .permisos-badge--rol {
-    font-size: 10px;
-  }
+/* ══════════════════════════════════════════════════════
+   REDISEÑO PREMIUM — Ausencias
+   ══════════════════════════════════════════════════════ */
+
+/* ── KPI Stats Grid ─────────────────────────────────── */
+.aus-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
+.aus-stat-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, transform 0.18s;
+  cursor: default;
+}
+.aus-stat-card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.09);
+  transform: translateY(-2px);
+}
+.aus-stat-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 14px;
+}
+.aus-stat-value {
+  font-size: 28px; font-weight: 800; color: #0f172a;
+  letter-spacing: -0.05em; line-height: 1; margin-bottom: 5px;
+}
+.aus-stat-label {
+  font-size: 12px; color: #475569;
+  font-weight: 600; letter-spacing: -0.01em;
+}
+.aus-stat-sub {
+  font-size: 11px; color: #94a3b8; margin-top: 5px; font-weight: 400;
+}
+
+/* ── Días inhabilitados button ─────────────────────── */
+.permisos-dias-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 10px;
+  border: 1.5px solid rgba(99,102,241,0.2);
+  background: rgba(99,102,241,0.06); color: #6366f1;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, transform 0.12s;
+  font-family: inherit; white-space: nowrap;
+}
+.permisos-dias-btn:hover {
+  background: rgba(99,102,241,0.12);
+  border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 2px 14px rgba(99,102,241,0.18);
+  transform: translateY(-1px);
+}
+.permisos-dias-btn:active { transform: translateY(0); }
+
+.permisos-dias-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  border-radius: 99px; background: #6366f1; color: #fff;
+  font-size: 10px; font-weight: 700;
+}
+
+/* ── User card: 3-column header ─────────────────────── */
+.permisos-user-header {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto !important;
+  gap: 14px !important;
+  padding: 13px 16px !important;
+  align-items: center !important;
+  background: #f8fafc;
+  cursor: pointer; user-select: none;
+  transition: background 0.15s;
+  flex-wrap: unset !important;
+}
+.permisos-user-header:hover { background: #f1f5f9; }
+
+.aus-user-left { display: flex; align-items: center; gap: 11px; }
+.aus-user-center { min-width: 0; }
+.aus-user-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+.aus-user-name {
+  font-weight: 700; font-size: 13.5px; color: #0f172a;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  line-height: 1.25;
+}
+.aus-user-meta {
+  font-size: 11.5px; color: #94a3b8; margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── Cuota progress bar ─────────────────────────────── */
+.aus-quota-wrap {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  min-width: 88px;
+}
+.aus-quota-bar {
+  width: 88px; height: 4px; border-radius: 99px;
+  background: #e9edf5; overflow: hidden;
+}
+.aus-quota-fill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.45s cubic-bezier(0.4,0,0.2,1);
+}
+.aus-quota-label {
+  font-size: 10.5px; color: #94a3b8; font-weight: 500; white-space: nowrap;
+}
+
+/* ── Ausencia rows ──────────────────────────────────── */
+.permisos-ausencia-row { transition: background 0.12s; }
+.permisos-ausencia-row:hover { background: rgba(99,102,241,0.025) !important; }
+
+/* ── Action buttons: fade in on row hover ───────────── */
+.aus-row-actions {
+  display: flex; gap: 2px; margin-left: 4px; flex-shrink: 0;
+  opacity: 0.25; transition: opacity 0.16s;
+}
+.permisos-ausencia-row:hover .aus-row-actions { opacity: 1; }
+
+/* ── Modal summary quota bar ─────────────────────────── */
+.mp-quota-wrap { padding: 8px 0 4px; }
+.mp-quota-bar {
+  height: 5px; border-radius: 99px;
+  background: #e9edf5; overflow: hidden; margin-bottom: 5px;
+}
+.mp-quota-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.mp-quota-row {
+  display: flex; justify-content: space-between; align-items: center; font-size: 11px;
+}
+
+/* ── inh-row-name contrast fix ──────────────────────── */
+.inh-row-name { color: #475569 !important; }
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) { .aus-stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) {
+  .aus-stats-grid { grid-template-columns: 1fr 1fr; }
+  .permisos-user-header { grid-template-columns: auto 1fr !important; }
+  .aus-user-right { display: none !important; }
+}
+@media (max-width: 380px) { .aus-stats-grid { grid-template-columns: 1fr; } }

@@ -1169,23 +1169,39 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       <span className="mp-summary-value">{jornadaLabel}</span>
                     </div>
                     {!cargandoPermisos && (
-                      <div className="mp-summary-row">
-                        <span className="mp-summary-label">Ausencias este año</span>
-                        <span className="mp-summary-value" style={{
-                          color: getAusenciaColors(permisosUsados).text,
-                          fontWeight: permisosUsados >= MAX_AUSENCIAS - 2 && permisosUsados > 0 ? 700 : 500,
-                        }}>
-                          {permisosUsados === 0
-                            ? 'Sin ausencias'
-                            : permisosUsados >= MAX_AUSENCIAS
-                              ? `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS}d — cuota agotada`
-                              : `${fmtDias(permisosUsados)}/${MAX_AUSENCIAS}d — quedan ${fmtDias(Math.max(MAX_AUSENCIAS - permisosUsados, 0))}`}
-                        </span>
-                      </div>
+                      <>
+                        <div className="mp-summary-row">
+                          <span className="mp-summary-label">Cuota este año</span>
+                          <span className="mp-summary-value" style={{ color: getAusenciaColors(permisosUsados).text }}>
+                            {fmtDias(permisosUsados)}/{MAX_AUSENCIAS} días
+                          </span>
+                        </div>
+                        <div className="mp-quota-wrap">
+                          <div className="mp-quota-bar">
+                            <div className="mp-quota-fill" style={{
+                              width: `${Math.min((permisosUsados / MAX_AUSENCIAS) * 100, 100)}%`,
+                              background: permisosUsados >= MAX_AUSENCIAS ? '#dc2626'
+                                : Math.max(MAX_AUSENCIAS - permisosUsados, 0) <= 1 ? '#ea580c'
+                                : Math.max(MAX_AUSENCIAS - permisosUsados, 0) <= 2 ? '#d97706'
+                                : '#6366f1',
+                            }} />
+                          </div>
+                          <div className="mp-quota-row">
+                            <span style={{ color: '#94a3b8' }}>
+                              {permisosUsados === 0 ? 'Sin ausencias registradas' : `${fmtDias(permisosUsados)} usados`}
+                            </span>
+                            <span style={{ color: getAusenciaColors(permisosUsados).text, fontWeight: 600 }}>
+                              {permisosUsados >= MAX_AUSENCIAS
+                                ? 'Cuota agotada'
+                                : `${fmtDias(Math.max(MAX_AUSENCIAS - permisosUsados, 0))} disponibles`}
+                            </span>
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     {duracion && (
-                      <div style={{ paddingTop: 10 }}>
+                      <div style={{ paddingTop: 6 }}>
                         <div className="mp-duration-badge">
                           <CalendarRange size={12} strokeWidth={2.5} />{duracion}
                         </div>
@@ -1772,6 +1788,22 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     return null // borrado sin reemplazo → se oculta
   }
 
+  // ── Stats para KPI header ────────────────────────────────────────────────
+  const hoy = new Date().toISOString().slice(0, 10)
+  const mesActualPrefix = hoy.slice(0, 7)
+  const ausenciasActivas = permisos.filter(p => p.fecha_inicio <= hoy && p.fecha_fin >= hoy)
+  const proximasAVencer = permisos.filter(p => {
+    if (!p.fecha_fin || p.fecha_fin < hoy) return false
+    return Math.round((new Date(p.fecha_fin + 'T12:00:00') - new Date(hoy + 'T12:00:00')) / 86400000) <= 7
+  })
+  const diasMesTotal = Math.round(calcDiasTotales(
+    permisos.filter(p => p.fecha_inicio?.startsWith(mesActualPrefix)), false, diasInhabilitados
+  ))
+  const usuariosConAus = new Set(permisos.map(p => {
+    const u = resolveUser(p); return u?.rut ?? u?.id
+  }).filter(Boolean)).size
+  const totalDiasInhab = feriadosAPI.length + diasAdmin.length
+
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
   const userStatsMap = (() => {
     const map = {}
@@ -1881,6 +1913,57 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
         </div>
       </div>
 
+      {/* ── KPI Cards ── */}
+      {!cargando && permisos.length > 0 && (
+        <div className="aus-stats-grid">
+          {[
+            {
+              label: 'Ausencias activas',
+              value: ausenciasActivas.length,
+              sub: 'En curso hoy',
+              icon: <CalendarCheck size={16} strokeWidth={2} />,
+              iconBg: 'rgba(99,102,241,0.10)',
+              iconColor: '#6366f1',
+            },
+            {
+              label: 'Próximas a vencer',
+              value: proximasAVencer.length,
+              sub: 'Terminan en 7 días',
+              icon: <AlertCircle size={16} strokeWidth={2} />,
+              iconBg: proximasAVencer.length > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(0,0,0,0.04)',
+              iconColor: proximasAVencer.length > 0 ? '#f59e0b' : '#94a3b8',
+            },
+            {
+              label: 'Días este mes',
+              value: diasMesTotal,
+              sub: new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' }),
+              icon: <CalendarRange size={16} strokeWidth={2} />,
+              iconBg: 'rgba(16,185,129,0.10)',
+              iconColor: '#10b981',
+            },
+            {
+              label: 'Personas con ausencias',
+              value: usuariosConAus,
+              sub: `${permisos.length} registros totales`,
+              icon: <UserPlus size={16} strokeWidth={2} />,
+              iconBg: 'rgba(212,160,23,0.12)',
+              iconColor: '#d4a017',
+            },
+          ].map((s, i) => (
+            <motion.div key={i} className="aus-stat-card"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.28 } }}>
+              <div className="aus-stat-icon" style={{ background: s.iconBg, color: s.iconColor }}>
+                {s.icon}
+              </div>
+              <div className="aus-stat-value">{s.value}</div>
+              <div className="aus-stat-label">{s.label}</div>
+              {s.sub && <div className="aus-stat-sub">{s.sub}</div>}
+            </motion.div>
+          ))}
+        </div>
+      )}
+
       <div className="permisos-card">
         <div className="permisos-card-header">
           <div className="permisos-card-header-left">
@@ -1892,9 +1975,13 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {usuario?.rol === 'admin' && (
-              <button className="permisos-btn-secondary" onClick={() => setModalInhabilitados(true)}
+              <button className="permisos-dias-btn" onClick={() => setModalInhabilitados(true)}
                 title="Gestionar días inhabilitados (feriados, puentes)">
-                <CalendarCheck size={14} strokeWidth={2.5} /> Días inhabilitados
+                <CalendarCheck size={14} strokeWidth={2.5} />
+                Días inhabilitados
+                {totalDiasInhab > 0 && (
+                  <span className="permisos-dias-badge">{totalDiasInhab}</span>
+                )}
               </button>
             )}
             {puedeGestionar && (
@@ -1968,55 +2055,41 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
 
                     {/* ── Cabecera del usuario (clickeable) ── */}
                     <div onClick={() => toggleColapso(cardKey)} className="permisos-user-header"
-                      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 14px', background: '#f8fafc', borderBottom: abierto ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', userSelect: 'none' }}>
-                      <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 36, height: 36, fontSize: 13, flexShrink: 0, marginTop: 1 }}>
-                        {getInitials(u.nombre ?? '')}
+                      style={{ borderBottom: abierto ? '1px solid #f0f4f8' : 'none' }}>
+                      {/* Izquierda: avatar + nombre + rol */}
+                      <div className="aus-user-left">
+                        <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
+                          {getInitials(u.nombre ?? '')}
+                        </div>
+                        <div>
+                          <div className="aus-user-name">{u.nombre ?? '—'}</div>
+                          <span className="permisos-badge permisos-badge--rol" style={{ marginTop: 3, display: 'inline-flex' }}>{rolLabel}</span>
+                        </div>
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Fila 1: nombre + chevron */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                          <span style={{ fontWeight: 600, fontSize: 13.5, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {u.nombre ?? '—'}
-                          </span>
-                          <ChevronDown size={14} strokeWidth={2.5}
-                            style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform 0.2s', transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
-                        </div>
-                        {/* Fila 2: badge de rol + RUT */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
-                          <span className="permisos-badge permisos-badge--rol">{rolLabel}</span>
-                          {u.rut && <span style={{ fontSize: 11.5, color: '#94a3b8' }}>{u.rut}</span>}
-                        </div>
-                        {/* Fila 3: email */}
+                      {/* Centro: correo + RUT */}
+                      <div className="aus-user-center">
                         {u.email && (
-                          <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 12, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {u.email}
                           </div>
                         )}
-                        {/* Fila 4: dots + estado cuota */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
-                          <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-                            {Array.from({ length: MAX_AUSENCIAS }).map((_, i) => {
-                              const filled = Math.min(Math.max(stats.dias - i, 0), 1)
-                              const bg = filled >= 1
-                                ? dotColor
-                                : filled > 0
-                                  ? `linear-gradient(90deg, ${dotColor} ${filled*100}%, #e2e8f0 ${filled*100}%)`
-                                  : '#e2e8f0'
-                              return <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', background: bg }} />
-                            })}
+                        {u.rut && <div className="aus-user-meta">{u.rut}</div>}
+                      </div>
+                      {/* Derecha: barra de cuota + chevron */}
+                      <div className="aus-user-right">
+                        <div className="aus-quota-wrap">
+                          <div className="aus-quota-bar">
+                            <div className="aus-quota-fill" style={{
+                              width: `${Math.min((stats.dias / MAX_AUSENCIAS) * 100, 100)}%`,
+                              background: agotada ? '#dc2626' : restantes <= 1 ? '#ea580c' : restantes <= 2 ? '#d97706' : '#6366f1',
+                            }} />
                           </div>
-                          <span style={{ fontSize: 11.5, color: textColor, fontWeight: agotada || restantes <= 2 ? 700 : 400 }}>
-                            {agotada
-                              ? `Cuota agotada (${diasFmt}/${MAX_AUSENCIAS}d)`
-                              : restantes <= 1
-                                ? `⚠️ Usó ${diasFmt}d — queda 1 día`
-                                : restantes <= 2
-                                  ? `⚠️ Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`
-                                  : stats.dias === 0
-                                    ? `${MAX_AUSENCIAS} días disponibles`
-                                    : `Usó ${diasFmt}d — quedan ${fmtDias(restantes)}`}
-                          </span>
+                          <div className="aus-quota-label" style={{ color: textColor }}>
+                            {agotada ? 'Cuota agotada' : `${diasFmt} / ${MAX_AUSENCIAS} días`}
+                          </div>
                         </div>
+                        <ChevronDown size={13} strokeWidth={2.5}
+                          style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform 0.22s', transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)' }} />
                       </div>
                     </div>
 
@@ -2051,7 +2124,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                                 </span>
                                 <span className="permisos-badge permisos-badge--jornada" style={{ flexShrink: 0 }}>{JORNADA_LABEL[p.jornada] ?? p.jornada}</span>
                                 {duracion && <span style={{ fontSize: 11.5, color: '#94a3b8', flexShrink: 0 }}>{duracion}</span>}
-                                <div style={{ display: 'flex', gap: 2, marginLeft: 4, flexShrink: 0 }}>
+                                <div className="aus-row-actions">
                                   <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
                                     <Eye size={13} strokeWidth={2} />
                                   </button>
