@@ -239,13 +239,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   useEffect(() => { cargarDatos() }, [])
 
-  useEffect(() => {
-    if (!menuMobil) return
-    const close = () => setMenuMobil(null)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
-  }, [menuMobil])
-
   const cargarDatos = async () => {
     setCargando(true)
 
@@ -2871,53 +2864,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                         </button>
                       )}
                     </div>
-                    {/* Mobile: Ver + ⋮ dropdown */}
+                    {/* Mobile: Ver + ⋮ (dropdown se renderiza fuera de la tabla) */}
                     <div className="acciones acciones-mobile">
                       {!b._pendiente && (
                         <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
                       )}
                       {!b._pendiente && (
-                        <div className="mas-acciones-wrap">
-                          <button
-                            className="btn-mas"
-                            title="Más acciones"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (menuMobil === b.id) { setMenuMobil(null); return }
-                              const rect = e.currentTarget.getBoundingClientRect()
-                              setMenuMobilPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
-                              setMenuMobil(b.id)
-                            }}
-                          >⋮</button>
-                          {menuMobil === b.id && menuMobilPos && (
-                            <div
-                              className="mas-menu"
-                              style={{ top: menuMobilPos.top, right: menuMobilPos.right }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {permisos.editar_bien && (
-                                <button onClick={() => { abrirFormEditar(b); setMenuMobil(null) }}>
-                                  <span>✏️</span> Editar
-                                </button>
-                              )}
-                              {puedeIncidencias && (esComp(b.categoria) || esTecno(b.categoria)) && (
-                                <button onClick={() => { setModalIncidencias(b); setMenuMobil(null) }}>
-                                  <span>🔧</span> Incidencias
-                                </button>
-                              )}
-                              {puedePrestamo && (
-                                <button onClick={() => { setModalPrestamo(b); setMenuMobil(null) }}>
-                                  <span>📤</span> {bienesConPrestamo.has(b.id) ? 'Ver préstamo' : 'Préstamo'}
-                                </button>
-                              )}
-                              {puedeEliminar && (
-                                <button className="mas-menu-del" onClick={() => { eliminarBien(b.id); setMenuMobil(null) }}>
-                                  <span>🗑️</span> Eliminar
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          className="btn-mas"
+                          title="Más acciones"
+                          onClick={(e) => {
+                            if (menuMobil === b.id) { setMenuMobil(null); return }
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            setMenuMobilPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+                            setMenuMobil(b.id)
+                          }}
+                        >⋮</button>
                       )}
                       {b._pendiente && (
                         <button className="btn-del" title="Cancelar (quitar pendiente)"
@@ -2944,6 +2906,39 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           <button onClick={() => setPaginaInv(totalPagsInv)} disabled={paginaInv >= totalPagsInv} style={pBtnInv(paginaInv >= totalPagsInv)}>»</button>
         </div>
       )}
+
+      {/* Dropdown móvil — fuera de la tabla para evitar el stacking context del transform de tr */}
+      {menuMobil && menuMobilPos && (() => {
+        const bm = filtradosPagInv.find(x => x.id === menuMobil)
+        if (!bm) return null
+        return (
+          <>
+            <div className="mas-overlay" onClick={() => setMenuMobil(null)} />
+            <div className="mas-menu" style={{ top: menuMobilPos.top, right: menuMobilPos.right }}>
+              {permisos.editar_bien && (
+                <button onClick={() => { abrirFormEditar(bm); setMenuMobil(null) }}>
+                  <span>✏️</span> Editar
+                </button>
+              )}
+              {puedeIncidencias && (esComp(bm.categoria) || esTecno(bm.categoria)) && (
+                <button onClick={() => { setModalIncidencias(bm); setMenuMobil(null) }}>
+                  <span>🔧</span> Incidencias
+                </button>
+              )}
+              {puedePrestamo && (
+                <button onClick={() => { setModalPrestamo(bm); setMenuMobil(null) }}>
+                  <span>📤</span> {bienesConPrestamo.has(bm.id) ? 'Ver préstamo' : 'Préstamo'}
+                </button>
+              )}
+              {puedeEliminar && (
+                <button className="mas-menu-del" onClick={() => { eliminarBien(bm.id); setMenuMobil(null) }}>
+                  <span>🗑️</span> Eliminar
+                </button>
+              )}
+            </div>
+          </>
+        )
+      })()}
 
       {/* Ficha de detalle — modal */}
       {verDetalle && (
