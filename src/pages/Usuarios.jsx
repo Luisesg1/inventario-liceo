@@ -40,18 +40,39 @@ const ACCIONES = [
   { key: 'ver_auditoria_permisos',       label: 'Ver auditoría de permisos',       labelCorto: 'Aud. Perm.' },
 ]
 
-// Acciones que aplican por categoría (las demás son globales)
-const ACCIONES_POR_CATEGORIA = [
-  'ver_inventario', 'agregar_bien', 'editar_bien',
-  'eliminar_bien', 'eliminar_lote', 'importar_csv', 'exportar',
+// Grupos de permisos por módulo (para el wizard de asignación)
+const GRUPOS_PERMISOS = [
+  {
+    key: 'inventario', label: 'Inventario', paso: 3, soloPersonalizado: true,
+    descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
+    permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
+               'eliminar_lote', 'importar_csv', 'exportar',
+               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias'],
+  },
+  {
+    key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
+    descripcion: 'Acceso al módulo de tickets de soporte.',
+    permisos: ['ver_tickets', 'gestionar_tickets'],
+  },
+  {
+    key: 'requerimientos', label: 'Requerimientos', paso: 5, soloPersonalizado: false,
+    descripcion: 'Acceso a la auditoría del módulo de requerimientos.',
+    permisos: ['ver_auditoria_requerimientos'],
+  },
+  {
+    key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
+    descripcion: 'Acceso a permisos de ausencia y gestión de usuarios.',
+    permisos: ['ver_auditoria_permisos', 'gestionar_usuarios'],
+  },
 ]
-// Acciones globales (no dependen de categoría)
-const ACCIONES_GLOBALES = [
-  'gestionar_categorias', 'gestionar_usuarios',
+
+// Backward-compat — algunos lugares aún usan estas listas
+const ACCIONES_POR_CATEGORIA = ['ver_inventario', 'agregar_bien', 'editar_bien',
+  'eliminar_bien', 'eliminar_lote', 'importar_csv', 'exportar']
+const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
   'registrar_prestamo', 'registrar_incidencia',
   'ver_tickets', 'gestionar_tickets',
-  'ver_auditoria_requerimientos', 'ver_auditoria_permisos',
-]
+  'ver_auditoria_requerimientos', 'ver_auditoria_permisos']
 
 const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
 
@@ -228,7 +249,18 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   const [paso, setPaso]     = useState(1)
   const [nivel, setNivel]   = useState(() => detectarNivelActual(draft?.permisos ?? {}))
 
-  function irAlPaso4() { setPaso(4); onFinalizado?.() }
+  // Devuelve el paso anterior según nivel
+  function pasoAnterior(p) {
+    if (p === 4 && nivel !== 'personalizado') return 2
+    return p - 1
+  }
+  // Devuelve el paso siguiente según nivel
+  function pasoSiguiente(p) {
+    if (p === 2 && nivel !== 'personalizado') return 4
+    return p + 1
+  }
+  // Último paso del wizard
+  const ULTIMO_PASO = 6
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -238,8 +270,6 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   if (!draft) return <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando…</p>
 
   const todasActivas = draft.categorias?.includes('todos')
-  const accCat    = ACCIONES.filter(a => ACCIONES_POR_CATEGORIA.includes(a.key))
-  const accGlobal = ACCIONES.filter(a => ACCIONES_GLOBALES.includes(a.key))
 
   function toggleCat(catKey) {
     const cats = draft.categorias ?? []
@@ -270,12 +300,14 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     }
   }
 
-  const pasoEfectivo = paso === 3 && nivel !== 'personalizado' ? 2 : paso
+  const pasoEfectivo = paso
   const stepsBase = [
     { n: 1, label: 'Módulos' },
     { n: 2, label: 'Nivel de acceso' },
-    ...(nivel === 'personalizado' ? [{ n: 3, label: 'Personalizar' }] : []),
-    { n: 4, label: 'Acciones globales' },
+    ...(nivel === 'personalizado' ? [{ n: 3, label: 'Inventario' }] : []),
+    { n: 4, label: 'Tickets' },
+    { n: 5, label: 'Requerimientos' },
+    { n: 6, label: 'Ausencia' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
@@ -289,6 +321,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
         {stepsBase.flatMap((s, i) => {
           const esActivo     = pasoEfectivo === s.n
           const esCompletado = pasoEfectivo > s.n
+          const displayN     = i + 1
           const items = [
             <div
               key={`s${s.n}`}
@@ -308,7 +341,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
                   : esCompletado ? 'rgba(var(--acento-rgb), 0.4)' : '#e5e7eb'}`,
                 boxShadow: esActivo ? '0 0 0 3px rgba(var(--primary-rgb), 0.15)' : 'none',
               }}>
-                {esCompletado ? '✓' : s.n}
+                {esCompletado ? '✓' : displayN}
               </div>
               <span style={{
                 fontSize: 10.5, fontWeight: esActivo ? 700 : 500, whiteSpace: 'nowrap',
@@ -455,85 +488,56 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
             <button onClick={() => setPaso(1)} style={sec}>← Atrás</button>
-            <button onClick={() => nivel === 'personalizado' ? setPaso(3) : irAlPaso4()} style={prim}>
+            <button onClick={() => setPaso(pasoSiguiente(2))} style={prim}>
               Siguiente →
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Paso 3: Personalizar (solo si nivel === 'personalizado') ── */}
-      {pasoEfectivo === 3 && nivel === 'personalizado' && (
-        <div>
-          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Personalizar permisos</p>
-          <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
-            Activa o desactiva cada permiso de inventario individualmente.
-          </p>
+      {/* ── Pasos 3-6: Personalizar por módulo ── */}
+      {GRUPOS_PERMISOS.filter(g => !g.soloPersonalizado || nivel === 'personalizado').map(grupo => (
+        pasoEfectivo === grupo.paso && (
+          <div key={grupo.key}>
+            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>
+              Personalizar permisos — {grupo.label}
+            </p>
+            <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
+              {grupo.descripcion}
+            </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {accCat.map(a => {
-              const activo = draft.permisos?.[a.key] ?? false
-              return (
-                <div
-                  key={a.key}
-                  onClick={() => toggleAccion(a.key)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
-                    border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
-                    background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
-                  <ToggleSwitch activo={activo} size="sm" />
-                </div>
-              )
-            })}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {ACCIONES.filter(a => grupo.permisos.includes(a.key)).map(a => {
+                const activo = draft.permisos?.[a.key] ?? false
+                return (
+                  <div
+                    key={a.key}
+                    onClick={() => toggleAccion(a.key)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
+                      border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
+                      background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                    <ToggleSwitch activo={activo} size="sm" />
+                  </div>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
+              <button onClick={() => setPaso(pasoAnterior(grupo.paso))} style={sec}>← Atrás</button>
+              {grupo.paso < ULTIMO_PASO
+                ? <button onClick={() => setPaso(pasoSiguiente(grupo.paso))} style={prim}>Siguiente →</button>
+                : <button onClick={() => onFinalizado?.()} style={prim}>Finalizar ✓</button>
+              }
+            </div>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
-            <button onClick={() => setPaso(2)} style={sec}>← Atrás</button>
-            <button onClick={irAlPaso4} style={prim}>Siguiente →</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Paso 4: Acciones globales ── */}
-      {pasoEfectivo === 4 && (
-        <div>
-          <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Acciones globales</p>
-          <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
-            Permisos independientes del inventario: tickets, usuarios y auditorías.
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {accGlobal.map(a => {
-              const activo = draft.permisos?.[a.key] ?? false
-              return (
-                <div
-                  key={a.key}
-                  onClick={() => toggleAccion(a.key)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
-                    border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
-                    background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
-                  <ToggleSwitch activo={activo} size="sm" />
-                </div>
-              )
-            })}
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: 22 }}>
-            <button onClick={() => setPaso(nivel === 'personalizado' ? 3 : 2)} style={sec}>← Atrás</button>
-          </div>
-        </div>
-      )}
+        )
+      ))}
     </div>
   )
 }
