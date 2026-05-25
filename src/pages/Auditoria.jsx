@@ -383,11 +383,11 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                           {campoLabel(c.campo)}
                         </span>
                         <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
-                          {c.anterior ?? '—'}
+                          {c.anterior === true || c.anterior === 'true' ? 'Sí' : c.anterior === false || c.anterior === 'false' ? 'No' : c.anterior ?? '—'}
                         </span>
                         <span className="audit-arrow">→</span>
                         <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
-                          {c.nuevo ?? '—'}
+                          {c.nuevo === true || c.nuevo === 'true' ? 'Sí' : c.nuevo === false || c.nuevo === 'false' ? 'No' : c.nuevo ?? '—'}
                         </span>
                         {modulo === 'inventario' && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
                           <button
