@@ -75,7 +75,12 @@ const GRUPOS_PERMISOS = [
   {
     key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de ausencias del personal.',
-    permisos: ['ver_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos', 'gestionar_usuarios'],
+    permisos: ['ver_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
+  },
+  {
+    key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
+    descripcion: 'Permite invitar y administrar cuentas de otros usuarios del sistema.',
+    permisos: ['gestionar_usuarios'],
   },
 ]
 
@@ -281,7 +286,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 6
+  const ULTIMO_PASO = 7
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -329,6 +334,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     { n: 4, label: 'Tickets' },
     { n: 5, label: 'Requerimientos' },
     { n: 6, label: 'Ausencia' },
+    { n: 7, label: 'Administración' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
