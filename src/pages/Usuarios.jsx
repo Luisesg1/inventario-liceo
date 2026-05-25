@@ -344,55 +344,39 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   return (
     <div>
       {/* ── Stepper ── */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 26 }}>
-        {stepsBase.flatMap((s, i) => {
-          const esActivo     = pasoEfectivo === s.n
-          const esCompletado = pasoEfectivo > s.n
-          const displayN     = i + 1
-          const items = [
-            <div
-              key={`s${s.n}`}
-              onClick={() => esCompletado && setPaso(s.n)}
-              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: esCompletado ? 'pointer' : 'default' }}
-            >
+      {(() => {
+        const idxActual   = stepsBase.findIndex(s => s.n === pasoEfectivo)
+        const displayActual = idxActual + 1
+        const total       = stepsBase.length
+        const labelActual = stepsBase[idxActual]?.label ?? ''
+        const progreso    = (idxActual / (total - 1)) * 100
+        return (
+          <div style={{ marginBottom: 24 }}>
+            {/* Barra de progreso */}
+            <div style={{ height: 4, background: '#e5e7eb', borderRadius: 99, marginBottom: 10, overflow: 'hidden' }}>
               <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, transition: 'all 0.25s',
-                background: esActivo
-                  ? 'rgb(var(--primary-rgb))'
-                  : esCompletado ? 'rgba(var(--acento-rgb), 0.15)' : '#f3f4f6',
-                color: esActivo ? '#fff' : esCompletado ? 'rgb(var(--acento-rgb))' : '#9ca3af',
-                border: `2px solid ${esActivo
-                  ? 'rgb(var(--primary-rgb))'
-                  : esCompletado ? 'rgba(var(--acento-rgb), 0.4)' : '#e5e7eb'}`,
-                boxShadow: esActivo ? '0 0 0 3px rgba(var(--primary-rgb), 0.15)' : 'none',
-              }}>
-                {esCompletado ? '✓' : displayN}
-              </div>
-              <span style={{
-                fontSize: 10.5, fontWeight: esActivo ? 700 : 500, whiteSpace: 'nowrap',
-                color: esActivo ? 'rgb(var(--primary-rgb))' : '#6b7280',
-              }}>
-                {s.label}
+                height: '100%', borderRadius: 99,
+                width: `${progreso}%`,
+                background: 'rgb(var(--acento-rgb))',
+                transition: 'width 0.3s ease',
+              }} />
+            </div>
+            {/* Texto paso actual */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 500 }}>
+                Paso <strong style={{ color: '#111827' }}>{displayActual}</strong> de {total}
               </span>
-            </div>,
-          ]
-          if (i < stepsBase.length - 1) {
-            items.push(
-              <div
-                key={`l${s.n}`}
-                style={{
-                  flex: 1, height: 2, marginBottom: 20,
-                  background: esCompletado ? 'rgb(var(--acento-rgb))' : '#e5e7eb',
-                  transition: 'background 0.3s',
-                }}
-              />
-            )
-          }
-          return items
-        })}
-      </div>
+              <span style={{
+                fontSize: 12, fontWeight: 700, color: 'rgb(var(--primary-rgb))',
+                background: 'rgba(var(--primary-rgb),0.07)',
+                padding: '3px 10px', borderRadius: 99,
+              }}>
+                {labelActual}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Paso 1: Módulos ── */}
       {pasoEfectivo === 1 && (
