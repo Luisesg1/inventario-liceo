@@ -693,9 +693,50 @@ function ImportarReq({ onImportado, onCerrar }) {
 
   const resetear = () => { setFase('idle'); setFilas([]); setErrParse(null); setFileName(''); setResultado(null) }
 
-  const descargarPlantilla = () => {
-    const cols = [...COLUMNAS_BD]
-    const ejemplo = {
+  const descargarPlantilla = async () => {
+    await cargarExcelJS()
+    const wb = new window.ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Plantilla')
+
+    const COLS_PLANTILLA = [
+      { key: 'numero_req',       label: 'numero_req',       width: 14 },
+      { key: 'fecha',            label: 'fecha',            width: 14 },
+      { key: 'contenido',        label: 'contenido',        width: 36 },
+      { key: 'solicitante',      label: 'solicitante',      width: 22 },
+      { key: 'fondo',            label: 'fondo',            width: 18 },
+      { key: 'dimension',        label: 'dimension',        width: 24 },
+      { key: 'sub_dimension',    label: 'sub_dimension',    width: 28 },
+      { key: 'accion',           label: 'accion',           width: 32 },
+      { key: 'monto_solicitado', label: 'monto_solicitado', width: 18 },
+      { key: 'monto_real',       label: 'monto_real',       width: 16 },
+      { key: 'estado',           label: 'estado',           width: 22 },
+      { key: 'fecha_recepcion',  label: 'fecha_recepcion',  width: 18 },
+      { key: 'orden_compra',     label: 'orden_compra',     width: 16 },
+      { key: 'rut_proveedor',    label: 'rut_proveedor',    width: 16 },
+      { key: 'numero_factura',   label: 'numero_factura',   width: 16 },
+      { key: 'evidencia',        label: 'evidencia',        width: 16 },
+      { key: 'observacion',      label: 'observacion',      width: 32 },
+    ]
+
+    ws.columns = COLS_PLANTILLA.map(c => ({ width: c.width }))
+
+    // Fila de encabezados
+    const hRow = ws.addRow(COLS_PLANTILLA.map(c => c.label))
+    hRow.height = 22
+    hRow.eachCell(cell => {
+      cell.font      = { bold: true, color: { argb: 'FF1A237E' }, size: 11 }
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAF6' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      cell.border    = {
+        top:    { style: 'medium', color: { argb: 'FF9FA8DA' } },
+        bottom: { style: 'medium', color: { argb: 'FF9FA8DA' } },
+        left:   { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+        right:  { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+      }
+    })
+
+    // Fila de ejemplo
+    const EJEMPLO = {
       numero_req:       '1',
       fecha:            '2026-05-25',
       contenido:        'Resma de papel tamaño carta',
@@ -704,7 +745,7 @@ function ImportarReq({ onImportado, onCerrar }) {
       dimension:        'Gestión Pedagógica',
       sub_dimension:    'Gestión curricular',
       accion:           '11. Innovación y CRA',
-      monto_solicitado: '25000',
+      monto_solicitado: 25000,
       monto_real:       '',
       estado:           'En proceso',
       fecha_recepcion:  '',
@@ -714,19 +755,42 @@ function ImportarReq({ onImportado, onCerrar }) {
       evidencia:        'Pendiente',
       observacion:      '',
     }
-    const esc = (v) => {
-      const s = String(v ?? '')
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+    const eRow = ws.addRow(COLS_PLANTILLA.map(c => EJEMPLO[c.key] ?? ''))
+    eRow.height = 18
+    eRow.eachCell({ includeEmpty: true }, cell => {
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF8E1' } }
+      cell.font      = { color: { argb: 'FF795548' }, italic: true, size: 11 }
+      cell.alignment = { vertical: 'middle' }
+      cell.border    = {
+        top:    { style: 'thin', color: { argb: 'FFFFE082' } },
+        bottom: { style: 'thin', color: { argb: 'FFFFE082' } },
+        left:   { style: 'thin', color: { argb: 'FFFFE082' } },
+        right:  { style: 'thin', color: { argb: 'FFFFE082' } },
+      }
+    })
+
+    // Filas vacías para rellenar
+    for (let i = 0; i < 10; i++) {
+      const r = ws.addRow(COLS_PLANTILLA.map(() => ''))
+      r.eachCell({ includeEmpty: true }, cell => {
+        cell.border = {
+          top:    { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          left:   { style: 'thin', color: { argb: 'FFE0E0E0' } },
+          right:  { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        }
+      })
     }
-    const csv = [
-      cols.join(','),
-      cols.map(c => esc(ejemplo[c] ?? '')).join(','),
-    ].join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
-    a.download = 'plantilla_requerimientos.csv'
+
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: COLS_PLANTILLA.length } }
+    ws.views = [{ state: 'frozen', ySplit: 1 }]
+
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url    = URL.createObjectURL(blob)
+    const a      = document.createElement('a')
+    a.href       = url
+    a.download   = 'plantilla_requerimientos.xlsx'
     a.click()
     URL.revokeObjectURL(url)
   }
