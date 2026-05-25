@@ -3481,6 +3481,8 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
   const [confirmDelete,  setConfirmDelete]  = useState(null) // { id, titulo }
   const [editandoId,     setEditandoId]     = useState(null)
   const [historialAbierto, setHistorialAbierto] = useState(true)
+  const [expandidasDesc, setExpandidasDesc]   = useState(new Set())
+  const DESC_MAX = 200
 
   const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'editor'
 
@@ -3581,8 +3583,13 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
               style={{ padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, outline: 'none' }} />
           </div>
-          <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Descripción opcional (qué se hizo, qué se encontró...)" rows={2}
-            style={{ padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
+          <div style={{ position: 'relative' }}>
+            <textarea value={descripcion} onChange={e => setDescripcion(e.target.value.slice(0, 500))} placeholder="Descripción opcional (qué se hizo, qué se encontró...)" rows={2} maxLength={500}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 12px', paddingBottom: 20, borderRadius: 8, border: `1.5px solid ${editandoId ? '#fcd34d' : '#c7d2fe'}`, fontSize: 13, resize: 'vertical', outline: 'none', fontFamily: 'inherit' }} />
+            <span style={{ position: 'absolute', bottom: 5, right: 10, fontSize: 10, color: descripcion.length > 450 ? '#ef4444' : '#9ca3af', pointerEvents: 'none' }}>
+              {descripcion.length}/500
+            </span>
+          </div>
           {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626' }}>⚠️ {error}</p>}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             {editandoId && (
@@ -3622,7 +3629,28 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
                         {new Date(inc.fecha + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' })}
                         {inc.usuarios?.nombre && <span> · {inc.usuarios.nombre}</span>}
                       </p>
-                      {inc.descripcion && <p style={{ margin: 0, fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{inc.descripcion}</p>}
+                      {inc.descripcion && (() => {
+                        const expandida = expandidasDesc.has(inc.id)
+                        const larga = inc.descripcion.length > DESC_MAX
+                        return (
+                          <div>
+                            <p style={{ margin: 0, fontSize: 12, color: '#4b5563', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                              {expandida || !larga ? inc.descripcion : inc.descripcion.slice(0, DESC_MAX) + '…'}
+                            </p>
+                            {larga && (
+                              <button type="button"
+                                onClick={() => setExpandidasDesc(prev => {
+                                  const s = new Set(prev)
+                                  expandida ? s.delete(inc.id) : s.add(inc.id)
+                                  return s
+                                })}
+                                style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, fontSize: 11, color: '#6366f1', cursor: 'pointer', fontWeight: 600 }}>
+                                {expandida ? 'Ver menos ▲' : 'Ver más ▼'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </div>
                     {esAdmin && (
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
