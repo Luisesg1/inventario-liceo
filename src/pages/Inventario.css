@@ -844,6 +844,7 @@ tr.fila-editando td { background: rgba(212,160,23,0.05); }
     border-radius: 5px; padding: 1px 6px; white-space: nowrap;
   }
   .td-code { font-size: 11px; }
+  .td-name { max-width: 130px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .badge { font-size: 10px; padding: 2px 8px; }
   .iconos-grid { grid-template-columns: repeat(7,1fr); }
   .filtros-row { flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 4px; }
