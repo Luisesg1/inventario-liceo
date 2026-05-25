@@ -27,10 +27,13 @@ const FORM_VACIO = {
   lugar_falla: '', descripcion: '',
 }
 
-export default function Tickets({ usuario, onTicketActualizado, filtroInicial = '' }) {
+export default function Tickets({ usuario, onTicketActualizado, filtroInicial = '', permisos = {} }) {
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
-  const esGestor  = esAdmin || esSoporte
+  // Permisos: usa prop si viene de App, sino fallback a lógica de roles
+  const esGestor    = permisos.gestionar ?? (esAdmin || esSoporte)
+  const puedeCrear  = permisos.crear     ?? true   // cualquiera puede crear por defecto
+  const puedeElim   = permisos.eliminar  ?? (esAdmin || esSoporte)
   const [tickets,         setTickets]         = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [filtroEstado,    setFiltroEstado]    = useState(filtroInicial)
@@ -251,7 +254,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             <button className="tickets-search-clear" onClick={() => setBusqueda('')}>✕</button>
           )}
         </div>
-        <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>
+        {puedeCrear && <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>}
       </div>
 
       {/* Filtros */}
@@ -303,7 +306,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             }
           </label>
 
-          {seleccionados.size > 0 && (
+          {puedeElim && seleccionados.size > 0 && (
             <button className="tickets-sel-btn-del" onClick={() => setConfirmandoBulk(true)}>
               🗑 Eliminar {seleccionados.size} ticket{seleccionados.size !== 1 ? 's' : ''}
             </button>
@@ -565,7 +568,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
                   </div>
                 ) : (
                   <div className="modal-actions-split">
-                    <button className="btn-modal-del" onClick={() => setConfirmarEliminar(true)}>Eliminar</button>
+                    {puedeElim && <button className="btn-modal-del" onClick={() => setConfirmarEliminar(true)}>Eliminar</button>}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn-modal-cancel" onClick={cerrarDetalle}>Cancelar</button>
                       <button className="btn-modal-save" onClick={guardarCambios} disabled={guardandoEdit}>

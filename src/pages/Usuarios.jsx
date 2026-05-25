@@ -28,16 +28,27 @@ const ACCIONES = [
   { key: 'eliminar_lote',        label: 'Eliminar en lote',       labelCorto: 'Lote' },
   { key: 'gestionar_categorias', label: 'Gestionar categorías',   labelCorto: 'Categ.' },
   { key: 'importar_csv',         label: 'Importar CSV',           labelCorto: 'CSV' },
-  { key: 'gestionar_usuarios',   label: 'Gestionar usuarios',     labelCorto: 'Usuarios' },
   { key: 'exportar',             label: 'Exportar',               labelCorto: 'Exportar' },
   { key: 'registrar_prestamo',   label: 'Registrar préstamo',     labelCorto: 'Préstamo' },
   { key: 'registrar_incidencia', label: 'Registrar incidencia',   labelCorto: 'Incidencia' },
   // Tickets
-  { key: 'ver_tickets',          label: 'Ver tickets (propios)',  labelCorto: 'Ver tick.' },
-  { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets', labelCorto: 'Gest. tick.' },
-  // Auditoría
+  { key: 'ver_tickets',          label: 'Ver tickets (propios)',      labelCorto: 'Ver tick.' },
+  { key: 'crear_ticket',         label: 'Crear nuevo ticket',         labelCorto: 'Crear tick.' },
+  { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets',labelCorto: 'Gest. tick.' },
+  { key: 'eliminar_ticket',      label: 'Eliminar tickets',           labelCorto: 'Elim. tick.' },
+  // Requerimientos
+  { key: 'ver_requerimientos',        label: 'Ver requerimientos',         labelCorto: 'Ver req.' },
+  { key: 'crear_requerimiento',       label: 'Crear requerimiento',        labelCorto: 'Crear req.' },
+  { key: 'editar_requerimiento',      label: 'Editar requerimiento',       labelCorto: 'Editar req.' },
+  { key: 'eliminar_requerimiento',    label: 'Eliminar requerimiento',     labelCorto: 'Elim. req.' },
+  { key: 'importar_requerimientos',   label: 'Importar requerimientos',    labelCorto: 'Imp. req.' },
+  { key: 'exportar_requerimientos',   label: 'Exportar requerimientos',    labelCorto: 'Exp. req.' },
   { key: 'ver_auditoria_requerimientos', label: 'Ver auditoría de requerimientos', labelCorto: 'Aud. Req.' },
-  { key: 'ver_auditoria_permisos',       label: 'Ver auditoría de permisos',       labelCorto: 'Aud. Perm.' },
+  // Ausencia
+  { key: 'ver_ausencias',         label: 'Ver ausencias del personal', labelCorto: 'Ver aus.' },
+  { key: 'gestionar_ausencias',   label: 'Registrar/editar ausencias', labelCorto: 'Gest. aus.' },
+  { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias', labelCorto: 'Aud. Aus.' },
+  { key: 'gestionar_usuarios',    label: 'Gestionar usuarios',         labelCorto: 'Usuarios' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -52,17 +63,19 @@ const GRUPOS_PERMISOS = [
   {
     key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de tickets de soporte.',
-    permisos: ['ver_tickets', 'gestionar_tickets'],
+    permisos: ['ver_tickets', 'crear_ticket', 'gestionar_tickets', 'eliminar_ticket'],
   },
   {
     key: 'requerimientos', label: 'Requerimientos', paso: 5, soloPersonalizado: false,
-    descripcion: 'Acceso a la auditoría del módulo de requerimientos.',
-    permisos: ['ver_auditoria_requerimientos'],
+    descripcion: 'Acceso al módulo de requerimientos y compras.',
+    permisos: ['ver_requerimientos', 'crear_requerimiento', 'editar_requerimiento',
+               'eliminar_requerimiento', 'importar_requerimientos', 'exportar_requerimientos',
+               'ver_auditoria_requerimientos'],
   },
   {
     key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
-    descripcion: 'Acceso a permisos de ausencia y gestión de usuarios.',
-    permisos: ['ver_auditoria_permisos', 'gestionar_usuarios'],
+    descripcion: 'Acceso al módulo de ausencias del personal.',
+    permisos: ['ver_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos', 'gestionar_usuarios'],
   },
 ]
 
@@ -85,26 +98,34 @@ const PERMISOS_POR_ROL = {
     permisos: {
       ver_inventario: true, agregar_bien: true, editar_bien: true,
       eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-      importar_csv: false, gestionar_usuarios: false, exportar: true,
+      importar_csv: false, exportar: true,
       registrar_prestamo: true, registrar_incidencia: true,
-      ver_tickets: true, gestionar_tickets: false,
+      // Tickets
+      ver_tickets: true, crear_ticket: true, gestionar_tickets: true, eliminar_ticket: false,
+      // Requerimientos
+      ver_requerimientos: true, crear_requerimiento: true, editar_requerimiento: true,
+      eliminar_requerimiento: false, importar_requerimientos: false, exportar_requerimientos: true,
+      ver_auditoria_requerimientos: true,
+      // Ausencia
+      ver_ausencias: true, gestionar_ausencias: true,
+      ver_auditoria_permisos: false, gestionar_usuarios: false,
     },
     categorias: ['todos'],
   },
   coordinador: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true },
+    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true, crear_requerimiento: true },
     categorias: ['todos'],
   },
   docente: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true },
+    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true },
     categorias: ['todos'],
   },
   asistente: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true },
+    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true },
     categorias: ['todos'],
   },
   administrativo: {
-    permisos: { ...PERMISOS_VACIO },
+    permisos: { ...PERMISOS_VACIO, ver_requerimientos: true },
     categorias: ['todos'],
   },
   // Legacy — usuarios existentes con roles anteriores

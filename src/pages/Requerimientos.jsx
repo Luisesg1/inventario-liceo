@@ -897,10 +897,16 @@ function DateRangePicker({ desde, hasta, onDesde, onHasta, onLimpiar }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-export default function Requerimientos({ usuario, filtroInicial = null }) {
+export default function Requerimientos({ usuario, filtroInicial = null, permisos = {} }) {
   const esAdmin     = usuario.rol === 'admin'
   const esVisorReq  = usuario.rol === 'visor_requerimientos'
-  const puedeEditar = !esVisorReq && (esAdmin || usuario.rol === 'editor' || usuario.rol === 'encargado')
+  const _legacyEdit = !esVisorReq && (esAdmin || usuario.rol === 'editor' || usuario.rol === 'encargado')
+  // Permisos granulares: usa prop si viene de App, sino fallback a roles
+  const puedeCrear    = permisos.crear    !== undefined ? permisos.crear    : _legacyEdit
+  const puedeEditar   = permisos.editar   !== undefined ? permisos.editar   : _legacyEdit
+  const puedeEliminar = permisos.eliminar !== undefined ? permisos.eliminar : esAdmin
+  const puedeImportar = permisos.importar !== undefined ? permisos.importar : esAdmin
+  const puedeExportar = permisos.exportar !== undefined ? permisos.exportar : _legacyEdit
 
   const [items,             setItems]             = useState([])
   const [cargando,          setCargando]          = useState(true)
@@ -1299,12 +1305,12 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
           onHasta={setFiltroFechaHasta}
           onLimpiar={() => { setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
         />
-        {puedeEditar && (
+        {puedeImportar && (
           <button className="req-btn-tool" onClick={() => setModalImportar(true)}>
             ⬆ Importar
           </button>
         )}
-        <div style={{ position: 'relative' }}>
+        {puedeExportar && <div style={{ position: 'relative' }}>
           <button className="req-btn-tool" onClick={() => setMenuExportar(v => !v)}>
             ⬇ Exportar ▾
           </button>
@@ -1344,8 +1350,8 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               </div>
             </>
           )}
-        </div>
-        {puedeEditar && (
+        </div>}
+        {puedeCrear && (
           <button className="req-btn-nuevo" onClick={abrirNuevo}>+ Nuevo</button>
         )}
       </div>
@@ -1400,6 +1406,9 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
                         <button type="button" className="btn-ver" onClick={() => abrirVer(r)} title="Ver detalle">👁</button>
                         {puedeEditar && (
                           <button type="button" className="btn-edit" onClick={() => abrirEditar(r)} title="Editar">✏️</button>
+                        )}
+                        {puedeEliminar && (
+                          <button type="button" className="btn-del" onClick={() => eliminarDesdeTabla(r)} title="Eliminar">✕</button>
                         )}
                         {esAdmin && (
                           <button type="button" className="btn-del" onClick={() => eliminarDesdeTabla(r)} title="Eliminar">✕</button>
@@ -1615,7 +1624,7 @@ export default function Requerimientos({ usuario, filtroInicial = null }) {
               {errorGuardar && <p className="req-error-guardar">{errorGuardar}</p>}
             </div>
             <div className="req-modal-footer">
-              {puedeEditar && modal !== 'nuevo' && esAdmin && (
+              {puedeEliminar && modal !== 'nuevo' && (
                 confirmarEliminar ? (
                   <div className="req-confirm-del">
                     <span>¿Eliminar este requerimiento?</span>

@@ -1470,7 +1470,9 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
 
 // ── Permisos (página) ──────────────────────────────────────────────────────
 
-export default function Permisos({ usuario }) {
+export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
+  const esAdmin         = usuario.rol === 'admin'
+  const puedeGestionar  = permisosAcceso.gestionar !== undefined ? permisosAcceso.gestionar : esAdmin
   const [usuarios,        setUsuarios]        = useState([])
   const [permisos,        setPermisos]        = useState([])
   const [cargando,        setCargando]        = useState(true)
@@ -1886,9 +1888,11 @@ export default function Permisos({ usuario }) {
                 <CalendarCheck size={14} strokeWidth={2.5} /> Días inhabilitados
               </button>
             )}
-            <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
-              <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
-            </button>
+            {puedeGestionar && (
+              <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
+                <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
+              </button>
+            )}
           </div>
         </div>
 
@@ -2042,12 +2046,16 @@ export default function Permisos({ usuario }) {
                                   <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
                                     <Eye size={13} strokeWidth={2} />
                                   </button>
-                                  <button className="permisos-action-btn" title="Editar" onClick={e => { e.stopPropagation(); abrirEditar(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
-                                    <Pencil size={13} strokeWidth={2} />
-                                  </button>
-                                  <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={e => { e.stopPropagation(); abrirEliminar(p) }} style={{ color: '#ef4444', width: 28, height: 28 }}>
-                                    <Trash2 size={13} strokeWidth={2} />
-                                  </button>
+                                  {puedeGestionar && (
+                                    <button className="permisos-action-btn" title="Editar" onClick={e => { e.stopPropagation(); abrirEditar(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
+                                      <Pencil size={13} strokeWidth={2} />
+                                    </button>
+                                  )}
+                                  {puedeGestionar && (
+                                    <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={e => { e.stopPropagation(); abrirEliminar(p) }} style={{ color: '#ef4444', width: 28, height: 28 }}>
+                                      <Trash2 size={13} strokeWidth={2} />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             )

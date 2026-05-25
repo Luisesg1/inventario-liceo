@@ -44,11 +44,12 @@ export default function Layout({
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
   puedeVerInventario = false, puedeGestionarTickets = false,
+  puedeVerAusencias = false, puedeVerRequerimientos = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
   const muestraInventario = puedeVerInventario
-  const muestraRequerimientos = puedeVerInventario || esVisorReq
+  const muestraRequerimientos = puedeVerInventario || esVisorReq || puedeVerRequerimientos
 
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
@@ -547,7 +548,7 @@ export default function Layout({
           ))}
 
           {/* Permisos con submenú */}
-          {esAdmin && (
+          {(esAdmin || puedeVerAusencias) && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}

@@ -183,16 +183,47 @@ export default function App() {
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
 
+  const esAdmin       = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
-  const puedeVerInventario     = usuario.rol === 'admin' || !!permisosUsuario?.ver_inventario
-  const puedeGestionarTickets  = usuario.rol === 'admin' || !!permisosUsuario?.gestionar_tickets
+  const p             = permisosUsuario ?? {}
+
+  // ── Permisos computados ─────────────────────────────────────────────────
+  const puedeVerInventario          = esAdmin || !!p.ver_inventario
+  const puedeGestionarTickets       = esAdmin || !!p.gestionar_tickets
+  const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
+  const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
+  // Tickets
+  const permisosTickets = {
+    verPropios:   esAdmin || !!p.ver_tickets,
+    crear:        esAdmin || !!p.crear_ticket,
+    gestionar:    esAdmin || !!p.gestionar_tickets,
+    eliminar:     esAdmin || !!p.eliminar_ticket,
+  }
+  // Requerimientos
+  const permisosReqs = {
+    ver:          esAdmin || !!p.ver_requerimientos,
+    crear:        esAdmin || !!p.crear_requerimiento,
+    editar:       esAdmin || !!p.editar_requerimiento,
+    eliminar:     esAdmin || !!p.eliminar_requerimiento,
+    importar:     esAdmin || !!p.importar_requerimientos,
+    exportar:     esAdmin || !!p.exportar_requerimientos,
+    verAuditoria: esAdmin || !!p.ver_auditoria_requerimientos,
+  }
+  // Ausencia
+  const permisosAusencia = {
+    ver:          esAdmin || !!p.ver_ausencias,
+    gestionar:    esAdmin || !!p.gestionar_ausencias,
+    verAuditoria: esAdmin || !!p.ver_auditoria_permisos,
+    gestionarUsuarios: esAdmin || !!p.gestionar_usuarios,
+  }
+
   const paginasVisorReq = ['requerimientos', 'tickets']
-  const puedeVerAuditoriaReq  = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_requerimientos
-  const puedeVerAuditoriaPermisos = usuario?.rol === 'admin' || !!permisosUsuario?.ver_auditoria_permisos
-  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos' || pagina === 'permisos'
+  const soloAdmin  = pagina === 'usuarios' || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+    || (pagina === 'permisos' && !permisosAusencia.ver)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
-  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard' || pagina === 'requerimientos'
+  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
+    || (pagina === 'requerimientos' && !permisosReqs.ver)
   const paginaSegura = (!puedeVerInventario && soloStaff) ? 'tickets'
     : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
     : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
@@ -212,6 +243,8 @@ export default function App() {
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
       puedeVerInventario={puedeVerInventario}
       puedeGestionarTickets={puedeGestionarTickets}
+      puedeVerAusencias={permisosAusencia.ver}
+      puedeVerRequerimientos={permisosReqs.ver}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} />}
@@ -219,11 +252,11 @@ export default function App() {
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="permisos" />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} />}
-      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} />}
-      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} />}
+      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
+      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
-      {paginaSegura === 'permisos'   && <Permisos        usuario={usuario} />}
+      {paginaSegura === 'permisos'   && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
     </Layout>
   )
 }
