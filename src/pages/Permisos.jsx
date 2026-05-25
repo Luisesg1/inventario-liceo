@@ -1789,26 +1789,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   }
 
   // ── Stats para KPI header ────────────────────────────────────────────────
-  const hoy = new Date().toISOString().slice(0, 10)
-  const mesActualPrefix = hoy.slice(0, 7)
   const licenciasMedicas = permisos.filter(p => p.tipo === 'licencia_medica')
   const permisosAdmin    = permisos.filter(p => p.tipo === 'permiso_administrativo')
-  const usuariosConAus   = new Set(permisos.map(p => { const u = resolveUser(p); return u?.rut ?? u?.id }).filter(Boolean)).size
-  // Días este mes: cuenta solo días hábiles para TODOS los tipos (excluye feriados/inhabilitados)
-  const diasMesTotal = Math.round(
-    permisos
-      .filter(p => p.fecha_inicio?.startsWith(mesActualPrefix))
-      .reduce((acc, p) => {
-        if (p.jornada === 'medio_dia') return acc + 0.5
-        if (p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin) {
-          const [sh, sm] = p.hora_inicio.split(':').map(Number)
-          const [eh, em] = p.hora_fin.split(':').map(Number)
-          return acc + Math.max(0, ((eh * 60 + em) - (sh * 60 + sm)) / 60 / 8)
-        }
-        if (p.fecha_inicio && p.fecha_fin) return acc + diasHabiles(p.fecha_inicio, p.fecha_fin, diasInhabilitados)
-        return acc
-      }, 0)
-  )
   const totalDiasInhab = feriadosAPI.length + diasAdmin.length
 
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
@@ -1941,18 +1923,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
               iconColor: '#854d0e',
             },
             {
-              label: 'Días este mes',
-              value: diasMesTotal,
-              sub: new Date().toLocaleString('es-CL', { month: 'long', year: 'numeric' }),
-              icon: <CalendarRange size={16} strokeWidth={2} />,
-              iconBg: 'rgba(16,185,129,0.10)',
-              iconColor: '#10b981',
-            },
-            {
               label: 'Total ausencias',
               value: permisos.length,
               sub: `${licenciasMedicas.length} licencias · ${permisosAdmin.length} permisos`,
-              icon: <UserPlus size={16} strokeWidth={2} />,
+              icon: <CalendarRange size={16} strokeWidth={2} />,
               iconBg: 'rgba(99,102,241,0.10)',
               iconColor: '#6366f1',
             },
