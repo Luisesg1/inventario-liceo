@@ -651,6 +651,12 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   }, [fechaInicio])
 
   useEffect(() => {
+    if (!fechaInicio || !fechaFin) return
+    if (jornada === 'medio_dia' || jornada === 'personalizado') return
+    setJornada(fechaInicio === fechaFin ? 'dia_completo' : 'reposo')
+  }, [fechaInicio, fechaFin])
+
+  useEffect(() => {
     if (!usuarioSel || !onGetPermisosUsados) return
     setCargandoPermisos(true)
     onGetPermisosUsados(usuarioSel.id, usuarioSel.rut)
