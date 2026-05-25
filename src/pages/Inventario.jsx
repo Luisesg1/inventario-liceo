@@ -202,6 +202,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   })
   const [dragOver, setDragOver]     = useState(null) // id sobre el que se arrastra
   const [dragging, setDragging]     = useState(null) // id que se arrastra
+  const [menuMobil, setMenuMobil]   = useState(null) // id del bien con dropdown móvil abierto
+  const [menuMobilPos, setMenuMobilPos] = useState(null) // { top, right } para position:fixed
 
   // ── Sincronizar pendientes con Supabase ───────────────────────────────────
   async function sincronizarPendientes() {
@@ -236,6 +238,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }, []) // eslint-disable-line
 
   useEffect(() => { cargarDatos() }, [])
+
+  useEffect(() => {
+    if (!menuMobil) return
+    const close = () => setMenuMobil(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [menuMobil])
 
   const cargarDatos = async () => {
     setCargando(true)
@@ -2836,7 +2845,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   <td><span className={`badge ${ESTADO_BADGE[b.estado] ?? ''}`}>{b.estado}</span></td>
                   <td className="td-muted td-hide-mobile">{b.ubicacion}</td>
                   <td className="td-acciones">
-                    <div className="acciones">
+                    {/* Desktop: todos los botones */}
+                    <div className="acciones acciones-desktop">
                       {!b._pendiente && <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>}
                       {(permisos.editar_bien) && !b._pendiente && <button className="btn-edit" onClick={() => abrirFormEditar(b)} title="Editar">✏️</button>}
                       {puedeIncidencias && !b._pendiente && (esComp(b.categoria) || esTecno(b.categoria)) && (
@@ -2853,6 +2863,61 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       )}
                       {puedeEliminar && !b._pendiente && (
                         <button className="btn-del btn-del--visible" onClick={() => eliminarBien(b.id)} title="Eliminar">🗑️</button>
+                      )}
+                      {b._pendiente && (
+                        <button className="btn-del" title="Cancelar (quitar pendiente)"
+                          onClick={() => { eliminarPendiente(b.id); setBienes(prev => prev.filter(x => x.id !== b.id)) }}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    {/* Mobile: Ver + ⋮ dropdown */}
+                    <div className="acciones acciones-mobile">
+                      {!b._pendiente && (
+                        <button className="btn-ver" onClick={() => setVerDetalle(verDetalle?.id === b.id ? null : b)} title="Ver detalle">👁</button>
+                      )}
+                      {!b._pendiente && (
+                        <div className="mas-acciones-wrap">
+                          <button
+                            className="btn-mas"
+                            title="Más acciones"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (menuMobil === b.id) { setMenuMobil(null); return }
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              setMenuMobilPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+                              setMenuMobil(b.id)
+                            }}
+                          >⋮</button>
+                          {menuMobil === b.id && menuMobilPos && (
+                            <div
+                              className="mas-menu"
+                              style={{ top: menuMobilPos.top, right: menuMobilPos.right }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {permisos.editar_bien && (
+                                <button onClick={() => { abrirFormEditar(b); setMenuMobil(null) }}>
+                                  <span>✏️</span> Editar
+                                </button>
+                              )}
+                              {puedeIncidencias && (esComp(b.categoria) || esTecno(b.categoria)) && (
+                                <button onClick={() => { setModalIncidencias(b); setMenuMobil(null) }}>
+                                  <span>🔧</span> Incidencias
+                                </button>
+                              )}
+                              {puedePrestamo && (
+                                <button onClick={() => { setModalPrestamo(b); setMenuMobil(null) }}>
+                                  <span>📤</span> {bienesConPrestamo.has(b.id) ? 'Ver préstamo' : 'Préstamo'}
+                                </button>
+                              )}
+                              {puedeEliminar && (
+                                <button className="mas-menu-del" onClick={() => { eliminarBien(b.id); setMenuMobil(null) }}>
+                                  <span>🗑️</span> Eliminar
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       )}
                       {b._pendiente && (
                         <button className="btn-del" title="Cancelar (quitar pendiente)"

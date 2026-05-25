@@ -854,3 +854,74 @@ tr.fila-editando td { background: rgba(212,160,23,0.05); }
   .modal-detalle { padding: 14px; }
   .detalle-grid-3 { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Mobile action dropdown ────────────────────────────────────────── */
+.acciones-mobile { display: none; }
+.acciones-desktop { display: flex; }
+
+@media (max-width: 640px) {
+  .acciones-desktop { display: none !important; }
+  .acciones-mobile  { display: flex; gap: 2px; align-items: center; }
+
+  .mas-acciones-wrap { position: relative; }
+
+  .btn-mas {
+    background: transparent;
+    border: none;
+    padding: 2px 5px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    line-height: 1;
+    letter-spacing: -2px;
+    transition: background 0.13s, color 0.13s;
+    opacity: 0.6;
+  }
+  .btn-mas:hover { background: rgba(100,116,139,0.12); color: #334155; opacity: 1; }
+
+  .mas-menu {
+    position: fixed;
+    z-index: 9999;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
+    min-width: 158px;
+    overflow: hidden;
+    animation: masMenuIn 0.15s cubic-bezier(0.16,1,0.3,1);
+    transform-origin: top right;
+  }
+  .mas-menu button {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 11px 15px;
+    text-align: left;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    transition: background 0.1s;
+  }
+  .mas-menu button:not(:last-child) { border-bottom: 1px solid #f1f5f9; }
+  .mas-menu button:hover { background: #f8fafc; }
+  .mas-menu button span { font-size: 14px; flex-shrink: 0; }
+  .mas-menu-del { color: #ef4444 !important; }
+  .mas-menu-del:hover { background: rgba(239,68,68,0.05) !important; }
+
+  @keyframes masMenuIn {
+    from { opacity: 0; transform: scale(0.93) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+}
