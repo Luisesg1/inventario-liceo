@@ -693,6 +693,44 @@ function ImportarReq({ onImportado, onCerrar }) {
 
   const resetear = () => { setFase('idle'); setFilas([]); setErrParse(null); setFileName(''); setResultado(null) }
 
+  const descargarPlantilla = () => {
+    const cols = [...COLUMNAS_BD]
+    const ejemplo = {
+      numero_req:       '1',
+      fecha:            '2026-05-25',
+      contenido:        'Resma de papel tamaño carta',
+      solicitante:      'Dirección',
+      fondo:            'S.E.P.',
+      dimension:        'Gestión Pedagógica',
+      sub_dimension:    'Gestión curricular',
+      accion:           '11. Innovación y CRA',
+      monto_solicitado: '25000',
+      monto_real:       '',
+      estado:           'En proceso',
+      fecha_recepcion:  '',
+      orden_compra:     '',
+      rut_proveedor:    '',
+      numero_factura:   '',
+      evidencia:        'Pendiente',
+      observacion:      '',
+    }
+    const esc = (v) => {
+      const s = String(v ?? '')
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const csv = [
+      cols.join(','),
+      cols.map(c => esc(ejemplo[c] ?? '')).join(','),
+    ].join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = 'plantilla_requerimientos.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="req-modal-overlay" onClick={e => e.target === e.currentTarget && onCerrar()}>
       <div className="req-modal req-modal--import">
@@ -720,7 +758,15 @@ function ImportarReq({ onImportado, onCerrar }) {
                 {errParse && <p className="req-drop-error">⚠️ {errParse}</p>}
               </div>
               <div className="req-import-cols">
-                <p className="req-import-cols-title">Columnas reconocidas</p>
+                <div className="req-import-cols-header">
+                  <p className="req-import-cols-title">Columnas reconocidas</p>
+                  <button type="button" className="req-btn-plantilla" onClick={descargarPlantilla}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3v13M7 11l5 5 5-5"/><rect x="3" y="18" width="18" height="3" rx="1.5"/>
+                    </svg>
+                    Descargar plantilla
+                  </button>
+                </div>
                 <div className="req-import-cols-list">
                   {[...COLUMNAS_BD].map(c => (
                     <span key={c} className="req-import-col-chip">{c}</span>
