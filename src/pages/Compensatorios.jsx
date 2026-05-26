@@ -12,11 +12,11 @@ import './Compensatorios.css'
 // ── Constantes ────────────────────────────────────────────
 
 const TIPOS = [
-  { value: 'desfile',                  label: 'Desfile',                   icon: '🎺' },
-  { value: 'trabajo_verano',           label: 'Trabajo de verano',         icon: '☀️' },
-  { value: 'actividad_institucional',  label: 'Actividad institucional',   icon: '🏫' },
-  { value: 'reemplazo',                label: 'Reemplazo',                 icon: '🔄' },
-  { value: 'otro',                     label: 'Otro',                      icon: '📌' },
+  { value: 'desfile',                  label: 'Desfile',                   icon: '' },
+  { value: 'trabajo_verano',           label: 'Trabajo en vacaciones',     icon: '' },
+  { value: 'actividad_institucional',  label: 'Actividad institucional',   icon: '' },
+  { value: 'reemplazo',                label: 'Reemplazo',                 icon: '' },
+  { value: 'otro',                     label: 'Otro',                      icon: '' },
 ]
 
 const TIPO_MAP = Object.fromEntries(TIPOS.map(t => [t.value, t]))
@@ -415,7 +415,7 @@ function FilaRegistro({ r, esAdmin, puedeGest, onEditar, onEliminar }) {
       )}
       <td>
         <span className="comp-tipo-badge" style={{ background: tipoStyle.bg, color: tipoStyle.color }}>
-          {tipo?.icon} {tipo?.label ?? r.tipo}
+          {tipo?.label ?? r.tipo}
         </span>
         {r.motivo && (
           <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#94a3b8', maxWidth: 200 }}
@@ -728,7 +728,7 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
               {tipoObj && (
                 <div className="comp-resumen-row">
                   <span>Tipo</span>
-                  <span className="comp-resumen-row-val">{tipoObj.icon} {tipoObj.label}</span>
+                  <span className="comp-resumen-row-val">{tipoObj.label}</span>
                 </div>
               )}
               {cantidadFinal > 0 && (
