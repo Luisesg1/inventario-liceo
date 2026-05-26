@@ -12,6 +12,7 @@ import Ajustes          from './pages/Ajustes'
 import CamposCategoria  from './pages/CamposCategoria'
 import Requerimientos   from './pages/Requerimientos'
 import Permisos         from './pages/Permisos'
+import Compensatorios   from './pages/Compensatorios'
 import { aplicarTema } from './utils/tema'
 
 export default function App() {
@@ -218,11 +219,18 @@ export default function App() {
     editarUsuario:     esAdmin || !!p.editar_usuario,
     eliminarUsuario:   esAdmin || !!p.eliminar_usuario,
   }
+  // Compensatorios
+  const permisosComp = {
+    ver:      esAdmin || !!p.ver_compensatorios,
+    gestionar: esAdmin || !!p.gestionar_compensatorios,
+  }
+  const puedeVerCompensatorios = permisosComp.ver
 
   const paginasVisorReq = ['requerimientos', 'tickets']
   const puedeAccederUsuarios = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
   const soloAdmin  = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
     || (pagina === 'permisos' && !permisosAusencia.ver)
+    || (pagina === 'compensatorios' && !puedeVerCompensatorios)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
   const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
@@ -248,6 +256,7 @@ export default function App() {
       puedeGestionarTickets={puedeGestionarTickets}
       puedeVerAusencias={permisosAusencia.ver}
       puedeVerRequerimientos={permisosReqs.ver}
+      puedeVerCompensatorios={puedeVerCompensatorios}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -259,7 +268,8 @@ export default function App() {
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
-      {paginaSegura === 'permisos'   && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
+      {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
+      {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
     </Layout>
   )
 }

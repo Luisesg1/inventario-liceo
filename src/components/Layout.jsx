@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, FileText, ChevronRight, X, LogOut,
-  Menu, Loader2, ShoppingCart, ShieldCheck,
+  Menu, Loader2, ShoppingCart, ShieldCheck, Gift,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -45,6 +45,7 @@ export default function Layout({
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
   puedeVerInventario = false, puedeGestionarTickets = false,
   puedeVerAusencias = false, puedeVerRequerimientos = false,
+  puedeVerCompensatorios = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
@@ -314,7 +315,7 @@ export default function Layout({
 
   const inventarioActivo    = paginaActual === 'inventario' || paginaActual === 'auditoria'
   const requerimientosActivo = paginaActual === 'requerimientos' || paginaActual === 'auditoria_requerimientos'
-  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'auditoria_permisos'
+  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
   const [inventarioAbierto,    setInventarioAbierto]    = useState(inventarioActivo)
   const [requerimientosAbierto, setRequerimientosAbierto] = useState(requerimientosActivo)
   const [permisosAbierto,      setPermisosAbierto]      = useState(permisosActivo)
@@ -330,6 +331,7 @@ export default function Layout({
     auditoria_requerimientos: 'Auditoría de Requerimientos',
     permisos:                 'Ausencias',
     auditoria_permisos:       'Auditoría de Ausencias',
+    compensatorios:           'Días Compensatorios',
     requerimientos: 'Requerimientos',
     tickets:        'Tickets',
     ajustes:    'Personalizar',
@@ -590,6 +592,16 @@ export default function Layout({
                       <span className="nav-subitem-dot" />
                       Auditoría
                     </div>
+                    {(esAdmin || puedeVerCompensatorios) && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'compensatorios' ? 'active' : ''}`}
+                        onClick={() => handleNav('compensatorios')}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <Gift size={11} strokeWidth={2.5} style={{ color: paginaActual === 'compensatorios' ? '#6366f1' : '#94a3b8', flexShrink: 0 }} />
+                        <span>Compensatorios</span>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

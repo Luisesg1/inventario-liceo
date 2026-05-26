@@ -53,6 +53,9 @@ const ACCIONES = [
   { key: 'editar_usuario',             label: 'Editar usuarios',               labelCorto: 'Editar usr.' },
   { key: 'eliminar_usuario',           label: 'Eliminar usuarios',             labelCorto: 'Elim. usr.' },
   { key: 'notificar_ausencia_correo',  label: 'Notificar ausencia por correo', labelCorto: 'Notif. correo' },
+  // Compensatorios
+  { key: 'ver_compensatorios',        label: 'Ver días compensatorios',        labelCorto: 'Ver comp.' },
+  { key: 'gestionar_compensatorios',  label: 'Gestionar días compensatorios',  labelCorto: 'Gest. comp.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -85,6 +88,11 @@ const GRUPOS_PERMISOS = [
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
     permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo'],
+  },
+  {
+    key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
+    descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.).',
+    permisos: ['ver_compensatorios', 'gestionar_compensatorios'],
   },
 ]
 
@@ -290,7 +298,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 7
+  const ULTIMO_PASO = 8
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -339,6 +347,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     { n: 5, label: 'Requerimientos' },
     { n: 6, label: 'Ausencia' },
     { n: 7, label: 'Administración' },
+    { n: 8, label: 'Compensatorios' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }

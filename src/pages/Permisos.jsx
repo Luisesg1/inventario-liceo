@@ -7,6 +7,7 @@ import {
   Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { getSaldoCompensatorio, descontarCompensatorios } from './Compensatorios'
 import './Permisos.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -42,10 +43,11 @@ const ROLES_ACTIVOS = [
 const TIPOS_PERMISO = [
   { value: 'licencia_medica',        label: 'Licencia médica' },
   { value: 'permiso_administrativo', label: 'Permiso administrativo' },
+  { value: 'dias_compensatorios',    label: 'Días compensatorios' },
 ]
 
 // Tipos que NO descuentan del cupo (solo quedan registrados)
-const TIPOS_SIN_DESCUENTO = new Set(['licencia_medica'])
+const TIPOS_SIN_DESCUENTO = new Set(['licencia_medica', 'dias_compensatorios'])
 
 const MAX_NOTAS = 400
 
@@ -53,8 +55,9 @@ const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label])
 
 // Estilos visuales por tipo
 const TIPO_STYLE = {
-  licencia_medica:        { bg: '#eff6ff', color: '#1d4ed8', icon: '🏥' },
-  permiso_administrativo: { bg: '#fef9c3', color: '#854d0e', icon: '📋' },
+  licencia_medica:        { bg: '#eff6ff',             color: '#1d4ed8', icon: '🏥' },
+  permiso_administrativo: { bg: '#fef9c3',             color: '#854d0e', icon: '📋' },
+  dias_compensatorios:    { bg: 'rgba(99,102,241,0.1)', color: '#4f46e5', icon: '🎁' },
 }
 
 const JORNADAS = [
@@ -624,6 +627,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [usuarioEncontradoEmail, setUsuarioEncontradoEmail] = useState(null)
   const [permisosUsados,    setPermisosUsados]    = useState(0)
   const [cargandoPermisos,  setCargandoPermisos]  = useState(false)
+  const [saldoComp,         setSaldoComp]         = useState(null)  // { disponible, records }
+  const [cargandoComp,      setCargandoComp]      = useState(false)
 
   const [fechaInicio, setFechaInicio] = useState(isEdit ? (editData.fecha_inicio ?? '') : '')
   const [fechaFin,    setFechaFin]    = useState(isEdit ? (editData.fecha_fin   ?? '') : '')
@@ -674,6 +679,18 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       .finally(() => setCargandoPermisos(false))
   }, [usuarioSel?.id, usuarioSel?.rut])
 
+  // Carga saldo compensatorio cuando el usuario cambia o el tipo es compensatorios
+  useEffect(() => {
+    if (tipoPermiso !== 'dias_compensatorios' || !usuarioSel?.id) {
+      setSaldoComp(null); return
+    }
+    setCargandoComp(true)
+    getSaldoCompensatorio(usuarioSel.id)
+      .then(s => setSaldoComp(s))
+      .catch(() => setSaldoComp({ disponible: 0, records: [] }))
+      .finally(() => setCargandoComp(false))
+  }, [tipoPermiso, usuarioSel?.id])
+
   const duracion    = calcDuration(fechaInicio, fechaFin, jornada, diasInhabilitados, tipoPermiso)
   const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
@@ -686,6 +703,18 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       || normStr(u.rut ?? '').includes(q)
       || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
   })
+
+  // Días a descontar del saldo compensatorio (float)
+  const diasCompAUsar = (() => {
+    if (tipoPermiso !== 'dias_compensatorios' || !fechaInicio || !fechaFin) return 0
+    if (jornada === 'medio_dia') return 0.5
+    if (jornada === 'personalizado' && horaInicio && horaFin) {
+      const [sh, sm] = horaInicio.split(':').map(Number)
+      const [eh, em] = horaFin.split(':').map(Number)
+      return Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60 / 8)
+    }
+    return diasHabiles(fechaInicio, fechaFin, diasInhabilitados)
+  })()
 
   // Notas siempre obligatorias (motivo de la licencia / permiso)
   const formValido = !!usuarioSel && !!fechaInicio && !!fechaFin && !!tipoPermiso
@@ -1084,7 +1113,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     ? 'Motivo de la licencia médica'
                     : tipoPermiso === 'permiso_administrativo'
                       ? 'Motivo del permiso administrativo'
-                      : 'Motivo'}
+                      : tipoPermiso === 'dias_compensatorios'
+                        ? 'Motivo del uso de compensatorios'
+                        : 'Motivo'}
                   {' '}<span style={{ color: '#ef4444', fontWeight: 700 }}>*</span>
                 </p>
                 <textarea className="mp-textarea"
@@ -1093,7 +1124,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       ? 'Ej: Consulta médica / reposo prescrito…'
                       : tipoPermiso === 'permiso_administrativo'
                         ? 'Ej: Trámite notarial, actividad institucional…'
-                        : 'Escribe el motivo de la ausencia…'
+                        : tipoPermiso === 'dias_compensatorios'
+                          ? 'Ej: Uso de días ganados por desfile 18 sept…'
+                          : 'Escribe el motivo de la ausencia…'
                   }
                   maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />
@@ -1198,6 +1231,62 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           </div>
                         </div>
                       </>
+                    )}
+
+                    {/* Saldo compensatorio */}
+                    {tipoPermiso === 'dias_compensatorios' && (
+                      <AnimatePresence>
+                        <motion.div
+                          key="comp-saldo"
+                          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                          style={{ marginTop: 10, background: 'rgba(79,70,229,0.07)', border: '1.5px solid rgba(99,102,241,0.2)',
+                            borderRadius: 12, padding: '12px 14px' }}
+                        >
+                          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: '#6366f1',
+                            textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                            🎁 Saldo compensatorio
+                          </p>
+                          {cargandoComp ? (
+                            <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Cargando saldo…</p>
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+                                <span style={{ color: '#475569' }}>Disponible</span>
+                                <span style={{ fontWeight: 700, color: '#4f46e5' }}>
+                                  {saldoComp ? (saldoComp.disponible === 0.5 ? '½' : saldoComp.disponible) : '—'} día{saldoComp?.disponible !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              {diasCompAUsar > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
+                                  <span style={{ color: '#475569' }}>A descontar</span>
+                                  <span style={{ fontWeight: 700, color: '#dc2626' }}>
+                                    −{diasCompAUsar === 0.5 ? '½' : diasCompAUsar} día{diasCompAUsar !== 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              )}
+                              {saldoComp && diasCompAUsar > 0 && (
+                                <>
+                                  <div style={{ height: 1, background: 'rgba(99,102,241,0.15)', margin: '6px 0' }} />
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                                    <span style={{ fontWeight: 600, color: '#374151' }}>Restante</span>
+                                    <span style={{ fontWeight: 800,
+                                      color: (saldoComp.disponible - diasCompAUsar) < 0 ? '#dc2626' : '#059669' }}>
+                                      {Math.max(saldoComp.disponible - diasCompAUsar, 0) === 0.5
+                                        ? '½'
+                                        : Math.max(saldoComp.disponible - diasCompAUsar, 0).toFixed(1).replace('.0', '')} día{Math.max(saldoComp.disponible - diasCompAUsar, 0) !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                  {saldoComp.disponible < diasCompAUsar && (
+                                    <p style={{ margin: '6px 0 0', fontSize: 11.5, color: '#dc2626', fontWeight: 600 }}>
+                                      ⚠ Saldo insuficiente para este período
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </motion.div>
+                      </AnimatePresence>
                     )}
 
                     {duracion && (
@@ -1702,6 +1791,26 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
       ;({ error } = await supabase.from('ausencias').insert(payload))
     }
     if (error) throw error
+
+    // Descontar saldo compensatorio si aplica (ausencia nueva)
+    if (!datos.id && datos.tipoPermiso === 'dias_compensatorios') {
+      const uid = u?.isExterno ? null : (u?.id ?? null)
+      if (uid) {
+        let diasADescontar = 0
+        if (datos.jornada === 'medio_dia') {
+          diasADescontar = 0.5
+        } else if (datos.jornada === 'personalizado' && datos.horaInicio && datos.horaFin) {
+          const [sh, sm] = datos.horaInicio.split(':').map(Number)
+          const [eh, em] = datos.horaFin.split(':').map(Number)
+          diasADescontar = Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60 / 8)
+        } else {
+          diasADescontar = diasHabiles(datos.fechaInicio, datos.fechaFin)
+        }
+        if (diasADescontar > 0) {
+          try { await descontarCompensatorios(uid, diasADescontar) } catch { /* silencioso */ }
+        }
+      }
+    }
 
     // Correos en ausencias nuevas
     if (!datos.id) {
