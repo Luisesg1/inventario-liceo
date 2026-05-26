@@ -119,11 +119,6 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   const thisYear = new Date().getFullYear()
   const misReg   = esAdmin ? registros : registros.filter(r => r.usuario_id === usuario?.id)
 
-  const saldoDisponible = misReg.reduce((sum, r) => {
-    if (estadoEfectivo(r) !== 'disponible') return sum
-    return sum + (r.saldo_restante ?? r.cantidad)
-  }, 0)
-
   const generadosAnio = misReg
     .filter(r => r.fecha_ganado?.startsWith(String(thisYear)))
     .reduce((sum, r) => sum + r.cantidad, 0)
@@ -212,10 +207,6 @@ export default function Compensatorios({ usuario, permisos = {} }) {
 
       {/* KPIs */}
       <div className="comp-kpi-grid">
-        <KPICard
-          icon={<Gift size={18} />} variant="indigo"
-          value={fmtDias(saldoDisponible)} label="Días disponibles"
-        />
         <KPICard
           icon={<TrendingUp size={18} />} variant="violet"
           value={fmtDias(generadosAnio)} label={`Generados ${thisYear}`}
