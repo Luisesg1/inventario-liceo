@@ -90,6 +90,17 @@
   transform: scale(1.12);
 }
 
+/* ── Bloque de sección (Resumen / Ausencias / Inventario) ── */
+.dash-section-block {
+  margin-bottom: 30px;
+}
+/* Dentro de un bloque, el título ya aporta el espaciado:
+   neutralizamos los márgenes propios de los contenidos. */
+.dash-section-block .dash-welcome,
+.dash-section-block .dash-kpis {
+  margin-bottom: 0;
+}
+
 /* ── Section title ────────────────────────────────────── */
 .dash-section-title {
   display: flex; align-items: center; gap: 7px;

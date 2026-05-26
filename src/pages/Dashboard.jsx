@@ -529,21 +529,26 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       transition={{ duration: 0.28, ease: 'easeOut' }}
     >
 
-      {/* Welcome */}
-      <motion.div
-        className="dash-welcome"
-        initial={rm ? false : { opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <h2>
-          Bienvenido, <span className="dash-welcome-accent">{usuario?.nombre}</span>
-        </h2>
-        <p>Resumen General{categoriaFiltro ? ` — ${catActiva?.label}` : ''}</p>
-      </motion.div>
+      {/* ── SECCIÓN 1: Resumen General ── */}
+      <section className="dash-section-block">
+        <SectionTitle icon={Activity} label="Resumen General" />
+        <motion.div
+          className="dash-welcome"
+          initial={rm ? false : { opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h2>
+            Bienvenido, <span className="dash-welcome-accent">{usuario?.nombre}</span>
+          </h2>
+          {categoriaFiltro && <p>{catActiva?.label}</p>}
+        </motion.div>
+      </section>
 
-      {/* Banner: personas ausentes hoy */}
+      {/* ── SECCIÓN 2: Ausencias ── */}
       {ausentesHoy !== null && (
+      <section className="dash-section-block">
+        <SectionTitle icon={UserX} label="Ausencias" iconBg="#fee2e2" iconColor="#dc2626" />
         <motion.div
           initial={rm ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -552,7 +557,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: ausentesHoy === 0 ? '#f0fdf4' : '#fef2f2',
             border: `1px solid ${ausentesHoy === 0 ? '#bbf7d0' : '#fecaca'}`,
-            borderRadius: 10, padding: '7px 12px', marginBottom: 4,
+            borderRadius: 10, padding: '7px 12px',
             color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
             alignSelf: 'flex-start', maxWidth: '100%',
           }}
@@ -590,10 +595,13 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
             </button>
           )}
         </motion.div>
+      </section>
       )}
 
-      {/* KPI Cards inventario */}
-      <div className="dash-kpis">
+      {/* ── SECCIÓN 3: Inventario ── */}
+      <section className="dash-section-block">
+        <SectionTitle icon={Package2} label="Inventario" iconBg="#e8eaf6" iconColor="#1a237e" />
+        <div className="dash-kpis">
         {KPI_CONFIG.map((kpi, i) => (
           <motion.div
             key={i}
@@ -622,7 +630,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
             </div>
           </motion.div>
         ))}
-      </div>
+        </div>
+      </section>
 
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
       <div className="dash-bottom-grid">
