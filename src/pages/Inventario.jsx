@@ -644,23 +644,63 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
   const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
-  const COLUMNAS_EXPORT = [
-    'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
-    'isbn','autor','descripcion',
-    'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
-    'memoria','tipo_almacenamiento','sistema_operativo',
-    'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
-    'licencia_office','off_version','off_proveedor','off_factura','off_fecha_factura','off_orden',
-    'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
-  ]
   const getCatLabel2 = () => catActual === 'todos' ? 'todos' : (categorias.find(c => c.id === catActual)?.label ?? catActual)
   const nombreArchivo = (ext) => `inventario_${getCatLabel2().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.${ext}`
+
+  // Orden preferido para campos estándar conocidos. Cualquier campo nuevo (custom o futuro)
+  // se agrega automáticamente al final sin tocar este array.
+  const BASE_COLS_ORDER = [
+    'codigo','codigo_interno','nombre','categoria','cantidad','estado',
+    'area','ubicacion','responsable',
+    'isbn','autor','descripcion',
+    'tipo','tecnologia','marca','modelo','numero_serie','consumible',
+    'pantalla','cpu','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo',
+    'licencia_windows','win_version','win_tipo_licencia','win_proveedor','win_factura','win_fecha_factura','win_orden',
+    'licencia_office','off_version','off_tipo_licencia','off_proveedor','off_factura','off_fecha_factura','off_orden',
+    'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
+    'obs',
+  ]
+  const COLS_INTERNAS = new Set(['id','creado_en','actualizado_en','campos_extra'])
+
+  const ETIQUETAS_COL = {
+    codigo:'Código',codigo_interno:'Código Interno',nombre:'Nombre',categoria:'Categoría',
+    cantidad:'Cantidad',estado:'Estado',area:'Área',ubicacion:'Ubicación',responsable:'Responsable',
+    isbn:'ISBN',autor:'Autor',descripcion:'Descripción',
+    tipo:'Tipo',tecnologia:'Tecnología',marca:'Marca',modelo:'Modelo',
+    numero_serie:'N° Serie',consumible:'Consumible',
+    pantalla:'Pantalla',cpu:'Procesador',ram:'RAM',ram_tipo:'Tipo RAM',ram_slots:'Slots RAM',
+    memoria:'Almacenamiento',tipo_almacenamiento:'Tipo Almacenamiento',sistema_operativo:'Sistema Operativo',
+    licencia_windows:'Licencia Windows',win_version:'Versión Windows',win_tipo_licencia:'Tipo Lic. Windows',
+    win_proveedor:'Proveedor Windows',win_factura:'Factura Windows',win_fecha_factura:'Fecha Factura Win',win_orden:'Orden Win',
+    licencia_office:'Licencia Office',off_version:'Versión Office',off_tipo_licencia:'Tipo Lic. Office',
+    off_proveedor:'Proveedor Office',off_factura:'Factura Office',off_fecha_factura:'Fecha Factura Office',off_orden:'Orden Office',
+    fecha_adquisicion:'Fecha Adquisición',proveedor:'Proveedor',numero_factura:'N° Factura',
+    numero_orden:'N° Orden Compra',fondo:'Fondo',garantia:'Garantía',obs:'Observaciones',
+  }
+
+  const getColumnasExportar = (datos) => {
+    // Aplanar campos_extra de cada bien para detectar campos personalizados
+    const datosFlat = datos.map(b => {
+      const extra = b.campos_extra && typeof b.campos_extra === 'object' ? b.campos_extra : {}
+      return { ...b, ...extra }
+    })
+    // Recolectar todas las claves presentes en los datos
+    const keysEnDatos = new Set()
+    datosFlat.forEach(b => Object.keys(b).forEach(k => { if (!COLS_INTERNAS.has(k)) keysEnDatos.add(k) }))
+    // Primero los campos base que tengan datos, respetando el orden
+    const cols = BASE_COLS_ORDER.filter(k => keysEnDatos.has(k))
+    const enCols = new Set(cols)
+    // Luego cualquier campo extra no contemplado (custom fields, campos futuros)
+    keysEnDatos.forEach(k => { if (!enCols.has(k)) cols.push(k) })
+    return { cols, datosFlat }
+  }
 
   const exportarCSV = () => {
     const datos = getDatosExportar()
     if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
+    const { cols, datosFlat } = getColumnasExportar(datos)
     const escapar = (v) => { if (v === null || v === undefined) return ''; const s = String(v); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s }
-    const filas = [COLUMNAS_EXPORT.join(','), ...datos.map(b => COLUMNAS_EXPORT.map(c => escapar(b[c])).join(','))]
+    const filas = [cols.join(','), ...datosFlat.map(b => cols.map(c => escapar(b[c])).join(','))]
     const blob = new Blob([filas.join('\n')], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('csv'); a.click(); URL.revokeObjectURL(url)
@@ -671,11 +711,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const datos = getDatosExportar()
     if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
     const cargarYExportar = () => {
+      const { cols, datosFlat } = getColumnasExportar(datos)
+      const encabezados = cols.map(c => ETIQUETAS_COL[c] ?? c)
       const wb = window.XLSX.utils.book_new()
-      const filas = [COLUMNAS_EXPORT, ...datos.map(b => COLUMNAS_EXPORT.map(c => b[c] ?? ''))]
+      const filas = [encabezados, ...datosFlat.map(b => cols.map(c => b[c] ?? ''))]
       const ws = window.XLSX.utils.aoa_to_sheet(filas)
-      // Estilo encabezado (ancho de columnas)
-      ws['!cols'] = COLUMNAS_EXPORT.map(() => ({ wch: 18 }))
+      ws['!cols'] = cols.map(() => ({ wch: 20 }))
       window.XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
       window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
       setMenuExportar(false)
