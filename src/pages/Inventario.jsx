@@ -1065,7 +1065,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const guardarBien = async () => {
     const errs = {}
     if (!esComp(form.categoria) && !esTecno(form.categoria) && !form.nombre?.trim()) errs.nombre = true
-    if (!form.codigo.trim()) errs.codigo = true
     const camposCatVal = categorias.find(c => c.id === form.categoria)?.campos_personalizados ?? []
     camposCatVal.filter(c => c.requerido).forEach(c => { if (!camposExtra[c.id]) errs[`extra_${c.id}`] = true })
     if (Object.keys(errs).length) { setErrores(errs); return }
@@ -1787,8 +1786,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           ) : (
             <div className="form-row triple">
               <div className="field">
-                <label>Código / N° inventario *</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="ej: INV-0001" maxLength={20} className={errores.codigo ? 'input-error' : ''} />
+                <label>N° inventario (auto)</label>
+                <input value={form.codigo} readOnly className="input-readonly" />
               </div>
               <div className="field">
                 <label>Cantidad</label>
@@ -2297,8 +2296,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           ) : (
             <div className="form-row triple">
               <div className="field">
-                <label>Código / N° inventario *</label>
-                <input name="codigo" value={form.codigo} onChange={handleChange} placeholder="ej: INV-0001" maxLength={20} className={errores.codigo ? 'input-error' : ''} />
+                <label>N° inventario (auto)</label>
+                <input value={form.codigo} readOnly className="input-readonly" />
               </div>
               <div className="field">
                 <label>Cantidad</label>
