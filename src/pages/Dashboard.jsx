@@ -566,57 +566,6 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         </motion.div>
       )}
 
-      {/* Charts: Donut + Actividad */}
-      <div className="dash-charts">
-        <motion.div
-          className="dash-card"
-          initial={rm ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.3 }}
-        >
-          <SectionTitle icon={Activity} label="Distribución por estado" />
-          <div className="dash-donut-wrap">
-            <DonutChart
-              datos={estadoDatos} total={bienesFiltrados.length}
-              estadoActivo={estadoFiltro} onEstadoClick={toggleEstado}
-            />
-            <div className="dash-donut-leyenda">
-              {estadoDatos.map(d => {
-                const pct = bienesPorCategoria.length > 0
-                  ? Math.round((d.count / bienesPorCategoria.length) * 100) : 0
-                return (
-                  <div
-                    key={d.estado}
-                    onClick={() => toggleEstado(d.estado)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      cursor: 'pointer', borderRadius: 9, padding: '5px 10px',
-                      background: estadoFiltro === d.estado ? ESTADO_BG[d.estado] : 'transparent',
-                      border: `1px solid ${estadoFiltro === d.estado ? ESTADO_COLOR[d.estado] + '40' : 'transparent'}`,
-                      opacity: (!estadoFiltro || estadoFiltro === d.estado) ? 1 : 0.35,
-                      transition: 'all 0.18s ease',
-                    }}
-                  >
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: ESTADO_COLOR[d.estado], flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: '#374151', minWidth: 54 }}>{d.estado}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{d.count}</span>
-                    <span style={{ fontSize: 11, color: '#94a3b8' }}>{pct}%</span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={rm ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.36, duration: 0.3 }}
-        >
-          <ActividadReciente actividades={actividades} rm={rm} />
-        </motion.div>
-      </div>
-
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
       <div className="dash-bottom-grid">
 
