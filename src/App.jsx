@@ -42,6 +42,8 @@ export default function App() {
   const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
   const irATickets       = (filtro = '') => { setFiltroInicialTickets(filtro); cambiarPagina('tickets') }
   const irAReqs          = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
+  const irAInventario    = () => cambiarPagina('inventario')
+  const irAAusencias     = () => cambiarPagina('permisos')
   const procesandoCambio = useRef(false)
   const modoRecovery     = useRef(esRecuperacion)
 
@@ -263,7 +265,7 @@ export default function App() {
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={permisosAusencia.ver ? irAAusencias : undefined} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}

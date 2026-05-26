@@ -307,7 +307,14 @@ function ActividadReciente({ actividades, rm }) {
 /* ══════════════════════════════════════════════════════════
    DASHBOARD PRINCIPAL
    ══════════════════════════════════════════════════════════ */
-export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }) {
+const TIPO_AUSENCIA_LABEL = {
+  licencia_medica:        'Licencia médica',
+  permiso_administrativo: 'Permiso administrativo',
+  justificativo:          'Ausencia sin justificar',
+  dias_compensatorios:    'Días compensatorios',
+}
+
+export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias }) {
   const rm = useReducedMotion()
 
   const esAdmin   = usuario?.rol === 'admin'
@@ -324,6 +331,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
   const [statsTickets,         setStatsTickets]         = useState(null)
   const [statsReqs,            setStatsReqs]            = useState(null)
   const [ausentesHoy,          setAusentesHoy]          = useState(null)
+  const [ausentesPorTipo,      setAusentesPorTipo]      = useState({})
   const [ticketPeriodo,        setTicketPeriodo]        = useState('semana')
   const [reqAño,               setReqAño]               = useState(new Date().getFullYear())
 
@@ -387,12 +395,12 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       const [{ data: us }, { data }] = await Promise.all([
         supabase.from('usuarios').select('id, rut'),
         supabase.from('ausencias')
-          .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, fecha_inicio, fecha_fin, usuario:usuario_id(id, rut)')
+          .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, tipo, fecha_inicio, fecha_fin, usuario:usuario_id(id, rut)')
           .lte('fecha_inicio', hoy).gte('fecha_fin', hoy),
       ])
       const usuariosList = us ?? []
       // Mismo criterio que resolveUser() en Ausencias: descarta usuarios borrados sin reemplazo
-      const set = new Set()
+      const tipoPorKey = new Map()
       ;(data ?? []).forEach(p => {
         let key = null
         if (p.usuario) {
@@ -404,9 +412,15 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           if (found) key = found.rut ? normRut(found.rut) : found.id
           // si no se encuentra → no se cuenta (igual que la lista de Ausencias)
         }
-        if (key) set.add(key)
+        if (key && !tipoPorKey.has(key)) tipoPorKey.set(key, p.tipo)
       })
-      setAusentesHoy(set.size)
+      const porTipo = {}
+      tipoPorKey.forEach(tipo => {
+        const t = tipo || 'otro'
+        porTipo[t] = (porTipo[t] ?? 0) + 1
+      })
+      setAusentesHoy(tipoPorKey.size)
+      setAusentesPorTipo(porTipo)
     }
     cargarAusentes()
     const ch = supabase.channel('dash-ausencias-live')
@@ -458,20 +472,34 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
   const toggleEstado = e => setEstadoFiltro(prev => prev === e ? null : e)
 
   const KPI_CONFIG = [
-    { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          Icon: Package2,   color: '#1a237e', bg: '#eef0ff', iconBg: '#e8eaf6' },
+    { label: categoriaFiltro ? `Total en ${catActiva?.label}` : 'Total de bienes', valor: total,          Icon: Package2,   color: '#1a237e', bg: '#eef0ff', iconBg: '#e8eaf6', onClick: onIrAInventario },
     { label: 'Categorías',                                                          valor: catGrid.length, Icon: FolderOpen, color: '#92700a', bg: '#fef9e7', iconBg: '#fef3c7' },
     { label: 'En buen estado',                                                      valor: `${pctBueno}%`, Icon: TrendingUp, color: '#16a34a', bg: '#f0fdf4', iconBg: '#dcfce7' },
     { label: 'Dados de baja',                                                       valor: enBaja,         Icon: Archive,    color: '#dc2626', bg: '#fef2f2', iconBg: '#fee2e2' },
   ]
 
-  /* ── Stats tickets ───────────────────────────────────── */
-  const tTotal     = statsTickets?.length ?? 0
-  const tAbiertos  = statsTickets?.filter(t => t.estado === 'Abierto').length ?? 0
-  const tEnProceso = statsTickets?.filter(t => t.estado === 'En proceso').length ?? 0
-  const tResueltos = statsTickets?.filter(t => t.estado === 'Resuelto').length ?? 0
+  /* ── Stats tickets (filtrados por período seleccionado) ─ */
+  const ahoraT = new Date()
+  const ticketsPeriodo = (statsTickets ?? []).filter(t => {
+    const d = new Date(t.creado_en)
+    if (isNaN(d)) return false
+    if (ticketPeriodo === 'semana') {
+      const desde = new Date(ahoraT); desde.setHours(0, 0, 0, 0); desde.setDate(desde.getDate() - 6)
+      return d >= desde
+    }
+    if (ticketPeriodo === 'mes') {
+      return d.getFullYear() === ahoraT.getFullYear() && d.getMonth() === ahoraT.getMonth()
+    }
+    return d.getFullYear() === ahoraT.getFullYear()
+  })
+  const tTotal     = ticketsPeriodo.length
+  const tAbiertos  = ticketsPeriodo.filter(t => t.estado === 'Abierto').length
+  const tEnProceso = ticketsPeriodo.filter(t => t.estado === 'En proceso').length
+  const tResueltos = ticketsPeriodo.filter(t => t.estado === 'Resuelto').length
   const tRecientes = statsTickets
     ?.filter(t => t.estado === 'Abierto')
     .slice(0, 3) ?? []
+  const periodoLabel = { semana: 'esta semana', mes: 'este mes', año: 'este año' }[ticketPeriodo]
 
   /* ── Stats requerimientos (filtrados por año) ────────── */
   const statsReqsAño = statsReqs?.filter(r => {
@@ -535,9 +563,32 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
               ? 'Hoy no hay personal ausente'
               : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
           </p>
-          <span style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
-            · {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
-          </span>
+          {ausentesHoy > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {Object.entries(ausentesPorTipo).map(([tipo, n]) => (
+                <span key={tipo} style={{
+                  fontSize: 11.5, fontWeight: 600, color: '#b91c1c',
+                  background: '#fff', border: '1px solid #fecaca',
+                  borderRadius: 20, padding: '1px 9px', whiteSpace: 'nowrap',
+                }}>
+                  {n} {TIPO_AUSENCIA_LABEL[tipo] ?? 'Otro'}
+                </span>
+              ))}
+            </span>
+          )}
+          {onIrAAusencias && (
+            <button
+              onClick={onIrAAusencias}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 2,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: 12, fontWeight: 700, color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Ver todos <ArrowRight size={12} />
+            </button>
+          )}
         </motion.div>
       )}
 
@@ -547,7 +598,9 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           <motion.div
             key={i}
             className="dash-kpi-card"
-            style={{ '--kpi-color': kpi.color }}
+            style={{ '--kpi-color': kpi.color, cursor: kpi.onClick ? 'pointer' : 'default' }}
+            onClick={kpi.onClick}
+            title={kpi.onClick ? 'Ver inventario' : undefined}
             initial={rm ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, duration: 0.32, ease: 'easeOut' }}
@@ -558,6 +611,11 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
                 <KpiNumber value={kpi.valor} rm={rm} />
               </div>
               <div className="kpi-label">{kpi.label}</div>
+              {kpi.onClick && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 12, fontWeight: 700, color: kpi.color }}>
+                  Ver todos <ArrowRight size={12} />
+                </span>
+              )}
             </div>
             <div className="kpi-icon-chip" style={{ background: kpi.iconBg }}>
               <kpi.Icon size={20} style={{ color: kpi.color }} strokeWidth={2} />
@@ -607,10 +665,10 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           {/* Gráfico de barras */}
           <BarChart datos={getTicketChartData(statsTickets, ticketPeriodo)} color="#1a237e" />
 
-          {/* Resumen de estados */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+          {/* Resumen de estados del período seleccionado */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap', alignItems: 'baseline' }}>
             <span style={{ fontSize: 12, color: '#64748b' }}>
-              Total: <strong style={{ color: '#1a237e' }}>{tTotal}</strong>
+              {tTotal} {tTotal === 1 ? 'ticket' : 'tickets'} {periodoLabel}
             </span>
             <span style={{ fontSize: 12, color: '#64748b' }}>
               Abiertos: <strong style={{ color: '#1d4ed8' }}>{tAbiertos}</strong>
