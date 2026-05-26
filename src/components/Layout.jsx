@@ -585,13 +585,6 @@ export default function Layout({
                       <span className="nav-subitem-dot" />
                       Ver ausencias
                     </div>
-                    <div
-                      className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}
-                      onClick={() => handleNav('auditoria_permisos')}
-                    >
-                      <span className="nav-subitem-dot" />
-                      Auditoría
-                    </div>
                     {(esAdmin || puedeVerCompensatorios) && (
                       <div
                         className={`nav-subitem ${paginaActual === 'compensatorios' ? 'active' : ''}`}
@@ -601,6 +594,13 @@ export default function Layout({
                         Compensatorios
                       </div>
                     )}
+                    <div
+                      className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}
+                      onClick={() => handleNav('auditoria_permisos')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
