@@ -193,7 +193,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [formEditHistorial, setFormEditHistorial] = useState({})
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
   const [catsVisible, setCatsVisible] = useState(true)
-  const [filtrosOpen, setFiltrosOpen] = useState(false)
+
   const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
   // Drag & drop + pin
   const [catOrder, setCatOrder]     = useState([]) // orden de ids
@@ -439,8 +439,95 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const filtradosPagInv = filtrados.slice((paginaInv - 1) * POR_PAG_INV, paginaInv * POR_PAG_INV)
   const pBtnInv = (dis) => ({ padding: '5px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: dis ? '#f9fafb' : '#fff', color: dis ? '#d1d5db' : '#374151', cursor: dis ? 'default' : 'pointer', fontSize: 12, fontWeight: 600 })
 
-  // Valores únicos para dropdowns dinámicos
+  // Valores únicos para dropdowns dinámicos (uso interno legacy)
   const unicos = (campo) => [...new Set(filtradosBase.map(b => b[campo]).filter(Boolean))].sort()
+
+  // Aplica todos los filtros activos a un arreglo base, opcionalmente excluyendo un campo
+  const aplicarFiltrosBase = (base, { excluirCampo = null, estadoVal, prestadoVal, filtrosVal } = {}) => {
+    const _estado   = estadoVal   !== undefined ? estadoVal   : filtroEstado
+    const _prestado = prestadoVal !== undefined ? prestadoVal : filtroPrestado
+    const _filtros  = filtrosVal  !== undefined ? filtrosVal  : filtros
+    let result = [...base]
+    const q = busqueda.toLowerCase()
+    if (q) result = result.filter(b =>
+      [b.nombre, b.codigo, b.marca, b.modelo, b.numero_serie, b.ubicacion, b.area, b.responsable, b.cpu, b.sistema_operativo]
+        .some(v => v && String(v).toLowerCase().includes(q))
+    )
+    if (excluirCampo !== 'estado'   && _estado)   result = result.filter(b => b.estado === _estado)
+    if (excluirCampo !== 'prestado' && _prestado) result = result.filter(b => {
+      if (_prestado === 'prestado')  return bienesConPrestamo.has(b.id)
+      if (_prestado === 'vencido')   return esVencido(b.id)
+      return !bienesConPrestamo.has(b.id)
+    })
+    Object.entries(_filtros).forEach(([c, val]) => {
+      if (c !== excluirCampo && val) result = result.filter(b => String(b[c] ?? '').toLowerCase() === val.toLowerCase())
+    })
+    return result
+  }
+
+  // Opciones dinámicas [valor, conteo][] para un campo, ignorando su propio filtro
+  const unicosDinamicos = (campo, overrides = {}) => {
+    const base = aplicarFiltrosBase(filtradosBase, { excluirCampo: campo, ...overrides })
+    const counts = {}
+    base.forEach(b => { const v = b[campo]; if (v) counts[v] = (counts[v] || 0) + 1 })
+    return Object.entries(counts).sort(([a], [b]) => a.localeCompare(b))
+  }
+
+  // Conteos dinámicos para el selector de Estado (excluye filtro de estado)
+  const estadosOpciones = (overrides = {}) => {
+    const base = aplicarFiltrosBase(filtradosBase, { excluirCampo: 'estado', ...overrides })
+    const counts = {}
+    base.forEach(b => { if (b.estado) counts[b.estado] = (counts[b.estado] || 0) + 1 })
+    return counts
+  }
+
+  // Conteos dinámicos para el selector de Préstamo (excluye filtro de préstamo)
+  const prestadosOpciones = (overrides = {}) => {
+    const base = aplicarFiltrosBase(filtradosBase, { excluirCampo: 'prestado', ...overrides })
+    let prestado = 0, disponible = 0, vencido = 0
+    base.forEach(b => {
+      if (esVencido(b.id))               vencido++
+      else if (bienesConPrestamo.has(b.id)) prestado++
+      else                               disponible++
+    })
+    return { prestado, disponible, vencido }
+  }
+
+  // Resetea filtros dependientes que ya no tienen resultados con los nuevos valores
+  const validarFiltrosDependientes = (newFiltros, newEstado, newPrestado) => {
+    const validated = { ...newFiltros }
+    camposActivos.forEach(({ campo: c }) => {
+      if (!validated[c]) return
+      const base = aplicarFiltrosBase(filtradosBase, {
+        excluirCampo: c,
+        estadoVal: newEstado,
+        prestadoVal: newPrestado,
+        filtrosVal: newFiltros,
+      })
+      const available = new Set(base.map(b => b[c]).filter(Boolean))
+      if (!available.has(validated[c])) validated[c] = ''
+    })
+    return validated
+  }
+
+  const handleFiltroChange = (campo, valor) => {
+    const newFiltros = { ...filtros, [campo]: valor }
+    setFiltros(validarFiltrosDependientes(newFiltros, filtroEstado, filtroPrestado))
+    setPaginaInv(1)
+  }
+
+  const handleEstadoChange = (valor) => {
+    setFiltroEstado(valor)
+    setFiltros(validarFiltrosDependientes(filtros, valor, filtroPrestado))
+    setPaginaInv(1)
+  }
+
+  const handlePrestadoChange = (valor) => {
+    setFiltroPrestado(valor)
+    setFiltros(validarFiltrosDependientes(filtros, filtroEstado, valor))
+    setPaginaInv(1)
+  }
+
   const getCatLabel = (id) => categorias.find(c => c.id === id)?.label ?? id
   const catInfo     = [{ id: 'todos', label: 'Todos', icon: '◉' }, ...categorias].find(c => c.id === catActual)
   const esComp   = (cat) => cat === 'computadores'
@@ -456,6 +543,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     return label.includes('biblio')
   }
+
+  // Campos activos según categoría actual (sin labels, para lógica de validación)
+  const camposActivos = esComp(catActual)
+    ? [{ campo: 'area' }, { campo: 'ubicacion' }, { campo: 'tipo' }, { campo: 'marca' }]
+    : esTecno(catActual)
+    ? [{ campo: 'area' }, { campo: 'ubicacion' }, { campo: 'tipo' }, { campo: 'marca' }]
+    : catActual === 'todos'
+    ? [{ campo: 'ubicacion' }, { campo: 'responsable' }, { campo: 'marca' }]
+    : [{ campo: 'ubicacion' }, { campo: 'responsable' }]
 
   // Categorías que muestran el campo "Descripción" en el formulario
   const tieneDescripcion = (cat) => {
@@ -1528,97 +1624,81 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
       {/* Barra de búsqueda y filtros */}
       {(() => {
-        const camposComp   = [
-          { campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' },
-        ]
-        const camposTecno  = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }]
-        const camposOtros  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
-        const camposTodos  = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
+        const camposComp  = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }]
+        const camposTecno = [{ campo: 'area', label: 'Área' }, { campo: 'ubicacion', label: 'Ubicación' }, { campo: 'tipo', label: 'Tipo' }, { campo: 'marca', label: 'Marca' }]
+        const camposOtros = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }]
+        const camposTodos = [{ campo: 'ubicacion', label: 'Ubicación' }, { campo: 'responsable', label: 'Responsable' }, { campo: 'marca', label: 'Marca' }]
         const campos = esComp(catActual) ? camposComp : esTecno(catActual) ? camposTecno : catActual === 'todos' ? camposTodos : camposOtros
-        const filtrosActivos = Object.values(filtros).filter(Boolean).length + (filtroEstado ? 1 : 0) + (filtroPrestado ? 1 : 0)
 
-        const selectStyle = (activo) => ({
-          height: '34px', borderRadius: '8px',
-          border: activo ? '1.5px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
-          fontSize: '0.82rem', padding: '0 8px',
-          background: activo ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-          color: activo ? '#a5b4fc' : 'rgba(255,255,255,0.7)',
-          minWidth: '130px', flex: '1',
-        })
+        const estadosCounts  = estadosOpciones()
+        const prestadosCounts = prestadosOpciones()
+        const ESTADO_LABELS = { Bueno: '✅ Bueno', Regular: '⚠️ Regular', Malo: '❌ Malo', Baja: '🗑 Baja' }
 
         return (
           <div className="filtros-zona">
-            {/* Fila buscador + botón filtros */}
+            {/* Fila buscador + limpiar */}
             <div className="filtros-top">
               <div style={{ position: 'relative', flex: 1 }}>
                 <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: '0.9rem' }}>🔍</span>
                 <input
                   value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
+                  onChange={e => { setBusqueda(e.target.value); setPaginaInv(1) }}
                   placeholder="Buscar por nombre, código, marca, serie, ubicación..."
                   style={{ width: '100%', paddingLeft: '32px', paddingRight: busqueda ? '32px' : '10px', height: '36px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.88rem', boxSizing: 'border-box', outline: 'none', background: '#fff', color: '#111827' }}
                 />
                 {busqueda && (
-                  <button onClick={() => setBusqueda('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}>✕</button>
+                  <button onClick={() => { setBusqueda(''); setPaginaInv(1) }} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '1rem' }}>✕</button>
                 )}
               </div>
-
-              {/* Botón filtros — siempre visible, en móvil abre panel */}
-              <button
-                className={`btn-filtros ${filtrosOpen ? 'active' : ''}`}
-                onClick={() => setFiltrosOpen(v => !v)}
-              >
-                <span>⚙</span>
-                <span className="btn-filtros-label">Filtros</span>
-                {filtrosActivos > 0 && <span className="filtros-badge">{filtrosActivos}</span>}
-                <span style={{ fontSize: '10px', marginLeft: '2px' }}>{filtrosOpen ? '▲' : '▼'}</span>
-              </button>
+              {hayFiltrosActivos && (
+                <button
+                  className="btn-filtros"
+                  onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}); setPaginaInv(1) }}
+                  style={{ color: '#f87171', borderColor: 'rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.06)' }}
+                >
+                  <span>✕</span>
+                  <span className="btn-filtros-label">Limpiar</span>
+                </button>
+              )}
             </div>
 
-            {/* Panel de filtros: inline en desktop, dropdown en móvil */}
-            {filtrosOpen && (
-              <div className="filtros-panel">
-                <div className="filtros-panel-grid">
-                  <div className="filtros-field">
-                    <label>Estado</label>
-                    <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={filtroEstado ? 'activo' : ''}>
-                      <option value="">Todos</option>
-                      <option value="Bueno">✅ Bueno</option>
-                      <option value="Regular">⚠️ Regular</option>
-                      <option value="Malo">❌ Malo</option>
-                      <option value="Baja">🗑 Baja</option>
-                    </select>
-                  </div>
-                  {campos.map(({ campo, label }) => {
-                    const opciones = unicos(campo)
-                    if (!opciones.length && campo !== 'area') return null
-                    return (
-                      <div key={campo} className="filtros-field">
-                        <label>{label}</label>
-                        <select value={filtros[campo] || ''} onChange={e => setFiltros(prev => ({ ...prev, [campo]: e.target.value }))} className={filtros[campo] ? 'activo' : ''}>
-                          <option value="">Todos</option>
-                          {opciones.map(v => <option key={v} value={v}>{v}</option>)}
-                        </select>
-                      </div>
-                    )
-                  })}
-                  <div className="filtros-field">
-                    <label>Préstamo</label>
-                    <select value={filtroPrestado} onChange={e => setFiltroPrestado(e.target.value)} className={filtroPrestado ? 'activo' : ''}>
-                      <option value="">Todos</option>
-                      <option value="prestado">📤 Prestado</option>
-                      <option value="disponible">✅ Disponible</option>
-                    </select>
-                  </div>
+            {/* Filtros siempre visibles con opciones dinámicas */}
+            <div className="filtros-panel">
+              <div className="filtros-panel-grid">
+                <div className="filtros-field">
+                  <label>Estado</label>
+                  <select value={filtroEstado} onChange={e => handleEstadoChange(e.target.value)} className={filtroEstado ? 'activo' : ''}>
+                    <option value="">Todos</option>
+                    {['Bueno', 'Regular', 'Malo', 'Baja'].map(e => {
+                      const cnt = estadosCounts[e]
+                      return cnt ? <option key={e} value={e}>{ESTADO_LABELS[e]} ({cnt})</option> : null
+                    })}
+                  </select>
                 </div>
-                {hayFiltrosActivos && (
-                  <button onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroPrestado(''); setFiltros({}); setPaginaInv(1) }}
-                    style={{ marginTop: '8px', height: '32px', padding: '0 14px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', fontSize: '0.82rem', color: '#f87171', fontWeight: 600 }}>
-                    ✕ Limpiar filtros
-                  </button>
-                )}
+                {campos.map(({ campo, label }) => {
+                  const opciones = unicosDinamicos(campo)
+                  if (!opciones.length && campo !== 'area') return null
+                  return (
+                    <div key={campo} className="filtros-field">
+                      <label>{label}</label>
+                      <select value={filtros[campo] || ''} onChange={e => handleFiltroChange(campo, e.target.value)} className={filtros[campo] ? 'activo' : ''}>
+                        <option value="">Todos</option>
+                        {opciones.map(([v, cnt]) => <option key={v} value={v}>{v} ({cnt})</option>)}
+                      </select>
+                    </div>
+                  )
+                })}
+                <div className="filtros-field">
+                  <label>Préstamo</label>
+                  <select value={filtroPrestado} onChange={e => handlePrestadoChange(e.target.value)} className={filtroPrestado ? 'activo' : ''}>
+                    <option value="">Todos</option>
+                    {prestadosCounts.prestado   > 0 && <option value="prestado">📤 Prestado ({prestadosCounts.prestado})</option>}
+                    {prestadosCounts.disponible > 0 && <option value="disponible">✅ Disponible ({prestadosCounts.disponible})</option>}
+                    {prestadosCounts.vencido    > 0 && <option value="vencido">⏰ Vencido ({prestadosCounts.vencido})</option>}
+                  </select>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         )
       })()}
