@@ -300,12 +300,14 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       if (!puede) { setAusentesHoy(null); return }
       const hoy = new Date().toISOString().slice(0, 10)
       const { data } = await supabase.from('ausencias')
-        .select('usuario_id, externo_rut, snapshot_rut, externo_nombre, fecha_inicio, fecha_fin')
+        .select('usuario_id, externo_rut, snapshot_rut, externo_nombre, fecha_inicio, fecha_fin, usuario:usuario_id(rut)')
         .lte('fecha_inicio', hoy).gte('fecha_fin', hoy)
+      const normRut = r => (r ?? '').replace(/[.\-\s]/g, '').toLowerCase()
       const set = new Set()
       ;(data ?? []).forEach(p => {
-        const rut = p.externo_rut ?? p.snapshot_rut
-        set.add(p.usuario_id ?? (rut ? rut.replace(/[.\-]/g, '').toLowerCase() : p.externo_nombre))
+        // Unificar siempre por RUT (interno, externo o snapshot); fallback a id/nombre
+        const rut = p.usuario?.rut ?? p.externo_rut ?? p.snapshot_rut
+        set.add(rut ? normRut(rut) : (p.usuario_id ?? p.externo_nombre))
       })
       setAusentesHoy(set.size)
     }
