@@ -180,6 +180,7 @@ const CAMPOS = {
       { col: 'cantidad',         desc: 'Cantidad' },
       { col: 'ubicacion',        desc: 'Ubicación' },
       { col: 'responsable',      desc: 'Responsable' },
+      { col: 'descripcion',      desc: 'Descripción del bien' },
       { col: 'obs',              desc: 'Observaciones' },
       { col: 'fecha_adquisicion',desc: 'Fecha adquisición' },
       { col: 'proveedor',        desc: 'Proveedor' },
