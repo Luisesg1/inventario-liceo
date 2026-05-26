@@ -118,6 +118,81 @@ function SectionTitle({ icon: Icon, label, iconBg = '#eef0ff', iconColor = '#1a2
   )
 }
 
+/* ── BarChart ────────────────────────────────────────────── */
+function getTicketChartData(tickets, periodo) {
+  const now = new Date()
+  if (periodo === 'semana') {
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      const label = d.toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', '')
+      days.push({ label, key, count: 0 })
+    }
+    tickets?.forEach(t => {
+      const key = (t.creado_en ?? '').slice(0, 10)
+      const found = days.find(d => d.key === key)
+      if (found) found.count++
+    })
+    return days
+  }
+  if (periodo === 'mes') {
+    const year = now.getFullYear(), month = now.getMonth()
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const weeks = []
+    for (let start = 1; start <= daysInMonth; start += 7) {
+      const end = Math.min(start + 6, daysInMonth)
+      weeks.push({ label: `${start}-${end}`, start, end, count: 0 })
+    }
+    tickets?.forEach(t => {
+      const d = new Date(t.creado_en)
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const day = d.getDate()
+        const w = weeks.find(w => day >= w.start && day <= w.end)
+        if (w) w.count++
+      }
+    })
+    return weeks
+  }
+  const year = now.getFullYear()
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    .map((label, i) => ({ label, count: 0, idx: i }))
+  tickets?.forEach(t => {
+    const d = new Date(t.creado_en)
+    if (d.getFullYear() === year) meses[d.getMonth()].count++
+  })
+  return meses
+}
+
+function BarChart({ datos, color = '#1a237e' }) {
+  const max = Math.max(...datos.map(d => d.count), 1)
+  const H = 80
+  return (
+    <div style={{ width: '100%', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: H + 32, padding: '0 4px' }}>
+        {datos.map((d, i) => {
+          const barH = d.count > 0 ? Math.max(Math.round((d.count / max) * H), 6) : 3
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color, opacity: d.count > 0 ? 0.85 : 0, lineHeight: 1.2 }}>{d.count || ''}</span>
+              <div style={{
+                width: '80%', maxWidth: 36, height: barH,
+                background: d.count > 0 ? color : '#e5e7eb',
+                borderRadius: '4px 4px 2px 2px',
+                opacity: d.count > 0 ? 0.82 : 0.4,
+                transition: 'height 0.4s ease',
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 8.5, color: '#94a3b8', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>{d.label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /* ── DonutChart ─────────────────────────────────────────── */
 function DonutChart({ datos, total, estadoActivo, onEstadoClick }) {
   const r = 54; const circ = 2 * Math.PI * r
@@ -242,6 +317,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
   const [statsTickets,         setStatsTickets]         = useState(null)
   const [statsReqs,            setStatsReqs]            = useState(null)
   const [ausentesHoy,          setAusentesHoy]          = useState(null)
+  const [ticketPeriodo,        setTicketPeriodo]        = useState('semana')
+  const [reqAño,               setReqAño]               = useState(new Date().getFullYear())
 
   useEffect(() => {
     const cargar = async () => {
@@ -272,7 +349,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       if (!esGestor && usuario?.id) qT = qT.eq('creado_por', usuario.id)
       const [{ data: tData }, { data: rData }] = await Promise.all([
         qT,
-        supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo'),
+        supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo, fecha'),
       ])
       setStatsTickets(tData ?? [])
       setStatsReqs(rData ?? [])
@@ -389,19 +466,24 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
     ?.filter(t => t.estado === 'Abierto')
     .slice(0, 3) ?? []
 
-  /* ── Stats requerimientos ────────────────────────────── */
-  const rTotal     = statsReqs?.length ?? 0
-  const rEnProceso = statsReqs?.filter(r =>
+  /* ── Stats requerimientos (filtrados por año) ────────── */
+  const statsReqsAño = statsReqs?.filter(r => {
+    if (!r.fecha) return true
+    return new Date(r.fecha + 'T00:00:00').getFullYear() === reqAño
+  }) ?? []
+
+  const rTotal     = statsReqsAño.length
+  const rEnProceso = statsReqsAño.filter(r =>
     ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)
-  ).length ?? 0
-  const rComprados = statsReqs?.filter(r =>
+  ).length
+  const rComprados = statsReqsAño.filter(r =>
     ['Comprado','Contratado','En ejecución'].includes(r.estado)
-  ).length ?? 0
-  const rRechazados = statsReqs?.filter(r =>
+  ).length
+  const rRechazados = statsReqsAño.filter(r =>
     (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto'
-  ).length ?? 0
-  const rMontoSol  = statsReqs?.reduce((acc, r) => acc + (Number(r.monto_solicitado) || 0), 0) ?? 0
-  const rMontoReal = statsReqs?.reduce((acc, r) => acc + (Number(r.monto_real)       || 0), 0) ?? 0
+  ).length
+  const rMontoSol  = statsReqsAño.reduce((acc, r) => acc + (Number(r.monto_solicitado) || 0), 0)
+  const rMontoReal = statsReqsAño.reduce((acc, r) => acc + (Number(r.monto_real)       || 0), 0)
 
   /* ── Render ──────────────────────────────────────────── */
   return (
@@ -422,7 +504,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         <h2>
           Bienvenido, <span className="dash-welcome-accent">{usuario?.nombre}</span>
         </h2>
-        <p>Resumen general del inventario{categoriaFiltro ? ` — ${catActiva?.label}` : ''}</p>
+        <p>Resumen General{categoriaFiltro ? ` — ${catActiva?.label}` : ''}</p>
       </motion.div>
 
       {/* KPI Cards inventario */}
@@ -554,74 +636,43 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             )}
           </div>
 
-          {/* KPI pills */}
-          <div className="dash-stat-pills">
-            <div
-              className="dash-stat-pill dash-stat-pill--total dash-stat-pill--link"
-              onClick={() => onIrATickets?.('')}
-              title="Ver todos los tickets"
-            >
-              <span className="dsp-num">{tTotal}</span>
-              <span className="dsp-label">Total</span>
-            </div>
-            {['Abierto','En proceso','Resuelto'].map(estado => {
-              const cfg = TICKET_ESTADO[estado]
-              const count = estado === 'Abierto' ? tAbiertos : estado === 'En proceso' ? tEnProceso : tResueltos
-              return (
-                <div
-                  key={estado}
-                  className="dash-stat-pill dash-stat-pill--link"
-                  style={{ background: cfg.bg }}
-                  onClick={() => onIrATickets?.(estado)}
-                  title={`Ver tickets ${estado.toLowerCase()}`}
-                >
-                  <cfg.Icon size={14} style={{ color: cfg.color, flexShrink: 0 }} strokeWidth={2.5} />
-                  <span className="dsp-num" style={{ color: cfg.color }}>{count}</span>
-                  <span className="dsp-label">{estado}</span>
-                </div>
-              )
-            })}
+          {/* Selector de período */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {['semana', 'mes', 'año'].map(p => (
+              <button
+                key={p}
+                onClick={() => setTicketPeriodo(p)}
+                style={{
+                  padding: '4px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, textTransform: 'capitalize',
+                  background: ticketPeriodo === p ? '#1a237e' : '#f1f5f9',
+                  color: ticketPeriodo === p ? '#fff' : '#64748b',
+                  transition: 'all 0.18s',
+                }}
+              >
+                {p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
           </div>
 
-          {/* Mini lista tickets abiertos recientes */}
-          {tRecientes.length > 0 ? (
-            <div className="dash-mini-list">
-              <p className="dash-mini-list-title">Abiertos recientes</p>
-              {tRecientes.map((t, i) => (
-                <motion.div
-                  key={t.id ?? i}
-                  className="dash-mini-item"
-                  initial={rm ? false : { opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.45 + i * 0.05 }}
-                >
-                  <div className="dash-mini-dot" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
-                    <Ticket size={12} strokeWidth={2} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="dash-mini-titulo">{t.titulo || t.area_reporte || '—'}</p>
-                    <p className="dash-mini-sub">
-                      {t.creado_por_nombre}
-                      {t.lugar_falla ? ` · ${t.lugar_falla}` : ''}
-                      {' · '}{tiempoRelativo(t.creado_en)}
-                    </p>
-                  </div>
-                  {t.prioridad && (
-                    <span className="dash-mini-badge" style={{
-                      background: PRIORIDAD_BG[t.prioridad],
-                      color: PRIORIDAD_COLOR[t.prioridad],
-                    }}>
-                      {t.prioridad}
-                    </span>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-          ) : statsTickets !== null && tAbiertos === 0 ? (
-            <p className="dash-resumen-empty">
-              <CheckCircle2 size={16} style={{ color: '#16a34a' }} /> Sin tickets abiertos
-            </p>
-          ) : null}
+          {/* Gráfico de barras */}
+          <BarChart datos={getTicketChartData(statsTickets, ticketPeriodo)} color="#1a237e" />
+
+          {/* Resumen de estados */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: '#64748b' }}>
+              Total: <strong style={{ color: '#1a237e' }}>{tTotal}</strong>
+            </span>
+            <span style={{ fontSize: 12, color: '#64748b' }}>
+              Abiertos: <strong style={{ color: '#1d4ed8' }}>{tAbiertos}</strong>
+            </span>
+            <span style={{ fontSize: 12, color: '#64748b' }}>
+              En proceso: <strong style={{ color: '#854d0e' }}>{tEnProceso}</strong>
+            </span>
+            <span style={{ fontSize: 12, color: '#64748b' }}>
+              Resueltos: <strong style={{ color: '#166534' }}>{tResueltos}</strong>
+            </span>
+          </div>
         </motion.div>
 
         {/* Requerimientos */}
@@ -638,6 +689,21 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
                 Ver todos <ArrowRight size={12} />
               </button>
             )}
+          </div>
+
+          {/* Selector de año */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <button
+              onClick={() => setReqAño(y => y - 1)}
+              style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', padding: '1px 8px', fontSize: 14, color: '#64748b', lineHeight: 1.6 }}
+            >‹</button>
+            <span style={{ fontSize: 11.5, color: '#475569', fontWeight: 600, textAlign: 'center', flex: 1 }}>
+              Estadística del 1 de Enero al 31 de Diciembre de {reqAño}
+            </span>
+            <button
+              onClick={() => setReqAño(y => y + 1)}
+              style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, cursor: 'pointer', padding: '1px 8px', fontSize: 14, color: '#64748b', lineHeight: 1.6 }}
+            >›</button>
           </div>
 
           {/* KPI pills */}
@@ -687,12 +753,12 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
             <div className="dash-monto-box dash-monto-box--sol">
               <span className="dash-monto-label">Monto solicitado</span>
               <span className="dash-monto-valor">{fmtMonto(rMontoSol)}</span>
-              <span className="dash-monto-sub">{statsReqs?.filter(r => Number(r.monto_solicitado) > 0).length ?? 0} req. con monto</span>
+              <span className="dash-monto-sub">{statsReqsAño.filter(r => Number(r.monto_solicitado) > 0).length} req. con monto</span>
             </div>
             <div className="dash-monto-box dash-monto-box--real">
               <span className="dash-monto-label">Monto real</span>
               <span className="dash-monto-valor">{fmtMonto(rMontoReal)}</span>
-              <span className="dash-monto-sub">{statsReqs?.filter(r => Number(r.monto_real) > 0).length ?? 0} req. con monto real</span>
+              <span className="dash-monto-sub">{statsReqsAño.filter(r => Number(r.monto_real) > 0).length} req. con monto real</span>
             </div>
           </div>
         </motion.div>
