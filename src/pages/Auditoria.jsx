@@ -101,6 +101,11 @@ const CAMPO_LABEL_PERMISOS = {
   eliminar_usuario: 'Eliminar usuarios',
 }
 
+const CAMPO_LABEL_AUSENCIAS = {
+  tipo: 'Tipo', periodo: 'Período', fecha_inicio: 'Desde', fecha_fin: 'Hasta',
+  jornada: 'Jornada', hora_inicio: 'Hora inicio', hora_fin: 'Hora fin', notas: 'Motivo',
+}
+
 export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario' }) {
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
@@ -128,6 +133,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   const campoLabel = (campo) => {
     if (modulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
     if (modulo === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
+    if (modulo === 'ausencias')      return CAMPO_LABEL_AUSENCIAS[campo] ?? campo
     return CAMPO_LABEL[campo] ?? campo
   }
 
@@ -222,6 +228,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
               placeholder={
                 modulo === 'requerimientos' ? 'Buscar por requerimiento o usuario…' :
                 modulo === 'permisos'       ? 'Buscar por usuario…' :
+                modulo === 'ausencias'      ? 'Buscar por tipo o funcionario…' :
                 'Buscar por bien o usuario…'
               }
               value={buscadorVal}
@@ -392,7 +399,9 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
                 {abierto && cambios.length > 0 && (
                   <div className="audit-cambios">
-                    <p style={{ ...secTitle, margin: '0 0 10px' }}>Campos modificados</p>
+                    <p style={{ ...secTitle, margin: '0 0 10px' }}>
+                      {modulo === 'ausencias' && log.accion === 'crear' ? 'Detalle' : 'Campos modificados'}
+                    </p>
                     {cambios.map((c, i) => (
                       <div key={i} className="audit-cambio-row">
                         <span className="audit-campo-label">
