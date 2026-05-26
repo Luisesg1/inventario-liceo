@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Gift, Plus, X, Search, Pencil, Trash2,
   CalendarDays, ChevronDown, Loader2, AlertTriangle,
-  TrendingUp, CheckCircle2, Clock,
+  TrendingUp, CheckCircle2, Clock, Eye,
+  ChevronLeft, ChevronRight as ChevronRightIcon,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Compensatorios.css'
@@ -93,6 +94,11 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   const [editData,   setEditData]   = useState(null)
   const [eliminar,   setEliminar]   = useState(null)
   const [eliminando, setEliminando] = useState(false)
+  const [verDetalle, setVerDetalle] = useState(null)
+
+  // Paginación
+  const POR_PAGINA = 10
+  const [pagActual, setPagActual]   = useState(1)
 
   useEffect(() => { cargar() }, [])
 
@@ -129,6 +135,9 @@ export default function Compensatorios({ usuario, permisos = {} }) {
 
   // ── Filtrado ──────────────────────────────────────────
   const norm = s => s?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') ?? ''
+
+  // Reset página al filtrar
+  useEffect(() => { setPagActual(1) }, [busq, filtTipo, filtEstado])
 
   const filas = registros.filter(r => {
     if (!esAdmin && r.usuario_id !== usuario?.id) return false
@@ -178,6 +187,10 @@ export default function Compensatorios({ usuario, permisos = {} }) {
     setEliminar(null)
     await cargar()
   }
+
+  const totalPags  = Math.max(1, Math.ceil(filas.length / POR_PAGINA))
+  const pagSegura  = Math.min(pagActual, totalPags)
+  const filasPag   = filas.slice((pagSegura - 1) * POR_PAGINA, pagSegura * POR_PAGINA)
 
   return (
     <div className="comp-page">
@@ -265,37 +278,87 @@ export default function Compensatorios({ usuario, permisos = {} }) {
             </p>
           </div>
         ) : (
-          <div className="comp-table-wrap">
-            <table className="comp-table">
-              <thead>
-                <tr>
-                  {esAdmin && <th>Usuario</th>}
-                  <th>Tipo</th>
-                  <th>Días</th>
-                  <th>Fecha ganado</th>
-                  <th>Vence</th>
-                  <th>Estado</th>
-                  {puedeGest && <th>Acciones</th>}
-                </tr>
-              </thead>
-              <tbody>
-                <AnimatePresence initial={false}>
-                  {filas.map(r => (
-                    <FilaRegistro
-                      key={r.id}
-                      r={r}
-                      esAdmin={esAdmin}
-                      puedeGest={puedeGest}
-                      onEditar={() => { setEditData(r); setModalOpen(true) }}
-                      onEliminar={() => setEliminar(r)}
-                    />
+          <>
+            <div className="comp-table-wrap">
+              <table className="comp-table">
+                <thead>
+                  <tr>
+                    {esAdmin && <th>Usuario</th>}
+                    <th>Tipo</th>
+                    <th>Días</th>
+                    <th>Fecha ganado</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <AnimatePresence initial={false}>
+                    {filasPag.map(r => (
+                      <FilaRegistro
+                        key={r.id}
+                        r={r}
+                        esAdmin={esAdmin}
+                        puedeGest={puedeGest}
+                        onVer={() => setVerDetalle(r)}
+                        onEditar={() => { setEditData(r); setModalOpen(true) }}
+                        onEliminar={() => setEliminar(r)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Paginación */}
+            {totalPags > 1 && (
+              <div className="comp-pagination">
+                <span className="comp-pagination-info">
+                  {(pagSegura - 1) * POR_PAGINA + 1}–{Math.min(pagSegura * POR_PAGINA, filas.length)} de {filas.length}
+                </span>
+                <div className="comp-pagination-btns">
+                  <button
+                    className="comp-pag-btn"
+                    onClick={() => setPagActual(p => Math.max(1, p - 1))}
+                    disabled={pagSegura === 1}
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  {Array.from({ length: totalPags }, (_, i) => i + 1).map(n => (
+                    <button
+                      key={n}
+                      className={`comp-pag-btn${n === pagSegura ? ' comp-pag-btn--active' : ''}`}
+                      onClick={() => setPagActual(n)}
+                    >
+                      {n}
+                    </button>
                   ))}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
+                  <button
+                    className="comp-pag-btn"
+                    onClick={() => setPagActual(p => Math.min(totalPags, p + 1))}
+                    disabled={pagSegura === totalPags}
+                  >
+                    <ChevronRightIcon size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
+
+      {/* Modal detalle */}
+      <AnimatePresence>
+        {verDetalle && (
+          <ModalDetalle
+            r={verDetalle}
+            puedeGest={puedeGest}
+            onClose={() => setVerDetalle(null)}
+            onEditar={() => { setEditData(verDetalle); setVerDetalle(null); setModalOpen(true) }}
+            onEliminar={() => { setEliminar(verDetalle); setVerDetalle(null) }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Modal registrar/editar */}
       <AnimatePresence>
@@ -373,7 +436,7 @@ function KPICard({ icon, variant, value, label }) {
 
 // ── Fila tabla ────────────────────────────────────────────
 
-function FilaRegistro({ r, esAdmin, puedeGest, onEditar, onEliminar }) {
+function FilaRegistro({ r, esAdmin, puedeGest, onVer, onEditar, onEliminar }) {
   const u      = r.usuario
   const estado = estadoEfectivo(r)
   const tipo   = TIPO_MAP[r.tipo]
@@ -441,19 +504,160 @@ function FilaRegistro({ r, esAdmin, puedeGest, onEditar, onEliminar }) {
           {estadoStyle.label}
         </span>
       </td>
-      {puedeGest && (
-        <td>
-          <div className="comp-actions">
+      <td>
+        <div className="comp-actions">
+          <button className="comp-action-btn comp-action-btn--view" onClick={onVer} title="Ver detalle">
+            <Eye size={13} />
+          </button>
+          {puedeGest && <>
             <button className="comp-action-btn comp-action-btn--edit" onClick={onEditar} title="Editar">
               <Pencil size={13} />
             </button>
             <button className="comp-action-btn comp-action-btn--delete" onClick={onEliminar} title="Eliminar">
               <Trash2 size={13} />
             </button>
-          </div>
-        </td>
-      )}
+          </>}
+        </div>
+      </td>
     </motion.tr>
+  )
+}
+
+// ── Modal detalle ─────────────────────────────────────────
+
+function ModalDetalle({ r, puedeGest, onClose, onEditar, onEliminar }) {
+  const u      = r.usuario
+  const estado = estadoEfectivo(r)
+  const tipo   = TIPO_MAP[r.tipo]
+
+  const estadoStyle = {
+    disponible: { bg: 'rgba(16,185,129,0.1)',  color: '#059669', label: 'Disponible' },
+    usado:      { bg: 'rgba(100,116,139,0.1)', color: '#475569', label: 'Usado' },
+    vencido:    { bg: 'rgba(239,68,68,0.1)',   color: '#dc2626', label: 'Vencido' },
+  }[estado]
+
+  const tipoStyle = {
+    desfile:                 { bg: 'rgba(79,70,229,0.1)',  color: '#4f46e5' },
+    trabajo_verano:          { bg: 'rgba(245,158,11,0.1)', color: '#d97706' },
+    actividad_institucional: { bg: 'rgba(16,185,129,0.1)', color: '#059669' },
+    reemplazo:               { bg: 'rgba(14,165,233,0.1)', color: '#0284c7' },
+    otro:                    { bg: 'rgba(100,116,139,0.1)',color: '#475569' },
+  }[r.tipo] ?? { bg: '#f1f5f9', color: '#475569' }
+
+  const Row = ({ label, value, highlight }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+      <span style={{ fontSize: 12.5, color: '#64748b', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: highlight ? 800 : 600, color: highlight ? '#4f46e5' : '#0f172a' }}>
+        {value}
+      </span>
+    </div>
+  )
+
+  return (
+    <motion.div className="comp-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <motion.div className="comp-modal" style={{ maxWidth: 460 }} variants={modalV} initial="hidden" animate="visible" exit="exit">
+
+        {/* Header */}
+        <div className="comp-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(79,70,229,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5' }}>
+              <Eye size={16} />
+            </div>
+            <p className="comp-modal-title">Detalle del compensatorio</p>
+          </div>
+          <button className="comp-modal-close" onClick={onClose}><X size={15} /></button>
+        </div>
+
+        <div className="comp-modal-body">
+
+          {/* Usuario */}
+          {u && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+              background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+              <div className="comp-avatar" style={{ background: avatarColor(u.nombre), width: 42, height: 42, fontSize: 15 }}>
+                {initials(u.nombre)}
+              </div>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#0f172a' }}>{u.nombre}</p>
+                {u.rut && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#94a3b8' }}>{u.rut}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Datos */}
+          <div>
+            <Row label="Tipo"
+              value={<span className="comp-tipo-badge" style={{ background: tipoStyle.bg, color: tipoStyle.color }}>
+                {tipo?.label ?? r.tipo}
+              </span>}
+            />
+            <Row label="Días ganados"
+              value={<span style={{ color: '#4f46e5', fontWeight: 800, fontSize: 16 }}>{fmtDias(r.cantidad)}</span>}
+            />
+            {r.saldo_restante !== r.cantidad && (
+              <Row label="Saldo restante"
+                value={<span style={{ fontWeight: 700, color: r.saldo_restante > 0 ? '#059669' : '#94a3b8' }}>
+                  {fmtDias(r.saldo_restante ?? 0)} día{r.saldo_restante !== 1 ? 's' : ''}
+                </span>}
+              />
+            )}
+            <Row label="Fecha ganado" value={fmtFecha(r.fecha_ganado)} />
+            <Row label="Vencimiento"
+              value={r.vence_en
+                ? <span style={{ color: r.vence_en < todayStr() ? '#dc2626' : '#0f172a' }}>{fmtFecha(r.vence_en)}</span>
+                : <span style={{ color: '#cbd5e1' }}>Sin vencimiento</span>}
+            />
+            <Row label="Estado"
+              value={<span className="comp-estado" style={{ background: estadoStyle.bg, color: estadoStyle.color }}>
+                {estadoStyle.label}
+              </span>}
+            />
+          </div>
+
+          {/* Motivo */}
+          {r.motivo && (
+            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px',
+              border: '1px solid #e2e8f0' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 700, color: '#94a3b8',
+                textTransform: 'uppercase', letterSpacing: '0.06em' }}>Motivo</p>
+              <p style={{ margin: 0, fontSize: 13.5, color: '#374151', lineHeight: 1.5 }}>{r.motivo}</p>
+            </div>
+          )}
+
+          {/* Observaciones */}
+          {r.observaciones && (
+            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px',
+              border: '1px solid #e2e8f0' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 700, color: '#94a3b8',
+                textTransform: 'uppercase', letterSpacing: '0.06em' }}>Observaciones</p>
+              <p style={{ margin: 0, fontSize: 13.5, color: '#374151', lineHeight: 1.5 }}>{r.observaciones}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="comp-modal-footer" style={{ justifyContent: 'space-between' }}>
+          <button className="comp-btn-secondary" onClick={onClose}>Cerrar</button>
+          {puedeGest && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="comp-btn-secondary" onClick={onEditar}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Pencil size={13} /> Editar
+              </button>
+              <button onClick={onEliminar}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                  borderRadius: 10, border: 'none', background: 'rgba(239,68,68,0.08)',
+                  color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Trash2 size={13} /> Eliminar
+              </button>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
