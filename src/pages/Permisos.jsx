@@ -1390,6 +1390,7 @@ function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFec
 function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar, onEditar }) {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [nuevaFecha,  setNuevaFecha]  = useState('')
+  const [nuevaFechaHasta, setNuevaFechaHasta] = useState('')
   const [nuevoMotivo, setNuevoMotivo] = useState('')
   const [guardando,   setGuardando]   = useState(false)
   const [errGuardar,  setErrGuardar]  = useState('')
@@ -1413,8 +1414,8 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
     if (!nuevaFecha || !nuevoMotivo.trim()) return
     setGuardando(true); setErrGuardar('')
     try {
-      await onAgregar(nuevaFecha, nuevoMotivo.trim())
-      setNuevaFecha(''); setNuevoMotivo(''); setMostrarForm(false)
+      await onAgregar(nuevaFecha, nuevoMotivo.trim(), nuevaFechaHasta || null)
+      setNuevaFecha(''); setNuevaFechaHasta(''); setNuevoMotivo(''); setMostrarForm(false)
     } catch { setErrGuardar('No se pudo guardar. Intenta de nuevo.') }
     finally  { setGuardando(false) }
   }
@@ -1538,23 +1539,35 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                           style={{ padding: '12px 6px', borderTop: diasAdmin.length > 0 ? '1px solid #f1f5f9' : 'none', marginTop: diasAdmin.length > 0 ? 4 : 0 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                             <div>
-                              <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>Fecha</label>
+                              <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>Desde</label>
                               <CalendarioFeriados
-                                value={nuevaFecha} onChange={setNuevaFecha}
+                                value={nuevaFecha}
+                                onChange={(f) => { setNuevaFecha(f); if (nuevaFechaHasta && nuevaFechaHasta < f) setNuevaFechaHasta('') }}
                                 inhabilitados={inhabSet} etiquetas={etiqMap}
                                 placeholder="Seleccionar fecha…"
                               />
                             </div>
                             <div>
+                              <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>
+                                Hasta <span style={{ color: '#cbd5e1', fontWeight: 400 }}>(opcional)</span>
+                              </label>
+                              <CalendarioFeriados
+                                value={nuevaFechaHasta} onChange={setNuevaFechaHasta}
+                                min={nuevaFecha}
+                                inhabilitados={inhabSet} etiquetas={etiqMap}
+                                placeholder="Mismo día si lo dejas vacío…"
+                              />
+                            </div>
+                            <div>
                               <label className="mp-field-label" style={{ display: 'block', marginBottom: 4 }}>Motivo</label>
                               <input type="text" className="mp-input"
-                                placeholder="Ej: Día puente, Feriado regional…"
+                                placeholder="Ej: Vacaciones de invierno, Día puente…"
                                 value={nuevoMotivo} onChange={e => setNuevoMotivo(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter') handleAgregar() }} />
                             </div>
                             {errGuardar && <span style={{ fontSize: 12, color: '#dc2626' }}>{errGuardar}</span>}
                             <div style={{ display: 'flex', gap: 6 }}>
-                              <button onClick={() => { setMostrarForm(false); setNuevaFecha(''); setNuevoMotivo(''); setErrGuardar('') }}
+                              <button onClick={() => { setMostrarForm(false); setNuevaFecha(''); setNuevaFechaHasta(''); setNuevoMotivo(''); setErrGuardar('') }}
                                 style={{ flex: 1, background: 'none', border: '1px solid #e2e8f0', borderRadius: 7, padding: '7px 0', fontSize: 12.5, color: '#64748b', cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Cancelar
                               </button>
@@ -1679,14 +1692,21 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     setCargandoAPI(false)
   }
 
-  async function handleAgregarDia(fecha, motivo) {
+  async function handleAgregarDia(fecha, motivo, fechaHasta) {
     const { data: sessionData } = await supabase.auth.getSession()
-    const { error } = await supabase.from('dias_inhabilitados').insert({
-      fecha,
-      motivo,
-      origen: 'admin',
-      creado_por: sessionData?.session?.user?.id ?? null,
-    })
+    const uid = sessionData?.session?.user?.id ?? null
+    // Construir el rango desde→hasta (un registro por día). Si no hay "hasta", un solo día.
+    const fin = (fechaHasta && fechaHasta >= fecha) ? fechaHasta : fecha
+    const rows = []
+    const cur = new Date(fecha + 'T12:00:00')
+    const end = new Date(fin   + 'T12:00:00')
+    while (cur <= end) {
+      rows.push({ fecha: cur.toISOString().slice(0, 10), motivo, origen: 'admin', creado_por: uid })
+      cur.setDate(cur.getDate() + 1)
+    }
+    const { error } = await supabase
+      .from('dias_inhabilitados')
+      .upsert(rows, { onConflict: 'fecha' })
     if (error) throw error
     await cargarDiasInhabilitados()
   }
