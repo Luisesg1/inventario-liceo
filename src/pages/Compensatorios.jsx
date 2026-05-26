@@ -702,8 +702,7 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
     if (!usuarioId)           e.usuario    = 'Selecciona un usuario'
     if (!tipo)                e.tipo       = 'Selecciona un tipo'
     if (!cantidadFinal || cantidadFinal <= 0) e.cantidad = 'Ingresa una cantidad válida'
-    if (!fechaGanado)         e.fechaGanado = 'Ingresa la fecha'
-    if (venceEn && venceEn < fechaGanado) e.venceEn = 'La fecha de vencimiento no puede ser anterior a la fecha ganada'
+    if (!motivo.trim())       e.motivo     = 'El motivo es obligatorio'
     setErrores(e)
     return Object.keys(e).length === 0
   }
@@ -714,7 +713,10 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
     await onGuardar({
       id: editData?.id ?? null,
       usuarioId, tipo, cantidad: cantidadFinal,
-      fechaGanado, venceEn, motivo, observaciones,
+      // fecha en que se ganó = fecha de registro (hoy); sin vencimiento
+      fechaGanado: fechaGanado || todayStr(),
+      venceEn: venceEn || null,
+      motivo, observaciones,
     })
     setGuardando(false)
   }
@@ -867,40 +869,21 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
             {errores.cantidad && <span className="comp-error">{errores.cantidad}</span>}
           </div>
 
-          {/* Fechas */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div className="comp-field">
-              <label className="comp-label">Fecha en que se ganó</label>
-              <input
-                type="date" className={`comp-input${errores.fechaGanado ? ' comp-input--error' : ''}`}
-                value={fechaGanado} onChange={e => { setFechaGanado(e.target.value); setErrores(p => ({ ...p, fechaGanado: '' })) }}
-              />
-              {errores.fechaGanado && <span className="comp-error">{errores.fechaGanado}</span>}
-            </div>
-            <div className="comp-field">
-              <label className="comp-label">Vence el <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
-              <input
-                type="date" className={`comp-input${errores.venceEn ? ' comp-input--error' : ''}`}
-                value={venceEn} min={fechaGanado || undefined}
-                onChange={e => { setVenceEn(e.target.value); setErrores(p => ({ ...p, venceEn: '' })) }}
-              />
-              {errores.venceEn && <span className="comp-error">{errores.venceEn}</span>}
-            </div>
-          </div>
-
           {/* Motivo */}
           <div className="comp-field">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <label className="comp-label">Motivo detallado <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
+              <label className="comp-label">Motivo detallado <span style={{ color: '#ef4444', fontWeight: 700 }}>*</span></label>
               <span style={{ fontSize: 11, color: motivo.length > 180 ? '#f59e0b' : '#cbd5e1', fontVariantNumeric: 'tabular-nums' }}>
                 {motivo.length}/200
               </span>
             </div>
             <input
-              className="comp-input" placeholder="Ej: Desfile 18 de septiembre, turno mañana"
+              className={`comp-input${errores.motivo ? ' comp-input--error' : ''}`}
+              placeholder="Ej: Desfile 18 de septiembre, turno mañana"
               maxLength={200}
-              value={motivo} onChange={e => setMotivo(e.target.value)}
+              value={motivo} onChange={e => { setMotivo(e.target.value); setErrores(p => ({ ...p, motivo: '' })) }}
             />
+            {errores.motivo && <span className="comp-error">{errores.motivo}</span>}
           </div>
 
           {/* Observaciones */}
@@ -919,7 +902,7 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
           </div>
 
           {/* Resumen */}
-          {(cantidadFinal > 0 || tipo || fechaGanado) && (
+          {(cantidadFinal > 0 || tipo) && (
             <motion.div
               className="comp-resumen"
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -944,18 +927,6 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
                   <span className="comp-resumen-row-val" style={{ color: '#4f46e5', fontSize: 16 }}>
                     +{fmtDias(cantidadFinal)} día{cantidadFinal !== 1 ? 's' : ''}
                   </span>
-                </div>
-              )}
-              {fechaGanado && (
-                <div className="comp-resumen-row">
-                  <span>Fecha ganado</span>
-                  <span className="comp-resumen-row-val">{fmtFecha(fechaGanado)}</span>
-                </div>
-              )}
-              {venceEn && (
-                <div className="comp-resumen-row">
-                  <span>Vence</span>
-                  <span className="comp-resumen-row-val">{fmtFecha(venceEn)}</span>
                 </div>
               )}
             </motion.div>
