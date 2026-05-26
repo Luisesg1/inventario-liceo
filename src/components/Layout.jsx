@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, FileText, ChevronRight, X, LogOut,
-  Menu, Loader2, ShoppingCart, ShieldCheck, Gift,
+  Menu, Loader2, ShoppingCart, ShieldCheck,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -596,10 +596,9 @@ export default function Layout({
                       <div
                         className={`nav-subitem ${paginaActual === 'compensatorios' ? 'active' : ''}`}
                         onClick={() => handleNav('compensatorios')}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                       >
-                        <Gift size={11} strokeWidth={2.5} style={{ color: paginaActual === 'compensatorios' ? '#6366f1' : '#94a3b8', flexShrink: 0 }} />
-                        <span>Compensatorios</span>
+                        <span className="nav-subitem-dot" />
+                        Compensatorios
                       </div>
                     )}
                   </motion.div>
