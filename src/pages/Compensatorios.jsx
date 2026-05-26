@@ -695,18 +695,30 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
 
           {/* Motivo */}
           <div className="comp-field">
-            <label className="comp-label">Motivo detallado <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label className="comp-label">Motivo detallado <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
+              <span style={{ fontSize: 11, color: motivo.length > 180 ? '#f59e0b' : '#cbd5e1', fontVariantNumeric: 'tabular-nums' }}>
+                {motivo.length}/200
+              </span>
+            </div>
             <input
               className="comp-input" placeholder="Ej: Desfile 18 de septiembre, turno mañana"
+              maxLength={200}
               value={motivo} onChange={e => setMotivo(e.target.value)}
             />
           </div>
 
           {/* Observaciones */}
           <div className="comp-field">
-            <label className="comp-label">Observaciones <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label className="comp-label">Observaciones <span style={{ color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(opcional)</span></label>
+              <span style={{ fontSize: 11, color: observaciones.length > 360 ? '#f59e0b' : '#cbd5e1', fontVariantNumeric: 'tabular-nums' }}>
+                {observaciones.length}/400
+              </span>
+            </div>
             <textarea
               className="comp-textarea" placeholder="Notas adicionales…"
+              maxLength={400}
               value={observaciones} onChange={e => setObservaciones(e.target.value)}
             />
           </div>
