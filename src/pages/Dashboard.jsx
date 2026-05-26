@@ -539,30 +539,22 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
           style={{
-            display: 'flex', alignItems: 'center', gap: 14,
+            display: 'flex', alignItems: 'center', gap: 10,
             background: ausentesHoy === 0 ? '#f0fdf4' : '#fef2f2',
             border: `1px solid ${ausentesHoy === 0 ? '#bbf7d0' : '#fecaca'}`,
-            borderRadius: 16, padding: '16px 20px', marginBottom: 4,
+            borderRadius: 10, padding: '8px 14px', marginBottom: 4,
+            color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
           }}
         >
-          <div style={{
-            width: 42, height: 42, borderRadius: 12, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: ausentesHoy === 0 ? '#dcfce7' : '#fee2e2',
-            color: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
-          }}>
-            {ausentesHoy === 0 ? <CheckCircle2 size={22} strokeWidth={2} /> : <UserX size={22} strokeWidth={2} />}
-          </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ausentesHoy === 0 ? '#15803d' : '#b91c1c' }}>
-              {ausentesHoy === 0
-                ? 'Hoy no hay personal ausente'
-                : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
-            </p>
-            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
-              {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
-            </p>
-          </div>
+          {ausentesHoy === 0 ? <CheckCircle2 size={18} strokeWidth={2.2} style={{ flexShrink: 0 }} /> : <UserX size={18} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+            {ausentesHoy === 0
+              ? 'Hoy no hay personal ausente'
+              : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
+          </p>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+            {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
+          </span>
         </motion.div>
       )}
 
