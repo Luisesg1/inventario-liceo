@@ -43,6 +43,7 @@ const ROLES_ACTIVOS = [
 const TIPOS_PERMISO = [
   { value: 'licencia_medica',        label: 'Licencia médica' },
   { value: 'permiso_administrativo', label: 'Permiso administrativo' },
+  { value: 'justificativo',          label: 'Justificativo' },
   { value: 'dias_compensatorios',    label: 'Días compensatorios' },
 ]
 
@@ -57,6 +58,7 @@ const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label])
 const TIPO_STYLE = {
   licencia_medica:        { bg: '#eff6ff',             color: '#1d4ed8', icon: '🏥' },
   permiso_administrativo: { bg: '#fef9c3',             color: '#854d0e', icon: '📋' },
+  justificativo:          { bg: '#ecfeff',             color: '#0e7490', icon: '📝' },
   dias_compensatorios:    { bg: 'rgba(99,102,241,0.1)', color: '#4f46e5', icon: '🎁' },
 }
 
@@ -1113,9 +1115,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     ? 'Motivo de la licencia médica'
                     : tipoPermiso === 'permiso_administrativo'
                       ? 'Motivo del permiso administrativo'
-                      : tipoPermiso === 'dias_compensatorios'
-                        ? 'Motivo del uso de compensatorios'
-                        : 'Motivo'}
+                      : tipoPermiso === 'justificativo'
+                        ? 'Motivo del justificativo'
+                        : tipoPermiso === 'dias_compensatorios'
+                          ? 'Motivo del uso de compensatorios'
+                          : 'Motivo'}
                   {' '}<span style={{ color: '#ef4444', fontWeight: 700 }}>*</span>
                 </p>
                 <textarea className="mp-textarea"
@@ -1124,9 +1128,11 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       ? 'Ej: Consulta médica / reposo prescrito…'
                       : tipoPermiso === 'permiso_administrativo'
                         ? 'Ej: Trámite notarial, actividad institucional…'
-                        : tipoPermiso === 'dias_compensatorios'
-                          ? 'Ej: Uso de días ganados por desfile 18 sept…'
-                          : 'Escribe el motivo de la ausencia…'
+                        : tipoPermiso === 'justificativo'
+                          ? 'Ej: Justificación de inasistencia…'
+                          : tipoPermiso === 'dias_compensatorios'
+                            ? 'Ej: Uso de días ganados por desfile 18 sept…'
+                            : 'Escribe el motivo de la ausencia…'
                   }
                   maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />

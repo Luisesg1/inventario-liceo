@@ -18,12 +18,14 @@ function fmtFecha(d: string) {
 const TIPO_LABEL: Record<string, string> = {
   licencia_medica:        'Licencia médica',
   permiso_administrativo: 'Permiso administrativo',
+  justificativo:          'Justificativo',
   dias_compensatorios:    'Días compensatorios',
 }
 
 const TIPO_ICON: Record<string, string> = {
   licencia_medica:        '🏥',
   permiso_administrativo: '📋',
+  justificativo:          '📝',
   dias_compensatorios:    '🎁',
 }
 
