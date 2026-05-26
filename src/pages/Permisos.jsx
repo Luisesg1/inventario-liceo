@@ -43,7 +43,7 @@ const ROLES_ACTIVOS = [
 const TIPOS_PERMISO = [
   { value: 'licencia_medica',        label: 'Licencia médica' },
   { value: 'permiso_administrativo', label: 'Permiso administrativo' },
-  { value: 'justificativo',          label: 'Justificativo' },
+  { value: 'justificativo',          label: 'Ausencia sin justificar' },
   { value: 'dias_compensatorios',    label: 'Días compensatorios' },
 ]
 
@@ -1116,7 +1116,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     : tipoPermiso === 'permiso_administrativo'
                       ? 'Motivo del permiso administrativo'
                       : tipoPermiso === 'justificativo'
-                        ? 'Motivo del justificativo'
+                        ? 'Motivo de la ausencia sin justificar'
                         : tipoPermiso === 'dias_compensatorios'
                           ? 'Motivo del uso de compensatorios'
                           : 'Motivo'}

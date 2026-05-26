@@ -18,7 +18,7 @@ function fmtFecha(d: string) {
 const TIPO_LABEL: Record<string, string> = {
   licencia_medica:        'Licencia médica',
   permiso_administrativo: 'Permiso administrativo',
-  justificativo:          'Justificativo',
+  justificativo:          'Ausencia sin justificar',
   dias_compensatorios:    'Días compensatorios',
 }
 
