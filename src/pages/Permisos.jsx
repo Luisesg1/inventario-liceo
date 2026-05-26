@@ -1975,17 +1975,18 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     return set.size
   })()
 
-  // Cuántos registros de un tipo están activos hoy
-  const activosHoyDe = (arr) => arr.filter(p =>
-    p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin
-  ).length
-  const fechaHoyCorta = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })
-
-  // Subtítulo claro para cards por tipo: total histórico + cuántas activas hoy
-  const subTipo = (total, hoy) => {
-    const base = total === 1 ? '1 registrada en total' : `${total} registradas en total`
-    return hoy > 0 ? `${base} · ${hoy} activa${hoy === 1 ? '' : 's'} hoy` : base
+  // Personas únicas (por RUT) de un tipo con ausencia activa hoy
+  const personasHoyDe = (arr) => {
+    const set = new Set()
+    arr.forEach(p => {
+      if (!(p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin)) return
+      const u = resolveUser(p)
+      if (!u) return
+      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
+    })
+    return set.size
   }
+  const fechaHoyCorta = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })
 
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
   const userStatsMap = (() => {
@@ -2110,43 +2111,35 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
               iconColor: ausentesHoy === 0 ? '#16a34a'            : '#dc2626',
               valueColor: ausentesHoy === 0 ? '#16a34a'           : '#dc2626',
             },
-            // Por tipo — solo los que existen. value = total histórico, sub aclara hoy.
-            licenciasMedicas.length > 0 && {
-              label: 'Licencias médicas',
-              value: licenciasMedicas.length,
-              sub: subTipo(licenciasMedicas.length, activosHoyDe(licenciasMedicas)),
+            // Por tipo — al día de hoy. Solo aparece si hay personas hoy.
+            (() => { const n = personasHoyDe(licenciasMedicas); return n > 0 && {
+              label: 'Con licencia médica',
+              value: n,
+              sub: `${n === 1 ? '1 persona' : `${n} personas`} hoy`,
               icon: <AlertTriangle size={16} strokeWidth={2} />,
               iconBg: 'rgba(29,78,216,0.10)', iconColor: '#1d4ed8',
-            },
-            permisosAdmin.length > 0 && {
-              label: 'Permisos administrativos',
-              value: permisosAdmin.length,
-              sub: subTipo(permisosAdmin.length, activosHoyDe(permisosAdmin)),
+            } })(),
+            (() => { const n = personasHoyDe(permisosAdmin); return n > 0 && {
+              label: 'Con permiso administrativo',
+              value: n,
+              sub: `${n === 1 ? '1 persona' : `${n} personas`} hoy`,
               icon: <CalendarCheck size={16} strokeWidth={2} />,
               iconBg: 'rgba(133,77,14,0.10)', iconColor: '#854d0e',
-            },
-            justificativos.length > 0 && {
-              label: 'Ausencias sin justificar',
-              value: justificativos.length,
-              sub: subTipo(justificativos.length, activosHoyDe(justificativos)),
+            } })(),
+            (() => { const n = personasHoyDe(justificativos); return n > 0 && {
+              label: 'Sin justificar',
+              value: n,
+              sub: `${n === 1 ? '1 persona' : `${n} personas`} hoy`,
               icon: <AlertCircle size={16} strokeWidth={2} />,
               iconBg: 'rgba(14,116,144,0.10)', iconColor: '#0e7490',
-            },
-            compensatorios.length > 0 && {
-              label: 'Días compensatorios',
-              value: compensatorios.length,
-              sub: subTipo(compensatorios.length, activosHoyDe(compensatorios)),
+            } })(),
+            (() => { const n = personasHoyDe(compensatorios); return n > 0 && {
+              label: 'Con día compensatorio',
+              value: n,
+              sub: `${n === 1 ? '1 persona' : `${n} personas`} hoy`,
               icon: <Gift size={16} strokeWidth={2} />,
               iconBg: 'rgba(99,102,241,0.10)', iconColor: '#4f46e5',
-            },
-            // Total
-            {
-              label: 'Total de ausencias registradas',
-              value: permisos.length,
-              sub: 'histórico de todos los tipos',
-              icon: <CalendarRange size={16} strokeWidth={2} />,
-              iconBg: 'rgba(100,116,139,0.10)', iconColor: '#64748b',
-            },
+            } })(),
           ].filter(Boolean).map((s, i) => (
             <motion.div key={i} className="aus-stat-card"
               initial={{ opacity: 0, y: 10 }}
