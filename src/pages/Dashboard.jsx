@@ -167,24 +167,31 @@ function getTicketChartData(tickets, periodo) {
 
 function BarChart({ datos, color = '#1a237e' }) {
   const max = Math.max(...datos.map(d => d.count), 1)
-  const H = 80
+  const H = 72
   return (
     <div style={{ width: '100%', paddingBottom: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: H + 32, padding: '0 4px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: H + 30 }}>
         {datos.map((d, i) => {
-          const barH = d.count > 0 ? Math.max(Math.round((d.count / max) * H), 6) : 3
+          const barH = d.count > 0 ? Math.max(Math.round((d.count / max) * H), 6) : 0
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color, opacity: d.count > 0 ? 0.85 : 0, lineHeight: 1.2 }}>{d.count || ''}</span>
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color, opacity: d.count > 0 ? 0.9 : 0, lineHeight: 1, height: 12 }}>{d.count || ''}</span>
+              {/* Pista de fondo + barra */}
               <div style={{
-                width: '80%', maxWidth: 36, height: barH,
-                background: d.count > 0 ? color : '#e5e7eb',
-                borderRadius: '4px 4px 2px 2px',
-                opacity: d.count > 0 ? 0.82 : 0.4,
-                transition: 'height 0.4s ease',
-                flexShrink: 0,
-              }} />
-              <span style={{ fontSize: 8.5, color: '#94a3b8', textAlign: 'center', lineHeight: 1.2, wordBreak: 'break-all' }}>{d.label}</span>
+                width: 16, height: H, borderRadius: 6,
+                background: '#f1f5f9',
+                display: 'flex', alignItems: 'flex-end',
+                overflow: 'hidden', flexShrink: 0,
+              }}>
+                <div style={{
+                  width: '100%', height: barH,
+                  background: color,
+                  borderRadius: 6,
+                  opacity: 0.9,
+                  transition: 'height 0.4s ease',
+                }} />
+              </div>
+              <span style={{ fontSize: 9, color: '#94a3b8', textAlign: 'center', lineHeight: 1.2 }}>{d.label}</span>
             </div>
           )
         })}
