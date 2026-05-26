@@ -1005,3 +1005,30 @@ export async function descontarCompensatorios(usuarioId, diasADescontar) {
     restante = parseFloat((restante - usar).toFixed(1))
   }
 }
+
+// Restaura (re-acredita) días al saldo — inverso de descontar.
+// Se usa al borrar/anular una ausencia de tipo compensatorios.
+// Restaura LIFO (al registro usado más reciente primero) para revertir el FIFO.
+export async function restaurarCompensatorios(usuarioId, diasARestaurar) {
+  const hoy = new Date().toISOString().slice(0, 10)
+  const { data } = await supabase
+    .from('dias_compensatorios')
+    .select('id, cantidad, saldo_restante, fecha_ganado, vence_en')
+    .eq('usuario_id', usuarioId)
+    .order('fecha_ganado', { ascending: false })
+  let restante = diasARestaurar
+  for (const r of (data ?? [])) {
+    if (restante <= 0) break
+    const saldo = r.saldo_restante ?? r.cantidad
+    const usado = parseFloat((r.cantidad - saldo).toFixed(1))
+    if (usado <= 0) continue
+    const restaurar = Math.min(usado, restante)
+    const nuevo     = parseFloat((saldo + restaurar).toFixed(1))
+    const vencido   = r.vence_en && r.vence_en < hoy
+    const estado    = vencido ? 'vencido' : (nuevo > 0 ? 'disponible' : 'usado')
+    await supabase.from('dias_compensatorios')
+      .update({ saldo_restante: nuevo, estado })
+      .eq('id', r.id)
+    restante = parseFloat((restante - restaurar).toFixed(1))
+  }
+}

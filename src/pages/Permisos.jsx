@@ -7,7 +7,7 @@ import {
   Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
 } from 'lucide-react'
 import { supabase } from '../supabase'
-import { getSaldoCompensatorio, descontarCompensatorios } from './Compensatorios'
+import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
 import './Permisos.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -1882,8 +1882,27 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     setErrorEliminar('')
     setEliminando(true)
     try {
-      const { error } = await supabase.from('ausencias').delete().eq('id', permisoEliminar.id)
+      const p = permisoEliminar
+      const { error } = await supabase.from('ausencias').delete().eq('id', p.id)
       if (error) throw error
+
+      // Si era una ausencia de compensatorios, devolver el saldo al usuario
+      if (p.tipo === 'dias_compensatorios' && p.usuario_id) {
+        let diasARestaurar = 0
+        if (p.jornada === 'medio_dia') {
+          diasARestaurar = 0.5
+        } else if (p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin) {
+          const [sh, sm] = p.hora_inicio.split(':').map(Number)
+          const [eh, em] = p.hora_fin.split(':').map(Number)
+          diasARestaurar = Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60 / 8)
+        } else {
+          diasARestaurar = diasHabiles(p.fecha_inicio, p.fecha_fin)
+        }
+        if (diasARestaurar > 0) {
+          try { await restaurarCompensatorios(p.usuario_id, diasARestaurar) } catch { /* silencioso */ }
+        }
+      }
+
       setPermisoEliminar(null)
       setPermisoVer(null)
       await cargarDatos()
