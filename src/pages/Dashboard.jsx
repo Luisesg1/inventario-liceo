@@ -299,15 +299,28 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       }
       if (!puede) { setAusentesHoy(null); return }
       const hoy = new Date().toISOString().slice(0, 10)
-      const { data } = await supabase.from('ausencias')
-        .select('usuario_id, externo_rut, snapshot_rut, externo_nombre, fecha_inicio, fecha_fin, usuario:usuario_id(rut)')
-        .lte('fecha_inicio', hoy).gte('fecha_fin', hoy)
       const normRut = r => (r ?? '').replace(/[.\-\s]/g, '').toLowerCase()
+      const [{ data: us }, { data }] = await Promise.all([
+        supabase.from('usuarios').select('id, rut'),
+        supabase.from('ausencias')
+          .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, fecha_inicio, fecha_fin, usuario:usuario_id(id, rut)')
+          .lte('fecha_inicio', hoy).gte('fecha_fin', hoy),
+      ])
+      const usuariosList = us ?? []
+      // Mismo criterio que resolveUser() en Ausencias: descarta usuarios borrados sin reemplazo
       const set = new Set()
       ;(data ?? []).forEach(p => {
-        // Unificar siempre por RUT (interno, externo o snapshot); fallback a id/nombre
-        const rut = p.usuario?.rut ?? p.externo_rut ?? p.snapshot_rut
-        set.add(rut ? normRut(rut) : (p.usuario_id ?? p.externo_nombre))
+        let key = null
+        if (p.usuario) {
+          key = p.usuario.rut ? normRut(p.usuario.rut) : p.usuario.id
+        } else if (p.externo_nombre) {
+          key = p.externo_rut ? normRut(p.externo_rut) : 'ext:' + p.externo_nombre
+        } else if (p.snapshot_rut) {
+          const found = usuariosList.find(u => normRut(u.rut ?? '') === normRut(p.snapshot_rut))
+          if (found) key = found.rut ? normRut(found.rut) : found.id
+          // si no se encuentra → no se cuenta (igual que la lista de Ausencias)
+        }
+        if (key) set.add(key)
       })
       setAusentesHoy(set.size)
     }
