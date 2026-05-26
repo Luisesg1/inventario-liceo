@@ -5,6 +5,7 @@ import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
   Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
+  Users, Gift, UserX,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
@@ -1957,7 +1958,22 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   // ── Stats para KPI header ────────────────────────────────────────────────
   const licenciasMedicas = permisos.filter(p => p.tipo === 'licencia_medica')
   const permisosAdmin    = permisos.filter(p => p.tipo === 'permiso_administrativo')
+  const justificativos   = permisos.filter(p => p.tipo === 'justificativo')
+  const compensatorios   = permisos.filter(p => p.tipo === 'dias_compensatorios')
   const totalDiasInhab = feriadosAPI.length + diasAdmin.length
+
+  // Personas ausentes HOY (período activo incluye la fecha de hoy), únicas
+  const hoyStr = new Date().toISOString().slice(0, 10)
+  const ausentesHoy = (() => {
+    const set = new Set()
+    permisos.forEach(p => {
+      if (p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin) {
+        const rut = p.usuario?.rut ?? p.externo_rut ?? p.snapshot_rut
+        set.add(rut ? normRut(rut) : (p.usuario_id ?? p.externo_nombre ?? p.id))
+      }
+    })
+    return set.size
+  })()
 
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
   const userStatsMap = (() => {
@@ -2072,38 +2088,61 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
       {!cargando && permisos.length > 0 && (
         <div className="aus-stats-grid">
           {[
+            // Destacada: ausentes hoy
             {
+              label: ausentesHoy === 1 ? 'Persona ausente hoy' : 'Personas ausentes hoy',
+              value: ausentesHoy,
+              sub: ausentesHoy === 0 ? 'Nadie está ausente hoy' : `Fuera el ${new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })}`,
+              icon: ausentesHoy === 0 ? <CheckCircle2 size={16} strokeWidth={2} /> : <UserX size={16} strokeWidth={2} />,
+              iconBg: ausentesHoy === 0 ? 'rgba(22,163,74,0.10)'  : 'rgba(220,38,38,0.10)',
+              iconColor: ausentesHoy === 0 ? '#16a34a'            : '#dc2626',
+              valueColor: ausentesHoy === 0 ? '#16a34a'           : '#dc2626',
+            },
+            // Por tipo — solo los que existen
+            licenciasMedicas.length > 0 && {
               label: 'Licencias médicas',
               value: licenciasMedicas.length,
               sub: `${licenciasMedicas.length === 1 ? '1 registro' : `${licenciasMedicas.length} registros`} totales`,
               icon: <AlertTriangle size={16} strokeWidth={2} />,
-              iconBg: 'rgba(29,78,216,0.10)',
-              iconColor: '#1d4ed8',
+              iconBg: 'rgba(29,78,216,0.10)', iconColor: '#1d4ed8',
             },
-            {
+            permisosAdmin.length > 0 && {
               label: 'Permisos administrativos',
               value: permisosAdmin.length,
               sub: `${permisosAdmin.length === 1 ? '1 registro' : `${permisosAdmin.length} registros`} totales`,
               icon: <CalendarCheck size={16} strokeWidth={2} />,
-              iconBg: 'rgba(133,77,14,0.10)',
-              iconColor: '#854d0e',
+              iconBg: 'rgba(133,77,14,0.10)', iconColor: '#854d0e',
             },
+            justificativos.length > 0 && {
+              label: 'Ausencias sin justificar',
+              value: justificativos.length,
+              sub: `${justificativos.length === 1 ? '1 registro' : `${justificativos.length} registros`} totales`,
+              icon: <AlertCircle size={16} strokeWidth={2} />,
+              iconBg: 'rgba(14,116,144,0.10)', iconColor: '#0e7490',
+            },
+            compensatorios.length > 0 && {
+              label: 'Días compensatorios',
+              value: compensatorios.length,
+              sub: `${compensatorios.length === 1 ? '1 registro' : `${compensatorios.length} registros`} totales`,
+              icon: <Gift size={16} strokeWidth={2} />,
+              iconBg: 'rgba(99,102,241,0.10)', iconColor: '#4f46e5',
+            },
+            // Total
             {
               label: 'Total ausencias',
               value: permisos.length,
-              sub: `${licenciasMedicas.length} licencias · ${permisosAdmin.length} permisos`,
+              sub: `${permisos.length === 1 ? '1 registro' : `${permisos.length} registros`} en total`,
               icon: <CalendarRange size={16} strokeWidth={2} />,
-              iconBg: 'rgba(99,102,241,0.10)',
-              iconColor: '#6366f1',
+              iconBg: 'rgba(100,116,139,0.10)', iconColor: '#64748b',
             },
-          ].map((s, i) => (
+          ].filter(Boolean).map((s, i) => (
             <motion.div key={i} className="aus-stat-card"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.28 } }}>
               <div className="aus-stat-icon" style={{ background: s.iconBg, color: s.iconColor }}>
                 {s.icon}
               </div>
-              <div className="aus-stat-value">{s.value}</div>
+              <div className="aus-stat-value" style={s.valueColor ? { color: s.valueColor } : undefined}>{s.value}</div>
               <div className="aus-stat-label">{s.label}</div>
               {s.sub && <div className="aus-stat-sub">{s.sub}</div>}
             </motion.div>
