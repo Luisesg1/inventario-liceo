@@ -514,31 +514,6 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
         <p>Resumen General{categoriaFiltro ? ` — ${catActiva?.label}` : ''}</p>
       </motion.div>
 
-      {/* KPI Cards inventario */}
-      <div className="dash-kpis">
-        {KPI_CONFIG.map((kpi, i) => (
-          <motion.div
-            key={i}
-            className="dash-kpi-card"
-            style={{ '--kpi-color': kpi.color }}
-            initial={rm ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07, duration: 0.32, ease: 'easeOut' }}
-            whileHover={rm ? {} : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
-          >
-            <div className="kpi-body">
-              <div className="kpi-valor" style={{ color: kpi.color }}>
-                <KpiNumber value={kpi.valor} rm={rm} />
-              </div>
-              <div className="kpi-label">{kpi.label}</div>
-            </div>
-            <div className="kpi-icon-chip" style={{ background: kpi.iconBg }}>
-              <kpi.Icon size={20} style={{ color: kpi.color }} strokeWidth={2} />
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
       {/* Banner: personas ausentes hoy */}
       {ausentesHoy !== null && (
         <motion.div
@@ -565,6 +540,31 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           </span>
         </motion.div>
       )}
+
+      {/* KPI Cards inventario */}
+      <div className="dash-kpis">
+        {KPI_CONFIG.map((kpi, i) => (
+          <motion.div
+            key={i}
+            className="dash-kpi-card"
+            style={{ '--kpi-color': kpi.color }}
+            initial={rm ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.07, duration: 0.32, ease: 'easeOut' }}
+            whileHover={rm ? {} : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+          >
+            <div className="kpi-body">
+              <div className="kpi-valor" style={{ color: kpi.color }}>
+                <KpiNumber value={kpi.valor} rm={rm} />
+              </div>
+              <div className="kpi-label">{kpi.label}</div>
+            </div>
+            <div className="kpi-icon-chip" style={{ background: kpi.iconBg }}>
+              <kpi.Icon size={20} style={{ color: kpi.color }} strokeWidth={2} />
+            </div>
+          </motion.div>
+        ))}
+      </div>
 
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
       <div className="dash-bottom-grid">
