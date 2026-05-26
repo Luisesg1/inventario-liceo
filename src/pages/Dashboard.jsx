@@ -546,21 +546,22 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
           style={{
-            display: 'flex', alignItems: 'center', gap: 10,
+            display: 'inline-flex', alignItems: 'center', gap: 8,
             background: ausentesHoy === 0 ? '#f0fdf4' : '#fef2f2',
             border: `1px solid ${ausentesHoy === 0 ? '#bbf7d0' : '#fecaca'}`,
-            borderRadius: 10, padding: '8px 14px', marginBottom: 4,
+            borderRadius: 10, padding: '7px 12px', marginBottom: 4,
             color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
+            alignSelf: 'flex-start', maxWidth: '100%',
           }}
         >
-          {ausentesHoy === 0 ? <CheckCircle2 size={18} strokeWidth={2.2} style={{ flexShrink: 0 }} /> : <UserX size={18} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>
+          {ausentesHoy === 0 ? <CheckCircle2 size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} /> : <UserX size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
             {ausentesHoy === 0
               ? 'Hoy no hay personal ausente'
               : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
           </p>
-          <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
-            {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
+          <span style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+            · {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
           </span>
         </motion.div>
       )}
