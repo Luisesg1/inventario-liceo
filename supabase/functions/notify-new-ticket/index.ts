@@ -24,17 +24,31 @@ serve(async (req) => {
         correo_solicitante?: string
       }
 
-    // Buscar todos los usuarios con rol soporte usando service role (sin restricciones RLS)
+    // Destinatarios = quienes pueden resolver tickets:
+    //  · rol admin o soporte (legacy)
+    //  · cualquier usuario con permiso gestionar_tickets
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-    const { data: soporteUsers } = await admin
-      .from('usuarios')
-      .select('email, nombre')
-      .eq('rol', 'soporte')
 
-    if (!soporteUsers?.length) {
-      console.log('No hay usuarios con rol soporte, omitiendo notificación')
+    const [{ data: porRol }, { data: permRows }] = await Promise.all([
+      admin.from('usuarios').select('email, nombre, rol').in('rol', ['admin', 'soporte']),
+      admin.from('permisos_usuario').select('permisos, usuario:usuario_id(email, nombre)'),
+    ])
+
+    const porPermiso = (permRows ?? [])
+      .filter((r: any) => r.permisos?.gestionar_tickets && r.usuario?.email)
+      .map((r: any) => ({ email: r.usuario.email, nombre: r.usuario.nombre }))
+
+    // Combinar y deduplicar por email
+    const mapa = new Map<string, { email: string; name: string }>()
+    ;[...(porRol ?? []), ...porPermiso].forEach((u: any) => {
+      if (u?.email) mapa.set(u.email.toLowerCase(), { email: u.email, name: u.nombre ?? u.email })
+    })
+    const soporteUsers = [...mapa.values()]
+
+    if (!soporteUsers.length) {
+      console.log('No hay destinatarios que puedan resolver tickets, omitiendo notificación')
       return new Response('OK (sin destinatarios)', { status: 200, headers: cors })
     }
 
@@ -82,7 +96,7 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const to = soporteUsers.map(u => ({ email: u.email, name: u.nombre }))
+    const to = soporteUsers.map(u => ({ email: u.email, name: u.name }))
 
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',

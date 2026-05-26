@@ -5,6 +5,7 @@ import {
   PlusCircle, Pencil, Wrench,
   Ticket, Activity, Clock,
   ArrowRight, ClipboardList, CheckCircle2, CircleDot, XCircle,
+  UserX,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Dashboard.css'
@@ -240,6 +241,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
   const [estadoFiltro,         setEstadoFiltro]         = useState(null)
   const [statsTickets,         setStatsTickets]         = useState(null)
   const [statsReqs,            setStatsReqs]            = useState(null)
+  const [ausentesHoy,          setAusentesHoy]          = useState(null)
 
   useEffect(() => {
     const cargar = async () => {
@@ -284,6 +286,34 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
       .on('postgres_changes', { event: '*', schema: 'public', table: 'requerimientos' }, cargarStats)
       .subscribe()
     return () => { supabase.removeChannel(chT); supabase.removeChannel(chR) }
+  }, [])
+
+  // Personas ausentes hoy (solo si el usuario puede ver ausencias)
+  useEffect(() => {
+    const cargarAusentes = async () => {
+      let puede = esAdmin
+      if (!esAdmin && usuario?.id) {
+        const { data } = await supabase.from('permisos_usuario')
+          .select('permisos').eq('usuario_id', usuario.id).maybeSingle()
+        puede = !!data?.permisos?.ver_ausencias
+      }
+      if (!puede) { setAusentesHoy(null); return }
+      const hoy = new Date().toISOString().slice(0, 10)
+      const { data } = await supabase.from('ausencias')
+        .select('usuario_id, externo_rut, snapshot_rut, externo_nombre, fecha_inicio, fecha_fin')
+        .lte('fecha_inicio', hoy).gte('fecha_fin', hoy)
+      const set = new Set()
+      ;(data ?? []).forEach(p => {
+        const rut = p.externo_rut ?? p.snapshot_rut
+        set.add(p.usuario_id ?? (rut ? rut.replace(/[.\-]/g, '').toLowerCase() : p.externo_nombre))
+      })
+      setAusentesHoy(set.size)
+    }
+    cargarAusentes()
+    const ch = supabase.channel('dash-ausencias-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ausencias' }, cargarAusentes)
+      .subscribe()
+    return () => supabase.removeChannel(ch)
   }, [])
 
   useEffect(() => {
@@ -404,6 +434,40 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos }
           </motion.div>
         ))}
       </div>
+
+      {/* Banner: personas ausentes hoy */}
+      {ausentesHoy !== null && (
+        <motion.div
+          initial={rm ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 14,
+            background: ausentesHoy === 0 ? '#f0fdf4' : '#fef2f2',
+            border: `1px solid ${ausentesHoy === 0 ? '#bbf7d0' : '#fecaca'}`,
+            borderRadius: 16, padding: '16px 20px', marginBottom: 4,
+          }}
+        >
+          <div style={{
+            width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: ausentesHoy === 0 ? '#dcfce7' : '#fee2e2',
+            color: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
+          }}>
+            {ausentesHoy === 0 ? <CheckCircle2 size={22} strokeWidth={2} /> : <UserX size={22} strokeWidth={2} />}
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: ausentesHoy === 0 ? '#15803d' : '#b91c1c' }}>
+              {ausentesHoy === 0
+                ? 'Hoy no hay personal ausente'
+                : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+              {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })}
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Charts: Donut + Actividad */}
       <div className="dash-charts">
