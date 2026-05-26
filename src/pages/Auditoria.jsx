@@ -74,15 +74,31 @@ const CAMPO_LABEL_REQ = {
 }
 
 const CAMPO_LABEL_PERMISOS = {
+  // Inventario
   ver_inventario: 'Ver inventario', agregar_bien: 'Agregar bien',
   editar_bien: 'Editar bien', eliminar_bien: 'Eliminar bien',
-  eliminar_lote: 'Eliminar lote', gestionar_categorias: 'Gestionar categorías',
+  eliminar_lote: 'Eliminar en lote', gestionar_categorias: 'Gestionar categorías',
   importar_csv: 'Importar CSV', gestionar_usuarios: 'Gestionar usuarios',
   exportar: 'Exportar', registrar_prestamo: 'Registrar préstamo',
   registrar_incidencia: 'Registrar incidencia',
-  ver_tickets: 'Ver tickets', gestionar_tickets: 'Gestionar tickets',
-  ver_auditoria_requerimientos: 'Auditoría requerimientos',
-  ver_auditoria_permisos: 'Auditoría permisos',
+  // Tickets
+  ver_tickets: 'Ver tickets (propios)', crear_ticket: 'Crear nuevo ticket',
+  gestionar_tickets: 'Gestionar todos los tickets', eliminar_ticket: 'Eliminar tickets',
+  // Requerimientos
+  ver_requerimientos: 'Ver requerimientos', crear_requerimiento: 'Crear requerimiento',
+  editar_requerimiento: 'Editar requerimiento', eliminar_requerimiento: 'Eliminar requerimiento',
+  importar_requerimientos: 'Importar requerimientos', exportar_requerimientos: 'Exportar requerimientos',
+  ver_auditoria_requerimientos: 'Ver auditoría de requerimientos',
+  // Ausencias
+  ver_ausencias: 'Ver ausencias del personal', gestionar_ausencias: 'Registrar/editar ausencias',
+  ver_auditoria_permisos: 'Ver auditoría de ausencias',
+  notificar_ausencia_correo: 'Notificar ausencia por correo',
+  // Compensatorios
+  ver_compensatorios: 'Ver días compensatorios',
+  gestionar_compensatorios: 'Gestionar días compensatorios',
+  // Administración de cuentas
+  invitar_usuario: 'Invitar usuarios', editar_usuario: 'Editar usuarios',
+  eliminar_usuario: 'Eliminar usuarios',
 }
 
 export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario' }) {
