@@ -1975,6 +1975,18 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     return set.size
   })()
 
+  // Cuántos registros de un tipo están activos hoy
+  const activosHoyDe = (arr) => arr.filter(p =>
+    p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin
+  ).length
+  const fechaHoyCorta = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })
+
+  // Subtítulo claro para cards por tipo: total histórico + cuántas activas hoy
+  const subTipo = (total, hoy) => {
+    const base = total === 1 ? '1 registrada en total' : `${total} registradas en total`
+    return hoy > 0 ? `${base} · ${hoy} activa${hoy === 1 ? '' : 's'} hoy` : base
+  }
+
   // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
   const userStatsMap = (() => {
     const map = {}
@@ -2092,46 +2104,46 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
             {
               label: ausentesHoy === 1 ? 'Persona ausente hoy' : 'Personas ausentes hoy',
               value: ausentesHoy,
-              sub: ausentesHoy === 0 ? 'Nadie está ausente hoy' : `Fuera el ${new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })}`,
+              sub: ausentesHoy === 0 ? 'Nadie está ausente hoy' : `con ausencia activa el ${fechaHoyCorta}`,
               icon: ausentesHoy === 0 ? <CheckCircle2 size={16} strokeWidth={2} /> : <UserX size={16} strokeWidth={2} />,
               iconBg: ausentesHoy === 0 ? 'rgba(22,163,74,0.10)'  : 'rgba(220,38,38,0.10)',
               iconColor: ausentesHoy === 0 ? '#16a34a'            : '#dc2626',
               valueColor: ausentesHoy === 0 ? '#16a34a'           : '#dc2626',
             },
-            // Por tipo — solo los que existen
+            // Por tipo — solo los que existen. value = total histórico, sub aclara hoy.
             licenciasMedicas.length > 0 && {
               label: 'Licencias médicas',
               value: licenciasMedicas.length,
-              sub: `${licenciasMedicas.length === 1 ? '1 registro' : `${licenciasMedicas.length} registros`} totales`,
+              sub: subTipo(licenciasMedicas.length, activosHoyDe(licenciasMedicas)),
               icon: <AlertTriangle size={16} strokeWidth={2} />,
               iconBg: 'rgba(29,78,216,0.10)', iconColor: '#1d4ed8',
             },
             permisosAdmin.length > 0 && {
               label: 'Permisos administrativos',
               value: permisosAdmin.length,
-              sub: `${permisosAdmin.length === 1 ? '1 registro' : `${permisosAdmin.length} registros`} totales`,
+              sub: subTipo(permisosAdmin.length, activosHoyDe(permisosAdmin)),
               icon: <CalendarCheck size={16} strokeWidth={2} />,
               iconBg: 'rgba(133,77,14,0.10)', iconColor: '#854d0e',
             },
             justificativos.length > 0 && {
               label: 'Ausencias sin justificar',
               value: justificativos.length,
-              sub: `${justificativos.length === 1 ? '1 registro' : `${justificativos.length} registros`} totales`,
+              sub: subTipo(justificativos.length, activosHoyDe(justificativos)),
               icon: <AlertCircle size={16} strokeWidth={2} />,
               iconBg: 'rgba(14,116,144,0.10)', iconColor: '#0e7490',
             },
             compensatorios.length > 0 && {
               label: 'Días compensatorios',
               value: compensatorios.length,
-              sub: `${compensatorios.length === 1 ? '1 registro' : `${compensatorios.length} registros`} totales`,
+              sub: subTipo(compensatorios.length, activosHoyDe(compensatorios)),
               icon: <Gift size={16} strokeWidth={2} />,
               iconBg: 'rgba(99,102,241,0.10)', iconColor: '#4f46e5',
             },
             // Total
             {
-              label: 'Total ausencias',
+              label: 'Total de ausencias registradas',
               value: permisos.length,
-              sub: `${permisos.length === 1 ? '1 registro' : `${permisos.length} registros`} en total`,
+              sub: 'histórico de todos los tipos',
               icon: <CalendarRange size={16} strokeWidth={2} />,
               iconBg: 'rgba(100,116,139,0.10)', iconColor: '#64748b',
             },
