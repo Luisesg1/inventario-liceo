@@ -1962,15 +1962,15 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const compensatorios   = permisos.filter(p => p.tipo === 'dias_compensatorios')
   const totalDiasInhab = feriadosAPI.length + diasAdmin.length
 
-  // Personas ausentes HOY (período activo incluye la fecha de hoy), únicas
+  // Personas ausentes HOY (período activo incluye la fecha de hoy), únicas por RUT
   const hoyStr = new Date().toISOString().slice(0, 10)
   const ausentesHoy = (() => {
     const set = new Set()
     permisos.forEach(p => {
-      if (p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin) {
-        const rut = p.usuario?.rut ?? p.externo_rut ?? p.snapshot_rut
-        set.add(rut ? normRut(rut) : (p.usuario_id ?? p.externo_nombre ?? p.id))
-      }
+      if (!(p.fecha_inicio && p.fecha_fin && p.fecha_inicio <= hoyStr && hoyStr <= p.fecha_fin)) return
+      const u = resolveUser(p)
+      if (!u) return // usuario borrado sin reemplazo → no se cuenta (igual que la lista)
+      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
     })
     return set.size
   })()

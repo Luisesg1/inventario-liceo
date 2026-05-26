@@ -574,8 +574,9 @@
 
 /* ── KPI Stats Grid ─────────────────────────────────── */
 .aus-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
 }
 .aus-stat-card {
@@ -586,6 +587,8 @@
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
   transition: box-shadow 0.2s, transform 0.18s;
   cursor: default;
+  flex: 1 1 220px;
+  max-width: 320px;
 }
 .aus-stat-card:hover {
   box-shadow: 0 8px 32px rgba(0,0,0,0.09);
