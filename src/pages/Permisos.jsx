@@ -1812,66 +1812,70 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
       }
     }
 
-    // Correos en ausencias nuevas
+    // ── Correos en ausencias nuevas ───────────────────────────────────────
     if (!datos.id) {
-      const correo = u?.isExterno ? (u.email ?? null) : (u?.email ?? null)
-      if (correo) {
-        // Permiso administrativo: correo de respaldo con días restantes
+      const correoSolicitante = u?.email ?? null
+      const nombrePersona     = u?.nombre ?? 'usuario'
+
+      // Detalle común de la ausencia
+      const detalle = {
+        tipo:        datos.tipoPermiso,
+        fechaInicio: datos.fechaInicio,
+        fechaFin:    datos.fechaFin,
+        jornada:     datos.jornada,
+        periodo:     datos.periodo ?? null,
+        horaInicio:  datos.horaInicio ?? null,
+        horaFin:     datos.horaFin ?? null,
+        notas:       datos.notas ?? null,
+      }
+
+      // 1) Correo al SOLICITANTE (todos los tipos)
+      if (correoSolicitante) {
         if (datos.tipoPermiso === 'permiso_administrativo') {
+          // Permiso administrativo conserva su correo con cuota de días
           let diasRestantes = null
           try {
             const diasUsados = await handleGetPermisosUsados(u?.id ?? null, u?.rut ?? null)
             diasRestantes = Math.max(MAX_AUSENCIAS - diasUsados, 0)
-          } catch { /* si falla, se envía igual */ }
-
+          } catch { /* se envía igual */ }
           try {
             const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
               body: {
-                correo,
-                nombre:      u?.nombre ?? null,
-                fechaInicio: datos.fechaInicio,
-                fechaFin:    datos.fechaFin,
-                jornada:     datos.jornada,
-                periodo:     datos.periodo ?? null,
-                horaInicio:  datos.horaInicio ?? null,
-                horaFin:     datos.horaFin ?? null,
-                notas:       datos.notas ?? null,
-                diasRestantes,
-                maxDias:     MAX_AUSENCIAS,
+                correo: correoSolicitante, nombre: nombrePersona,
+                fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin,
+                jornada: datos.jornada, periodo: datos.periodo ?? null,
+                horaInicio: datos.horaInicio ?? null, horaFin: datos.horaFin ?? null,
+                notas: datos.notas ?? null, diasRestantes, maxDias: MAX_AUSENCIAS,
               },
             })
             setEmailNotif(fnError ? 'error' : 'ok')
           } catch { setEmailNotif('error') }
+        } else {
+          // Resto de tipos (licencia médica, días compensatorios, etc.)
+          try {
+            const { error: fnError } = await supabase.functions.invoke('notify-ausencia', {
+              body: { correo: correoSolicitante, destinatario: nombrePersona, persona: nombrePersona, modo: 'solicitante', ...detalle },
+            })
+            setEmailNotif(fnError ? 'error' : 'ok')
+          } catch { setEmailNotif('error') }
         }
-
-        // Notificación general: solo si el usuario tiene notificar_ausencia_correo activado
-        try {
-          const uid = u?.isExterno ? null : (u?.id ?? null)
-          if (uid) {
-            const { data: perm } = await supabase
-              .from('permisos_usuario')
-              .select('permisos')
-              .eq('usuario_id', uid)
-              .maybeSingle()
-            if (perm?.permisos?.notificar_ausencia_correo) {
-              await supabase.functions.invoke('notify-ausencia', {
-                body: {
-                  correo,
-                  nombre:      u?.nombre ?? null,
-                  tipo:        datos.tipoPermiso,
-                  fechaInicio: datos.fechaInicio,
-                  fechaFin:    datos.fechaFin,
-                  jornada:     datos.jornada,
-                  periodo:     datos.periodo ?? null,
-                  horaInicio:  datos.horaInicio ?? null,
-                  horaFin:     datos.horaFin ?? null,
-                  notas:       datos.notas ?? null,
-                },
-              })
-            }
-          }
-        } catch { /* silencioso */ }
       }
+
+      // 2) Correos de RESPALDO a quienes tengan notificar_ausencia_correo
+      try {
+        const { data: backups } = await supabase
+          .from('permisos_usuario')
+          .select('permisos, usuario:usuario_id(nombre, email)')
+        const destinatarios = (backups ?? [])
+          .filter(b => b.permisos?.notificar_ausencia_correo && b.usuario?.email)
+          // evitar duplicado con el solicitante
+          .filter(b => b.usuario.email.toLowerCase() !== (correoSolicitante ?? '').toLowerCase())
+        for (const b of destinatarios) {
+          await supabase.functions.invoke('notify-ausencia', {
+            body: { correo: b.usuario.email, destinatario: b.usuario.nombre ?? null, persona: nombrePersona, modo: 'respaldo', ...detalle },
+          })
+        }
+      } catch { /* silencioso */ }
     }
 
     await cargarDatos()
