@@ -2848,6 +2848,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   {[
                     { icon: '📄', label: 'CSV',   desc: 'Texto separado por comas', fn: exportarCSV },
                     { icon: '📊', label: 'Excel', desc: 'Hoja de cálculo .xlsx',    fn: exportarExcel },
+                    { icon: '📕', label: 'PDF',   desc: 'Tabla en PDF A4',          fn: exportarPDF },
                   ].map(({ icon, label, desc, fn }) => (
                     <button key={label} onClick={fn} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
