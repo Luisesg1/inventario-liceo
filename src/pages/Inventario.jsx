@@ -2833,6 +2833,36 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           <button onClick={eliminarSeleccionados} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
             🗑 Eliminar seleccionados
           </button>
+          {/* Exportar seleccionados */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setMenuExportarDetalle(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#1d4ed8', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+              📤 Exportar ▾
+            </button>
+            {menuExportarDetalle && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setMenuExportarDetalle(false)} />
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '170px', overflow: 'hidden' }}>
+                  <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                    Exportar {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
+                  </p>
+                  {[
+                    { icon: '📄', label: 'CSV',   desc: 'Texto separado por comas', fn: exportarCSV },
+                    { icon: '📊', label: 'Excel', desc: 'Hoja de cálculo .xlsx',    fn: exportarExcel },
+                  ].map(({ icon, label, desc, fn }) => (
+                    <button key={label} onClick={fn} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={() => setSeleccion(new Set())} style={{ padding: '5px 10px', background: 'white', border: '1px solid #bfdbfe', borderRadius: '6px', cursor: 'pointer', fontSize: '0.82rem', color: '#6b7280' }}>
             Cancelar
           </button>
@@ -3092,42 +3122,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <span className={`badge ${ESTADO_BADGE[verDetalle.estado]}`}>{verDetalle.estado}</span>
 <button className="btn-descargar-pdf" onClick={() => abrirQR(verDetalle)} title="Generar QR">▦ QR</button>
 <button className="btn-descargar-pdf" onClick={descargarPDF}>⬇ <span className="pdf-label">Descargar </span>PDF</button>
-                {/* Exportar bien individual */}
-                <div style={{ position: 'relative' }}>
-                  <button className="btn-descargar-pdf" onClick={() => setMenuExportarDetalle(v => !v)}>📤 Exportar ▾</button>
-                  {menuExportarDetalle && (
-                    <>
-                      <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setMenuExportarDetalle(false)} />
-                      <div style={{
-                        position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 200,
-                        background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '170px', overflow: 'hidden',
-                      }}>
-                        <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                          Exportar este bien
-                        </p>
-                        {[
-                          { icon: '📄', label: 'CSV',   desc: 'Texto separado por comas', fn: () => exportarCSV([verDetalle]) },
-                          { icon: '📊', label: 'Excel', desc: 'Hoja de cálculo .xlsx',    fn: () => exportarExcel([verDetalle]) },
-                        ].map(({ icon, label, desc, fn }) => (
-                          <button key={label} onClick={fn} style={{
-                            display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                            padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                          >
-                            <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                            <div>
-                              <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
-                              <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
                 {puedeIncidencias && (esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && (
                   <button className="btn-descargar-pdf" onClick={() => { setVerDetalle(null); setModalIncidencias(verDetalle) }} title="Incidencias">🔧 Incidencias</button>
                 )}
@@ -3145,8 +3139,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </div>
               <div className="detalle-seccion">
                 <p className="detalle-titulo">Asignación</p>
-                {(esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) && verDetalle.area &&
-                  <div className="detalle-fila"><span>Área</span><strong>{verDetalle.area}</strong></div>}
+                {(esComp(verDetalle.categoria) || esTecno(verDetalle.categoria)) &&
+                  <div className="detalle-fila"><span>Área</span><strong>{verDetalle.area || '—'}</strong></div>}
                 <div className="detalle-fila"><span>Ubicación</span><strong>{verDetalle.ubicacion || 'N/A'}</strong></div>
                 <div className="detalle-fila"><span>Responsable</span><strong>{verDetalle.responsable || 'N/A'}</strong></div>
               </div>
