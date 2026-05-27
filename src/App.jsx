@@ -204,7 +204,7 @@ export default function App() {
   // Tickets
   const permisosTickets = {
     verPropios:   esAdmin || !!p.ver_tickets,
-    crear:        esAdmin || !!p.crear_ticket,
+    crear:        esAdmin || p.crear_ticket !== false,
     gestionar:    esAdmin || !!p.gestionar_tickets,
     eliminar:     esAdmin || !!p.eliminar_ticket,
   }
