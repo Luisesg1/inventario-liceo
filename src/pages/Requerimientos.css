@@ -1142,3 +1142,163 @@
     transition: none;
   }
 }
+
+/* ── Banner sin conexión ── */
+.req-offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(245,158,11,0.09);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: #92400e;
+  font-weight: 500;
+  animation: req-banner-in 0.18s ease;
+}
+.req-offline-icon { font-size: 1rem; }
+
+/* ── Banner sincronizando ── */
+.req-sinc-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(99,102,241,0.07);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: #4338ca;
+  font-weight: 500;
+  animation: req-banner-in 0.18s ease;
+}
+.req-sinc-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(99,102,241,0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: req-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ── Aviso / notificación ── */
+.req-aviso {
+  padding: 10px 16px;
+  background: rgba(21,128,61,0.09);
+  border: 1px solid rgba(21,128,61,0.25);
+  border-radius: 10px;
+  font-size: 0.83rem;
+  color: #15803d;
+  font-weight: 500;
+  cursor: pointer;
+  animation: req-banner-in 0.18s ease;
+  transition: background 0.15s;
+}
+.req-aviso:hover { background: rgba(21,128,61,0.14); }
+
+/* ── Badge pendiente de sincronización ── */
+.req-badge-pendiente {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px;
+  border-radius: 4px;
+  background: rgba(245,158,11,0.12);
+  color: #b45309;
+  cursor: default;
+  title: attr(title);
+}
+.req-badge-pendiente--edit {
+  background: rgba(99,102,241,0.1);
+  color: #6366f1;
+  font-size: 13px;
+}
+
+/* ── FiltroSelect: conteo dinámico ── */
+.fsel-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fsel-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(148,163,184,0.12);
+  border-radius: 10px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.fsel-option--sel .fsel-count {
+  background: rgba(99,102,241,0.15);
+  color: #6366f1;
+}
+
+/* ── Modal confirmación de eliminación ── */
+.req-modal-confirmar {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 28px 24px;
+  max-width: 400px;
+  width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: req-modal-in 0.22s ease;
+}
+.req-confirmar-icono {
+  font-size: 36px;
+  line-height: 1;
+}
+.req-confirmar-titulo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  text-align: center;
+}
+.req-confirmar-desc {
+  font-size: 13px;
+  color: #475569;
+  text-align: center;
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+.req-confirmar-aviso {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+  font-weight: 500;
+}
+.req-confirmar-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  width: 100%;
+  justify-content: center;
+}
+.req-confirmar-btns .req-btn-cancel {
+  flex: 1;
+  max-width: 160px;
+  padding: 9px 16px;
+}
+.req-confirmar-btns .req-btn-del {
+  flex: 1;
+  max-width: 160px;
+  padding: 9px 16px;
+}
+
+@keyframes req-modal-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}

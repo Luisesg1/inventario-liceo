@@ -2,6 +2,12 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Requerimientos.css'
+import {
+  cachearRequerimientos, obtenerCacheRequerimientos,
+  obtenerPendientesReq, agregarPendienteReq, eliminarPendienteReq,
+  obtenerEditadosReq, guardarEditadoReq, eliminarEditadoReq,
+} from '../offlineReq'
+import { useDynamicFilters } from '../hooks/useDynamicFilters'
 
 // ── Skeleton table ─────────────────────────────────────────────────────────
 function SkeletonReqs() {
@@ -921,7 +927,8 @@ function ImportarReq({ onImportado, onCerrar }) {
 }
 
 // ── FiltroSelect ─────────────────────────────────────────────────────────
-function FiltroSelect({ value, onChange, opciones, placeholder }) {
+// opciones: string[] o [valor, conteo][] (tuples dinámicas del hook)
+function FiltroSelect({ value, onChange, opciones = [], opcionesDinamicas = null, placeholder }) {
   const [abierto, setAbierto] = useState(false)
   const ref = useRef()
 
@@ -930,6 +937,11 @@ function FiltroSelect({ value, onChange, opciones, placeholder }) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  // Si hay opcionesDinamicas (del hook), úsalas; si no, normaliza el array de strings
+  const lista = opcionesDinamicas
+    ? opcionesDinamicas // ya es [valor, conteo][]
+    : opciones.map(o => [o, null])
 
   return (
     <div className="fsel-wrap" ref={ref}>
@@ -949,13 +961,14 @@ function FiltroSelect({ value, onChange, opciones, placeholder }) {
           >
             {placeholder}
           </div>
-          {opciones.map(o => (
+          {lista.map(([o, cnt]) => (
             <div
               key={o}
               className={`fsel-option ${value === o ? 'fsel-option--sel' : ''}`}
               onMouseDown={() => { onChange(o); setAbierto(false) }}
             >
-              {o}
+              <span>{o}</span>
+              {cnt !== null && <span className="fsel-count">{cnt}</span>}
             </div>
           ))}
         </div>
@@ -1061,20 +1074,67 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const [menuExportar,      setMenuExportar]      = useState(false)
   const [modalImportar,     setModalImportar]     = useState(false)
   const [busqueda,          setBusqueda]          = useState('')
-  const [filtroEstado,      setFiltroEstado]      = useState('')
-  const [filtroFondo,       setFiltroFondo]       = useState('')
   const [filtroKpi,         setFiltroKpi]         = useState(filtroInicial)
   const [filtroFechaDesde,  setFiltroFechaDesde]  = useState('')
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [filtroNumero,      setFiltroNumero]      = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
-  const [confirmDelId,      setConfirmDelId]      = useState(null)
+  const [reqAEliminar,      setReqAEliminar]      = useState(null)  // modal de confirmación de eliminación
   const [paginaR, setPaginaR] = useState(1)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
   const [imagenesNuevas,     setImagenesNuevas]     = useState([])
   const [errorGuardar,       setErrorGuardar]       = useState('')
+  const [isOnline,           setIsOnline]           = useState(navigator.onLine)
+  const [aviso,              setAviso]              = useState('')
+  const [sincronizando,      setSincronizando]      = useState(false)
 
-  useEffect(() => { cargar() }, [])
+  // ── Sincronizar pendientes con Supabase ──────────────────────────────────
+  const sincronizarPendientes = useCallback(async () => {
+    const pends = obtenerPendientesReq()
+    const edits  = obtenerEditadosReq()
+    if (pends.length === 0 && Object.keys(edits).length === 0) return
+    setSincronizando(true)
+    let ok = 0, okEdit = 0
+
+    for (const item of pends) {
+      // eslint-disable-next-line no-unused-vars
+      const { id, _pendiente, _pendienteEdit, creado_en, ...payload } = item
+      const { data, error } = await supabase.from('requerimientos').insert(payload).select().single()
+      if (!error && data) {
+        eliminarPendienteReq(id)
+        setItems(prev => prev.map(i => i.id === id ? data : i))
+        ok++
+      }
+    }
+    for (const [reqId, payload] of Object.entries(edits)) {
+      const { error } = await supabase.from('requerimientos').update(payload).eq('id', reqId)
+      if (!error) {
+        eliminarEditadoReq(reqId)
+        setItems(prev => prev.map(i => i.id === reqId ? { ...i, ...payload, _pendienteEdit: false } : i))
+        okEdit++
+      }
+    }
+    setSincronizando(false)
+    const partes = []
+    if (ok > 0)     partes.push(`${ok} agregado${ok !== 1 ? 's' : ''}`)
+    if (okEdit > 0) partes.push(`${okEdit} editado${okEdit !== 1 ? 's' : ''}`)
+    if (partes.length) {
+      setAviso(`✓ Sincronizado: ${partes.join(' y ')} correctamente`)
+      cargar()
+    }
+  }, []) // eslint-disable-line
+
+  useEffect(() => {
+    cargar()
+    const goOnline  = async () => { setIsOnline(true);  await sincronizarPendientes() }
+    const goOffline = () => setIsOnline(false)
+    window.addEventListener('online',  goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online',  goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, []) // eslint-disable-line
 
   const revocarPreviewsNuevas = () => {
     setImagenesNuevas(prev => {
@@ -1095,34 +1155,71 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
 
   const cargar = async () => {
     setCargando(true)
+
+    if (!navigator.onLine) {
+      const cached   = obtenerCacheRequerimientos()
+      const pends    = obtenerPendientesReq()
+      const edits    = obtenerEditadosReq()
+      const base     = (cached ?? []).map(i => edits[i.id] ? { ...i, ...edits[i.id], _pendienteEdit: true } : i)
+      setItems([...base, ...pends])
+      setCargando(false)
+      return
+    }
+
     const { data } = await supabase.from('requerimientos').select('*').order('id', { ascending: false })
-    setItems(data ?? [])
+    const resultado = data ?? []
+    cachearRequerimientos(resultado)
+    // Mantener en la lista los pendientes offline que aún no sincronizaron
+    const pends = obtenerPendientesReq()
+    const edits = obtenerEditadosReq()
+    const merged = resultado.map(i => edits[i.id] ? { ...i, ...edits[i.id], _pendienteEdit: true } : i)
+    setItems([...merged, ...pends])
     setCargando(false)
   }
 
-  const filtrados = useMemo(() => items.filter(r => {
-    if (filtroEstado && r.estado !== filtroEstado) return false
-    if (filtroFondo  && r.fondo  !== filtroFondo)  return false
+  // Pre-filtro: texto libre, fechas, KPI, número
+  const baseItems = useMemo(() => items.filter(r => {
+    if (filtroNumero.trim()) {
+      const q = filtroNumero.trim().toLowerCase()
+      if (!String(r.id).includes(q) && !(r.numero_req ?? '').toLowerCase().includes(q)) return false
+    }
     if (filtroFechaDesde && r.fecha && r.fecha < filtroFechaDesde) return false
     if (filtroFechaHasta && r.fecha && r.fecha > filtroFechaHasta) return false
-    if (filtroKpi === 'proceso')   {
-      if (!['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)) return false
-    }
-    if (filtroKpi === 'comprados') {
-      if (!['Comprado','Contratado','En ejecución'].includes(r.estado)) return false
-    }
-    if (filtroKpi === 'rechazados') {
-      if (!(r.estado ?? '').startsWith('Rechazado') && r.estado !== 'Devuelto') return false
-    }
+    if (filtroKpi === 'proceso'    && !['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)) return false
+    if (filtroKpi === 'comprados'  && !['Comprado','Contratado','En ejecución'].includes(r.estado)) return false
+    if (filtroKpi === 'rechazados' && !(r.estado ?? '').startsWith('Rechazado') && r.estado !== 'Devuelto') return false
     if (busqueda.trim()) {
-      const q   = busqueda.toLowerCase()
-      const hay = s => (s ?? '').toLowerCase().includes(q)
-      if (!hay(r.contenido) && !hay(r.solicitante) && !hay(r.accion) && !hay(r.orden_compra) && !hay(r.numero_factura)) return false
+      const q = busqueda.toLowerCase()
+      if (!['contenido','solicitante','accion','orden_compra','numero_factura'].some(k => (r[k] ?? '').toLowerCase().includes(q))) return false
     }
     return true
-  }), [items, filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
+  }), [items, filtroNumero, filtroFechaDesde, filtroFechaHasta, filtroKpi, busqueda])
 
-  useEffect(() => { setPaginaR(1) }, [filtroEstado, filtroFondo, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
+  // Campos para filtros dependientes (hook reutilizable)
+  const CAMPOS_FILTRO_REQ = useMemo(() => [
+    { campo: 'estado' },
+    { campo: 'fondo' },
+    { campo: 'solicitante' },
+    { campo: 'accion' },
+  ], [])
+
+  const {
+    filtrados,
+    filtros:            filtrosCampos,
+    getOpciones,
+    handleFiltroChange,
+    resetFiltros:       resetFiltrosCampos,
+    hayFiltros:         hayFiltrosCampos,
+  } = useDynamicFilters({ data: baseItems, campos: CAMPOS_FILTRO_REQ })
+
+  // Aliases de compatibilidad (solo lectura)
+  const filtroEstado      = filtrosCampos.estado      || ''
+  const filtroFondo       = filtrosCampos.fondo       || ''
+  const filtroSolicitante = filtrosCampos.solicitante || ''
+  const filtroAccion      = filtrosCampos.accion      || ''
+
+  const filtrosKey = JSON.stringify(filtrosCampos)
+  useEffect(() => { setPaginaR(1) }, [filtrosKey, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
   const POR_PAG_R    = 20
   const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
@@ -1218,6 +1315,28 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
       evidencia:        form.evidencia,
       observacion:      form.observacion,
     }
+
+    // ── Modo offline ──────────────────────────────────────────────────────
+    if (!navigator.onLine) {
+      if (imagenesNuevas.length > 0) {
+        setErrorGuardar('Sin conexión: las imágenes se guardarán cuando vuelva internet. Guarda sin imágenes por ahora.')
+        setGuardando(false)
+        return
+      }
+      if (modal === 'nuevo') {
+        const tempId = agregarPendienteReq(payload)
+        setItems(prev => [{ ...payload, id: tempId, _pendiente: true, observacion_imagenes: [] }, ...prev])
+      } else {
+        guardarEditadoReq(modal.id, payload)
+        setItems(prev => prev.map(i => i.id === modal.id ? { ...i, ...payload, _pendienteEdit: true } : i))
+      }
+      limpiarImagenesPendientes()
+      setGuardando(false)
+      cerrar()
+      setAviso('Guardado localmente. Se sincronizará cuando vuelva la conexión.')
+      return
+    }
+
     try {
       let reqId = modal === 'nuevo' ? null : modal.id
       const prevUrls = modal !== 'nuevo' ? parseObsImagenes(modal.observacion_imagenes) : []
@@ -1280,11 +1399,19 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
     }
   }
 
-  const eliminarDesdeTabla = (r) => {
-    setConfirmDelId(null)
-    eliminarRegistro(r).catch(err => {
-      window.alert(err?.message || 'No se pudo eliminar.')
-    })
+  const iniciarEliminar = (r) => {
+    setReqAEliminar(r)
+  }
+
+  const confirmarEliminarModal = async () => {
+    if (!reqAEliminar) return
+    try {
+      await eliminarRegistro(reqAEliminar)
+    } catch (err) {
+      setAviso(err?.message || 'No se pudo eliminar.')
+    } finally {
+      setReqAEliminar(null)
+    }
   }
 
   const descargarPDFDetalle = async () => {
@@ -1332,7 +1459,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   }, [items])
 
   const kpiFiltrados = useMemo(() => {
-    const hayFiltro = filtroEstado || filtroFondo || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
+    const hayFiltro = hayFiltrosCampos || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
     if (!hayFiltro) return null
     const conMonto     = filtrados.filter(r => Number(r.monto_solicitado) > 0)
     const conMontoReal = filtrados.filter(r => Number(r.monto_real) > 0)
@@ -1359,6 +1486,34 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
       initial={shouldReduce ? false : 'hidden'}
       animate="visible"
     >
+
+      {/* Banner offline */}
+      {!isOnline && (
+        <div className="req-offline-banner">
+          <span className="req-offline-icon">⚡</span>
+          <span>
+            Sin conexión — los cambios se guardan localmente
+            {obtenerPendientesReq().length + Object.keys(obtenerEditadosReq()).length > 0
+              ? ` · ${obtenerPendientesReq().length + Object.keys(obtenerEditadosReq()).length} pendiente${obtenerPendientesReq().length + Object.keys(obtenerEditadosReq()).length !== 1 ? 's' : ''} de sincronizar`
+              : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Banner sincronizando */}
+      {sincronizando && (
+        <div className="req-sinc-banner">
+          <span className="req-sinc-spinner" />
+          Sincronizando con el servidor…
+        </div>
+      )}
+
+      {/* Aviso / notificación */}
+      {aviso && (
+        <div className="req-aviso" onClick={() => setAviso('')}>
+          {aviso} <span style={{ opacity: 0.5, fontSize: 11 }}>· Clic para cerrar</span>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="req-kpis">
@@ -1425,7 +1580,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           <button
             className="req-filtro-banner__limpiar"
             onClick={() => {
-              setBusqueda(''); setFiltroEstado(''); setFiltroFondo('');
+              setBusqueda(''); resetFiltrosCampos();
               setFiltroKpi(null); setFiltroFechaDesde(''); setFiltroFechaHasta(''); setFiltroNumero('')
             }}
           >✕ Limpiar filtros</button>
@@ -1449,15 +1604,27 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         />
         <FiltroSelect
           value={filtroEstado}
-          onChange={setFiltroEstado}
-          opciones={ESTADOS}
+          onChange={v => handleFiltroChange('estado', v)}
+          opcionesDinamicas={getOpciones('estado')}
           placeholder="Todos los estados"
         />
         <FiltroSelect
           value={filtroFondo}
-          onChange={setFiltroFondo}
-          opciones={FONDOS}
+          onChange={v => handleFiltroChange('fondo', v)}
+          opcionesDinamicas={getOpciones('fondo')}
           placeholder="Todos los fondos"
+        />
+        <FiltroSelect
+          value={filtroSolicitante}
+          onChange={v => handleFiltroChange('solicitante', v)}
+          opcionesDinamicas={getOpciones('solicitante')}
+          placeholder="Todos los solicitantes"
+        />
+        <FiltroSelect
+          value={filtroAccion}
+          onChange={v => handleFiltroChange('accion', v)}
+          opcionesDinamicas={getOpciones('accion')}
+          placeholder="Todas las acciones"
         />
         <DateRangePicker
           desde={filtroFechaDesde}
@@ -1547,7 +1714,9 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                   <tr key={r.id} className="req-row">
                     <td className="req-num">
                       {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6366f1' }}>{r.numero_req}</span>}
-                      <span style={{ color: r.numero_req ? '#94a3b8' : undefined }}>#{r.id}</span>
+                      <span style={{ color: r.numero_req ? '#94a3b8' : undefined }}>
+                        {r._pendiente ? <em style={{ color: '#f59e0b', fontStyle: 'normal' }}>pendiente</em> : `#${r.id}`}
+                      </span>
                     </td>
                     <td className="req-nowrap">{formatFecha(r.fecha)}</td>
                     <td className="req-contenido">{r.contenido}</td>
@@ -1569,29 +1738,18 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                           <button type="button" className="btn-edit" onClick={() => abrirEditar(r)} title="Editar">✏️</button>
                         )}
                         {(puedeEliminar || esAdmin) && (
-                          confirmDelId === r.id ? (
-                            <span className="req-confirm-inline">
-                              <button
-                                type="button"
-                                className="req-confirm-si"
-                                title="Confirmar eliminación"
-                                onClick={() => eliminarDesdeTabla(r)}
-                              >✓</button>
-                              <button
-                                type="button"
-                                className="req-confirm-no"
-                                title="Cancelar"
-                                onClick={() => setConfirmDelId(null)}
-                              >✕</button>
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              className="btn-del"
-                              onClick={() => setConfirmDelId(r.id)}
-                              title="Eliminar"
-                            >✕</button>
-                          )
+                          <button
+                            type="button"
+                            className="btn-del"
+                            onClick={() => iniciarEliminar(r)}
+                            title="Eliminar"
+                          >✕</button>
+                        )}
+                        {r._pendiente && (
+                          <span className="req-badge-pendiente" title="Pendiente de sincronización">⏳</span>
+                        )}
+                        {r._pendienteEdit && !r._pendiente && (
+                          <span className="req-badge-pendiente req-badge-pendiente--edit" title="Edición pendiente de sincronización">✎</span>
                         )}
                       </div>
                     </td>
@@ -1834,6 +1992,41 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           onImportado={() => { cargar() }}
           onCerrar={() => setModalImportar(false)}
         />
+      )}
+
+      {/* Modal confirmación de eliminación */}
+      {reqAEliminar && (
+        <div className="req-modal-overlay" onClick={e => e.target === e.currentTarget && setReqAEliminar(null)}>
+          <div className="req-modal-confirmar" onClick={e => e.stopPropagation()}>
+            <div className="req-confirmar-icono">🗑️</div>
+            <h3 className="req-confirmar-titulo">¿Eliminar requerimiento?</h3>
+            <p className="req-confirmar-desc">
+              {reqAEliminar.numero_req
+                ? <><strong>{reqAEliminar.numero_req}</strong> · </>
+                : <><strong>#{reqAEliminar.id}</strong> · </>}
+              {reqAEliminar.contenido
+                ? reqAEliminar.contenido.length > 80
+                  ? reqAEliminar.contenido.slice(0, 80) + '…'
+                  : reqAEliminar.contenido
+                : 'Sin descripción'}
+            </p>
+            <p className="req-confirmar-aviso">Esta acción no se puede deshacer.</p>
+            <div className="req-confirmar-btns">
+              <button
+                className="req-btn-cancel"
+                onClick={() => setReqAEliminar(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="req-btn-del"
+                onClick={confirmarEliminarModal}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </motion.div>
   )
