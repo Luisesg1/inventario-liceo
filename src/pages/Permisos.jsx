@@ -2641,7 +2641,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {usuario?.rol === 'admin' && (
+            {!modoMisAusencias && usuario?.rol === 'admin' && (
               <button className="permisos-dias-btn" onClick={() => setModalInhabilitados(true)}
                 title="Gestionar días inhabilitados (feriados, puentes)">
                 <CalendarCheck size={14} strokeWidth={2.5} />
