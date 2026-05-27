@@ -182,6 +182,27 @@ function formatFecha(fecha) {
   return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`
 }
 
+function agruparDiasAdmin(dias) {
+  if (!dias.length) return []
+  const sorted = [...dias].sort((a, b) => a.fecha.localeCompare(b.fecha))
+  const grupos = []
+  let cur = { fechaDesde: sorted[0].fecha, fechaHasta: sorted[0].fecha, motivo: sorted[0].motivo, fechas: [sorted[0].fecha] }
+  for (let i = 1; i < sorted.length; i++) {
+    const d = sorted[i]
+    const nxt = new Date(cur.fechaHasta + 'T12:00:00')
+    nxt.setDate(nxt.getDate() + 1)
+    if (nxt.toISOString().slice(0, 10) === d.fecha && d.motivo === cur.motivo) {
+      cur.fechaHasta = d.fecha
+      cur.fechas.push(d.fecha)
+    } else {
+      grupos.push(cur)
+      cur = { fechaDesde: d.fecha, fechaHasta: d.fecha, motivo: d.motivo, fechas: [d.fecha] }
+    }
+  }
+  grupos.push(cur)
+  return grupos
+}
+
 function normStr(s = '') {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
@@ -1681,20 +1702,71 @@ function DiaRow({ item, isEditing, editFecha, editMotivo, onStartEdit, onEditFec
   )
 }
 
+// ── GrupoRow ────────────────────────────────────────────────────────────────
+
+function GrupoRow({ grupo, editando, editMotivo, onStartEdit, onEditMotivo, onSaveEdit, onCancelEdit, onEliminar, guardandoEdit, confirmando, onPedirConfirm, onCancelConfirm }) {
+  const esSolo = grupo.fechaDesde === grupo.fechaHasta
+  const chipLabel = esSolo
+    ? formatFecha(grupo.fechaDesde)
+    : `${formatFecha(grupo.fechaDesde)} → ${formatFecha(grupo.fechaHasta)}`
+
+  return (
+    <div className="inh-row">
+      {editando ? (
+        <>
+          <span className="inh-chip inh-chip--admin" style={{ flexShrink: 0, fontSize: 11, maxWidth: 160 }}>{chipLabel}</span>
+          <input className="mp-input"
+            style={{ flex: 1, padding: '3px 8px', fontSize: 12.5, height: 28, minWidth: 0 }}
+            value={editMotivo} onChange={e => onEditMotivo(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter')  onSaveEdit(grupo.fechas, editMotivo)
+              if (e.key === 'Escape') onCancelEdit()
+            }} autoFocus />
+          <button className="inh-btn-ok" onClick={() => onSaveEdit(grupo.fechas, editMotivo)} disabled={guardandoEdit || !editMotivo.trim()}>✓</button>
+          <button className="inh-btn-x" onClick={onCancelEdit}>✕</button>
+        </>
+      ) : confirmando ? (
+        <>
+          <span style={{ flex: 1, fontSize: 12, color: '#6b7280' }}>
+            ¿Eliminar <strong style={{ color: '#374151' }}>{grupo.motivo}</strong>{!esSolo ? ` (${grupo.fechas.length} días)` : ''}?
+          </span>
+          <button className="inh-btn-x" onClick={onCancelConfirm} style={{ fontSize: 12, padding: '3px 8px' }}>No</button>
+          <button className="inh-btn-ok inh-btn-ok--danger" onClick={() => onEliminar(grupo.fechas)}>Eliminar</button>
+        </>
+      ) : (
+        <>
+          <span className="inh-chip inh-chip--admin" style={{ fontSize: esSolo ? undefined : 10.5, flexShrink: 0, maxWidth: 170 }}>
+            {chipLabel}
+          </span>
+          <span className="inh-row-name">{grupo.motivo}</span>
+          <div className="inh-row-actions">
+            <button className="inh-action-btn" title="Editar" onClick={() => onStartEdit(grupo.fechaDesde, grupo.motivo)}>
+              <Pencil size={11} strokeWidth={2} />
+            </button>
+            <button className="inh-action-btn inh-action-btn--danger" title="Eliminar" onClick={onPedirConfirm}>
+              <Trash2 size={11} strokeWidth={2} />
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── ModalDiasInhabilitados ─────────────────────────────────────────────────
 
-function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar, onEditar }) {
+function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, onAgregar, onEliminar, onEditar, onEliminarGrupo, onEditarGrupo }) {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [nuevaFecha,  setNuevaFecha]  = useState('')
   const [nuevaFechaHasta, setNuevaFechaHasta] = useState('')
   const [nuevoMotivo, setNuevoMotivo] = useState('')
   const [guardando,   setGuardando]   = useState(false)
   const [errGuardar,  setErrGuardar]  = useState('')
-  const [editando,    setEditando]    = useState(null)   // fecha original siendo editada
-  const [editFecha,   setEditFecha]   = useState('')     // nueva fecha (puede cambiar)
+  const [editando,    setEditando]    = useState(null)   // key del item siendo editado (fecha para API, fechaDesde para grupos admin)
+  const [editFecha,   setEditFecha]   = useState('')
   const [editMotivo,  setEditMotivo]  = useState('')
   const [guardandoEdit, setGuardandoEdit] = useState(false)
-  const [confirmarEliminar, setConfirmarEliminar] = useState(null) // fecha del item a eliminar
+  const [confirmarEliminar, setConfirmarEliminar] = useState(null) // key del item a eliminar
 
   const year  = new Date().getFullYear()
   const total = feriadosAPI.length + diasAdmin.length
@@ -1720,6 +1792,13 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
     if (!nuevoMotivo.trim() || !nuevaFecha) return
     setGuardandoEdit(true)
     try { await onEditar(fechaOriginal, nuevaFecha, nuevoMotivo.trim(), origen); setEditando(null) }
+    catch {} finally { setGuardandoEdit(false) }
+  }
+
+  async function handleSaveEditGrupo(fechas, nuevoMotivo) {
+    if (!nuevoMotivo.trim()) return
+    setGuardandoEdit(true)
+    try { await onEditarGrupo(fechas, nuevoMotivo.trim()); setEditando(null) }
     catch {} finally { setGuardandoEdit(false) }
   }
 
@@ -1815,15 +1894,15 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
                   </div>
                 ) : (
                   <>
-                    {diasAdmin.map(d => (
-                      <DiaRow key={d.fecha} item={d}
-                        isEditing={editando === d.fecha} editFecha={editFecha} editMotivo={editMotivo}
-                        onStartEdit={(fecha, mot) => { setEditando(fecha); setEditFecha(fecha); setEditMotivo(mot) }}
-                        onEditFecha={setEditFecha} onEditMotivo={setEditMotivo}
-                        onSaveEdit={handleSaveEdit} onCancelEdit={() => setEditando(null)}
-                        onEliminar={onEliminar} guardandoEdit={guardandoEdit}
-                        confirmando={confirmarEliminar === d.fecha}
-                        onPedirConfirm={() => setConfirmarEliminar(d.fecha)}
+                    {agruparDiasAdmin(diasAdmin).map(grupo => (
+                      <GrupoRow key={grupo.fechaDesde} grupo={grupo}
+                        editando={editando === grupo.fechaDesde} editMotivo={editMotivo}
+                        onStartEdit={(key, mot) => { setEditando(key); setEditMotivo(mot) }}
+                        onEditMotivo={setEditMotivo}
+                        onSaveEdit={handleSaveEditGrupo} onCancelEdit={() => setEditando(null)}
+                        onEliminar={onEliminarGrupo} guardandoEdit={guardandoEdit}
+                        confirmando={confirmarEliminar === grupo.fechaDesde}
+                        onPedirConfirm={() => setConfirmarEliminar(grupo.fechaDesde)}
                         onCancelConfirm={() => setConfirmarEliminar(null)}
                       />
                     ))}
@@ -2085,6 +2164,18 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
 
   async function handleEliminarDia(fecha) {
     const { error } = await supabase.from('dias_inhabilitados').delete().eq('fecha', fecha)
+    if (error) throw error
+    await cargarDiasInhabilitados()
+  }
+
+  async function handleEliminarGrupoDias(fechas) {
+    const { error } = await supabase.from('dias_inhabilitados').delete().in('fecha', fechas)
+    if (error) throw error
+    await cargarDiasInhabilitados()
+  }
+
+  async function handleEditarGrupoDias(fechas, nuevoMotivo) {
+    const { error } = await supabase.from('dias_inhabilitados').update({ motivo: nuevoMotivo }).in('fecha', fechas)
     if (error) throw error
     await cargarDiasInhabilitados()
   }
@@ -3036,6 +3127,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
           onAgregar={handleAgregarDia}
           onEliminar={handleEliminarDia}
           onEditar={handleEditarDia}
+          onEliminarGrupo={handleEliminarGrupoDias}
+          onEditarGrupo={handleEditarGrupoDias}
         />
       )}
 
