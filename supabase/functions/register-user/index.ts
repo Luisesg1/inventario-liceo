@@ -16,7 +16,11 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
-    const { codigo } = await req.json()
+    const body = await req.json()
+    const { codigo, nombre, apellidos, rut, email, password } = body as {
+      codigo?: string; nombre?: string; apellidos?: string
+      rut?: string; email?: string; password?: string
+    }
 
     if (!codigo?.trim()) return json({ error: 'Código requerido' }, 400)
 
@@ -24,19 +28,68 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data, error } = await admin
+    // 1. Validar código de invitación
+    const { data: cfg, error: cfgError } = await admin
       .from('configuracion')
       .select('valor')
       .eq('clave', 'codigo_invitacion')
       .single()
 
-    if (error || !data) return json({ error: 'Error de configuración' }, 500)
+    if (cfgError || !cfg) return json({ error: 'Error de configuración' }, 500)
+    if (codigo.trim() !== cfg.valor.trim()) return json({ error: 'Código de invitación incorrecto' }, 400)
 
-    if (codigo.trim() !== data.valor.trim()) {
-      return json({ error: 'Código de invitación incorrecto' }, 400)
+    // Solo validar código — si no vienen los demás datos, retornar OK (modo legacy)
+    if (!nombre || !email || !password) return json({ ok: true })
+
+    // 2. Crear usuario en Supabase Auth
+    const nombreCompleto = `${nombre.trim()} ${(apellidos ?? '').trim()}`.trim()
+    const { data: authData, error: createError } = await admin.auth.admin.createUser({
+      email: email.trim(),
+      password: password,
+      email_confirm: true,
+      user_metadata: { nombre: nombreCompleto, rut: rut?.trim() ?? null, via_invitacion: 'true' },
+    })
+
+    if (createError || !authData.user) {
+      const msg = createError?.message ?? ''
+      const traducido = msg.includes('already been registered') || msg.includes('already registered')
+        ? 'Ya existe una cuenta con ese correo electrónico.'
+        : 'Error al crear la cuenta: ' + msg
+      return json({ error: traducido }, 400)
     }
 
-    return json({ ok: true })
+    const userId = authData.user.id
+
+    // 3. Insertar en tabla usuarios con RUT
+    const { error: insertError } = await admin.from('usuarios').insert({
+      id: userId,
+      nombre: nombreCompleto,
+      rut: rut?.trim() || null,
+      email: email.trim().toLowerCase(),
+      rol: 'docente',
+      debe_cambiar_password: false,
+    })
+
+    if (insertError) {
+      await admin.auth.admin.deleteUser(userId)
+      return json({ error: 'Error al registrar usuario: ' + insertError.message }, 500)
+    }
+
+    // 4. Permisos por defecto para docente
+    await admin.from('permisos_usuario').insert({
+      usuario_id: userId,
+      permisos: {
+        ver_inventario: false, agregar_bien: false, editar_bien: false,
+        eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
+        importar_csv: false, gestionar_usuarios: false, exportar: false,
+        registrar_prestamo: false, registrar_incidencia: false,
+        ver_tickets: true, gestionar_tickets: false, crear_ticket: true,
+      },
+      categorias: ['todos'],
+    })
+
+    return json({ ok: true, creado: true })
+
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

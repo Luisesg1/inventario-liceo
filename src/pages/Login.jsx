@@ -178,26 +178,20 @@ export default function Login({
     if (!ok) return
     setCargando(true)
     const { data: fnData, error: fnError } = await supabase.functions.invoke('register-user', {
-      body: { codigo: regCodigo },
+      body: {
+        codigo:    regCodigo,
+        nombre:    regNombres.trim(),
+        apellidos: regApellidos.trim(),
+        rut:       regRut.trim(),
+        email:     regEmail,
+        password:  regPass,
+      },
     })
     if (fnError || fnData?.error) {
-      setError(fnData?.error || 'Error al validar el código'); setCargando(false); return
-    }
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: regEmail, password: regPass,
-      options: { data: { nombre: `${regNombres.trim()} ${regApellidos.trim()}`.trim(), rut: regRut.trim(), via_invitacion: 'true' } },
-    })
-    setCargando(false)
-    if (signUpError) {
-      const m = signUpError.message ?? ''
-      setError(
-        m === 'User already registered' || m.includes('already been registered') || m.includes('already registered')
-          ? 'Ya existe una cuenta con ese correo electrónico.'
-          : 'Error al crear la cuenta: ' + m
-      )
-      return
+      setError(fnData?.error || 'Error al crear la cuenta'); setCargando(false); return
     }
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: regEmail, password: regPass })
+    setCargando(false)
     if (loginError) setRegExito(true)
   }
 
