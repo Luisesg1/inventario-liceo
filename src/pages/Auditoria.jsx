@@ -163,6 +163,12 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   useEffect(() => { cargar() }, [cargar])
 
+  // Búsqueda en tiempo real con debounce de 300 ms
+  useEffect(() => {
+    const t = setTimeout(() => { setBuscar(buscadorVal); setPagina(0) }, 300)
+    return () => clearTimeout(t)
+  }, [buscadorVal])
+
   const aplicarBusqueda = () => { setBuscar(buscadorVal); setPagina(0) }
 
   const limpiarFiltros = () => {
