@@ -643,6 +643,8 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const [notas,       setNotas]       = useState(isEdit ? (editData.notas ?? '') : '')
   const [recordatorio, setRecordatorio] = useState(isEdit ? !!editData.recordatorio : false)
   const [diasRecord,  setDiasRecord]  = useState(isEdit && editData.recordatorio ? editData.recordatorio : '1')
+  const [compSubMode,   setCompSubMode]   = useState('horas') // 'dias' | 'horas' — sub-modo de Personalizado en compensatorios
+  const [compDiasInput, setCompDiasInput] = useState('')
   const [guardando,   setGuardando]   = useState(false)
   const [errorGuardar, setErrorGuardar] = useState('')
 
@@ -721,6 +723,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
         || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
     })
   })()
+
+  // Resetear sub-modo al salir de Personalizado o de compensatorios
+  useEffect(() => {
+    if (jornada !== 'personalizado') { setCompSubMode('horas'); setCompDiasInput('') }
+  }, [jornada])
+  useEffect(() => {
+    if (tipoPermiso !== 'dias_compensatorios') { setCompSubMode('horas'); setCompDiasInput('') }
+  }, [tipoPermiso])
 
   // Días a descontar del saldo compensatorio (float)
   const diasCompAUsar = (() => {
@@ -1182,7 +1192,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       })}
                     </div>
 
-                    {/* Vista previa rápida */}
+                    {/* Vista previa rápida (medio día / 1 día hábil) */}
                     <AnimatePresence>
                       {(jornada === 'medio_dia' || jornada === 'dia_completo') && fechaInicio && (
                         <motion.div
@@ -1198,13 +1208,131 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             marginTop: 2,
                           }}>
-                            <span style={{ fontSize: 11.5, color: '#64748b' }}>
-                              Vista previa
-                            </span>
+                            <span style={{ fontSize: 11.5, color: '#64748b' }}>Vista previa</span>
                             <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
                               {jornada === 'medio_dia' ? '½ día' : '1 día hábil'} · {formatFecha(fechaInicio)}
                             </span>
                           </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* ── Sub-modo Personalizado: Días / Horas ── */}
+                    <AnimatePresence>
+                      {jornada === 'personalizado' && (
+                        <motion.div
+                          key="comp-submode"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto', transition: { duration: 0.15 } }}
+                          exit={{ opacity: 0, height: 0, transition: { duration: 0.12 } }}
+                          style={{ overflow: 'hidden', marginTop: 8 }}
+                        >
+                          {/* Toggle */}
+                          <div style={{ display: 'flex', gap: 3, background: '#f1f5f9', borderRadius: 8, padding: 3, marginBottom: 10 }}>
+                            {[{ k: 'dias', label: 'Días' }, { k: 'horas', label: 'Horas' }].map(opt => (
+                              <button
+                                key={opt.k}
+                                type="button"
+                                onClick={() => setCompSubMode(opt.k)}
+                                style={{
+                                  flex: 1, padding: '5px 0', border: 'none', borderRadius: 6,
+                                  cursor: 'pointer', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+                                  background: compSubMode === opt.k ? '#fff' : 'transparent',
+                                  color: compSubMode === opt.k ? '#4f46e5' : '#94a3b8',
+                                  boxShadow: compSubMode === opt.k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* ── Modo Días ── */}
+                          {compSubMode === 'dias' && (() => {
+                            const numVal   = Math.max(parseFloat(compDiasInput) || 0, 0)
+                            const enteros  = Math.floor(numVal)
+                            const frac     = parseFloat((numVal - enteros).toFixed(2))
+                            const fracLbl  = frac === 0.5 ? '½ día' : frac > 0 ? `~${Math.round(frac * 8)}h` : null
+                            const distrib  = enteros > 0 && fracLbl ? `${enteros} día${enteros !== 1 ? 's' : ''} + ${fracLbl}` : null
+                            const restantes = saldoComp ? Math.max(saldoComp.disponible - numVal, 0) : null
+                            return (
+                              <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                  <input
+                                    type="number" min="0.5" step="0.5"
+                                    value={compDiasInput}
+                                    onChange={e => {
+                                      const v = e.target.value
+                                      setCompDiasInput(v)
+                                      const n = parseFloat(v)
+                                      if (!isNaN(n) && n > 0) {
+                                        const totalMin = Math.round(n * 8 * 60)
+                                        const hh = String(Math.floor(totalMin / 60)).padStart(2, '0')
+                                        const mm = String(totalMin % 60).padStart(2, '0')
+                                        setHoraInicio('00:00')
+                                        setHoraFin(`${hh}:${mm}`)
+                                        if (!fechaInicio) {
+                                          const hoy = new Date().toISOString().slice(0, 10)
+                                          setFechaInicio(hoy); setFechaFin(hoy)
+                                        }
+                                      } else {
+                                        setHoraInicio('00:00'); setHoraFin('00:00')
+                                      }
+                                    }}
+                                    placeholder="ej: 1.5"
+                                    className="mp-input"
+                                    style={{ width: 88, textAlign: 'center', fontSize: 16, fontWeight: 700 }}
+                                  />
+                                  <span style={{ fontSize: 13, color: '#475569' }}>días</span>
+                                </div>
+                                {numVal > 0 && (
+                                  <div style={{
+                                    background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)',
+                                    borderRadius: 8, padding: '8px 10px',
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                      <span style={{ color: '#6366f1', fontWeight: 600 }}>
+                                        Usarás {fmtDias(numVal)} día{numVal !== 1 ? 's' : ''}
+                                      </span>
+                                      {restantes !== null && (
+                                        <span style={{ fontWeight: 600, color: restantes === 0 ? '#dc2626' : '#059669' }}>
+                                          Restan {fmtDias(restantes)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {distrib && (
+                                      <p style={{ margin: '3px 0 0', fontSize: 11, color: '#94a3b8' }}>{distrib}</p>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+
+                          {/* ── Modo Horas ── */}
+                          {compSubMode === 'horas' && (
+                            <>
+                              <p style={{ margin: '0 0 6px', fontSize: 11.5, color: '#94a3b8' }}>
+                                Configura el horario en la sección de período ↓
+                              </p>
+                              {diasCompAUsar > 0 && saldoComp && (
+                                <div style={{
+                                  background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)',
+                                  borderRadius: 8, padding: '8px 10px',
+                                }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                                    <span style={{ color: '#6366f1', fontWeight: 600 }}>
+                                      ~{Math.round(diasCompAUsar * 8)}h · {fmtDias(diasCompAUsar)} días
+                                    </span>
+                                    <span style={{ fontWeight: 600, color: (saldoComp.disponible - diasCompAUsar) <= 0 ? '#dc2626' : '#059669' }}>
+                                      Restan {fmtDias(Math.max(saldoComp.disponible - diasCompAUsar, 0))}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1254,7 +1382,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       </div>
                     </motion.div>
                   )}
-                  {jornada === 'personalizado' && (
+                  {jornada === 'personalizado' && !(tipoPermiso === 'dias_compensatorios' && compSubMode === 'dias') && (
                     <motion.div key="custom" className="mp-jornada-extra" variants={slideV} initial="hidden" animate="visible" exit="exit">
                       <div className="mp-date-row">
                         <div className="mp-field-group">
