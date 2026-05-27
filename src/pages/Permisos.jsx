@@ -5,7 +5,7 @@ import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
   Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
-  Users, Gift, UserX,
+  Users, Gift, UserX, Download,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
@@ -1911,6 +1911,9 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const [filtroRol,       setFiltroRol]       = useState('')
   const [expandidos,      setExpandidos]      = useState(new Set()) // keys de grupos abiertos
   const [paginaP,         setPaginaP]         = useState(1)
+  const [seleccionados,   setSeleccionados]   = useState(new Set()) // IDs de ausencias seleccionadas para exportar
+  const [exportMenuOpen,  setExportMenuOpen]  = useState(false)
+  const exportMenuRef = useRef(null)
 
   // ── Días inhabilitados (feriados + puentes) ────────────────────────────
   const [diasInhabilitados,  setDiasInhabilitados]  = useState(new Set())
@@ -1927,6 +1930,26 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
       return next
     })
   }
+
+  function toggleSeleccion(id) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // Cierra el menú de exportación al hacer click fuera
+  useEffect(() => {
+    function handler(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Limpia selección al cambiar filtros o página
+  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, paginaP])
 
   useEffect(() => { cargarDatos(); cargarDiasInhabilitados() }, [])
 
@@ -2171,8 +2194,9 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
             })
             setEmailNotif(fnError ? 'error' : 'ok')
           } catch { setEmailNotif('error') }
-        } else {
-          // Resto de tipos (licencia médica, días compensatorios, etc.)
+        } else if (datos.tipoPermiso !== 'licencia_medica') {
+          // Resto de tipos (días compensatorios, justificativos, etc.)
+          // La licencia médica NO envía correo al trabajador
           try {
             const { error: fnError } = await supabase.functions.invoke('notify-ausencia', {
               body: { correo: correoSolicitante, destinatario: nombrePersona, persona: nombrePersona, modo: 'solicitante', ...detalle },
@@ -2243,6 +2267,93 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
     } catch {
       setErrorEliminar('No se pudo eliminar. Agrega la política DELETE en Supabase.')
     } finally { setEliminando(false) }
+  }
+
+  function exportarRegistros(formato) {
+    setExportMenuOpen(false)
+    const registros = permisos.filter(p => seleccionados.has(p.id))
+    if (registros.length === 0) return
+
+    const rows = registros.map(p => {
+      const u       = resolveUser(p)
+      const nombre  = u?.nombre ?? '—'
+      const rut     = u?.rut ?? p.externo_rut ?? p.snapshot_rut ?? '—'
+      const rol     = ROL_LABEL[u?.rol] ?? (u?.isExterno ? 'Externo' : '—')
+      const tipo    = TIPO_LABEL[p.tipo] ?? p.tipo
+      const jornada = JORNADA_LABEL[p.jornada] ?? p.jornada
+      const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados, p.tipo) ?? '—'
+      const horas   = p.jornada === 'personalizado' && p.hora_inicio && p.hora_fin
+        ? `${p.hora_inicio} – ${p.hora_fin}` : '—'
+      const obj = {
+        'Nombre':          nombre,
+        'RUT':             rut,
+        'Rol':             rol,
+        'Tipo de ausencia': tipo,
+        'Fecha inicio':    p.fecha_inicio ? formatFecha(p.fecha_inicio) : '—',
+        'Fecha fin':       p.fecha_fin    ? formatFecha(p.fecha_fin)    : '—',
+        'Jornada':         jornada,
+        'Días usados':     duracion,
+        'Horas (si aplica)': horas,
+        'Motivo':          p.notas ?? '—',
+      }
+      if (p.tipo === 'licencia_medica') {
+        obj['N° licencia médica'] = p.numero_licencia ?? p.notas ?? '—'
+      }
+      if (p.tipo === 'dias_compensatorios') {
+        obj['Saldo compensatorio'] = '(ver módulo compensatorios)'
+      }
+      return obj
+    })
+
+    // Encabezados dinámicos (incluye columnas extra según tipos seleccionados)
+    const headers = [
+      'Nombre','RUT','Rol','Tipo de ausencia','Fecha inicio','Fecha fin',
+      'Jornada','Días usados','Horas (si aplica)','Motivo',
+      ...( registros.some(p => p.tipo === 'licencia_medica')      ? ['N° licencia médica']     : []),
+      ...( registros.some(p => p.tipo === 'dias_compensatorios')   ? ['Saldo compensatorio']    : []),
+    ]
+
+    if (formato === 'csv') {
+      const csv = [
+        headers.map(h => `"${h}"`).join(','),
+        ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+      ].join('\n')
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'ausencias.csv'; a.click()
+      URL.revokeObjectURL(url)
+
+    } else if (formato === 'excel') {
+      const table = `<table><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${
+        rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>`).join('')
+      }</table>`
+      const blob = new Blob([table], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'ausencias.xls'; a.click()
+      URL.revokeObjectURL(url)
+
+    } else if (formato === 'pdf') {
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ausencias</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1e293b}
+h2{font-size:15px;margin-bottom:4px;color:#1a237e}
+p.sub{margin:0 0 14px;font-size:11px;color:#64748b}
+table{border-collapse:collapse;width:100%}
+th{background:#1a237e;color:#fff;padding:6px 9px;text-align:left;font-size:10.5px;white-space:nowrap}
+td{padding:5px 9px;border-bottom:1px solid #e2e8f0;font-size:10.5px}
+tr:nth-child(even) td{background:#f8fafc}
+</style></head><body>
+<h2>Ausencias registradas</h2>
+<p class="sub">Exportado el ${new Date().toLocaleDateString('es-CL')} · ${registros.length} ${registros.length === 1 ? 'registro' : 'registros'}</p>
+<table>
+<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
+${rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>`).join('')}
+</table></body></html>`
+      const w = window.open('', '_blank')
+      if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { w.print() }, 400) }
+    }
   }
 
   function abrirEditar(p) {
@@ -2498,6 +2609,47 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                 )}
               </button>
             )}
+            {/* Botón Exportar — solo visible cuando hay registros seleccionados */}
+            {seleccionados.size > 0 && (
+              <div style={{ position: 'relative' }} ref={exportMenuRef}>
+                <button
+                  className="permisos-dias-btn"
+                  onClick={() => setExportMenuOpen(prev => !prev)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' }}
+                >
+                  <Download size={14} strokeWidth={2.5} />
+                  Exportar ({seleccionados.size})
+                  <ChevronDown size={12} strokeWidth={2.5} style={{ transition: 'transform 0.18s', transform: exportMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </button>
+                {exportMenuOpen && (
+                  <div style={{
+                    position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+                    background: '#fff', border: '1px solid #e2e8f0', borderRadius: 9,
+                    boxShadow: '0 6px 24px rgba(0,0,0,0.10)', zIndex: 200,
+                    minWidth: 148, overflow: 'hidden', padding: '4px 0',
+                  }}>
+                    {[
+                      { label: 'PDF',   fmt: 'pdf',   icon: '📄' },
+                      { label: 'Excel', fmt: 'excel', icon: '📊' },
+                      { label: 'CSV',   fmt: 'csv',   icon: '📋' },
+                    ].map(({ label, fmt, icon }) => (
+                      <button key={fmt} onClick={() => exportarRegistros(fmt)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                          padding: '9px 14px', background: 'none', border: 'none',
+                          cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left',
+                          fontFamily: 'inherit', transition: 'background 0.12s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <span>{icon}</span>{label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {puedeGestionar && (
               <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
                 <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
@@ -2620,10 +2772,20 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                             return (
                               <div key={p.id} className="permisos-ausencia-row" style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
-                                padding: '9px 16px 9px 66px',
+                                padding: '9px 16px 9px 56px',
                                 borderTop: '1px solid #f8fafc',
-                                background: '#fff',
+                                background: seleccionados.has(p.id) ? 'rgba(99,102,241,0.04)' : '#fff',
+                                transition: 'background 0.15s',
                               }}>
+                                {/* Checkbox de selección */}
+                                <input
+                                  type="checkbox"
+                                  checked={seleccionados.has(p.id)}
+                                  onChange={() => toggleSeleccion(p.id)}
+                                  onClick={e => e.stopPropagation()}
+                                  title="Seleccionar para exportar"
+                                  style={{ width: 14, height: 14, cursor: 'pointer', flexShrink: 0, accentColor: '#4f46e5' }}
+                                />
                                 <span className="permisos-badge permisos-badge--tipo" style={{
                                   flexShrink: 0,
                                   background: TIPO_STYLE[p.tipo]?.bg ?? '#f1f5f9',
