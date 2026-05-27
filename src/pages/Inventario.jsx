@@ -643,7 +643,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }, [modalPrestamo?.id])
 
   // ── Datos y columnas para exportar ───────────────────────────────────────
-  const getDatosExportar = () => catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
+  const getDatosExportar = () => {
+    // 1) Si hay bienes seleccionados, exportar solo esos
+    if (seleccion.size > 0) return bienes.filter(b => seleccion.has(b.id))
+    // 2) Si hay búsqueda o filtros activos, exportar el resultado filtrado
+    if (hayFiltrosActivos) return filtrados
+    // 3) Si no, exportar toda la categoría actual
+    return catActual === 'todos' ? bienes : bienes.filter(b => b.categoria === catActual)
+  }
   const getCatLabel2 = () => catActual === 'todos' ? 'todos' : (categorias.find(c => c.id === catActual)?.label ?? catActual)
   const nombreArchivo = (ext) => `inventario_${getCatLabel2().replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.${ext}`
 
@@ -1587,7 +1594,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', maxWidth: 'calc(100vw - 16px)', overflow: 'hidden',
                 }}>
                   <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                    Exportar vista actual
+                    {seleccion.size > 0
+                      ? `Exportar ${seleccion.size} seleccionado${seleccion.size !== 1 ? 's' : ''}`
+                      : hayFiltrosActivos
+                        ? `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
+                        : 'Exportar vista actual'}
                   </p>
                   {[
                     { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas', fn: exportarCSV },
