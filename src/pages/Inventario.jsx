@@ -790,7 +790,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       el.innerHTML = htmlContent
       document.body.appendChild(el)
       window.html2pdf().set(opt).from(el).save().then(() => { document.body.removeChild(el) })
-      setMenuExportar(false)
+      setMenuExportar(false); setMenuExportarDetalle(false)
     }
     if (window.html2pdf) { cargarYExportar(); return }
     const script = document.createElement('script')
@@ -826,7 +826,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('doc'); a.click(); URL.revokeObjectURL(url)
-    setMenuExportar(false)
+    setMenuExportar(false); setMenuExportarDetalle(false)
   }
 
   const exportarImagen = () => {
@@ -878,7 +878,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('png'); a.click(); URL.revokeObjectURL(url)
     })
-    setMenuExportar(false)
+    setMenuExportar(false); setMenuExportarDetalle(false)
   }
 
   const exportarExcelPorCategorias = () => {
@@ -2846,9 +2846,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     Exportar {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
                   </p>
                   {[
-                    { icon: '📄', label: 'CSV',   desc: 'Texto separado por comas', fn: exportarCSV },
-                    { icon: '📊', label: 'Excel', desc: 'Hoja de cálculo .xlsx',    fn: exportarExcel },
-                    { icon: '📕', label: 'PDF',   desc: 'Tabla en PDF A4',          fn: exportarPDF },
+                    { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas', fn: exportarCSV },
+                    { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',    fn: exportarExcel },
+                    { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',          fn: exportarPDF },
+                    { icon: '📝', label: 'Word',   desc: 'Documento .doc',           fn: exportarWord },
+                    { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: exportarImagen },
                   ].map(({ icon, label, desc, fn }) => (
                     <button key={label} onClick={fn} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                       onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
