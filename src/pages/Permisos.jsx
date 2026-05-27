@@ -2749,13 +2749,43 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                 const diasFmt   = fmtDias(stats.dias)
                 const rolLabel    = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
 
+                const todosSeleccionados = aus.every(p => seleccionados.has(p.id))
+                const algunoSeleccionado = aus.some(p => seleccionados.has(p.id))
+
+                function toggleUsuario(e) {
+                  e.stopPropagation()
+                  setSeleccionados(prev => {
+                    const next = new Set(prev)
+                    if (todosSeleccionados) {
+                      aus.forEach(p => next.delete(p.id))
+                    } else {
+                      aus.forEach(p => next.add(p.id))
+                    }
+                    return next
+                  })
+                }
+
                 return (
                   <div key={cardKey}
-                    style={{ border: '1px solid #e9edf5', borderRadius: 12, overflow: 'hidden', background: '#fff' }}>
+                    style={{
+                      border: algunoSeleccionado ? '1.5px solid #c7d2fe' : '1px solid #e9edf5',
+                      borderRadius: 12, overflow: 'hidden', background: '#fff',
+                      transition: 'border-color 0.15s',
+                    }}>
 
                     {/* ── Cabecera del usuario (clickeable) ── */}
                     <div onClick={() => toggleColapso(cardKey)} className="permisos-user-header"
                       style={{ borderBottom: abierto ? '1px solid #f0f4f8' : 'none' }}>
+                      {/* Checkbox de usuario — selecciona/deselecciona todas sus ausencias */}
+                      <input
+                        type="checkbox"
+                        checked={todosSeleccionados}
+                        ref={el => { if (el) el.indeterminate = algunoSeleccionado && !todosSeleccionados }}
+                        onChange={toggleUsuario}
+                        onClick={e => e.stopPropagation()}
+                        title={todosSeleccionados ? 'Deseleccionar todas' : 'Seleccionar todas las ausencias'}
+                        style={{ width: 15, height: 15, cursor: 'pointer', flexShrink: 0, accentColor: '#4f46e5', marginRight: 4 }}
+                      />
                       {/* Izquierda: avatar + nombre + rol */}
                       <div className="aus-user-left">
                         <div className="permisos-avatar" style={{ background: getAvatarColor(u.nombre ?? ''), width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
