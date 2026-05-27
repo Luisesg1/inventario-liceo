@@ -291,7 +291,8 @@
 .drp-panel {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
+  left: auto;
   z-index: 200;
   background: #f8fafc;
   border: 1px solid rgba(0,0,0,0.06);
@@ -301,7 +302,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 280px;
+  min-width: 300px;
 }
 .drp-row {
   display: flex;
