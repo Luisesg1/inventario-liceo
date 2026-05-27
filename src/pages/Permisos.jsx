@@ -1960,14 +1960,38 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     setCargando(true)
 
     if (modoMisAusencias) {
-      // Seguridad: solo carga las ausencias del usuario autenticado
-      const { data: ps } = await supabase
-        .from('ausencias')
-        .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
-        .eq('usuario_id', usuario.id)
-        .order('fecha_inicio', { ascending: false })
+      const rut = usuario.rut ?? null
+
+      // 1. Todos los user IDs que comparten el mismo RUT (misma persona, distintas cuentas)
+      let allIds = [usuario.id]
+      if (rut) {
+        const { data: mismoRut } = await supabase
+          .from('usuarios').select('id').eq('rut', rut)
+        if (mismoRut?.length) {
+          allIds = [...new Set([...allIds, ...mismoRut.map(u => u.id)])]
+        }
+      }
+
+      // 2. Consultas en paralelo: por usuario_id, externo_rut y snapshot_rut
+      const sel = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
+      const consultas = [
+        supabase.from('ausencias').select(sel).in('usuario_id', allIds).order('fecha_inicio', { ascending: false }),
+        ...(rut ? [
+          supabase.from('ausencias').select(sel).eq('externo_rut',  rut),
+          supabase.from('ausencias').select(sel).eq('snapshot_rut', rut),
+        ] : []),
+      ]
+      const resultados = await Promise.all(consultas)
+
+      // 3. Unir y deduplicar por ID
+      const vistos = new Set()
+      const allPermisos = resultados
+        .flatMap(r => r.data ?? [])
+        .filter(p => { if (vistos.has(p.id)) return false; vistos.add(p.id); return true })
+        .sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? ''))
+
       setUsuarios([usuario])
-      setPermisos(ps ?? [])
+      setPermisos(allPermisos)
       setCargando(false)
       return
     }
