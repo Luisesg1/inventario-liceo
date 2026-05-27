@@ -2271,7 +2271,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
 
   function exportarRegistros(formato) {
     setExportMenuOpen(false)
-    const registros = permisos.filter(p => seleccionados.has(p.id))
+    // Si hay selección manual, exporta solo esos; si no, exporta todos los filtrados
+    const registros = seleccionados.size > 0
+      ? permisos.filter(p => seleccionados.has(p.id))
+      : permisosFiltrados
     if (registros.length === 0) return
 
     const rows = registros.map(p => {
@@ -2609,16 +2612,21 @@ ${rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>
                 )}
               </button>
             )}
-            {/* Botón Exportar — solo visible cuando hay registros seleccionados */}
-            {seleccionados.size > 0 && (
+            {/* Botón Exportar — siempre visible; exporta seleccionados o filtrados */}
+            {permisos.length > 0 && (
               <div style={{ position: 'relative' }} ref={exportMenuRef}>
                 <button
                   className="permisos-dias-btn"
                   onClick={() => setExportMenuOpen(prev => !prev)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' }}
+                  style={seleccionados.size > 0
+                    ? { display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' }
+                    : { display: 'flex', alignItems: 'center', gap: 6 }}
+                  title={seleccionados.size > 0
+                    ? `Exportar ${seleccionados.size} seleccionado${seleccionados.size !== 1 ? 's' : ''}`
+                    : `Exportar ${permisosFiltrados.length} registro${permisosFiltrados.length !== 1 ? 's' : ''} filtrados`}
                 >
                   <Download size={14} strokeWidth={2.5} />
-                  Exportar ({seleccionados.size})
+                  {seleccionados.size > 0 ? `Exportar (${seleccionados.size})` : 'Exportar'}
                   <ChevronDown size={12} strokeWidth={2.5} style={{ transition: 'transform 0.18s', transform: exportMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                 </button>
                 {exportMenuOpen && (
@@ -2626,8 +2634,14 @@ ${rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>
                     position: 'absolute', right: 0, top: 'calc(100% + 4px)',
                     background: '#fff', border: '1px solid #e2e8f0', borderRadius: 9,
                     boxShadow: '0 6px 24px rgba(0,0,0,0.10)', zIndex: 200,
-                    minWidth: 148, overflow: 'hidden', padding: '4px 0',
+                    minWidth: 160, overflow: 'hidden', padding: '4px 0',
                   }}>
+                    {/* Cabecera del menú: indica qué se va a exportar */}
+                    <div style={{ padding: '7px 14px 5px', fontSize: 11, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', marginBottom: 2 }}>
+                      {seleccionados.size > 0
+                        ? `${seleccionados.size} seleccionado${seleccionados.size !== 1 ? 's' : ''}`
+                        : `${permisosFiltrados.length} registro${permisosFiltrados.length !== 1 ? 's' : ''} filtrados`}
+                    </div>
                     {[
                       { label: 'PDF',   fmt: 'pdf',   icon: '📄' },
                       { label: 'Excel', fmt: 'excel', icon: '📊' },
