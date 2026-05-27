@@ -1964,10 +1964,19 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     setCargando(true)
 
     if (modoMisAusencias) {
-      const rutRaw  = usuario.rut ?? null
-      const rutNorm = normRut(rutRaw ?? '')
-      // Intentar ambos formatos: '20.469.215-7' y '20469215-7' por inconsistencias en DB
-      const rutFormatos = [...new Set([rutRaw, rutNorm || null].filter(Boolean))]
+      // Obtener datos frescos del usuario desde la BD (el RUT puede haber sido
+      // asignado después de iniciar sesión, así que no confiamos en usuario.rut)
+      const { data: freshUser } = await supabase
+        .from('usuarios')
+        .select('id, rut, nombre, email, rol')
+        .eq('id', usuario.id)
+        .maybeSingle()
+
+      const rutRaw      = freshUser?.rut ?? usuario.rut ?? null
+      const rutNorm     = normRut(rutRaw ?? '')
+      const rutFormated = rutNorm ? formatRut(rutNorm) : null
+      // Cubrir todos los formatos posibles en DB: '20.469.215-7', '20469215-7', '204692157'
+      const rutFormatos = [...new Set([rutRaw, rutNorm || null, rutFormated].filter(Boolean))]
 
       // 1. Todos los IDs con el mismo RUT normalizado (cualquier formato en DB)
       const { data: todosUs } = await supabase.from('usuarios').select('id, rut')
@@ -1999,7 +2008,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         .filter(p => { if (vistos.has(p.id)) return false; vistos.add(p.id); return true })
         .sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? ''))
 
-      setUsuarios([usuario])
+      setUsuarios([freshUser ?? usuario])
       setPermisos(allPermisos)
       setCargando(false)
       return
