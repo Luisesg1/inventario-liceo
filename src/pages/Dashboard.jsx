@@ -45,8 +45,6 @@ function tiempoRelativo(fecha) {
 function fmtMonto(v) {
   const n = Number(v)
   if (!n) return '$0'
-  if (n >= 1000000) return '$' + (n / 1000000).toLocaleString('es-CL', { maximumFractionDigits: 1 }) + 'M'
-  if (n >= 1000)    return '$' + Math.round(n / 1000).toLocaleString('es-CL') + 'k'
   return '$' + n.toLocaleString('es-CL')
 }
 
