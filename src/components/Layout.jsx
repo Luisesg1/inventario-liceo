@@ -323,6 +323,7 @@ export default function Layout({
 
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos' || paginaActual === 'usuarios'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
+  const [herramientasAbierto, setHerramientasAbierto] = useState(false)
 
   const titulos = {
     dashboard:  'Inicio',
@@ -675,15 +676,36 @@ export default function Layout({
         {/* Herramientas */}
         {esAdmin && (
           <div className="tools-section">
-            <p className="nav-section">Herramientas</p>
-            {toolButtons.map(({ Icon, label, fn }) => (
-              <button key={label} className="tool-btn" onClick={fn} disabled={exportando}>
-                <span className="tool-btn-icon">
-                  {exportando ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
-                </span>
-                {exportando ? 'Generando…' : label}
-              </button>
-            ))}
+            <div
+              className="nav-section"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => setHerramientasAbierto(o => !o)}
+            >
+              Herramientas
+              <span className={`nav-chevron ${herramientasAbierto ? 'nav-chevron--open' : ''}`} style={{ position: 'static', marginLeft: 4 }}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
+            </div>
+            <AnimatePresence initial={false}>
+              {herramientasAbierto && (
+                <motion.div
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  {toolButtons.map(({ Icon, label, fn }) => (
+                    <button key={label} className="tool-btn" onClick={fn} disabled={exportando}>
+                      <span className="tool-btn-icon">
+                        {exportando ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
+                      </span>
+                      {exportando ? 'Generando…' : label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
