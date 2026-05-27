@@ -46,6 +46,7 @@ export default function App() {
   const irAAusencias     = () => cambiarPagina('permisos') // se sobrescribe abajo tras calcular permisos
   const procesandoCambio = useRef(false)
   const modoRecovery     = useRef(esRecuperacion)
+  const sesionCargada    = useRef(false)   // evita resetear la página en recargas de sesión
 
   useEffect(() => {
     const hash = window.location.hash
@@ -58,6 +59,7 @@ export default function App() {
 
       if (event === 'SIGNED_OUT' || !session) {
         if (event === 'INITIAL_SESSION' && modoRecovery.current) return
+        sesionCargada.current = false
         setUsuario(null)
         setMostrarSetPassword(false)
         setCargando(false)
@@ -66,6 +68,9 @@ export default function App() {
 
       // No recargar el perfil en cada refresh de token
       if (event === 'TOKEN_REFRESHED') return
+
+      // Si ya cargamos esta sesión, ignorar eventos redundantes (evita resetear la página)
+      if (sesionCargada.current) return
 
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && modoRecovery.current)) {
         modoRecovery.current = true
@@ -146,6 +151,7 @@ export default function App() {
       return
     }
 
+    sesionCargada.current = true
     setUsuario(data)
     // Cargar permisos granulares
     if (data.rol !== 'admin') {
