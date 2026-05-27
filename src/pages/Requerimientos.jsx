@@ -1642,11 +1642,10 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         </div>
       )}
 
-      {/* Toolbar */}
+      {/* Toolbar — fila 1: búsqueda + botones de acción */}
       <div className="req-toolbar">
         <input
-          style={{ width: 110, flexShrink: 0 }}
-          className="req-search"
+          className="req-search req-search--num"
           placeholder="N° req..."
           value={filtroNumero}
           onChange={e => setFiltroNumero(e.target.value)}
@@ -1657,29 +1656,90 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
         />
+        <div className="req-toolbar-actions">
+          {puedeImportar && (
+            <button className="req-btn-tool" onClick={() => setModalImportar(true)}>
+              ⬆ Importar
+            </button>
+          )}
+          {puedeExportar && (
+            <div style={{ position: 'relative' }}>
+              <button className="req-btn-tool" onClick={() => setMenuExportar(v => !v)}>
+                ⬇ {seleccion.size > 0 ? `Exportar ${seleccion.size}` : 'Exportar'} ▾
+              </button>
+              {menuExportar && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
+                    background: '#0d1628', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.45)', minWidth: '200px', overflow: 'hidden',
+                  }}>
+                    <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                      {seleccion.size > 0
+                        ? `Exportar ${seleccion.size} seleccionado${seleccion.size !== 1 ? 's' : ''}`
+                        : hayFiltrosCampos || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
+                          ? `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
+                          : 'Exportar vista actual'}
+                    </p>
+                    {[
+                      { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(getDatosExportar()); setMenuExportar(false) } },
+                      { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportar(false); try { await exportarExcel(getDatosExportar()) } finally { setExportando(false) } } },
+                      { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(getDatosExportar()); setMenuExportar(false) } },
+                      { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(getDatosExportar()); setMenuExportar(false) } },
+                      { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(getDatosExportar()); setMenuExportar(false) } },
+                    ].map(({ icon, label, desc, fn }) => (
+                      <button key={label} onClick={fn} style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                        padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                        textAlign: 'left', transition: 'background 0.15s', fontFamily: 'inherit',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(27,43,69,0.6)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#e5e7eb' }}>{label}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8' }}>{desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {puedeCrear && (
+            <button className="req-btn-nuevo" onClick={abrirNuevo}>+ Nuevo</button>
+          )}
+        </div>
+      </div>
+
+      {/* Filtros — fila 2: filtros dependientes */}
+      <div className="req-filtros">
         <FiltroSelect
           value={filtroEstado}
           onChange={v => handleFiltroChange('estado', v)}
           opcionesDinamicas={getOpciones('estado')}
-          placeholder="Todos los estados"
+          placeholder="Estado"
         />
         <FiltroSelect
           value={filtroFondo}
           onChange={v => handleFiltroChange('fondo', v)}
           opcionesDinamicas={getOpciones('fondo')}
-          placeholder="Todos los fondos"
+          placeholder="Fondo"
         />
         <FiltroSelect
           value={filtroSolicitante}
           onChange={v => handleFiltroChange('solicitante', v)}
           opcionesDinamicas={getOpciones('solicitante')}
-          placeholder="Todos los solicitantes"
+          placeholder="Solicitante"
         />
         <FiltroSelect
           value={filtroAccion}
           onChange={v => handleFiltroChange('accion', v)}
           opcionesDinamicas={getOpciones('accion')}
-          placeholder="Todas las acciones"
+          placeholder="Acción"
         />
         <DateRangePicker
           desde={filtroFechaDesde}
@@ -1688,59 +1748,6 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           onHasta={setFiltroFechaHasta}
           onLimpiar={() => { setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
         />
-        {puedeImportar && (
-          <button className="req-btn-tool" onClick={() => setModalImportar(true)}>
-            ⬆ Importar
-          </button>
-        )}
-        {puedeExportar && <div style={{ position: 'relative' }}>
-          <button className="req-btn-tool" onClick={() => setMenuExportar(v => !v)}>
-            ⬇ {seleccion.size > 0 ? `Exportar ${seleccion.size}` : 'Exportar'} ▾
-          </button>
-          {menuExportar && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
-              <div style={{
-                position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
-                background: '#0d1628', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.45)', minWidth: '200px', overflow: 'hidden',
-              }}>
-                <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                  {seleccion.size > 0
-                    ? `Exportar ${seleccion.size} seleccionado${seleccion.size !== 1 ? 's' : ''}`
-                    : hayFiltrosCampos || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
-                      ? `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
-                      : 'Exportar vista actual'}
-                </p>
-                {[
-                  { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(getDatosExportar()); setMenuExportar(false) } },
-                  { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportar(false); try { await exportarExcel(getDatosExportar()) } finally { setExportando(false) } } },
-                  { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(getDatosExportar()); setMenuExportar(false) } },
-                  { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(getDatosExportar()); setMenuExportar(false) } },
-                  { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(getDatosExportar()); setMenuExportar(false) } },
-                ].map(({ icon, label, desc, fn }) => (
-                  <button key={label} onClick={fn} style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                    padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-                    textAlign: 'left', transition: 'background 0.15s', fontFamily: 'inherit',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(27,43,69,0.6)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                  >
-                    <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                    <div>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#e5e7eb' }}>{label}</p>
-                      <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8' }}>{desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>}
-        {puedeCrear && (
-          <button className="req-btn-nuevo" onClick={abrirNuevo}>+ Nuevo</button>
-        )}
       </div>
 
       {/* Barra de selección múltiple */}

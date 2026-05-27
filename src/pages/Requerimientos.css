@@ -82,16 +82,15 @@
   margin-top: 2px;
 }
 
-/* ── Toolbar ── */
+/* ── Toolbar (fila 1: búsqueda + acciones) ── */
 .req-toolbar {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
   align-items: center;
 }
 .req-search {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid rgba(0,0,0,0.13);
   border-radius: 8px;
@@ -100,6 +99,9 @@
   color: #1e293b;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+.req-search--num {
+  flex: 0 0 100px;
+}
 .req-search::placeholder { color: #94a3b8; }
 .req-search:hover { border-color: rgba(0,0,0,0.2); }
 .req-search:focus {
@@ -107,6 +109,20 @@
   border-color: rgba(99,102,241,0.5);
   background: #fafbff;
   box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.req-toolbar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── Filtros (fila 2: dependientes) ── */
+.req-filtros {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 .req-filter {
   padding: 8px 10px;
@@ -161,17 +177,19 @@
 /* ── FiltroSelect ── */
 .fsel-wrap {
   position: relative;
+  flex: 1;
+  min-width: 110px;
 }
 .fsel-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
   user-select: none;
   font-family: inherit;
   font-size: 13px;
   white-space: nowrap;
-  min-width: 140px;
+  width: 100%;
   justify-content: space-between;
   padding: 8px 10px;
   background: #ffffff;
@@ -237,6 +255,7 @@
 /* ── DateRangePicker compacto ── */
 .drp-wrap {
   position: relative;
+  flex-shrink: 0;
 }
 .drp-trigger {
   display: flex;
@@ -1020,14 +1039,13 @@
   }
   .req-search {
     min-width: 0;
-    width: 100%;
-    flex: 1 1 100%;
+    flex: 1 1 160px;
   }
-  .req-search:first-child {
-    flex: 0 1 100px;
-  }
-  .fsel-trigger { min-width: 0; flex: 1; }
-  .drp-trigger  { flex: 1; white-space: nowrap; }
+  .req-search--num { flex: 0 0 80px; }
+  .req-toolbar-actions { flex-shrink: 0; }
+  .req-filtros { gap: 6px; }
+  .fsel-wrap   { flex: 1 1 140px; }
+  .drp-wrap    { flex: 1 1 auto; }
 
   .req-acciones .btn-ver,
   .req-acciones .btn-edit,
