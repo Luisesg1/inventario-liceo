@@ -1619,7 +1619,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const [busqueda,        setBusqueda]        = useState('')
   const [filtroTipo,      setFiltroTipo]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')
-  const [colapsados,      setColapsados]      = useState(new Set()) // keys de grupos cerrados
+  const [expandidos,      setExpandidos]      = useState(new Set()) // keys de grupos abiertos
   const [paginaP,         setPaginaP]         = useState(1)
 
   // ── Días inhabilitados (feriados + puentes) ────────────────────────────
@@ -1631,7 +1631,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
   const [emailNotif,         setEmailNotif]         = useState(null) // null | 'ok' | 'error'
 
   function toggleColapso(key) {
-    setColapsados(prev => {
+    setExpandidos(prev => {
       const next = new Set(prev)
       next.has(key) ? next.delete(key) : next.add(key)
       return next
@@ -2252,7 +2252,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                 const rut      = u.rut ?? u.externo_rut
                 const statsKey = rut ? normRut(rut) : (u.id ?? 'unknown')
                 const cardKey  = u.id ?? rut ?? u.nombre
-                const abierto  = !colapsados.has(cardKey)
+                const abierto  = expandidos.has(cardKey)
                 const stats    = userStatsMap[statsKey] ?? { count: 0, dias: 0 }
                 const restantes = Math.max(MAX_AUSENCIAS - stats.dias, 0)
                 const agotada   = stats.dias >= MAX_AUSENCIAS
