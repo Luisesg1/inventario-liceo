@@ -1,9 +1,10 @@
 // src/offline.js — Utilidades para modo sin conexión
 const KEYS = {
-  bienes:     'inv_cache_bienes',
-  categorias: 'inv_cache_cats',
-  permisos:   'inv_cache_permisos',
-  pendientes: 'inv_pendientes',
+  bienes:         'inv_cache_bienes',
+  categorias:     'inv_cache_cats',
+  permisos:       'inv_cache_permisos',
+  pendientes:     'inv_pendientes',
+  pendientesEdit: 'inv_pendientes_edit',
 }
 
 // ── Caché de datos ────────────────────────────────────────────────────────
@@ -50,4 +51,22 @@ export function agregarPendiente(bien) {
 export function eliminarPendiente(id) {
   const lista = obtenerPendientes().filter(p => p.id !== id)
   try { localStorage.setItem(KEYS.pendientes, JSON.stringify(lista)) } catch {}
+}
+
+// ── Cola de ediciones pendientes (mapa { idBien: payload }) ────────────────
+
+export function obtenerPendientesEdicion() {
+  try { return JSON.parse(localStorage.getItem(KEYS.pendientesEdit) || '{}') } catch { return {} }
+}
+
+export function guardarPendienteEdicion(id, payload) {
+  const mapa = obtenerPendientesEdicion()
+  mapa[id] = payload // última edición gana
+  try { localStorage.setItem(KEYS.pendientesEdit, JSON.stringify(mapa)) } catch {}
+}
+
+export function eliminarPendienteEdicion(id) {
+  const mapa = obtenerPendientesEdicion()
+  delete mapa[id]
+  try { localStorage.setItem(KEYS.pendientesEdit, JSON.stringify(mapa)) } catch {}
 }

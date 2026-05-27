@@ -7,6 +7,7 @@ import {
   cachearBienes, cachearCategorias, cachearPermisos,
   obtenerCacheBienes, obtenerCacheCategorias, obtenerCachePermisos,
   obtenerPendientes, agregarPendiente, eliminarPendiente,
+  obtenerPendientesEdicion, guardarPendienteEdicion, eliminarPendienteEdicion,
 } from '../offline'
 
 // Inserta campos faltantes en su posición natural, no al final
@@ -209,12 +210,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   // ── Sincronizar pendientes con Supabase ───────────────────────────────────
   async function sincronizarPendientes() {
     const pendientes = obtenerPendientes()
-    if (pendientes.length === 0) return
+    const ediciones  = obtenerPendientesEdicion()
+    if (pendientes.length === 0 && Object.keys(ediciones).length === 0) return
     setSincronizando(true)
     let ok = 0
+    // 1) Altas pendientes (bienes nuevos creados offline)
     for (const item of pendientes) {
       // eslint-disable-next-line no-unused-vars
-      const { id, _pendiente, creado_en, actualizado_en, ...payload } = item
+      const { id, _pendiente, _pendienteEdit, creado_en, actualizado_en, ...payload } = item
       const { data, error } = await supabase.from('bienes').insert(payload).select().single()
       if (!error && data) {
         eliminarPendiente(id)
@@ -222,8 +225,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         ok++
       }
     }
+    // 2) Ediciones pendientes (bienes existentes editados offline)
+    let okEdit = 0
+    for (const [idBien, payload] of Object.entries(ediciones)) {
+      const { error } = await supabase.from('bienes').update(payload).eq('id', idBien)
+      if (!error) {
+        eliminarPendienteEdicion(idBien)
+        setBienes(prev => prev.map(b => b.id === idBien ? { ...b, _pendienteEdit: false } : b))
+        supabase.rpc('set_audit_dispositivo', { p_bien_id: idBien, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
+        okEdit++
+      }
+    }
     setSincronizando(false)
-    if (ok > 0) setAviso(`✓ ${ok} bien${ok !== 1 ? 'es' : ''} sincronizado${ok !== 1 ? 's' : ''} correctamente`)
+    const partes = []
+    if (ok > 0)     partes.push(`${ok} agregado${ok !== 1 ? 's' : ''}`)
+    if (okEdit > 0) partes.push(`${okEdit} editado${okEdit !== 1 ? 's' : ''}`)
+    if (partes.length) setAviso(`✓ Sincronizado: ${partes.join(' y ')} correctamente`)
   }
 
   // ── Detectar cambios de conexión ──────────────────────────────────────────
@@ -271,6 +288,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       const bs         = obtenerCacheBienes()
       const cached     = obtenerCachePermisos()
       const pendientes = obtenerPendientes()
+      const ediciones  = obtenerPendientesEdicion()
       if (!cats) {
         setAviso('Sin conexión y sin datos guardados. Conéctate al menos una vez para cargar el inventario.')
         setCargando(false)
@@ -283,8 +301,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         ? defaultsPorRol.admin
         : (cached?.permisos ?? defaultsPorRol[rol] ?? defaultsPorRol.encargado)
       const catsOffline = esAdmin ? ['todos'] : (cached?.categorias ?? ['todos'])
+      // Aplicar ediciones pendientes sobre los bienes en caché y marcarlos
+      const bsConEdits = (bs ?? []).map(b => ediciones[b.id] ? { ...b, ...ediciones[b.id], _pendienteEdit: true } : b)
       setCategorias(cats)
-      setBienes([...(bs ?? []), ...pendientes])
+      setBienes([...bsConEdits, ...pendientes])
       setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
       setPermisos(permisosOffline)
       setCategoriasPermitidas(catsOffline)
@@ -341,8 +361,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const saved = (() => { try { return JSON.parse(localStorage.getItem('inv_cat_order') || 'null') } catch { return null } })()
     const ids = cats.map(c => c.id)
 
+    // Aplicar ediciones pendientes (de sesiones offline previas) de forma optimista
+    const edicionesOnline = obtenerPendientesEdicion()
+    const bsConEdits = Object.keys(edicionesOnline).length
+      ? bs.map(b => edicionesOnline[b.id] ? { ...b, ...edicionesOnline[b.id], _pendienteEdit: true } : b)
+      : bs
+
     setCategorias(cats)
-    setBienes(bs)
+    setBienes(bsConEdits)
     setCatOrder(saved ? [...new Set([...saved.filter(id => ids.includes(id)), ...ids])] : ids)
     setPermisos(permisosFinales)
     setCategoriasPermitidas(catsFinales)
@@ -668,7 +694,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
     'obs',
   ]
-  const COLS_INTERNAS = new Set(['id','creado_en','actualizado_en','campos_extra'])
+  const COLS_INTERNAS = new Set(['id','creado_en','actualizado_en','campos_extra','_pendiente','_pendienteEdit'])
 
   const ETIQUETAS_COL = {
     codigo:'Código',codigo_interno:'Código Interno',nombre:'Nombre',categoria:'Categoría',
@@ -1137,28 +1163,34 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     delete payload.cpu_marca
     delete payload.cpu_modelo
     delete payload.cpu_generacion
+    delete payload._pendiente
+    delete payload._pendienteEdit
 
 
     // Helper: detectar error de red (sin conexión real aunque navigator.onLine diga true)
     const esErrorRed = (e) => e instanceof TypeError && e.message.toLowerCase().includes('fetch')
 
     if (editandoId !== null) {
-      if (!online) {
-        setAviso('Sin conexión — no se pueden editar bienes existentes offline.')
+      // Sin internet: guardar la edición en cola local y marcar como pendiente
+      const guardarEdicionOffline = () => {
+        guardarPendienteEdicion(editandoId, payload)
+        setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload, nombre: nombreFinal, _pendienteEdit: true } : b))
+        setOnline(false)
         setGuardando(false)
-        return
+        cancelarForm()
       }
+      if (!online || !navigator.onLine) { guardarEdicionOffline(); return }
       try {
         const { error } = await supabase.from('bienes').update(payload).eq('id', editandoId)
         if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
         supabase.rpc('set_audit_dispositivo', { p_bien_id: editandoId, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
       } catch (e) {
-        setAviso(esErrorRed(e) ? 'Sin conexión — no se pueden editar bienes sin internet.' : 'Error al guardar: ' + e.message)
-        if (esErrorRed(e)) setOnline(false)
+        if (esErrorRed(e)) { guardarEdicionOffline(); return }
+        setAviso('Error al guardar: ' + e.message)
         setGuardando(false)
         return
       }
-      setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload } : b))
+      setBienes(prev => prev.map(b => b.id === editandoId ? { ...b, ...payload, _pendienteEdit: false } : b))
       logActividad(usuario, payload.estado === 'Baja' ? 'baja' : 'actualizar', nombreFinal, editandoId)
     } else {
       // Sin internet: guardar en cola local
@@ -1481,16 +1513,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         }}>
           <span style={{ fontSize: 18 }}>📡</span>
           <span style={{ fontSize: 13, color: '#92400e', fontWeight: 500 }}>
-            Sin conexión — los bienes nuevos se guardarán localmente y se sincronizarán al volver a conectarse.
+            Sin conexión — los cambios (nuevos y editados) se guardarán localmente y se sincronizarán al volver a conectarse.
           </span>
-          {obtenerPendientes().length > 0 && (
-            <span style={{
-              marginLeft: 'auto', fontSize: 12, fontWeight: 700,
-              background: '#f59e0b', color: '#fff', borderRadius: 20, padding: '2px 10px',
-            }}>
-              {obtenerPendientes().length} pendiente{obtenerPendientes().length !== 1 ? 's' : ''}
-            </span>
-          )}
+          {(() => {
+            const totalPend = obtenerPendientes().length + Object.keys(obtenerPendientesEdicion()).length
+            return totalPend > 0 && (
+              <span style={{
+                marginLeft: 'auto', fontSize: 12, fontWeight: 700,
+                background: '#f59e0b', color: '#fff', borderRadius: 20, padding: '2px 10px',
+              }}>
+                {totalPend} pendiente{totalPend !== 1 ? 's' : ''}
+              </span>
+            )
+          })()}
         </div>
       )}
 
@@ -2957,8 +2992,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                         fontWeight: 700, verticalAlign: 'middle',
                       }}>📤 Prestado</span>
                     )}
-                    {b._pendiente && (
-                      <span style={{
+                    {(b._pendiente || b._pendienteEdit) && (
+                      <span title={b._pendienteEdit ? 'Edición pendiente de sincronizar' : 'Nuevo bien pendiente de sincronizar'} style={{
                         fontSize: 10, background: '#fef3c7', color: '#92400e',
                         borderRadius: 4, padding: '1px 6px', marginLeft: 6,
                         fontWeight: 700, verticalAlign: 'middle',
