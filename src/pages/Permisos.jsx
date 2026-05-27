@@ -558,14 +558,18 @@ function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar, diasInhabilit
           </div>
 
           <div className="mp-footer">
-            <button className="mp-btn-danger" onClick={onEliminar}>
-              <Trash2 size={14} strokeWidth={2.5} /> Eliminar
-            </button>
+            {onEliminar && (
+              <button className="mp-btn-danger" onClick={onEliminar}>
+                <Trash2 size={14} strokeWidth={2.5} /> Eliminar
+              </button>
+            )}
             <div style={{ flex: 1 }} />
             <button className="mp-btn-cancel" onClick={onClose}>Cerrar</button>
-            <button className="mp-btn-save" onClick={onEditar}>
-              <Pencil size={14} strokeWidth={2.5} /> Editar
-            </button>
+            {onEditar && (
+              <button className="mp-btn-save" onClick={onEditar}>
+                <Pencil size={14} strokeWidth={2.5} /> Editar
+              </button>
+            )}
           </div>
 
         </motion.div>
@@ -1960,33 +1964,35 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     setCargando(true)
 
     if (modoMisAusencias) {
-      const rutNorm = normRut(usuario.rut ?? '')
+      const rutRaw  = usuario.rut ?? null
+      const rutNorm = normRut(rutRaw ?? '')
+      // Intentar ambos formatos: '20.469.215-7' y '20469215-7' por inconsistencias en DB
+      const rutFormatos = [...new Set([rutRaw, rutNorm || null].filter(Boolean))]
 
-      // 1. Carga todos los usuarios y filtra por RUT normalizado en cliente
-      //    (evita problemas de formato: '20.469.215-7' vs '20469215-7')
+      // 1. Todos los IDs con el mismo RUT normalizado (cualquier formato en DB)
       const { data: todosUs } = await supabase.from('usuarios').select('id, rut')
       const allIds = [...new Set([
         usuario.id,
-        ...(todosUs ?? [])
-          .filter(u => rutNorm && normRut(u.rut ?? '') === rutNorm)
-          .map(u => u.id),
+        ...(rutNorm ? (todosUs ?? [])
+          .filter(u => normRut(u.rut ?? '') === rutNorm)
+          .map(u => u.id) : []),
       ])]
 
-      // 2. Consultas en paralelo: por usuario_id, externo_rut y snapshot_rut
+      // 2. Consultas en paralelo: usuario_id, externo_rut, snapshot_rut
+      //    Se usan .in() con ambos formatos de RUT para máxima compatibilidad
       const sel = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
-      const rutRaw = usuario.rut ?? null
       const consultas = [
         supabase.from('ausencias').select(sel)
           .in('usuario_id', allIds)
           .order('fecha_inicio', { ascending: false }),
-        ...(rutRaw ? [
-          supabase.from('ausencias').select(sel).eq('externo_rut',  rutRaw),
-          supabase.from('ausencias').select(sel).eq('snapshot_rut', rutRaw),
+        ...(rutFormatos.length ? [
+          supabase.from('ausencias').select(sel).in('externo_rut',  rutFormatos),
+          supabase.from('ausencias').select(sel).in('snapshot_rut', rutFormatos),
         ] : []),
       ]
       const resultados = await Promise.all(consultas)
 
-      // 3. Unir, deduplicar y ordenar
+      // 3. Unir, deduplicar por ID y ordenar por fecha desc
       const vistos = new Set()
       const allPermisos = resultados
         .flatMap(r => r.data ?? [])
@@ -2925,7 +2931,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
                                 <span className="permisos-badge permisos-badge--jornada" style={{ flexShrink: 0 }}>{JORNADA_LABEL[p.jornada] ?? p.jornada}</span>
                                 {duracion && <span style={{ fontSize: 11.5, color: '#94a3b8', flexShrink: 0 }}>{duracion}</span>}
                                 <div className="aus-row-actions">
-                                  <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
+                                  <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(modoMisAusencias ? { ...p, usuario: p.usuario ?? usuario } : p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
                                     <Eye size={13} strokeWidth={2} />
                                   </button>
                                   {puedeGestionar && (
@@ -2997,8 +3003,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         <ModalVerPermiso
           permiso={permisoVer}
           onClose={() => setPermisoVer(null)}
-          onEditar={() => abrirEditar(permisoVer)}
-          onEliminar={() => abrirEliminar(permisoVer)}
+          onEditar={modoMisAusencias ? undefined : () => abrirEditar(permisoVer)}
+          onEliminar={modoMisAusencias ? undefined : () => abrirEliminar(permisoVer)}
           diasInhabilitados={diasInhabilitados}
         />
       )}
