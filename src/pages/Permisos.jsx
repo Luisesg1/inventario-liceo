@@ -1052,6 +1052,151 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 </select>
               </section>
 
+              {/* ── Panel visual compensatorios ── */}
+              <AnimatePresence>
+                {tipoPermiso === 'dias_compensatorios' && (
+                  <motion.section
+                    key="comp-panel"
+                    variants={slideV} initial="hidden" animate="visible" exit="exit"
+                  >
+                    <p className="mp-section-label">Saldo compensatorio</p>
+
+                    {/* Saldo + barra */}
+                    <div style={{
+                      background: 'rgba(99,102,241,0.05)',
+                      border: '1.5px solid rgba(99,102,241,0.16)',
+                      borderRadius: 11,
+                      padding: '11px 13px',
+                      marginBottom: 10,
+                    }}>
+                      {cargandoComp ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#94a3b8', fontSize: 12 }}>
+                          <Loader2 size={13} className="animate-spin" /> Verificando saldo…
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: (saldoComp?.disponible ?? 0) > 0 ? 8 : 0 }}>
+                            <span style={{ fontSize: 11.5, color: '#6366f1', fontWeight: 600 }}>Disponible</span>
+                            <span style={{ fontSize: 15, fontWeight: 800, color: (saldoComp?.disponible ?? 0) > 0 ? '#4f46e5' : '#dc2626' }}>
+                              {saldoComp ? fmtDias(saldoComp.disponible) : '0'} día{(saldoComp?.disponible ?? 0) !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          {(saldoComp?.disponible ?? 0) > 0 && (() => {
+                            const pct = Math.min(100, Math.max(0,
+                              ((saldoComp.disponible - diasCompAUsar) / saldoComp.disponible) * 100
+                            ))
+                            const overdrawn = diasCompAUsar > saldoComp.disponible
+                            const barColor  = overdrawn ? '#dc2626'
+                              : (saldoComp.disponible - diasCompAUsar) <= 0.5 ? '#f59e0b'
+                              : '#6366f1'
+                            return (
+                              <>
+                                <div style={{ height: 5, background: 'rgba(99,102,241,0.12)', borderRadius: 99, overflow: 'hidden' }}>
+                                  <div style={{
+                                    height: '100%', width: `${pct}%`,
+                                    background: barColor, borderRadius: 99,
+                                    transition: 'width 0.3s ease, background 0.2s',
+                                  }} />
+                                </div>
+                                {diasCompAUsar > 0 && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5, fontSize: 11, color: '#94a3b8' }}>
+                                    <span>Usando {fmtDias(diasCompAUsar)} día{diasCompAUsar !== 1 ? 's' : ''}</span>
+                                    <span style={{ fontWeight: 600, color: overdrawn ? '#dc2626' : '#059669' }}>
+                                      Restantes {fmtDias(Math.max(saldoComp.disponible - diasCompAUsar, 0))}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+                          {(saldoComp?.disponible ?? 0) === 0 && (
+                            <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#dc2626', fontWeight: 600 }}>
+                              ⚠ Sin saldo disponible
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Selección rápida */}
+                    <p className="mp-field-label" style={{ marginBottom: 6 }}>Selección rápida</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 4 }}>
+                      {[
+                        { j: 'medio_dia',     label: 'Medio día',      sub: '½ día hábil',      autoFill: true  },
+                        { j: 'dia_completo',  label: '1 día hábil',    sub: 'Jornada completa', autoFill: true  },
+                        { j: 'personalizado', label: 'Personalizado',  sub: 'Definir horario',  autoFill: false },
+                        { j: 'reposo',        label: 'Desde / Hasta',  sub: 'Rango de fechas',  autoFill: false },
+                      ].map(opt => {
+                        const active = jornada === opt.j
+                        return (
+                          <button
+                            key={opt.j}
+                            type="button"
+                            onClick={() => {
+                              setJornada(opt.j)
+                              if (opt.autoFill) {
+                                const hoy = new Date().toISOString().slice(0, 10)
+                                if (!fechaInicio) { setFechaInicio(hoy); setFechaFin(hoy) }
+                                else if (!fechaFin) setFechaFin(fechaInicio)
+                              }
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '9px 10px',
+                              border: `1.5px solid ${active ? '#6366f1' : '#e2e8f0'}`,
+                              borderRadius: 10,
+                              background: active ? 'rgba(99,102,241,0.07)' : '#fafafa',
+                              cursor: 'pointer', textAlign: 'left',
+                              transition: 'border-color 0.15s, background 0.15s',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 12.5, fontWeight: active ? 700 : 500, color: active ? '#4f46e5' : '#374151', lineHeight: 1.2 }}>
+                                {opt.label}
+                              </p>
+                              <p style={{ margin: '1px 0 0', fontSize: 11, color: active ? '#6366f1' : '#94a3b8' }}>
+                                {opt.sub}
+                              </p>
+                            </div>
+                            {active && (
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Vista previa rápida */}
+                    <AnimatePresence>
+                      {(jornada === 'medio_dia' || jornada === 'dia_completo') && fechaInicio && (
+                        <motion.div
+                          key="comp-preview"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto', transition: { duration: 0.15 } }}
+                          exit={{ opacity: 0, height: 0, transition: { duration: 0.12 } }}
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <div style={{
+                            background: '#f8fafc', border: '1px solid #e2e8f0',
+                            borderRadius: 8, padding: '7px 12px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            marginTop: 2,
+                          }}>
+                            <span style={{ fontSize: 11.5, color: '#64748b' }}>
+                              Vista previa
+                            </span>
+                            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+                              {jornada === 'medio_dia' ? '½ día' : '1 día hábil'} · {formatFecha(fechaInicio)}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.section>
+                )}
+              </AnimatePresence>
+
               {/* Período */}
               <section>
                 <p className="mp-section-label">Período de ausencia</p>
@@ -1074,12 +1219,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     />
                   </div>
                 </div>
-                <div className="mp-jornada-pills">
-                  {JORNADAS.map(j => (
-                    <button key={j.value} type="button" className={`mp-jornada-pill ${jornada === j.value ? 'active' : ''}`}
-                      onClick={() => setJornada(j.value)}>{j.label}</button>
-                  ))}
-                </div>
+                {tipoPermiso !== 'dias_compensatorios' && (
+                  <div className="mp-jornada-pills">
+                    {JORNADAS.map(j => (
+                      <button key={j.value} type="button" className={`mp-jornada-pill ${jornada === j.value ? 'active' : ''}`}
+                        onClick={() => setJornada(j.value)}>{j.label}</button>
+                    ))}
+                  </div>
+                )}
                 <AnimatePresence mode="wait">
                   {jornada === 'medio_dia' && (
                     <motion.div key="md" className="mp-jornada-extra" variants={slideV} initial="hidden" animate="visible" exit="exit">
