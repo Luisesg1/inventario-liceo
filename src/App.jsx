@@ -43,7 +43,7 @@ export default function App() {
   const irATickets       = (filtro = '') => { setFiltroInicialTickets(filtro); cambiarPagina('tickets') }
   const irAReqs          = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
   const irAInventario    = () => cambiarPagina('inventario')
-  const irAAusencias     = () => cambiarPagina('permisos')
+  const irAAusencias     = () => cambiarPagina('permisos') // se sobrescribe abajo tras calcular permisos
   const procesandoCambio = useRef(false)
   const modoRecovery     = useRef(esRecuperacion)
 
@@ -226,20 +226,28 @@ export default function App() {
     ver:      esAdmin || !!p.ver_compensatorios,
     gestionar: esAdmin || !!p.gestionar_compensatorios,
   }
-  const puedeVerCompensatorios = permisosComp.ver
+  const puedeVerCompensatorios  = permisosComp.ver
+  // Puede gestionar ausencias → ve "Gestión de ausencias", Compensatorios y Auditoría
+  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias
 
   const paginasVisorReq = ['requerimientos', 'tickets']
   const puedeAccederUsuarios = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
-  const soloAdmin  = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
-    || (pagina === 'permisos' && !permisosAusencia.ver)
-    || (pagina === 'compensatorios' && !puedeVerCompensatorios)
+
+  // 'mis_ausencias' nunca está bloqueada — cualquier usuario autenticado puede verla
+  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+    || (pagina === 'permisos'         && !puedeGestionarAusencias)
+    || (pagina === 'compensatorios'   && !puedeGestionarAusencias)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
-    || (pagina === 'auditoria_permisos' && !puedeVerAuditoriaPermisos)
-  const soloStaff  = pagina === 'inventario' || pagina === 'dashboard'
+    || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
+  const soloStaff = pagina === 'inventario' || pagina === 'dashboard'
     || (pagina === 'requerimientos' && !permisosReqs.ver)
+
+  // Páginas de ausencias redirigen a mis_ausencias en lugar de dashboard
+  const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
   const paginaSegura = (!puedeVerInventario && soloStaff) ? 'tickets'
     : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
-    : usuario.rol !== 'admin' && soloAdmin ? 'dashboard'
+    : usuario.rol !== 'admin' && soloAdmin
+      ? (PAGINAS_AUSENCIAS.has(pagina) ? 'mis_ausencias' : 'dashboard')
     : pagina
 
   return (
@@ -259,17 +267,19 @@ export default function App() {
       puedeVerAusencias={permisosAusencia.ver}
       puedeVerRequerimientos={permisosReqs.ver}
       puedeVerCompensatorios={puedeVerCompensatorios}
+      puedeGestionarAusencias={puedeGestionarAusencias}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={permisosAusencia.ver ? irAAusencias : undefined} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
+      {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
     </Layout>

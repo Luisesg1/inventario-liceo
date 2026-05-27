@@ -46,6 +46,7 @@ export default function Layout({
   puedeVerInventario = false, puedeGestionarTickets = false,
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
+  puedeGestionarAusencias = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
@@ -315,7 +316,7 @@ export default function Layout({
 
   const inventarioActivo    = paginaActual === 'inventario' || paginaActual === 'auditoria'
   const requerimientosActivo = paginaActual === 'requerimientos' || paginaActual === 'auditoria_requerimientos'
-  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
+  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'mis_ausencias' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
   const [inventarioAbierto,    setInventarioAbierto]    = useState(inventarioActivo)
   const [requerimientosAbierto, setRequerimientosAbierto] = useState(requerimientosActivo)
   const [permisosAbierto,      setPermisosAbierto]      = useState(permisosActivo)
@@ -329,7 +330,8 @@ export default function Layout({
     usuarios:   'Gestión de Usuarios',
     auditoria:  'Auditoría de Cambios Inventario',
     auditoria_requerimientos: 'Auditoría de Requerimientos',
-    permisos:                 'Ausencias',
+    mis_ausencias:            'Mis ausencias',
+    permisos:                 'Gestión de ausencias',
     auditoria_permisos:       'Auditoría de Ausencias',
     compensatorios:           'Días Compensatorios',
     requerimientos: 'Requerimientos',
@@ -550,50 +552,63 @@ export default function Layout({
             </motion.div>
           ))}
 
-          {/* Permisos con submenú */}
-          {(esAdmin || puedeVerAusencias) && (
-            <>
-              <motion.div
-                className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
-                onClick={() => setPermisosAbierto(o => !o)}
-                whileHover={{ x: 2 }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              >
-                <span className="nav-icon">
-                  <ShieldCheck size={15} strokeWidth={2} />
-                </span>
-                Ausencias
-                <span className={`nav-chevron ${permisosAbierto ? 'nav-chevron--open' : ''}`}>
-                  <ChevronRight size={13} strokeWidth={2.5} />
-                </span>
-              </motion.div>
-              <AnimatePresence initial={false}>
-                {permisosAbierto && (
-                  <motion.div
-                    className="nav-submenu"
-                    variants={submenuVariants}
-                    initial="closed"
-                    animate="open"
-                    exit="closed"
-                    style={{ overflow: 'hidden' }}
+          {/* Ausencias con submenú — visible para todos los usuarios */}
+          <>
+            <motion.div
+              className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
+              onClick={() => setPermisosAbierto(o => !o)}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <ShieldCheck size={15} strokeWidth={2} />
+              </span>
+              Ausencias
+              <span className={`nav-chevron ${permisosAbierto ? 'nav-chevron--open' : ''}`}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
+            </motion.div>
+            <AnimatePresence initial={false}>
+              {permisosAbierto && (
+                <motion.div
+                  className="nav-submenu"
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  {/* Mis ausencias: siempre visible para cualquier usuario */}
+                  <div
+                    className={`nav-subitem ${paginaActual === 'mis_ausencias' ? 'active' : ''}`}
+                    onClick={() => handleNav('mis_ausencias')}
                   >
+                    <span className="nav-subitem-dot" />
+                    Mis ausencias
+                  </div>
+                  {/* Gestión de ausencias: solo para gestores/admin */}
+                  {puedeGestionarAusencias && (
                     <div
                       className={`nav-subitem ${paginaActual === 'permisos' ? 'active' : ''}`}
                       onClick={() => handleNav('permisos')}
                     >
                       <span className="nav-subitem-dot" />
-                      Ver ausencias
+                      Gestión de ausencias
                     </div>
-                    {(esAdmin || puedeVerCompensatorios) && (
-                      <div
-                        className={`nav-subitem ${paginaActual === 'compensatorios' ? 'active' : ''}`}
-                        onClick={() => handleNav('compensatorios')}
-                      >
-                        <span className="nav-subitem-dot" />
-                        Compensatorios
-                      </div>
-                    )}
+                  )}
+                  {/* Compensatorios: solo para gestores/admin */}
+                  {puedeGestionarAusencias && (esAdmin || puedeVerCompensatorios) && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'compensatorios' ? 'active' : ''}`}
+                      onClick={() => handleNav('compensatorios')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Compensatorios
+                    </div>
+                  )}
+                  {/* Auditoría: solo para quienes tienen permiso explícito */}
+                  {puedeVerAuditoriaPermisos && (
                     <div
                       className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}
                       onClick={() => handleNav('auditoria_permisos')}
@@ -601,11 +616,11 @@ export default function Layout({
                       <span className="nav-subitem-dot" />
                       Auditoría
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </>
-          )}
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
 
           {/* Ajustes con submenú */}
           {esAdmin && (

@@ -1896,9 +1896,10 @@ function ModalDiasInhabilitados({ feriadosAPI, diasAdmin, cargandoAPI, onClose, 
 
 // ── Permisos (página) ──────────────────────────────────────────────────────
 
-export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
+export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoMisAusencias = false }) {
   const esAdmin         = usuario.rol === 'admin'
-  const puedeGestionar  = permisosAcceso.gestionar !== undefined ? permisosAcceso.gestionar : esAdmin
+  // En modoMisAusencias nunca se permite gestión global
+  const puedeGestionar  = !modoMisAusencias && (permisosAcceso.gestionar !== undefined ? permisosAcceso.gestionar : esAdmin)
   const [usuarios,        setUsuarios]        = useState([])
   const [permisos,        setPermisos]        = useState([])
   const [cargando,        setCargando]        = useState(true)
@@ -1957,6 +1958,20 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
 
   async function cargarDatos() {
     setCargando(true)
+
+    if (modoMisAusencias) {
+      // Seguridad: solo carga las ausencias del usuario autenticado
+      const { data: ps } = await supabase
+        .from('ausencias')
+        .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
+        .eq('usuario_id', usuario.id)
+        .order('fecha_inicio', { ascending: false })
+      setUsuarios([usuario])
+      setPermisos(ps ?? [])
+      setCargando(false)
+      return
+    }
+
     let { data: us, error: usErr } = await supabase
       .from('usuarios').select('id, nombre, email, rol, rut').order('nombre')
     if (usErr) {
@@ -2549,8 +2564,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
 
       <div className="permisos-header">
         <div>
-          <h1 className="permisos-title">Ausencias</h1>
-          <p className="permisos-subtitle">Gestiona las ausencias del personal.</p>
+          <h1 className="permisos-title">{modoMisAusencias ? 'Mis ausencias' : 'Gestión de ausencias'}</h1>
+          <p className="permisos-subtitle">
+            {modoMisAusencias
+              ? 'Historial de tus ausencias registradas.'
+              : 'Gestiona las ausencias del personal.'}
+          </p>
         </div>
       </div>
 
@@ -2694,23 +2713,29 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
 
         {/* ── Buscador + Filtros ── */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
-            <Search size={13} strokeWidth={2.5}
-              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-            <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre, RUT o email…"
-              style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
-          </div>
+          {/* Búsqueda por nombre solo en modo gestión (no tiene sentido en mis ausencias) */}
+          {!modoMisAusencias && (
+            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+              <Search size={13} strokeWidth={2.5}
+                style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+              <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                placeholder="Buscar por nombre, RUT o email…"
+                style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
+            </div>
+          )}
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
             style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
             <option value="">Todos los tipos</option>
             {TIPOS_PERMISO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <select value={filtroRol} onChange={e => setFiltroRol(e.target.value)}
-            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
-            <option value="">Todos los roles</option>
-            {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          {/* Filtro por rol solo en modo gestión */}
+          {!modoMisAusencias && (
+            <select value={filtroRol} onChange={e => setFiltroRol(e.target.value)}
+              style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+              <option value="">Todos los roles</option>
+              {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          )}
           {(busqueda || filtroTipo || filtroRol) && (
             <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol('') }}
               style={{ padding: '6px 10px', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
