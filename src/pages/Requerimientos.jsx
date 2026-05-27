@@ -1621,6 +1621,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto solicitado {kpis.anioActual}</span>
+          <span className="req-kpi-hint">1 Ene – 31 Dic {kpis.anioActual}</span>
         </motion.div>
         <motion.div
           className="req-kpi req-kpi--monto-real req-kpi--resumen"
@@ -1630,6 +1631,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
           <span className="req-kpi-label">Monto real {kpis.anioActual}</span>
+          <span className="req-kpi-hint">1 Ene – 31 Dic {kpis.anioActual}</span>
         </motion.div>
       </div>
 
