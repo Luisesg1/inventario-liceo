@@ -1302,3 +1302,79 @@
   from { opacity: 0; transform: scale(0.94) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* ── Barra de selección múltiple ── */
+.req-barra-sel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  animation: req-banner-in 0.18s ease;
+}
+.req-barra-sel__count {
+  font-size: 0.87rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+.req-barra-sel__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border: none;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.req-barra-sel__btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.req-barra-sel__btn--eliminar {
+  background: #ef4444;
+  color: #ffffff;
+}
+.req-barra-sel__btn--exportar {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+.req-barra-sel__btn--cancelar {
+  background: #ffffff;
+  color: #6b7280;
+  border: 1px solid #bfdbfe;
+  margin-left: auto;
+}
+
+/* ── Checkbox en tabla ── */
+.req-th-check,
+.req-td-check {
+  width: 36px;
+  text-align: center;
+  padding: 0 6px !important;
+  flex-shrink: 0;
+}
+.req-th-check input,
+.req-td-check input {
+  accent-color: #6366f1;
+}
+
+/* ── Fila seleccionada ── */
+.req-row--sel {
+  background: rgba(99,102,241,0.06) !important;
+  outline: 1px solid rgba(99,102,241,0.2);
+  outline-offset: -1px;
+}
+.req-row--sel:hover {
+  background: rgba(99,102,241,0.1) !important;
+}
+
+@media (max-width: 640px) {
+  .req-barra-sel { gap: 6px; }
+  .req-barra-sel__btn--cancelar { margin-left: 0; }
+}

@@ -1079,7 +1079,9 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const [filtroFechaHasta,  setFiltroFechaHasta]  = useState('')
   const [filtroNumero,      setFiltroNumero]      = useState('')
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
-  const [reqAEliminar,      setReqAEliminar]      = useState(null)  // modal de confirmación de eliminación
+  const [reqAEliminar,      setReqAEliminar]      = useState(null)  // modal confirmación eliminación (objeto item o { _lote, count })
+  const [seleccion,         setSeleccion]         = useState(new Set())  // ids seleccionados para acción masiva
+  const [menuExportarSel,   setMenuExportarSel]   = useState(false)
   const [paginaR, setPaginaR] = useState(1)
   const [imagenesExistentes, setImagenesExistentes] = useState([])
   const [imagenesNuevas,     setImagenesNuevas]     = useState([])
@@ -1219,7 +1221,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const filtroAccion      = filtrosCampos.accion      || ''
 
   const filtrosKey = JSON.stringify(filtrosCampos)
-  useEffect(() => { setPaginaR(1) }, [filtrosKey, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
+  useEffect(() => { setPaginaR(1); setSeleccion(new Set()) }, [filtrosKey, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
 
   const POR_PAG_R    = 20
   const totalPagsR   = Math.ceil(filtrados.length / POR_PAG_R)
@@ -1405,13 +1407,66 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
 
   const confirmarEliminarModal = async () => {
     if (!reqAEliminar) return
-    try {
-      await eliminarRegistro(reqAEliminar)
-    } catch (err) {
-      setAviso(err?.message || 'No se pudo eliminar.')
-    } finally {
-      setReqAEliminar(null)
+
+    if (reqAEliminar._lote) {
+      // Eliminación masiva de seleccionados
+      const ids = [...seleccion]
+      const fallidos = []
+      for (const id of ids) {
+        const item = items.find(i => i.id === id)
+        if (item) {
+          const urls = parseObsImagenes(item.observacion_imagenes)
+          await borrarImagenesStorage(urls)
+        }
+        // Items pendientes offline: solo quitar de la lista local
+        if (String(id).startsWith('temp_')) {
+          eliminarPendienteReq(id)
+          continue
+        }
+        const { error } = await supabase.from('requerimientos').delete().eq('id', id)
+        if (error) fallidos.push(id)
+      }
+      const eliminados = ids.filter(id => !fallidos.includes(id))
+      setItems(prev => prev.filter(i => !eliminados.includes(i.id)))
+      setSeleccion(new Set(fallidos))
+      if (eliminados.length > 0) setAviso(`✓ ${eliminados.length} requerimiento${eliminados.length !== 1 ? 's' : ''} eliminado${eliminados.length !== 1 ? 's' : ''}`)
+      if (fallidos.length > 0) setAviso(`No se pudieron eliminar ${fallidos.length} requerimiento${fallidos.length !== 1 ? 's' : ''}`)
+    } else {
+      // Eliminación de ítem individual
+      try {
+        await eliminarRegistro(reqAEliminar)
+      } catch (err) {
+        setAviso(err?.message || 'No se pudo eliminar.')
+      }
     }
+    setReqAEliminar(null)
+  }
+
+  // ── Selección múltiple ────────────────────────────────────────────────────
+  const toggleSeleccion = (id) => {
+    setSeleccion(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleTodos = () => {
+    if (seleccion.size === filtrados.length && filtrados.length > 0) {
+      setSeleccion(new Set())
+    } else {
+      setSeleccion(new Set(filtrados.map(r => r.id)))
+    }
+  }
+
+  const iniciarEliminarLote = () => {
+    if (seleccion.size === 0) return
+    setReqAEliminar({ _lote: true, count: seleccion.size })
+  }
+
+  const getDatosExportar = () => {
+    if (seleccion.size > 0) return items.filter(i => seleccion.has(i.id))
+    return filtrados
   }
 
   const descargarPDFDetalle = async () => {
@@ -1640,7 +1695,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         )}
         {puedeExportar && <div style={{ position: 'relative' }}>
           <button className="req-btn-tool" onClick={() => setMenuExportar(v => !v)}>
-            ⬇ Exportar ▾
+            ⬇ {seleccion.size > 0 ? `Exportar ${seleccion.size}` : 'Exportar'} ▾
           </button>
           {menuExportar && (
             <>
@@ -1651,14 +1706,18 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                 boxShadow: '0 8px 24px rgba(0,0,0,0.45)', minWidth: '200px', overflow: 'hidden',
               }}>
                 <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                  Exportar vista actual
+                  {seleccion.size > 0
+                    ? `Exportar ${seleccion.size} seleccionado${seleccion.size !== 1 ? 's' : ''}`
+                    : hayFiltrosCampos || filtroKpi || filtroFechaDesde || filtroFechaHasta || busqueda.trim() || filtroNumero.trim()
+                      ? `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
+                      : 'Exportar vista actual'}
                 </p>
                 {[
-                  { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
-                  { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportar(false); try { await exportarExcel(filtrados.length ? filtrados : items) } finally { setExportando(false) } } },
-                  { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
-                  { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
-                  { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(filtrados.length ? filtrados : items); setMenuExportar(false) } },
+                  { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(getDatosExportar()); setMenuExportar(false) } },
+                  { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportar(false); try { await exportarExcel(getDatosExportar()) } finally { setExportando(false) } } },
+                  { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(getDatosExportar()); setMenuExportar(false) } },
+                  { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(getDatosExportar()); setMenuExportar(false) } },
+                  { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(getDatosExportar()); setMenuExportar(false) } },
                 ].map(({ icon, label, desc, fn }) => (
                   <button key={label} onClick={fn} style={{
                     display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
@@ -1684,6 +1743,62 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         )}
       </div>
 
+      {/* Barra de selección múltiple */}
+      {seleccion.size > 0 && (
+        <div className="req-barra-sel">
+          <span className="req-barra-sel__count">
+            {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
+          </span>
+          {puedeEliminar && (
+            <button className="req-barra-sel__btn req-barra-sel__btn--eliminar" onClick={iniciarEliminarLote}>
+              🗑 Eliminar seleccionados
+            </button>
+          )}
+          {puedeExportar && (
+            <div style={{ position: 'relative' }}>
+              <button className="req-barra-sel__btn req-barra-sel__btn--exportar" onClick={() => setMenuExportarSel(v => !v)}>
+                📤 Exportar ▾
+              </button>
+              {menuExportarSel && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setMenuExportarSel(false)} />
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+                    background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '10px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', overflow: 'hidden',
+                  }}>
+                    <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                      Exportar {seleccion.size} seleccionado{seleccion.size !== 1 ? 's' : ''}
+                    </p>
+                    {[
+                      { icon: '📄', label: 'CSV',    desc: 'Texto separado por comas',  fn: () => { exportarCSVReq(getDatosExportar()); setMenuExportarSel(false) } },
+                      { icon: '📊', label: 'Excel',  desc: 'Hoja de cálculo .xlsx',     fn: async () => { setExportando(true); setMenuExportarSel(false); try { await exportarExcel(getDatosExportar()) } finally { setExportando(false) } } },
+                      { icon: '📕', label: 'PDF',    desc: 'Tabla en PDF A4',           fn: () => { exportarPDFReq(getDatosExportar()); setMenuExportarSel(false) } },
+                      { icon: '📝', label: 'Word',   desc: 'Documento .doc',            fn: () => { exportarWordReq(getDatosExportar()); setMenuExportarSel(false) } },
+                      { icon: '🖼️', label: 'Imagen', desc: 'Captura PNG',              fn: () => { exportarImagenReq(getDatosExportar()); setMenuExportarSel(false) } },
+                    ].map(({ icon, label, desc, fn }) => (
+                      <button key={label} onClick={fn} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <button className="req-barra-sel__btn req-barra-sel__btn--cancelar" onClick={() => setSeleccion(new Set())}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
       {/* Tabla */}
       {cargando ? (
         <SkeletonReqs />
@@ -1694,6 +1809,16 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           <table className="req-table">
             <thead>
               <tr>
+                <th className="req-th-check">
+                  <input
+                    type="checkbox"
+                    checked={seleccion.size === filtrados.length && filtrados.length > 0}
+                    ref={el => { if (el) el.indeterminate = seleccion.size > 0 && seleccion.size < filtrados.length }}
+                    onChange={toggleTodos}
+                    title="Seleccionar todos"
+                    style={{ cursor: 'pointer', width: 15, height: 15 }}
+                  />
+                </th>
                 <th>N°</th>
                 <th>Fecha</th>
                 <th>Contenido</th>
@@ -1711,7 +1836,15 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
               {filtradosPagR.map(r => {
                 const st = ESTADO_STYLE[r.estado] || { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8' }
                 return (
-                  <tr key={r.id} className="req-row">
+                  <tr key={r.id} className={`req-row${seleccion.has(r.id) ? ' req-row--sel' : ''}`}>
+                    <td className="req-td-check">
+                      <input
+                        type="checkbox"
+                        checked={seleccion.has(r.id)}
+                        onChange={() => toggleSeleccion(r.id)}
+                        style={{ cursor: 'pointer', width: 15, height: 15 }}
+                      />
+                    </td>
                     <td className="req-num">
                       {r.numero_req && <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6366f1' }}>{r.numero_req}</span>}
                       <span style={{ color: r.numero_req ? '#94a3b8' : undefined }}>
@@ -1994,21 +2127,29 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         />
       )}
 
-      {/* Modal confirmación de eliminación */}
+      {/* Modal confirmación de eliminación (individual o lote) */}
       {reqAEliminar && (
         <div className="req-modal-overlay" onClick={e => e.target === e.currentTarget && setReqAEliminar(null)}>
           <div className="req-modal-confirmar" onClick={e => e.stopPropagation()}>
             <div className="req-confirmar-icono">🗑️</div>
-            <h3 className="req-confirmar-titulo">¿Eliminar requerimiento?</h3>
+            <h3 className="req-confirmar-titulo">
+              {reqAEliminar._lote
+                ? `¿Eliminar ${reqAEliminar.count} requerimiento${reqAEliminar.count !== 1 ? 's' : ''}?`
+                : '¿Eliminar requerimiento?'}
+            </h3>
             <p className="req-confirmar-desc">
-              {reqAEliminar.numero_req
-                ? <><strong>{reqAEliminar.numero_req}</strong> · </>
-                : <><strong>#{reqAEliminar.id}</strong> · </>}
-              {reqAEliminar.contenido
-                ? reqAEliminar.contenido.length > 80
-                  ? reqAEliminar.contenido.slice(0, 80) + '…'
-                  : reqAEliminar.contenido
-                : 'Sin descripción'}
+              {reqAEliminar._lote
+                ? `Se eliminarán ${reqAEliminar.count} requerimientos seleccionados.`
+                : (<>
+                    {reqAEliminar.numero_req
+                      ? <><strong>{reqAEliminar.numero_req}</strong> · </>
+                      : <><strong>#{reqAEliminar.id}</strong> · </>}
+                    {reqAEliminar.contenido
+                      ? reqAEliminar.contenido.length > 80
+                        ? reqAEliminar.contenido.slice(0, 80) + '…'
+                        : reqAEliminar.contenido
+                      : 'Sin descripción'}
+                  </>)}
             </p>
             <p className="req-confirmar-aviso">Esta acción no se puede deshacer.</p>
             <div className="req-confirmar-btns">
