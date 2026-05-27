@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import './Permisos.css'
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -2338,24 +2340,42 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
       URL.revokeObjectURL(url)
 
     } else if (formato === 'pdf') {
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ausencias</title>
-<style>
-body{font-family:Arial,sans-serif;font-size:11px;padding:20px;color:#1e293b}
-h2{font-size:15px;margin-bottom:4px;color:#1a237e}
-p.sub{margin:0 0 14px;font-size:11px;color:#64748b}
-table{border-collapse:collapse;width:100%}
-th{background:#1a237e;color:#fff;padding:6px 9px;text-align:left;font-size:10.5px;white-space:nowrap}
-td{padding:5px 9px;border-bottom:1px solid #e2e8f0;font-size:10.5px}
-tr:nth-child(even) td{background:#f8fafc}
-</style></head><body>
-<h2>Ausencias registradas</h2>
-<p class="sub">Exportado el ${new Date().toLocaleDateString('es-CL')} · ${registros.length} ${registros.length === 1 ? 'registro' : 'registros'}</p>
-<table>
-<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-${rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>`).join('')}
-</table></body></html>`
-      const w = window.open('', '_blank')
-      if (w) { w.document.write(html); w.document.close(); w.focus(); setTimeout(() => { w.print() }, 400) }
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+
+      // Encabezado
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor(26, 35, 126) // #1a237e
+      doc.text('Ausencias registradas', 14, 16)
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139) // #64748b
+      const subtitulo = `Exportado el ${new Date().toLocaleDateString('es-CL')} · ${registros.length} ${registros.length === 1 ? 'registro' : 'registros'}`
+      doc.text(subtitulo, 14, 22)
+
+      autoTable(doc, {
+        startY: 27,
+        head: [headers],
+        body: rows.map(r => headers.map(h => r[h] ?? '')),
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+        headStyles: { fillColor: [26, 35, 126], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 22 }, 9: { cellWidth: 40 } },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          // Pie de página con número de página
+          doc.setFontSize(7.5)
+          doc.setTextColor(148, 163, 184)
+          doc.text(
+            `Pág. ${data.pageNumber}`,
+            doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8,
+            { align: 'center' }
+          )
+        },
+      })
+
+      doc.save('ausencias.pdf')
     }
   }
 
