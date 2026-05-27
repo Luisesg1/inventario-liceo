@@ -1499,17 +1499,22 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   }
 
   const kpis = useMemo(() => {
-    const conMonto     = items.filter(r => Number(r.monto_solicitado) > 0)
-    const conMontoReal = items.filter(r => Number(r.monto_real) > 0)
+    const anioActual = new Date().getFullYear()
+    const inicioAnio = `${anioActual}-01-01`
+    const finAnio    = `${anioActual}-12-31`
+    const delAnio    = items.filter(r => r.fecha >= inicioAnio && r.fecha <= finAnio)
+    const conMonto     = delAnio.filter(r => Number(r.monto_solicitado) > 0)
+    const conMontoReal = delAnio.filter(r => Number(r.monto_real) > 0)
     return {
-      total:         items.length,
-      enProceso:     items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
-      comprados:     items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
-      rechazados:    items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
-      montoTotal:    conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
-      conMonto:      conMonto.length,
+      total:          items.length,
+      enProceso:      items.filter(r => ['En proceso','Revisión DAEM','En adquisiciones','Enviado al DAEM','Reenviado'].includes(r.estado)).length,
+      comprados:      items.filter(r => ['Comprado','Contratado','En ejecución'].includes(r.estado)).length,
+      rechazados:     items.filter(r => (r.estado ?? '').startsWith('Rechazado') || r.estado === 'Devuelto').length,
+      montoTotal:     conMonto.reduce((acc, r) => acc + Number(r.monto_solicitado), 0),
+      conMonto:       conMonto.length,
       montoRealTotal: conMontoReal.reduce((acc, r) => acc + Number(r.monto_real), 0),
-      conMontoReal:  conMontoReal.length,
+      conMontoReal:   conMontoReal.length,
+      anioActual,
     }
   }, [items])
 
@@ -1610,21 +1615,21 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
         </motion.div>
         <motion.div
           className="req-kpi req-kpi--monto req-kpi--resumen"
-          title="Suma de todos los montos solicitados registrados (no filtra la tabla)"
+          title={`Suma de montos solicitados del 01/01/${kpis.anioActual} al 31/12/${kpis.anioActual}`}
           {...kpiAnim(4)}
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoTotal)} filtrado</span>}
-          <span className="req-kpi-label">Monto solicitado (total)</span>
+          <span className="req-kpi-label">Monto solicitado {kpis.anioActual}</span>
         </motion.div>
         <motion.div
           className="req-kpi req-kpi--monto-real req-kpi--resumen"
-          title="Suma de todos los montos reales registrados (no filtra la tabla)"
+          title={`Suma de montos reales del 01/01/${kpis.anioActual} al 31/12/${kpis.anioActual}`}
           {...kpiAnim(5)}
         >
           <span className="req-kpi-num req-kpi-num--monto">{formatMontoKpi(kpis.montoRealTotal)}</span>
           {kpiFiltrados && <span className="req-kpi-sub req-kpi-sub--monto">{formatMontoKpi(kpiFiltrados.montoRealTotal)} filtrado</span>}
-          <span className="req-kpi-label">Monto real (total)</span>
+          <span className="req-kpi-label">Monto real {kpis.anioActual}</span>
         </motion.div>
       </div>
 
