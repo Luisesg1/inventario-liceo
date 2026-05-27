@@ -60,23 +60,27 @@ serve(async (req) => {
 
     const userId = authData.user.id
 
-    // 3. Insertar en tabla usuarios con RUT
-    const { error: insertError } = await admin.from('usuarios').insert({
+    // 3. Esperar un momento para que el trigger de BD (si existe) cree la fila primero
+    await new Promise(r => setTimeout(r, 800))
+
+    // 4. Upsert en tabla usuarios con RUT (funciona haya o no trigger previo)
+    const { error: upsertError } = await admin.from('usuarios').upsert({
       id: userId,
       nombre: nombreCompleto,
       rut: rut?.trim() || null,
       email: email.trim().toLowerCase(),
       rol: 'docente',
       debe_cambiar_password: false,
-    })
+    }, { onConflict: 'id' })
 
-    if (insertError) {
+    if (upsertError) {
+      console.error('upsert usuarios error:', upsertError.message)
       await admin.auth.admin.deleteUser(userId)
-      return json({ error: 'Error al registrar usuario: ' + insertError.message }, 500)
+      return json({ error: 'Error al registrar usuario: ' + upsertError.message }, 500)
     }
 
-    // 4. Permisos por defecto para docente
-    await admin.from('permisos_usuario').insert({
+    // 5. Permisos por defecto para docente (upsert por si el trigger ya los creó)
+    await admin.from('permisos_usuario').upsert({
       usuario_id: userId,
       permisos: {
         ver_inventario: false, agregar_bien: false, editar_bien: false,
@@ -86,7 +90,7 @@ serve(async (req) => {
         ver_tickets: true, gestionar_tickets: false, crear_ticket: true,
       },
       categorias: ['todos'],
-    })
+    }, { onConflict: 'usuario_id' })
 
     return json({ ok: true, creado: true })
 
