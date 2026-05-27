@@ -1960,30 +1960,33 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     setCargando(true)
 
     if (modoMisAusencias) {
-      const rut = usuario.rut ?? null
+      const rutNorm = normRut(usuario.rut ?? '')
 
-      // 1. Todos los user IDs que comparten el mismo RUT (misma persona, distintas cuentas)
-      let allIds = [usuario.id]
-      if (rut) {
-        const { data: mismoRut } = await supabase
-          .from('usuarios').select('id').eq('rut', rut)
-        if (mismoRut?.length) {
-          allIds = [...new Set([...allIds, ...mismoRut.map(u => u.id)])]
-        }
-      }
+      // 1. Carga todos los usuarios y filtra por RUT normalizado en cliente
+      //    (evita problemas de formato: '20.469.215-7' vs '20469215-7')
+      const { data: todosUs } = await supabase.from('usuarios').select('id, rut')
+      const allIds = [...new Set([
+        usuario.id,
+        ...(todosUs ?? [])
+          .filter(u => rutNorm && normRut(u.rut ?? '') === rutNorm)
+          .map(u => u.id),
+      ])]
 
       // 2. Consultas en paralelo: por usuario_id, externo_rut y snapshot_rut
       const sel = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
+      const rutRaw = usuario.rut ?? null
       const consultas = [
-        supabase.from('ausencias').select(sel).in('usuario_id', allIds).order('fecha_inicio', { ascending: false }),
-        ...(rut ? [
-          supabase.from('ausencias').select(sel).eq('externo_rut',  rut),
-          supabase.from('ausencias').select(sel).eq('snapshot_rut', rut),
+        supabase.from('ausencias').select(sel)
+          .in('usuario_id', allIds)
+          .order('fecha_inicio', { ascending: false }),
+        ...(rutRaw ? [
+          supabase.from('ausencias').select(sel).eq('externo_rut',  rutRaw),
+          supabase.from('ausencias').select(sel).eq('snapshot_rut', rutRaw),
         ] : []),
       ]
       const resultados = await Promise.all(consultas)
 
-      // 3. Unir y deduplicar por ID
+      // 3. Unir, deduplicar y ordenar
       const vistos = new Set()
       const allPermisos = resultados
         .flatMap(r => r.data ?? [])
@@ -2597,8 +2600,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
-      {!cargando && permisos.length > 0 && (
+      {/* ── KPI Cards — solo en Gestión de ausencias ── */}
+      {!modoMisAusencias && !cargando && permisos.length > 0 && (
         <div className="aus-stats-grid">
           {[
             // Destacada: ausentes hoy
