@@ -698,14 +698,23 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
   const tipoLabel   = TIPOS_PERMISO.find(t => t.value === tipoPermiso)?.label
   const jornadaLabel = JORNADAS.find(j => j.value === jornada)?.label
 
-  const usuariosFiltrados = usuarios.filter(u => {
-    if (!busqueda.trim()) return true
-    const q    = normStr(busqueda)
-    const qRut = normRut(busqueda)
-    return normStr(u.nombre).includes(q)
-      || normStr(u.rut ?? '').includes(q)
-      || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
-  })
+  const usuariosFiltrados = (() => {
+    const seenRut = new Set()
+    return usuarios.filter(u => {
+      // Deduplica por RUT: si ya se mostró alguien con el mismo RUT, ocultar
+      if (u.rut) {
+        const key = normRut(u.rut)
+        if (seenRut.has(key)) return false
+        seenRut.add(key)
+      }
+      if (!busqueda.trim()) return true
+      const q    = normStr(busqueda)
+      const qRut = normRut(busqueda)
+      return normStr(u.nombre).includes(q)
+        || normStr(u.rut ?? '').includes(q)
+        || (qRut.length > 0 && normRut(u.rut ?? '').includes(qRut))
+    })
+  })()
 
   // Días a descontar del saldo compensatorio (float)
   const diasCompAUsar = (() => {
@@ -1407,14 +1416,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
                                 <span style={{ color: '#475569' }}>Disponible</span>
                                 <span style={{ fontWeight: 700, color: '#4f46e5' }}>
-                                  {saldoComp ? (saldoComp.disponible === 0.5 ? '½' : saldoComp.disponible) : '—'} día{saldoComp?.disponible !== 1 ? 's' : ''}
+                                  {saldoComp ? fmtDias(saldoComp.disponible) : '—'} día{saldoComp?.disponible !== 1 ? 's' : ''}
                                 </span>
                               </div>
                               {diasCompAUsar > 0 && (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
                                   <span style={{ color: '#475569' }}>A descontar</span>
                                   <span style={{ fontWeight: 700, color: '#dc2626' }}>
-                                    −{diasCompAUsar === 0.5 ? '½' : diasCompAUsar} día{diasCompAUsar !== 1 ? 's' : ''}
+                                    −{fmtDias(diasCompAUsar)} día{diasCompAUsar !== 1 ? 's' : ''}
                                   </span>
                                 </div>
                               )}
@@ -1978,10 +1987,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           const [eh, em] = datos.horaFin.split(':').map(Number)
           diasADescontar = Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60 / 8)
         } else {
-          diasADescontar = diasHabiles(datos.fechaInicio, datos.fechaFin)
+          diasADescontar = diasHabiles(datos.fechaInicio, datos.fechaFin, diasInhabilitados)
         }
         if (diasADescontar > 0) {
-          try { await descontarCompensatorios(uid, diasADescontar) } catch { /* silencioso */ }
+          try { await descontarCompensatorios(uid, diasADescontar) } catch (e) { console.error('[compensatorios] error al descontar:', e) }
         }
       }
     }
@@ -2074,10 +2083,15 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           const [eh, em] = p.hora_fin.split(':').map(Number)
           diasARestaurar = Math.max(0, (eh * 60 + em - sh * 60 - sm) / 60 / 8)
         } else {
-          diasARestaurar = diasHabiles(p.fecha_inicio, p.fecha_fin)
+          diasARestaurar = diasHabiles(p.fecha_inicio, p.fecha_fin, diasInhabilitados)
         }
         if (diasARestaurar > 0) {
-          try { await restaurarCompensatorios(p.usuario_id, diasARestaurar) } catch { /* silencioso */ }
+          try {
+            await restaurarCompensatorios(p.usuario_id, diasARestaurar)
+          } catch (e) {
+            console.error('[compensatorios] error al restaurar:', e)
+            setErrorEliminar('Ausencia eliminada, pero no se pudo restaurar el saldo compensatorio.')
+          }
         }
       }
 
