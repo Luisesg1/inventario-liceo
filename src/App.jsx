@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase, esRecuperacion, recoveryTokens } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -15,7 +16,44 @@ import Permisos         from './pages/Permisos'
 import Compensatorios   from './pages/Compensatorios'
 import { aplicarTema } from './utils/tema'
 
+const RUTA_A_PAGINA = {
+  '/':                         'dashboard',
+  '/dashboard':                'dashboard',
+  '/inventario':               'inventario',
+  '/inventario/auditoria':     'auditoria',
+  '/requerimientos':           'requerimientos',
+  '/requerimientos/auditoria': 'auditoria_requerimientos',
+  '/tickets':                  'tickets',
+  '/ausencias/mis-ausencias':  'mis_ausencias',
+  '/ausencias/gestion':        'permisos',
+  '/ausencias/compensatorios': 'compensatorios',
+  '/ausencias/auditoria':      'auditoria_permisos',
+  '/usuarios':                 'usuarios',
+  '/ajustes':                  'ajustes',
+  '/ajustes/campos':           'campos',
+}
+
+const PAGINA_A_RUTA = {
+  dashboard:                '/',
+  inventario:               '/inventario',
+  auditoria:                '/inventario/auditoria',
+  requerimientos:           '/requerimientos',
+  auditoria_requerimientos: '/requerimientos/auditoria',
+  tickets:                  '/tickets',
+  mis_ausencias:            '/ausencias/mis-ausencias',
+  permisos:                 '/ausencias/gestion',
+  compensatorios:           '/ausencias/compensatorios',
+  auditoria_permisos:       '/ausencias/auditoria',
+  usuarios:                 '/usuarios',
+  ajustes:                  '/ajustes',
+  campos:                   '/ajustes/campos',
+}
+
 export default function App() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const pagina   = RUTA_A_PAGINA[location.pathname] || 'dashboard'
+
   const [usuario,            setUsuario]            = useState(null)
   const [permisosUsuario,    setPermisosUsuario]    = useState({})
   const [cargando,           setCargando]           = useState(true)
@@ -23,31 +61,98 @@ export default function App() {
   const [nombreSistema,      setNombreSistema]      = useState('Inventario')
   const [nombreInstitucion,  setNombreInstitucion]  = useState('Liceo Polivalente de Excelencia Juvenal Hernández Jaque')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
-  const [pagina,             setPagina]             = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('bien')) return 'inventario'
-    return localStorage.getItem('app_pagina') || 'dashboard'
-  })
-  const [abrirBienId,        setAbrirBienId]        = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get('bien')
-    if (id) window.history.replaceState(null, '', window.location.pathname)
-    return id ? Number(id) : null
-  })
+  const [abrirBienId,        setAbrirBienId]        = useState(null)
   const [abrirCatId,           setAbrirCatId]           = useState(null)
   const [filtroInicialTickets, setFiltroInicialTickets] = useState('')
   const [filtroInicialReqs,    setFiltroInicialReqs]    = useState(null)
   const refreshTicketBadge = useRef(null)
+  const procesandoCambio   = useRef(false)
+  const modoRecovery       = useRef(esRecuperacion)
+  const sesionCargada      = useRef(false)
 
-  const cambiarPagina    = (p) => { setPagina(p); localStorage.setItem('app_pagina', p) }
-  const irATickets       = (filtro = '') => { setFiltroInicialTickets(filtro); cambiarPagina('tickets') }
-  const irAReqs          = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
-  const irAInventario    = () => cambiarPagina('inventario')
-  const irAAusencias     = () => cambiarPagina('permisos') // se sobrescribe abajo tras calcular permisos
-  const procesandoCambio = useRef(false)
-  const modoRecovery     = useRef(esRecuperacion)
-  const sesionCargada    = useRef(false)   // evita resetear la página en recargas de sesión
+  // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
+  const esAdmin    = usuario?.rol === 'admin'
+  const esVisorReq = usuario?.rol === 'visor_requerimientos'
+  const p          = permisosUsuario ?? {}
 
+  const puedeVerInventario          = esAdmin || !!p.ver_inventario
+  const puedeGestionarTickets       = esAdmin || !!p.gestionar_tickets
+  const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
+  const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
+  const permisosTickets = {
+    verPropios: esAdmin || !!p.ver_tickets,
+    crear:      esAdmin || p.crear_ticket !== false,
+    gestionar:  esAdmin || !!p.gestionar_tickets,
+    eliminar:   esAdmin || !!p.eliminar_ticket,
+  }
+  const permisosReqs = {
+    ver:          esAdmin || !!p.ver_requerimientos,
+    crear:        esAdmin || !!p.crear_requerimiento,
+    editar:       esAdmin || !!p.editar_requerimiento,
+    eliminar:     esAdmin || !!p.eliminar_requerimiento,
+    importar:     esAdmin || !!p.importar_requerimientos,
+    exportar:     esAdmin || !!p.exportar_requerimientos,
+    verAuditoria: esAdmin || !!p.ver_auditoria_requerimientos,
+  }
+  const permisosAusencia = {
+    ver:             esAdmin || !!p.ver_ausencias,
+    gestionar:       esAdmin || !!p.gestionar_ausencias,
+    verAuditoria:    esAdmin || !!p.ver_auditoria_permisos,
+    invitarUsuario:  esAdmin || !!p.invitar_usuario,
+    editarUsuario:   esAdmin || !!p.editar_usuario,
+    eliminarUsuario: esAdmin || !!p.eliminar_usuario,
+  }
+  const permisosComp = {
+    ver:      esAdmin || !!p.ver_compensatorios,
+    gestionar:esAdmin || !!p.gestionar_compensatorios,
+  }
+  const puedeVerCompensatorios  = permisosComp.ver
+  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias
+  const paginasVisorReq         = ['requerimientos', 'tickets']
+  const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
+
+  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+    || (pagina === 'permisos'         && !puedeGestionarAusencias)
+    || (pagina === 'compensatorios'   && !puedeGestionarAusencias)
+    || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
+    || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
+  const soloStaff = pagina === 'inventario' || pagina === 'dashboard'
+    || (pagina === 'requerimientos' && !permisosReqs.ver)
+
+  const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
+  const paginaSegura = !usuario ? pagina
+    : (!puedeVerInventario && soloStaff) ? 'tickets'
+    : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
+    : usuario.rol !== 'admin' && soloAdmin
+      ? (PAGINAS_AUSENCIAS.has(pagina) ? 'mis_ausencias' : 'dashboard')
+    : pagina
+
+  // ── Navegación ───────────────────────────────────────────────────
+  const cambiarPagina = (p) => navigate(PAGINA_A_RUTA[p] || '/')
+  const irATickets    = (filtro = '') => { setFiltroInicialTickets(filtro); cambiarPagina('tickets') }
+  const irAReqs       = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
+  const irAInventario = () => cambiarPagina('inventario')
+
+  // ── Redirigir si la URL no corresponde a la página permitida ─────
+  useEffect(() => {
+    if (!usuario || cargando) return
+    const rutaEsperada = PAGINA_A_RUTA[paginaSegura] || '/'
+    if (location.pathname !== rutaEsperada) {
+      navigate(rutaEsperada, { replace: true })
+    }
+  }, [paginaSegura, usuario, cargando])
+
+  // ── Manejar ?bien= al cargar ─────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const id = params.get('bien')
+    if (id) {
+      setAbrirBienId(Number(id))
+      navigate('/inventario', { replace: true })
+    }
+  }, [])
+
+  // ── Auth ─────────────────────────────────────────────────────────
   useEffect(() => {
     const hash = window.location.hash
     if (hash.includes('error=access_denied') || hash.includes('type=invite') || hash.includes('type=recovery')) {
@@ -66,10 +171,7 @@ export default function App() {
         return
       }
 
-      // No recargar el perfil en cada refresh de token
       if (event === 'TOKEN_REFRESHED') return
-
-      // Si ya cargamos esta sesión, ignorar eventos redundantes (evita resetear la página)
       if (sesionCargada.current) return
 
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && modoRecovery.current)) {
@@ -97,13 +199,14 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // ── Configuración visual ─────────────────────────────────────────
   useEffect(() => {
     async function cargarConfig() {
       const { data } = await supabase.from('configuracion').select('clave, valor')
       if (!data) return
       const cfg = Object.fromEntries(data.map(r => [r.clave, r.valor]))
-      if (cfg.logo_url)          setLogoUrl(cfg.logo_url)
-      if (cfg.nombre_sistema)    setNombreSistema(cfg.nombre_sistema)
+      if (cfg.logo_url)           setLogoUrl(cfg.logo_url)
+      if (cfg.nombre_sistema)     setNombreSistema(cfg.nombre_sistema)
       if (cfg.nombre_institucion) setNombreInstitucion(cfg.nombre_institucion)
       aplicarTema({
         colorPrimario: cfg.color_primario || '#1a237e',
@@ -116,14 +219,13 @@ export default function App() {
     cargarConfig()
   }, [])
 
+  // ── Verificación de sesión periódica ─────────────────────────────
   useEffect(() => {
     if (!usuario) return
     const check = async () => {
       if (!navigator.onLine) return
       try {
         const { error } = await supabase.auth.getUser()
-        // Solo cerrar sesión ante un 401 real del servidor (token revocado/expirado)
-        // Cualquier otro error (red, timeout, reconexión) se ignora
         if (error?.status === 401) {
           await supabase.auth.signOut()
         }
@@ -153,7 +255,6 @@ export default function App() {
 
     sesionCargada.current = true
     setUsuario(data)
-    // Cargar permisos granulares
     if (data.rol !== 'admin') {
       supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
         .then(({ data: pd }) => { if (pd?.permisos) setPermisosUsuario(pd.permisos) })
@@ -161,11 +262,9 @@ export default function App() {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true })
     }
     if (data.rol === 'docente') {
-      setPagina('tickets')
-      localStorage.setItem('app_pagina', 'tickets')
+      navigate('/tickets', { replace: true })
     } else if (data.rol === 'visor_requerimientos') {
-      setPagina('requerimientos')
-      localStorage.setItem('app_pagina', 'requerimientos')
+      navigate('/requerimientos', { replace: true })
     }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
@@ -191,70 +290,6 @@ export default function App() {
 
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
-
-  const esAdmin       = usuario.rol === 'admin'
-  const esVisorReq    = usuario.rol === 'visor_requerimientos'
-  const p             = permisosUsuario ?? {}
-
-  // ── Permisos computados ─────────────────────────────────────────────────
-  const puedeVerInventario          = esAdmin || !!p.ver_inventario
-  const puedeGestionarTickets       = esAdmin || !!p.gestionar_tickets
-  const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
-  const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
-  // Tickets
-  const permisosTickets = {
-    verPropios:   esAdmin || !!p.ver_tickets,
-    crear:        esAdmin || p.crear_ticket !== false,
-    gestionar:    esAdmin || !!p.gestionar_tickets,
-    eliminar:     esAdmin || !!p.eliminar_ticket,
-  }
-  // Requerimientos
-  const permisosReqs = {
-    ver:          esAdmin || !!p.ver_requerimientos,
-    crear:        esAdmin || !!p.crear_requerimiento,
-    editar:       esAdmin || !!p.editar_requerimiento,
-    eliminar:     esAdmin || !!p.eliminar_requerimiento,
-    importar:     esAdmin || !!p.importar_requerimientos,
-    exportar:     esAdmin || !!p.exportar_requerimientos,
-    verAuditoria: esAdmin || !!p.ver_auditoria_requerimientos,
-  }
-  // Ausencia
-  const permisosAusencia = {
-    ver:          esAdmin || !!p.ver_ausencias,
-    gestionar:    esAdmin || !!p.gestionar_ausencias,
-    verAuditoria: esAdmin || !!p.ver_auditoria_permisos,
-    invitarUsuario:    esAdmin || !!p.invitar_usuario,
-    editarUsuario:     esAdmin || !!p.editar_usuario,
-    eliminarUsuario:   esAdmin || !!p.eliminar_usuario,
-  }
-  // Compensatorios
-  const permisosComp = {
-    ver:      esAdmin || !!p.ver_compensatorios,
-    gestionar: esAdmin || !!p.gestionar_compensatorios,
-  }
-  const puedeVerCompensatorios  = permisosComp.ver
-  // Puede gestionar ausencias → ve "Gestión de ausencias", Compensatorios y Auditoría
-  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias
-
-  const paginasVisorReq = ['requerimientos', 'tickets']
-  const puedeAccederUsuarios = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
-
-  // 'mis_ausencias' nunca está bloqueada — cualquier usuario autenticado puede verla
-  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
-    || (pagina === 'permisos'         && !puedeGestionarAusencias)
-    || (pagina === 'compensatorios'   && !puedeGestionarAusencias)
-    || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
-    || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
-  const soloStaff = pagina === 'inventario' || pagina === 'dashboard'
-    || (pagina === 'requerimientos' && !permisosReqs.ver)
-
-  // Páginas de ausencias redirigen a mis_ausencias en lugar de dashboard
-  const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
-  const paginaSegura = (!puedeVerInventario && soloStaff) ? 'tickets'
-    : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
-    : usuario.rol !== 'admin' && soloAdmin
-      ? (PAGINAS_AUSENCIAS.has(pagina) ? 'mis_ausencias' : 'dashboard')
-    : pagina
 
   return (
     <Layout
