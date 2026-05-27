@@ -2831,20 +2831,28 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                           animate={{ opacity: 1, height: 'auto', transition: { duration: 0.2 } }}
                           exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
                           style={{ overflow: 'hidden' }}>
-                          {aus.map((p, idx) => {
+                          {/* Contenedor interno que agrupa los registros */}
+                          <div style={{
+                            background: '#f8fafc',
+                            padding: '8px 12px',
+                            display: 'flex', flexDirection: 'column', gap: 5,
+                          }}>
+                          {aus.map((p) => {
                             const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados, p.tipo)
+                            const sel = seleccionados.has(p.id)
                             return (
                               <div key={p.id} className="permisos-ausencia-row" style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                padding: '9px 16px 9px 56px',
-                                borderTop: '1px solid #f8fafc',
-                                background: seleccionados.has(p.id) ? 'rgba(99,102,241,0.04)' : '#fff',
-                                transition: 'background 0.15s',
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                padding: '8px 10px',
+                                borderRadius: 8,
+                                border: `1px solid ${sel ? '#c7d2fe' : '#eef0f5'}`,
+                                background: sel ? 'rgba(99,102,241,0.05)' : '#fff',
+                                transition: 'background 0.15s, border-color 0.15s',
                               }}>
                                 {/* Checkbox de selección */}
                                 <input
                                   type="checkbox"
-                                  checked={seleccionados.has(p.id)}
+                                  checked={sel}
                                   onChange={() => toggleSeleccion(p.id)}
                                   onClick={e => e.stopPropagation()}
                                   title="Seleccionar para exportar"
@@ -2857,7 +2865,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                                 }}>
                                   {TIPO_STYLE[p.tipo]?.icon ?? ''} {TIPO_LABEL[p.tipo] ?? p.tipo}
                                 </span>
-                                <span style={{ fontSize: 12.5, color: '#475569', flex: 1, whiteSpace: 'nowrap' }}>
+                                <span style={{ fontSize: 12.5, color: '#475569', flex: 1, whiteSpace: 'nowrap', minWidth: 0 }}>
                                   {formatFecha(p.fecha_inicio)}
                                   <span style={{ color: '#cbd5e1', margin: '0 5px' }}>→</span>
                                   {formatFecha(p.fecha_fin)}
@@ -2882,6 +2890,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
                               </div>
                             )
                           })}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
