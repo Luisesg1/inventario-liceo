@@ -947,12 +947,14 @@ function ModalCompensatorio({ usuarios, editData, usuarioActual, esAdmin, onClos
 }
 
 // Exportar helper para uso en Permisos.jsx
-export async function getSaldoCompensatorio(usuarioId) {
-  const hoy = new Date().toISOString().slice(0, 10)
+// extraIds: IDs adicionales con el mismo RUT (misma persona, cuentas distintas)
+export async function getSaldoCompensatorio(usuarioId, extraIds = []) {
+  const hoy    = new Date().toISOString().slice(0, 10)
+  const allIds = [...new Set([usuarioId, ...extraIds].filter(Boolean))]
   const { data } = await supabase
     .from('dias_compensatorios')
     .select('id, cantidad, saldo_restante, fecha_ganado, vence_en')
-    .eq('usuario_id', usuarioId)
+    .in('usuario_id', allIds)
     .eq('estado', 'disponible')
     .order('fecha_ganado', { ascending: true })
   const records = (data ?? []).filter(r => !r.vence_en || r.vence_en >= hoy)
@@ -961,8 +963,8 @@ export async function getSaldoCompensatorio(usuarioId) {
 }
 
 // Descuenta dias de saldo_restante (FIFO por fecha_ganado)
-export async function descontarCompensatorios(usuarioId, diasADescontar) {
-  const { records } = await getSaldoCompensatorio(usuarioId)
+export async function descontarCompensatorios(usuarioId, diasADescontar, extraIds = []) {
+  const { records } = await getSaldoCompensatorio(usuarioId, extraIds)
   let restante = diasADescontar
   for (const r of records) {
     if (restante <= 0) break
@@ -980,12 +982,13 @@ export async function descontarCompensatorios(usuarioId, diasADescontar) {
 // Restaura (re-acredita) días al saldo — inverso de descontar.
 // Se usa al borrar/anular una ausencia de tipo compensatorios.
 // Restaura LIFO (al registro usado más reciente primero) para revertir el FIFO.
-export async function restaurarCompensatorios(usuarioId, diasARestaurar) {
-  const hoy = new Date().toISOString().slice(0, 10)
+export async function restaurarCompensatorios(usuarioId, diasARestaurar, extraIds = []) {
+  const hoy    = new Date().toISOString().slice(0, 10)
+  const allIds = [...new Set([usuarioId, ...extraIds].filter(Boolean))]
   const { data } = await supabase
     .from('dias_compensatorios')
     .select('id, cantidad, saldo_restante, fecha_ganado, vence_en')
-    .eq('usuario_id', usuarioId)
+    .in('usuario_id', allIds)
     .order('fecha_ganado', { ascending: false })
   let restante = diasARestaurar
   for (const r of (data ?? [])) {

@@ -688,7 +688,13 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
       setSaldoComp(null); return
     }
     setCargandoComp(true)
-    getSaldoCompensatorio(usuarioSel.id)
+    // Resuelve todos los IDs que comparten el mismo RUT (misma persona, distintas cuentas)
+    const extraIds = usuarioSel.rut
+      ? usuarios
+          .filter(u => u.rut && normRut(u.rut) === normRut(usuarioSel.rut) && u.id !== usuarioSel.id)
+          .map(u => u.id)
+      : []
+    getSaldoCompensatorio(usuarioSel.id, extraIds)
       .then(s => setSaldoComp(s))
       .catch(() => setSaldoComp({ disponible: 0, records: [] }))
       .finally(() => setCargandoComp(false))
@@ -1990,7 +1996,11 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           diasADescontar = diasHabiles(datos.fechaInicio, datos.fechaFin, diasInhabilitados)
         }
         if (diasADescontar > 0) {
-          try { await descontarCompensatorios(uid, diasADescontar) } catch (e) { console.error('[compensatorios] error al descontar:', e) }
+          const rut      = u?.isExterno ? null : (u?.rut ?? null)
+          const extraIds = rut
+            ? usuarios.filter(usr => usr.rut && normRut(usr.rut) === normRut(rut) && usr.id !== uid).map(usr => usr.id)
+            : []
+          try { await descontarCompensatorios(uid, diasADescontar, extraIds) } catch (e) { console.error('[compensatorios] error al descontar:', e) }
         }
       }
     }
@@ -2086,8 +2096,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {} }) {
           diasARestaurar = diasHabiles(p.fecha_inicio, p.fecha_fin, diasInhabilitados)
         }
         if (diasARestaurar > 0) {
+          const rut      = p.usuario?.rut ?? p.snapshot_rut ?? null
+          const extraIds = rut
+            ? usuarios.filter(u => u.rut && normRut(u.rut) === normRut(rut) && u.id !== p.usuario_id).map(u => u.id)
+            : []
           try {
-            await restaurarCompensatorios(p.usuario_id, diasARestaurar)
+            await restaurarCompensatorios(p.usuario_id, diasARestaurar, extraIds)
           } catch (e) {
             console.error('[compensatorios] error al restaurar:', e)
             setErrorEliminar('Ausencia eliminada, pero no se pudo restaurar el saldo compensatorio.')
