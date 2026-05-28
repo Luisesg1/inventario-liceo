@@ -110,7 +110,7 @@ export default function App() {
   }
   const puedeVerCompensatorios  = permisosComp.ver
   const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias
-  const paginasVisorReq         = ['requerimientos', 'tickets']
+  const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
 
   const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
@@ -119,7 +119,6 @@ export default function App() {
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
   const soloStaff = pagina === 'inventario'
-    || (pagina === 'dashboard' && !puedeGestionarTickets)
     || (pagina === 'requerimientos' && !permisosReqs.ver)
 
   const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
@@ -263,11 +262,6 @@ export default function App() {
         .then(({ data: pd }) => { if (pd?.permisos) setPermisosUsuario(pd.permisos) })
     } else {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true })
-    }
-    if (data.rol === 'docente') {
-      navigate('/tickets', { replace: true })
-    } else if (data.rol === 'visor_requerimientos') {
-      navigate('/requerimientos', { replace: true })
     }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
