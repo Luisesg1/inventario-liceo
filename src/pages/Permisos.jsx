@@ -1983,6 +1983,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const esAdmin         = usuario.rol === 'admin'
   // En modoMisAusencias nunca se permite gestión global
   const puedeGestionar  = !modoMisAusencias && (permisosAcceso.gestionar !== undefined ? permisosAcceso.gestionar : esAdmin)
+  const puedeCrear      = !modoMisAusencias && (permisosAcceso.crear    !== undefined ? permisosAcceso.crear    : puedeGestionar)
+  const puedeEditar     = !modoMisAusencias && (permisosAcceso.editar   !== undefined ? permisosAcceso.editar   : puedeGestionar)
+  const puedeEliminar   = !modoMisAusencias && (permisosAcceso.eliminar !== undefined ? permisosAcceso.eliminar : esAdmin)
+  const puedeExportar   = permisosAcceso.exportar !== undefined ? permisosAcceso.exportar : esAdmin
   const [usuarios,        setUsuarios]        = useState([])
   const [permisos,        setPermisos]        = useState([])
   const [cargando,        setCargando]        = useState(true)
@@ -2784,8 +2788,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
                 )}
               </button>
             )}
-            {/* Botón Exportar — siempre visible; exporta seleccionados o filtrados */}
-            {permisos.length > 0 && (
+            {/* Botón Exportar — visible solo si tiene permiso de exportar */}
+            {puedeExportar && permisos.length > 0 && (
               <div style={{ position: 'relative' }} ref={exportMenuRef}>
                 <button
                   className="permisos-dias-btn"
@@ -2836,7 +2840,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
                 )}
               </div>
             )}
-            {puedeGestionar && (
+            {puedeCrear && (
               <button className="permisos-btn-primary" onClick={() => setModalAbierto(true)}>
                 <Plus size={14} strokeWidth={2.5} /> Registrar ausencia
               </button>
@@ -3034,12 +3038,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
                                   <button className="permisos-action-btn" title="Ver" onClick={e => { e.stopPropagation(); setPermisoVer(modoMisAusencias ? { ...p, usuario: p.usuario ?? usuario } : p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
                                     <Eye size={13} strokeWidth={2} />
                                   </button>
-                                  {puedeGestionar && (
+                                  {puedeEditar && (
                                     <button className="permisos-action-btn" title="Editar" onClick={e => { e.stopPropagation(); abrirEditar(p) }} style={{ color: '#64748b', width: 28, height: 28 }}>
                                       <Pencil size={13} strokeWidth={2} />
                                     </button>
                                   )}
-                                  {puedeGestionar && (
+                                  {puedeEliminar && (
                                     <button className="permisos-action-btn permisos-action-btn--danger" title="Eliminar" onClick={e => { e.stopPropagation(); abrirEliminar(p) }} style={{ color: '#ef4444', width: 28, height: 28 }}>
                                       <Trash2 size={13} strokeWidth={2} />
                                     </button>

@@ -77,8 +77,11 @@ function estadoEfectivo(rec) {
 // ── Componente principal ──────────────────────────────────
 
 export default function Compensatorios({ usuario, permisos = {} }) {
-  const esAdmin    = usuario?.rol === 'admin'
-  const puedeGest  = esAdmin || !!permisos.gestionar_compensatorios
+  const esAdmin      = usuario?.rol === 'admin'
+  const puedeGest    = esAdmin || !!permisos.gestionar  // gestionar es el campo genérico heredado
+  const puedeCrear   = esAdmin || !!(permisos.crear  ?? permisos.gestionar)
+  const puedeEditar  = esAdmin || !!(permisos.editar ?? permisos.gestionar)
+  const puedeElim    = esAdmin || !!permisos.eliminar
 
   const [registros,  setRegistros]  = useState([])
   const [usuarios,   setUsuarios]   = useState([])
@@ -197,7 +200,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
             Saldo de días ganados por desfiles, trabajo de verano y actividades institucionales
           </p>
         </div>
-        {puedeGest && (
+        {puedeCrear && (
           <button className="comp-btn-primary" onClick={() => { setEditData(null); setModalOpen(true) }}>
             <Plus size={15} strokeWidth={2.5} />
             Registrar compensación
@@ -290,7 +293,8 @@ export default function Compensatorios({ usuario, permisos = {} }) {
                         key={r.id}
                         r={r}
                         esAdmin={esAdmin}
-                        puedeGest={puedeGest}
+                        puedeEditar={puedeEditar}
+                        puedeElim={puedeElim}
                         onVer={() => setVerDetalle(r)}
                         onEditar={() => { setEditData(r); setModalOpen(true) }}
                         onEliminar={() => setEliminar(r)}
@@ -343,7 +347,8 @@ export default function Compensatorios({ usuario, permisos = {} }) {
         {verDetalle && (
           <ModalDetalle
             r={verDetalle}
-            puedeGest={puedeGest}
+            puedeEditar={puedeEditar}
+            puedeElim={puedeElim}
             onClose={() => setVerDetalle(null)}
             onEditar={() => { setEditData(verDetalle); setVerDetalle(null); setModalOpen(true) }}
             onEliminar={() => { setEliminar(verDetalle); setVerDetalle(null) }}
@@ -427,7 +432,7 @@ function KPICard({ icon, variant, value, label }) {
 
 // ── Fila tabla ────────────────────────────────────────────
 
-function FilaRegistro({ r, esAdmin, puedeGest, onVer, onEditar, onEliminar }) {
+function FilaRegistro({ r, esAdmin, puedeEditar, puedeElim, onVer, onEditar, onEliminar }) {
   const u      = r.usuario
   const estado = estadoEfectivo(r)
   const tipo   = TIPO_MAP[r.tipo]
@@ -500,14 +505,16 @@ function FilaRegistro({ r, esAdmin, puedeGest, onVer, onEditar, onEliminar }) {
           <button className="comp-action-btn comp-action-btn--view" onClick={onVer} title="Ver detalle">
             <Eye size={13} />
           </button>
-          {puedeGest && <>
+          {puedeEditar && (
             <button className="comp-action-btn comp-action-btn--edit" onClick={onEditar} title="Editar">
               <Pencil size={13} />
             </button>
+          )}
+          {puedeElim && (
             <button className="comp-action-btn comp-action-btn--delete" onClick={onEliminar} title="Eliminar">
               <Trash2 size={13} />
             </button>
-          </>}
+          )}
         </div>
       </td>
     </motion.tr>
@@ -516,7 +523,7 @@ function FilaRegistro({ r, esAdmin, puedeGest, onVer, onEditar, onEliminar }) {
 
 // ── Modal detalle ─────────────────────────────────────────
 
-function ModalDetalle({ r, puedeGest, onClose, onEditar, onEliminar }) {
+function ModalDetalle({ r, puedeEditar, puedeElim, onClose, onEditar, onEliminar }) {
   const u      = r.usuario
   const estado = estadoEfectivo(r)
   const tipo   = TIPO_MAP[r.tipo]
@@ -632,18 +639,22 @@ function ModalDetalle({ r, puedeGest, onClose, onEditar, onEliminar }) {
         {/* Footer */}
         <div className="comp-modal-footer" style={{ justifyContent: 'space-between' }}>
           <button className="comp-btn-secondary" onClick={onClose}>Cerrar</button>
-          {puedeGest && (
+          {(puedeEditar || puedeElim) && (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="comp-btn-secondary" onClick={onEditar}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Pencil size={13} /> Editar
-              </button>
-              <button onClick={onEliminar}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-                  borderRadius: 10, border: 'none', background: 'rgba(239,68,68,0.08)',
-                  color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Trash2 size={13} /> Eliminar
-              </button>
+              {puedeEditar && (
+                <button className="comp-btn-secondary" onClick={onEditar}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Pencil size={13} /> Editar
+                </button>
+              )}
+              {puedeElim && (
+                <button onClick={onEliminar}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+                    borderRadius: 10, border: 'none', background: 'rgba(239,68,68,0.08)',
+                    color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <Trash2 size={13} /> Eliminar
+                </button>
+              )}
             </div>
           )}
         </div>

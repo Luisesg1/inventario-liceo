@@ -47,16 +47,24 @@ const ACCIONES = [
   { key: 'exportar_requerimientos',   label: 'Exportar requerimientos',    labelCorto: 'Exp. req.' },
   { key: 'ver_auditoria_requerimientos', label: 'Ver auditoría de requerimientos', labelCorto: 'Aud. Req.' },
   // Ausencia
-  { key: 'ver_ausencias',         label: 'Ver ausencias del personal', labelCorto: 'Ver aus.' },
-  { key: 'gestionar_ausencias',   label: 'Registrar/editar ausencias', labelCorto: 'Gest. aus.' },
-  { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias', labelCorto: 'Aud. Aus.' },
-  { key: 'invitar_usuario',             label: 'Invitar usuarios',              labelCorto: 'Invitar' },
-  { key: 'editar_usuario',             label: 'Editar usuarios',               labelCorto: 'Editar usr.' },
-  { key: 'eliminar_usuario',           label: 'Eliminar usuarios',             labelCorto: 'Elim. usr.' },
-  { key: 'notificar_ausencia_correo',  label: 'Notificar ausencia por correo', labelCorto: 'Notif. correo' },
+  { key: 'ver_ausencias',         label: 'Ver ausencias del personal',         labelCorto: 'Ver aus.',    desc: 'Permite consultar el registro de ausencias de todo el personal.' },
+  { key: 'crear_ausencias',       label: 'Registrar ausencias',                labelCorto: 'Crear aus.',  desc: 'Permite ingresar nuevas ausencias para cualquier funcionario.' },
+  { key: 'editar_ausencias',      label: 'Editar ausencias',                   labelCorto: 'Editar aus.', desc: 'Permite modificar ausencias ya registradas.' },
+  { key: 'eliminar_ausencias',    label: 'Eliminar ausencias',                 labelCorto: 'Elim. aus.', desc: 'Permite eliminar registros de ausencias del sistema.' },
+  { key: 'aprobar_ausencias',     label: 'Aprobar / rechazar ausencias',       labelCorto: 'Aprob. aus.', desc: 'Permite cambiar el estado de una ausencia a Aprobada o Rechazada.' },
+  { key: 'exportar_ausencias',    label: 'Exportar ausencias',                 labelCorto: 'Exp. aus.',   desc: 'Permite exportar el registro de ausencias a PDF o Excel.' },
+  { key: 'gestionar_ausencias',   label: 'Gestionar ausencias (legado)',       labelCorto: 'Gest. aus.',  desc: 'Permiso heredado que equivale a crear y editar ausencias. Se conserva por compatibilidad.' },
+  { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias',         labelCorto: 'Aud. Aus.',   desc: 'Permite ver el historial de cambios en el módulo de ausencias.' },
+  { key: 'invitar_usuario',            label: 'Invitar usuarios',               labelCorto: 'Invitar' },
+  { key: 'editar_usuario',            label: 'Editar usuarios',                labelCorto: 'Editar usr.' },
+  { key: 'eliminar_usuario',          label: 'Eliminar usuarios',              labelCorto: 'Elim. usr.' },
+  { key: 'notificar_ausencia_correo', label: 'Notificar ausencia por correo',  labelCorto: 'Notif. correo' },
   // Compensatorios
-  { key: 'ver_compensatorios',        label: 'Ver días compensatorios',        labelCorto: 'Ver comp.' },
-  { key: 'gestionar_compensatorios',  label: 'Gestionar días compensatorios',  labelCorto: 'Gest. comp.' },
+  { key: 'ver_compensatorios',       label: 'Ver días compensatorios',         labelCorto: 'Ver comp.',   desc: 'Permite consultar el registro de días compensatorios del personal.' },
+  { key: 'crear_compensatorios',     label: 'Registrar compensatorios',        labelCorto: 'Crear comp.', desc: 'Permite ingresar nuevos días compensatorios para cualquier funcionario.' },
+  { key: 'editar_compensatorios',    label: 'Editar compensatorios',           labelCorto: 'Editar comp.',desc: 'Permite modificar registros de días compensatorios ya existentes.' },
+  { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
+  { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -82,8 +90,8 @@ const GRUPOS_PERMISOS = [
   },
   {
     key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de ausencias del personal.',
-    permisos: ['ver_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
+    descripcion: 'Acceso al módulo de ausencias del personal. Cada acción puede activarse de forma independiente.',
+    permisos: ['ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'ver_auditoria_permisos'],
   },
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
@@ -92,8 +100,8 @@ const GRUPOS_PERMISOS = [
   },
   {
     key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.).',
-    permisos: ['ver_compensatorios', 'gestionar_compensatorios'],
+    descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
+    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios'],
   },
 ]
 
@@ -126,6 +134,8 @@ const PERMISOS_POR_ROL = {
       ver_auditoria_requerimientos: true,
       // Ausencia
       ver_ausencias: true, gestionar_ausencias: true,
+      crear_ausencias: true, editar_ausencias: true, eliminar_ausencias: false,
+      aprobar_ausencias: false, exportar_ausencias: true,
       ver_auditoria_permisos: false, gestionar_usuarios: false,
     },
     categorias: ['todos'],
@@ -560,9 +570,13 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
                       border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
                       background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
                       transition: 'all 0.15s',
+                      gap: 12,
                     }}
                   >
-                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                      {a.desc && <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#6b7280', fontWeight: 400, lineHeight: 1.4 }}>{a.desc}</p>}
+                    </div>
                     <ToggleSwitch activo={activo} size="sm" />
                   </div>
                 )

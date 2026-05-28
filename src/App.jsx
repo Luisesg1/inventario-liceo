@@ -99,23 +99,31 @@ export default function App() {
   const permisosAusencia = {
     ver:             esAdmin || !!p.ver_ausencias,
     gestionar:       esAdmin || !!p.gestionar_ausencias,
+    crear:           esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias,
+    editar:          esAdmin || !!p.gestionar_ausencias || !!p.editar_ausencias,
+    eliminar:        esAdmin || !!p.eliminar_ausencias,
+    aprobar:         esAdmin || !!p.aprobar_ausencias,
+    exportar:        esAdmin || !!p.exportar_ausencias,
     verAuditoria:    esAdmin || !!p.ver_auditoria_permisos,
     invitarUsuario:  esAdmin || !!p.invitar_usuario,
     editarUsuario:   esAdmin || !!p.editar_usuario,
     eliminarUsuario: esAdmin || !!p.eliminar_usuario,
   }
   const permisosComp = {
-    ver:      esAdmin || !!p.ver_compensatorios,
+    ver:     esAdmin || !!p.ver_compensatorios,
     gestionar:esAdmin || !!p.gestionar_compensatorios,
+    crear:   esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
+    editar:  esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
+    eliminar:esAdmin || !!p.eliminar_compensatorios,
   }
   const puedeVerCompensatorios  = permisosComp.ver
-  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias
+  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
 
   const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
     || (pagina === 'permisos'         && !puedeGestionarAusencias)
-    || (pagina === 'compensatorios'   && !puedeGestionarAusencias)
+    || (pagina === 'compensatorios'   && !puedeVerCompensatorios)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
   const soloStaff = pagina === 'inventario'
