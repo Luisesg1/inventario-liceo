@@ -266,8 +266,8 @@ export default function App() {
     sesionCargada.current = true
     setUsuario(data)
     if (data.rol !== 'admin') {
-      supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
-        .then(({ data: pd }) => { if (pd?.permisos) setPermisosUsuario(pd.permisos) })
+      const { data: pd } = await supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
+      if (pd?.permisos) setPermisosUsuario(pd.permisos)
     } else {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true })
     }
@@ -322,7 +322,7 @@ export default function App() {
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}

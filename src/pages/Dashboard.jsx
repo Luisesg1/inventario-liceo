@@ -312,7 +312,7 @@ const TIPO_AUSENCIA_LABEL = {
   dias_compensatorios:    'Días compensatorios',
 }
 
-export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false, puedeVerInventario = false, puedeVerRequerimientos = false }) {
+export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false, puedeVerInventario = false, puedeVerRequerimientos = false, puedeVerAusencias = false, puedeGestionarTickets = false }) {
   const rm = useReducedMotion()
 
   const esAdmin   = usuario?.rol === 'admin'
@@ -360,7 +360,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
   useEffect(() => {
     const cargarStats = async () => {
       let qT = supabase.from('tickets').select('estado, prioridad, titulo, creado_por_nombre, area_reporte, lugar_falla, creado_en')
-      if (!esGestor && usuario?.id) qT = qT.eq('creado_por', usuario.id)
+      if (!esGestor && !puedeGestionarTickets && usuario?.id) qT = qT.eq('creado_por', usuario.id)
       const [{ data: tData }, { data: rData }] = await Promise.all([
         qT,
         supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo, fecha'),
@@ -382,13 +382,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
   // Personas ausentes hoy (solo si el usuario puede ver ausencias)
   useEffect(() => {
     const cargarAusentes = async () => {
-      let puede = esAdmin
-      if (!esAdmin && usuario?.id) {
-        const { data } = await supabase.from('permisos_usuario')
-          .select('permisos').eq('usuario_id', usuario.id).maybeSingle()
-        puede = !!data?.permisos?.ver_ausencias
-      }
-      if (!puede) { setAusentesHoy(null); return }
+      if (!puedeVerAusencias) { setAusentesHoy(null); return }
       const hoy = new Date().toISOString().slice(0, 10)
       const normRut = r => (r ?? '').replace(/[.\-\s]/g, '').toLowerCase()
       const [{ data: us }, { data }] = await Promise.all([
@@ -422,11 +416,12 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       setAusentesPorTipo(porTipo)
     }
     cargarAusentes()
+    if (!puedeVerAusencias) return
     const ch = supabase.channel('dash-ausencias-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ausencias' }, cargarAusentes)
       .subscribe()
     return () => supabase.removeChannel(ch)
-  }, [])
+  }, [puedeVerAusencias])
 
   useEffect(() => {
     supabase.from('actividades').select('*').order('created_at', { ascending: false }).limit(3)
@@ -711,8 +706,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       </section>
       )}
 
-      {/* ── SECCIÓN SOPORTE: métricas de tickets ── */}
-      {esSoporte && (
+      {/* ── SECCIÓN SOPORTE/ADMIN: métricas de tickets ── */}
+      {(esGestor || puedeGestionarTickets) && (
       <section className="dash-section-block">
         <SectionTitle icon={Ticket} label="Estado actual de tickets" iconBg="#e0f2fe" iconColor="#0369a1" />
         <div className="dash-kpis">
