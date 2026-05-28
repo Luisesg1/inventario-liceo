@@ -335,6 +335,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
 
   useEffect(() => {
     const cargar = async () => {
+      if (esSoporte) { setCargando(false); return }
       const queries = [
         supabase.from('bienes').select('categoria, estado, ubicacion'),
         supabase.from('categorias').select('id, label, icon'),
@@ -499,6 +500,11 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
     .slice(0, 3) ?? []
   const periodoLabel = { semana: 'esta semana', mes: 'este mes', año: 'este año' }[ticketPeriodo]
 
+  const tTotalGlobal    = statsTickets?.length ?? 0
+  const tAbiertosTotal  = statsTickets?.filter(t => t.estado === 'Abierto').length ?? 0
+  const tEnProcesoTotal = statsTickets?.filter(t => t.estado === 'En proceso').length ?? 0
+  const tResueltosTotal = statsTickets?.filter(t => t.estado === 'Resuelto').length ?? 0
+
   /* ── Stats requerimientos (filtrados por año) ────────── */
   const statsReqsAño = statsReqs?.filter(r => {
     if (!r.fecha) return true
@@ -596,8 +602,49 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       </section>
       )}
 
-      {/* ── SECCIÓN 3: Inventario ── */}
+      {/* ── SECCIÓN SOPORTE: métricas de tickets ── */}
+      {esSoporte && (
       <section className="dash-section-block">
+        <SectionTitle icon={Ticket} label="Estado actual de tickets" iconBg="#e0f2fe" iconColor="#0369a1" />
+        <div className="dash-kpis">
+          {[
+            { label: 'Abiertos',   valor: tAbiertosTotal,  color: '#1d4ed8', bg: '#dbeafe', iconBg: '#eff6ff', Icon: CircleDot,    onClick: () => onIrATickets?.('Abierto') },
+            { label: 'En revisión',valor: tEnProcesoTotal, color: '#854d0e', bg: '#fef9c3', iconBg: '#fef3c7', Icon: Activity,     onClick: () => onIrATickets?.('En proceso') },
+            { label: 'Resueltos',  valor: tResueltosTotal, color: '#166534', bg: '#dcfce7', iconBg: '#f0fdf4', Icon: CheckCircle2, onClick: () => onIrATickets?.('Resuelto') },
+            { label: 'Total',      valor: tTotalGlobal,    color: '#1a237e', bg: '#eef0ff', iconBg: '#e8eaf6', Icon: Ticket,       onClick: onIrATickets },
+          ].map((kpi, i) => (
+            <motion.div
+              key={i}
+              className="dash-kpi-card"
+              style={{ '--kpi-color': kpi.color, cursor: kpi.onClick ? 'pointer' : 'default' }}
+              onClick={kpi.onClick}
+              initial={rm ? false : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07, duration: 0.32, ease: 'easeOut' }}
+              whileHover={rm ? {} : { y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+            >
+              <div className="kpi-body">
+                <div className="kpi-valor" style={{ color: kpi.color }}>
+                  <KpiNumber value={kpi.valor} rm={rm} />
+                </div>
+                <div className="kpi-label">{kpi.label}</div>
+                {kpi.onClick && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 6, fontSize: 12, fontWeight: 700, color: kpi.color }}>
+                    Ver <ArrowRight size={12} />
+                  </span>
+                )}
+              </div>
+              <div className="kpi-icon-chip" style={{ background: kpi.iconBg }}>
+                <kpi.Icon size={20} style={{ color: kpi.color }} strokeWidth={2} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+      )}
+
+      {/* ── SECCIÓN 3: Inventario ── */}
+      {!esSoporte && <section className="dash-section-block">
         <SectionTitle icon={Package2} label="Inventario" iconBg="#e8eaf6" iconColor="#1a237e" />
         <div className="dash-kpis">
         {KPI_CONFIG.map((kpi, i) => (
@@ -629,10 +676,10 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           </motion.div>
         ))}
         </div>
-      </section>
+      </section>}
 
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
-      <div className="dash-bottom-grid">
+      <div className="dash-bottom-grid" style={esSoporte ? { gridTemplateColumns: '1fr' } : undefined}>
 
         {/* Tickets */}
         <motion.div
@@ -689,8 +736,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           </div>
         </motion.div>
 
-        {/* Requerimientos */}
-        <motion.div
+        {/* Requerimientos — oculto para soporte */}
+        {!esSoporte && <motion.div
           className="dash-card"
           initial={rm ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -775,7 +822,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
               <span className="dash-monto-sub">{statsReqsAño.filter(r => Number(r.monto_real) > 0).length} req. con monto real</span>
             </div>
           </div>
-        </motion.div>
+        </motion.div>}
 
       </div>
     </motion.div>

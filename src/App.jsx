@@ -73,6 +73,7 @@ export default function App() {
   // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
   const esAdmin    = usuario?.rol === 'admin'
   const esVisorReq = usuario?.rol === 'visor_requerimientos'
+  const esSoporte  = usuario?.rol === 'soporte'
   const p          = permisosUsuario ?? {}
 
   const puedeVerInventario          = esAdmin || !!p.ver_inventario
@@ -116,7 +117,8 @@ export default function App() {
     || (pagina === 'compensatorios'   && !puedeGestionarAusencias)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
-  const soloStaff = pagina === 'inventario' || pagina === 'dashboard'
+  const soloStaff = pagina === 'inventario'
+    || (pagina === 'dashboard' && !puedeGestionarTickets)
     || (pagina === 'requerimientos' && !permisosReqs.ver)
 
   const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
@@ -305,6 +307,7 @@ export default function App() {
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
       puedeVerInventario={puedeVerInventario}
       puedeGestionarTickets={puedeGestionarTickets}
+      esSoporte={esSoporte}
       puedeVerAusencias={permisosAusencia.ver}
       puedeVerRequerimientos={permisosReqs.ver}
       puedeVerCompensatorios={puedeVerCompensatorios}

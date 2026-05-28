@@ -185,7 +185,7 @@ const ROL_LABEL = {
   encargado_permisos:  'Encargado Permisos',
   editor:              'Editor',
   encargado:           'Encargado',
-  soporte:             'Soporte',
+  soporte:             'Soporte técnico',
   visor_requerimientos:'Visor requerimientos',
 }
 
@@ -902,6 +902,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                   <option value="docente">Docente</option>
                   <option value="asistente">Asistente de la educación</option>
                   <option value="administrativo">Administrativo</option>
+                  <option value="soporte">Soporte técnico</option>
                 </select>
               </label>
             </div>
@@ -1459,6 +1460,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           <option value="docente">Docente</option>
           <option value="asistente">Asistente de la educación</option>
           <option value="administrativo">Administrativo</option>
+          <option value="soporte">Soporte técnico</option>
         </select>
       </div>
       {busqueda && (
@@ -1545,6 +1547,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                     <option value="docente">Docente</option>
                     <option value="asistente">Asistente educación</option>
                     <option value="administrativo">Administrativo</option>
+                    <option value="soporte">Soporte técnico</option>
                   </select>
                 ) : (
                   <span className="rol-select"
@@ -1638,6 +1641,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                           <option value="docente">Docente</option>
                           <option value="asistente">Asistente de la educación</option>
                           <option value="administrativo">Administrativo</option>
+                          <option value="soporte">Soporte técnico</option>
                         </select>
                       </label>
                     </div>

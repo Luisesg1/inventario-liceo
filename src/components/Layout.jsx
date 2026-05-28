@@ -20,12 +20,23 @@ const COLS_BACKUP = [
 ]
 
 const ROL_LABEL = {
-  admin:     'Administrador',
-  editor:    'Editor',
-  encargado: 'Encargado',
-  docente:   'Docente',
-  soporte:   'Soporte',
-  visor_requerimientos: 'Visor requerimientos',
+  admin:                 'Administrador',
+  directivo:             'Directivo',
+  coordinador:           'Coordinador',
+  docente:               'Docente',
+  asistente:             'Asistente de la educación',
+  administrativo:        'Administrativo',
+  soporte:               'Soporte técnico',
+  editor:                'Editor',
+  encargado:             'Encargado',
+  encargado_inventario:  'Encargado inventario',
+  encargado_soporte:     'Encargado Soporte',
+  encargado_permisos:    'Encargado Permisos',
+  visor_requerimientos:  'Visor requerimientos',
+}
+
+const ROL_BADGE = {
+  soporte: { bg: '#e0f2fe', color: '#0369a1', label: 'Soporte técnico' },
 }
 
 const sidebarVariants = {
@@ -47,6 +58,7 @@ export default function Layout({
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
+  esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
@@ -553,8 +565,8 @@ export default function Layout({
             </motion.div>
           ))}
 
-          {/* Ausencias con submenú — visible para todos los usuarios */}
-          <>
+          {/* Ausencias con submenú — oculto para soporte */}
+          {!esSoporte && <>
             <motion.div
               className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
               onClick={() => setPermisosAbierto(o => !o)}
@@ -621,7 +633,7 @@ export default function Layout({
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
+          </>}
 
           {/* Ajustes con submenú */}
           {esAdmin && (
@@ -714,7 +726,20 @@ export default function Layout({
           <div className="avatar">{usuario.nombre[0]}</div>
           <div className="user-info">
             <p>{usuario.nombre}</p>
-            <span>{ROL_LABEL[usuario.rol] ?? usuario.rol}</span>
+            {ROL_BADGE[usuario.rol] ? (
+              <span style={{
+                display: 'inline-block',
+                background: ROL_BADGE[usuario.rol].bg,
+                color: ROL_BADGE[usuario.rol].color,
+                fontSize: 10.5, fontWeight: 700,
+                borderRadius: 20, padding: '2px 9px',
+                letterSpacing: '0.02em',
+              }}>
+                {ROL_BADGE[usuario.rol].label}
+              </span>
+            ) : (
+              <span>{ROL_LABEL[usuario.rol] ?? usuario.rol}</span>
+            )}
           </div>
         </div>
       </motion.aside>
