@@ -299,14 +299,12 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   const [paso, setPaso]     = useState(1)
   const [nivel, setNivel]   = useState(() => detectarNivelActual(draft?.permisos ?? {}))
 
-  // Devuelve el paso anterior según nivel
+  // Devuelve el paso anterior
   function pasoAnterior(p) {
-    if (p === 4 && nivel !== 'personalizado') return 2
     return p - 1
   }
-  // Devuelve el paso siguiente según nivel
+  // Devuelve el paso siguiente
   function pasoSiguiente(p) {
-    if (p === 2 && nivel !== 'personalizado') return 4
     return p + 1
   }
   // Último paso del wizard
@@ -354,7 +352,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   const stepsBase = [
     { n: 1, label: 'Módulos' },
     { n: 2, label: 'Nivel de acceso' },
-    ...(nivel === 'personalizado' ? [{ n: 3, label: 'Inventario' }] : []),
+    { n: 3, label: 'Inventario' },
     { n: 4, label: 'Tickets' },
     { n: 5, label: 'Requerimientos' },
     { n: 6, label: 'Ausencia' },
