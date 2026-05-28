@@ -315,6 +315,7 @@ export default function App() {
       puedeVerRequerimientos={permisosReqs.ver}
       puedeVerCompensatorios={puedeVerCompensatorios}
       puedeGestionarAusencias={puedeGestionarAusencias}
+      puedeAccederUsuarios={puedeAccederUsuarios}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}

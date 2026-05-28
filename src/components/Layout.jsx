@@ -58,6 +58,7 @@ export default function Layout({
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
+  puedeAccederUsuarios = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -634,7 +635,7 @@ export default function Layout({
           </>
 
           {/* Ajustes con submenú */}
-          {esAdmin && (
+          {(esAdmin || puedeAccederUsuarios) && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
@@ -662,20 +663,31 @@ export default function Layout({
                     exit="closed"
                     style={{ overflow: 'hidden' }}
                   >
-                    {[
-                      { id: 'ajustes',  label: 'Personalizar' },
-                      { id: 'campos',   label: 'Campos por categoría' },
-                      { id: 'usuarios', label: 'Usuarios' },
-                    ].map(sub => (
+                    {esAdmin && (
                       <div
-                        key={sub.id}
-                        className={`nav-subitem ${paginaActual === sub.id ? 'active' : ''}`}
-                        onClick={() => handleNav(sub.id)}
+                        className={`nav-subitem ${paginaActual === 'ajustes' ? 'active' : ''}`}
+                        onClick={() => handleNav('ajustes')}
                       >
                         <span className="nav-subitem-dot" />
-                        {sub.label}
+                        Personalizar
                       </div>
-                    ))}
+                    )}
+                    {esAdmin && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
+                        onClick={() => handleNav('campos')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Campos por categoría
+                      </div>
+                    )}
+                    <div
+                      className={`nav-subitem ${paginaActual === 'usuarios' ? 'active' : ''}`}
+                      onClick={() => handleNav('usuarios')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Usuarios
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
