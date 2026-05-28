@@ -33,10 +33,11 @@ const ACCIONES = [
   { key: 'registrar_prestamo',   label: 'Registrar préstamo',     labelCorto: 'Préstamo' },
   { key: 'registrar_incidencia', label: 'Registrar incidencia',   labelCorto: 'Incidencia' },
   // Tickets
-  { key: 'ver_tickets',          label: 'Ver tickets (propios)',      labelCorto: 'Ver tick.' },
-  { key: 'crear_ticket',         label: 'Crear nuevo ticket',         labelCorto: 'Crear tick.' },
-  { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets',labelCorto: 'Gest. tick.' },
-  { key: 'eliminar_ticket',      label: 'Eliminar tickets',           labelCorto: 'Elim. tick.' },
+  { key: 'ver_tickets',          label: 'Ver tickets (propios)',                    labelCorto: 'Ver tick.' },
+  { key: 'crear_ticket',         label: 'Crear nuevo ticket',                       labelCorto: 'Crear tick.' },
+  { key: 'gestionar_tickets',    label: 'Gestionar todos los tickets',              labelCorto: 'Gest. tick.' },
+  { key: 'eliminar_ticket',      label: 'Eliminar tickets',                         labelCorto: 'Elim. tick.' },
+  { key: 'ver_alertas_tickets',  label: 'Ver alertas de tickets en dashboard',      labelCorto: 'Alert. tick.' },
   // Requerimientos
   { key: 'ver_requerimientos',        label: 'Ver requerimientos',         labelCorto: 'Ver req.' },
   { key: 'crear_requerimiento',       label: 'Crear requerimiento',        labelCorto: 'Crear req.' },
@@ -70,7 +71,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de tickets de soporte.',
-    permisos: ['ver_tickets', 'crear_ticket', 'gestionar_tickets', 'eliminar_ticket'],
+    permisos: ['ver_tickets', 'crear_ticket', 'gestionar_tickets', 'eliminar_ticket', 'ver_alertas_tickets'],
   },
   {
     key: 'requerimientos', label: 'Requerimientos', paso: 5, soloPersonalizado: false,
@@ -101,7 +102,7 @@ const ACCIONES_POR_CATEGORIA = ['ver_inventario', 'agregar_bien', 'editar_bien',
   'eliminar_bien', 'eliminar_lote', 'importar_csv', 'exportar']
 const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
   'registrar_prestamo', 'registrar_incidencia',
-  'ver_tickets', 'gestionar_tickets',
+  'ver_tickets', 'gestionar_tickets', 'ver_alertas_tickets',
   'ver_auditoria_requerimientos', 'ver_auditoria_permisos']
 
 const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
@@ -118,7 +119,7 @@ const PERMISOS_POR_ROL = {
       importar_csv: false, exportar: true,
       registrar_prestamo: true, registrar_incidencia: true,
       // Tickets
-      ver_tickets: true, crear_ticket: true, gestionar_tickets: true, eliminar_ticket: false,
+      ver_tickets: true, crear_ticket: true, gestionar_tickets: true, eliminar_ticket: false, ver_alertas_tickets: true,
       // Requerimientos
       ver_requerimientos: true, crear_requerimiento: true, editar_requerimiento: true,
       eliminar_requerimiento: false, importar_requerimientos: false, exportar_requerimientos: true,
@@ -130,7 +131,7 @@ const PERMISOS_POR_ROL = {
     categorias: ['todos'],
   },
   coordinador: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true, crear_requerimiento: true },
+    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_alertas_tickets: true, ver_requerimientos: true, crear_requerimiento: true },
     categorias: ['todos'],
   },
   docente: {
@@ -147,11 +148,11 @@ const PERMISOS_POR_ROL = {
   },
   // Legacy — usuarios existentes con roles anteriores
   encargado_inventario: { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: false, gestionar_tickets: false }, categorias: ['todos'] },
-  encargado_soporte:    { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true }, categorias: ['todos'] },
+  encargado_soporte:    { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true }, categorias: ['todos'] },
   encargado_permisos:   { permisos: { ...PERMISOS_VACIO, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true }, categorias: ['todos'] },
   editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
   encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
-  soporte:              { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true }, categorias: ['todos'] },
+  soporte:              { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true }, categorias: ['todos'] },
   visor_requerimientos: { permisos: { ...PERMISOS_VACIO, ver_tickets: true }, categorias: [] },
 }
 

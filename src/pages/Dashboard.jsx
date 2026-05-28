@@ -5,7 +5,7 @@ import {
   PlusCircle, Pencil, Wrench,
   Ticket, Activity, Clock,
   ArrowRight, ClipboardList, CheckCircle2, CircleDot, XCircle,
-  UserX,
+  UserX, Bell, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Dashboard.css'
@@ -312,7 +312,7 @@ const TIPO_AUSENCIA_LABEL = {
   dias_compensatorios:    'Días compensatorios',
 }
 
-export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias }) {
+export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false }) {
   const rm = useReducedMotion()
 
   const esAdmin   = usuario?.rol === 'admin'
@@ -548,6 +548,115 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           {categoriaFiltro && <p>{catActiva?.label}</p>}
         </motion.div>
       </section>
+
+      {/* ── SECCIÓN 1b: Alerta de tickets pendientes ── */}
+      {puedeVerAlertasTickets && tAbiertosTotal > 0 && (
+      <motion.section
+        className="dash-section-block"
+        initial={rm ? false : { opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: 'easeOut' }}
+      >
+        <div style={{
+          background: esSoporte ? '#e0f2fe' : '#eff6ff',
+          border: `1.5px solid ${esSoporte ? '#7dd3fc' : '#bfdbfe'}`,
+          borderRadius: 14, padding: '14px 16px',
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+
+          {/* Cabecera */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                background: esSoporte ? '#0369a1' : '#1d4ed8',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Bell size={16} style={{ color: '#fff' }} strokeWidth={2.5} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: '#0f172a', lineHeight: 1.3 }}>
+                  {esGestor
+                    ? `${tAbiertosTotal} ${tAbiertosTotal === 1 ? 'ticket abierto' : 'tickets abiertos'} en el sistema`
+                    : `Tienes ${tAbiertosTotal} ${tAbiertosTotal === 1 ? 'ticket abierto' : 'tickets abiertos'}`}
+                </p>
+                {tEnProcesoTotal > 0 && (
+                  <p style={{ margin: 0, fontSize: 11.5, color: '#475569', marginTop: 2 }}>
+                    + {tEnProcesoTotal} {tEnProcesoTotal === 1 ? 'ticket en revisión' : 'tickets en revisión'}
+                  </p>
+                )}
+              </div>
+            </div>
+            {onIrATickets && (
+              <button
+                onClick={() => onIrATickets('Abierto')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: esSoporte ? '#0369a1' : '#1d4ed8',
+                  color: '#fff', border: 'none', borderRadius: 9,
+                  padding: '7px 14px', fontSize: 12.5, fontWeight: 700,
+                  cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  transition: 'opacity 0.15s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.opacity = '0.87' }}
+                onMouseOut={e => { e.currentTarget.style.opacity = '1' }}
+              >
+                Ver tickets <ArrowRight size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Lista de tickets recientes (recuperado) */}
+          {tRecientes.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {tRecientes.map((t, i) => (
+                <motion.div
+                  key={i}
+                  onClick={() => onIrATickets?.('Abierto')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                    padding: '7px 10px', borderRadius: 9,
+                    background: 'rgba(255,255,255,0.72)',
+                    border: '1px solid rgba(59,130,246,0.14)',
+                    cursor: onIrATickets ? 'pointer' : 'default',
+                  }}
+                  whileHover={onIrATickets && !rm ? { backgroundColor: 'rgba(255,255,255,0.96)' } : {}}
+                  transition={{ duration: 0.12 }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                    <CircleDot size={13} style={{ color: '#1d4ed8', flexShrink: 0 }} strokeWidth={2.5} />
+                    <span style={{
+                      fontSize: 12.5, fontWeight: 600, color: '#1e293b',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {t.titulo}
+                    </span>
+                    {t.area_reporte && (
+                      <span style={{ fontSize: 11, color: '#64748b', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        — {t.area_reporte}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    {t.prioridad && (
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 700, borderRadius: 20, padding: '2px 8px',
+                        background: PRIORIDAD_BG[t.prioridad] ?? '#f3f4f6',
+                        color: PRIORIDAD_COLOR[t.prioridad] ?? '#374151',
+                        textTransform: 'capitalize',
+                      }}>
+                        {t.prioridad}
+                      </span>
+                    )}
+                    <ChevronRight size={13} style={{ color: '#94a3b8' }} strokeWidth={2} />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.section>
+      )}
 
       {/* ── SECCIÓN 2: Ausencias ── */}
       {ausentesHoy !== null && (

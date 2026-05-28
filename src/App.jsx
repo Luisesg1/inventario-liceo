@@ -78,6 +78,7 @@ export default function App() {
 
   const puedeVerInventario          = esAdmin || !!p.ver_inventario
   const puedeGestionarTickets       = esAdmin || !!p.gestionar_tickets
+  const puedeVerAlertasTickets      = esAdmin || esSoporte || !!p.ver_alertas_tickets
   const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
   const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
   const permisosTickets = {
@@ -318,7 +319,7 @@ export default function App() {
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} puedeVerAlertasTickets={puedeVerAlertasTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
