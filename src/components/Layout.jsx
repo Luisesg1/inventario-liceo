@@ -565,8 +565,8 @@ export default function Layout({
             </motion.div>
           ))}
 
-          {/* Ausencias con submenú — oculto para soporte */}
-          {!esSoporte && <>
+          {/* Ausencias con submenú */}
+          <>
             <motion.div
               className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
               onClick={() => setPermisosAbierto(o => !o)}
@@ -633,7 +633,7 @@ export default function Layout({
                 </motion.div>
               )}
             </AnimatePresence>
-          </>}
+          </>
 
           {/* Ajustes con submenú */}
           {esAdmin && (
