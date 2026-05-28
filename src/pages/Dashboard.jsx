@@ -312,7 +312,7 @@ const TIPO_AUSENCIA_LABEL = {
   dias_compensatorios:    'Días compensatorios',
 }
 
-export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false }) {
+export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false, puedeVerInventario = false, puedeVerRequerimientos = false }) {
   const rm = useReducedMotion()
 
   const esAdmin   = usuario?.rol === 'admin'
@@ -335,7 +335,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
 
   useEffect(() => {
     const cargar = async () => {
-      if (esSoporte) { setCargando(false); return }
+      if (!puedeVerInventario) { setCargando(false); return }
       const queries = [
         supabase.from('bienes').select('categoria, estado, ubicacion'),
         supabase.from('categorias').select('id, label, icon'),
@@ -753,7 +753,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       )}
 
       {/* ── SECCIÓN 3: Inventario ── */}
-      {!esSoporte && <section className="dash-section-block">
+      {puedeVerInventario && <section className="dash-section-block">
         <SectionTitle icon={Package2} label="Inventario" iconBg="#e8eaf6" iconColor="#1a237e" />
         <div className="dash-kpis">
         {KPI_CONFIG.map((kpi, i) => (
@@ -788,7 +788,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       </section>}
 
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
-      <div className="dash-bottom-grid" style={esSoporte ? { gridTemplateColumns: '1fr' } : undefined}>
+      <div className="dash-bottom-grid" style={!puedeVerRequerimientos ? { gridTemplateColumns: '1fr' } : undefined}>
 
         {/* Tickets */}
         <motion.div
@@ -845,8 +845,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           </div>
         </motion.div>
 
-        {/* Requerimientos — oculto para soporte */}
-        {!esSoporte && <motion.div
+        {/* Requerimientos — solo si tiene permiso */}
+        {puedeVerRequerimientos && <motion.div
           className="dash-card"
           initial={rm ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
