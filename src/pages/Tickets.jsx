@@ -180,7 +180,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const formValido = form.nombre.trim() && form.apellidos.trim() && form.rol_solicitante && form.correo_contacto.trim() && form.area_reporte && form.lugar_falla.trim() && form.descripcion.trim()
 
   const crearTicket = async () => {
-    if (!formValido) return
+    if (!formValido || !puedeCrear) return
     setGuardando(true)
     const titulo = form.area_reporte === 'Otro' && form.area_otro
       ? `Otro — ${form.area_otro}`
@@ -221,7 +221,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const cerrarDetalle = () => { setTicketDetalle(null); setConfirmarEliminar(false) }
 
   const guardarCambios = async () => {
-    if (!ticketDetalle) return
+    if (!ticketDetalle || !esGestor) return
     setGuardandoEdit(true)
     const notasVal = editNotas.trim() || null
 
@@ -262,6 +262,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   }
 
   const eliminarTicket = async (id) => {
+    if (!puedeElim) return
     const { error } = await supabase.from('tickets').delete().eq('id', id)
     if (error) { console.error('Error al eliminar ticket:', error); return }
     setTickets(prev => prev.filter(t => t.id !== id))
@@ -279,6 +280,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   )
   const salirSeleccion = () => { setSeleccionados(new Set()); setConfirmandoBulk(false) }
   const eliminarSeleccionados = async () => {
+    if (!puedeElim) return
     const { error } = await supabase.from('tickets').delete().in('id', [...seleccionados])
     if (error) { console.error('Error al eliminar tickets:', error); return }
     setTickets(prev => prev.filter(t => !seleccionados.has(t.id)))

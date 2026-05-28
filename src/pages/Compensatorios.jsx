@@ -153,6 +153,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
 
   // ── CRUD ──────────────────────────────────────────────
   async function handleGuardar(datos) {
+    if (datos.id ? !puedeEditar : !puedeCrear) return
     const { id, usuarioId, tipo, cantidad, fechaGanado, venceEn, motivo, observaciones } = datos
     const payload = {
       usuario_id:    usuarioId,
@@ -178,7 +179,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   }
 
   async function handleEliminar() {
-    if (!eliminar) return
+    if (!eliminar || !puedeElim) return
     setEliminando(true)
     await supabase.from('dias_compensatorios').delete().eq('id', eliminar.id)
     setEliminando(false)

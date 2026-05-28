@@ -684,6 +684,7 @@ function ImportarReq({ onImportado, onCerrar }) {
   }, [])
 
   const importar = async () => {
+    if (!puedeImportar) return
     setFase('importando')
     let importados = 0, errores = []
     for (const payload of filas) {
@@ -1296,6 +1297,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
 
   const guardar = async () => {
     if (!form.contenido?.trim()) return
+    if (modal?.id ? !puedeEditar : !puedeCrear) return
     setGuardando(true)
     setErrorGuardar('')
     const payload = {
@@ -1393,7 +1395,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   }
 
   const eliminar = async () => {
-    if (!modal?.id) return
+    if (!modal?.id || !puedeEliminar) return
     try {
       await eliminarRegistro(modal)
     } catch (err) {
@@ -1884,7 +1886,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
                         {puedeEditar && (
                           <button type="button" className="btn-edit" onClick={() => abrirEditar(r)} title="Editar">✏️</button>
                         )}
-                        {(puedeEliminar || esAdmin) && (
+                        {puedeEliminar && (
                           <button
                             type="button"
                             className="btn-del"

@@ -2236,6 +2236,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }
 
   async function handleGuardar(datos) {
+    if (datos.id ? !puedeEditar : !puedeCrear) return
     const u = datos.usuario
 
     // Validar duplicados por solapamiento de fechas

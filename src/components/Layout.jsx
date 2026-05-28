@@ -63,7 +63,7 @@ export default function Layout({
   const esAdmin   = usuario.rol === 'admin'
   const esVisorReq    = usuario.rol === 'visor_requerimientos'
   const muestraInventario = puedeVerInventario
-  const muestraRequerimientos = puedeVerInventario || esVisorReq || puedeVerRequerimientos
+  const muestraRequerimientos = esVisorReq || puedeVerRequerimientos
 
   const [sidebarOpen,   setSidebarOpen]   = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
