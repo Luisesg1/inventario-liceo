@@ -89,6 +89,18 @@ function descargarPlantilla() {
   URL.revokeObjectURL(url)
 }
 
+// ── Descarga CSV de credenciales ─────────────────────────────────────────────
+function descargarCredenciales(creds) {
+  const cabecera = ['nombre', 'email', 'rut', 'rol', 'password_temporal']
+  const filas = creds.map(c => [c.nombre, c.email, c.rut, c.rol, c.password_temporal])
+  const csv = [cabecera, ...filas].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `credenciales_usuarios_${new Date().toISOString().slice(0,10)}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── Badges de estado ──────────────────────────────────────────────────────────
 const BADGE = {
   nuevo:          { bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0', label: '✅ Nuevo usuario' },
@@ -104,9 +116,11 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
   const [parseando, setParseando] = useState(false)
   const [archivoNombre, setArchivoNombre] = useState('')
   const [filas, setFilas]         = useState([])
+  const [enviarCorreo, setEnviarCorreo] = useState(false)
   const [importando, setImportando] = useState(false)
   const [progreso, setProgreso]   = useState(0)
   const [resultado, setResultado] = useState(null)
+  const [credenciales, setCredenciales] = useState([]) // para descarga CSV
   const inputRef = useRef(null)
 
   // ── Procesar archivo ────────────────────────────────────────────────────────
@@ -280,6 +294,7 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
     const token = session?.access_token
 
     const detalles = []
+    const creds = []
     let creados = 0, actualizados = 0, erroresCreacion = 0
 
     for (let i = 0; i < filasAImportar.length; i++) {
@@ -287,7 +302,7 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
 
       try {
         if (fila.estado === 'nuevo' || fila.decision === 'vincular') {
-          // Crear nueva cuenta (igual que invitar usuario)
+          const pass = passwordDesdeRut(fila.rut)
           const res = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
             {
@@ -298,7 +313,8 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
                 rut:              fila.rut,
                 email:            fila.email,
                 rol:              fila.rolInterno,
-                passwordOverride: passwordDesdeRut(fila.rut),
+                passwordOverride: pass,
+                skipEmail:        !enviarCorreo,
               }),
             }
           )
@@ -309,7 +325,17 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
           } else {
             creados++
             const etiqueta = fila.decision === 'vincular' ? '🔗 Vinculado' : '✅ Creado'
-            detalles.push({ ...fila, _resultado: 'creado', _msg: json.emailEnviado ? `${etiqueta}, email enviado` : `${etiqueta} (email no enviado)` })
+            const emailMsg = enviarCorreo
+              ? (json.emailEnviado ? ', email enviado' : ', email fallido')
+              : ''
+            detalles.push({ ...fila, _resultado: 'creado', _msg: `${etiqueta}${emailMsg}`, _emailEnviado: json.emailEnviado })
+            creds.push({
+              nombre: `${fila.nombres} ${fila.apellidos}`.trim(),
+              email:  fila.email,
+              rut:    fila.rut,
+              rol:    fila.rolInterno,
+              password_temporal: pass,
+            })
           }
 
         } else if (fila.decision === 'actualizar_correo') {
@@ -355,11 +381,17 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
       setProgreso(Math.round(((i + 1) / filasAImportar.length) * 100))
     }
 
+    const emailsEnviados = detalles.filter(d => d._emailEnviado).length
+    const emailsFallidos = enviarCorreo ? detalles.filter(d => d._resultado === 'creado' && !d._emailEnviado).length : 0
+
+    setCredenciales(creds)
     setResultado({
       creados,
       actualizados,
       omitidos: filasExistentes.length + filasRutDetectado.filter(f => f.decision === 'omitir').length,
       errores: erroresCreacion,
+      emailsEnviados,
+      emailsFallidos,
       detalles,
     })
     setImportando(false)
@@ -601,6 +633,27 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
               </table>
             </div>
 
+            {/* Checkbox envío de correo */}
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 16px', marginBottom: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={enviarCorreo}
+                  onChange={e => setEnviarCorreo(e.target.checked)}
+                  style={{ marginTop: 2, width: 15, height: 15, flexShrink: 0, accentColor: '#1a237e', cursor: 'pointer' }}
+                />
+                <div>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: '#111827' }}>
+                    Enviar credenciales por correo al crear usuarios
+                  </span>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 3 }}>
+                    ⚠️ Enviar correos puede consumir la cuota gratuita del servicio de email.
+                    {!enviarCorreo && <span style={{ color: '#1a237e', fontWeight: 600 }}> Si no marcas esta opción, se descargará un CSV con las credenciales generadas.</span>}
+                  </div>
+                </div>
+              </label>
+            </div>
+
             {filasAImportar.length === 0 && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 14, fontSize: 13, color: '#dc2626', textAlign: 'center' }}>
                 No hay filas listas para importar. Revisa los errores o selecciona una acción para los RUTs detectados.
@@ -658,8 +711,28 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
 
                 {(resultado.creados + resultado.actualizados) > 0 && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
-                    ✅ Proceso completado. Los usuarios nuevos recibirán su email con la contraseña temporal (primeros 4 dígitos del RUT) y deberán cambiarla al primer ingreso.
+                    ✅ Proceso completado. La contraseña temporal es los primeros 4 dígitos del RUT. Al primer ingreso deberán cambiarla.
                   </div>
+                )}
+
+                {/* Contadores de email (si se activó envío) */}
+                {enviarCorreo && resultado.creados > 0 && (
+                  <div style={{ background: '#f8faff', border: '1px solid #e0e7ff', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: '#374151' }}>
+                    <span style={{ fontWeight: 700, color: '#1a237e' }}>Correos: </span>
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>✅ {resultado.emailsEnviados} enviados</span>
+                    {resultado.emailsFallidos > 0 && <span style={{ color: '#dc2626', fontWeight: 600, marginLeft: 12 }}>❌ {resultado.emailsFallidos} fallidos</span>}
+                    {resultado.omitidos > 0 && <span style={{ color: '#9ca3af', marginLeft: 12 }}>— {resultado.omitidos} omitidos</span>}
+                  </div>
+                )}
+
+                {/* Descarga CSV de credenciales (si no se enviaron correos) */}
+                {!enviarCorreo && credenciales.length > 0 && (
+                  <button
+                    onClick={() => descargarCredenciales(credenciales)}
+                    style={{ width: '100%', padding: '11px 0', borderRadius: 10, border: '1.5px solid #1a237e', background: '#f0f4ff', color: '#1a237e', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}
+                  >
+                    ⬇️ Descargar CSV con credenciales ({credenciales.length} usuarios)
+                  </button>
                 )}
 
                 {/* Detalle */}

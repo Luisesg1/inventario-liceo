@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
     // 4. Validar body
     const body = await req.json();
-    const { nombre, rut, email, rol, passwordOverride } = body as { nombre?: string; rut?: string; email?: string; rol?: string; passwordOverride?: string };
+    const { nombre, rut, email, rol, passwordOverride, skipEmail } = body as { nombre?: string; rut?: string; email?: string; rol?: string; passwordOverride?: string; skipEmail?: boolean };
 
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
@@ -102,33 +102,37 @@ Deno.serve(async (req: Request) => {
     });
     if (permisosError) console.warn("Permisos no insertados:", permisosError.message);
 
-    // 9. Enviar email via Brevo
+    // 9. Enviar email (opcional — se omite si skipEmail es true)
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://inventario-liceo.vercel.app";
-    const brevoKey = Deno.env.get("BREVO_API_KEY");
-    const resendKey = Deno.env.get("RESEND_API_KEY");
     let emailEnviado = false;
     let emailError: string | undefined;
 
-    if (brevoKey) {
-      const result = await enviarEmailBrevo({ brevoKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
-      emailEnviado = result.ok;
-      emailError = result.error;
-    } else if (resendKey) {
-      emailEnviado = await enviarEmailResend({ resendKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
-    } else {
-      emailEnviado = await enviarEmailSMTP({ para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
-    }
+    if (!skipEmail) {
+      const brevoKey  = Deno.env.get("BREVO_API_KEY");
+      const resendKey = Deno.env.get("RESEND_API_KEY");
 
-    console.log("Email enviado:", emailEnviado, "Error:", emailError);
+      if (brevoKey) {
+        const result = await enviarEmailBrevo({ brevoKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+        emailEnviado = result.ok;
+        emailError = result.error;
+      } else if (resendKey) {
+        emailEnviado = await enviarEmailResend({ resendKey, para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+      } else {
+        emailEnviado = await enviarEmailSMTP({ para: email.trim(), nombreDestinatario: nombre.trim(), passwordTemporal, siteUrl });
+      }
+      console.log("Email enviado:", emailEnviado, "Error:", emailError);
+    }
 
     return json({
       usuario: usuarioInsertado,
       emailEnviado,
       emailError: emailError ?? null,
-      passwordTemporal, // siempre incluida por si falla el email
-      mensaje: emailEnviado
-        ? `Usuario creado y email enviado a ${email.trim()}`
-        : `Usuario creado. No se pudo enviar email — contraseña temporal: ${passwordTemporal}`,
+      passwordTemporal,
+      mensaje: skipEmail
+        ? `Usuario creado. Correo omitido — contraseña temporal: ${passwordTemporal}`
+        : emailEnviado
+          ? `Usuario creado y email enviado a ${email.trim()}`
+          : `Usuario creado. No se pudo enviar email — contraseña temporal: ${passwordTemporal}`,
     }, 200);
 
   } catch (err) {
