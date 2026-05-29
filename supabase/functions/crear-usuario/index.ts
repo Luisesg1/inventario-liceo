@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
 
     // 4. Validar body
     const body = await req.json();
-    const { nombre, rut, email, rol } = body as { nombre?: string; rut?: string; email?: string; rol?: string };
+    const { nombre, rut, email, rol, passwordOverride } = body as { nombre?: string; rut?: string; email?: string; rol?: string; passwordOverride?: string };
 
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
@@ -56,8 +56,8 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 7. Crear usuario con contraseña temporal
-    const passwordTemporal = generarPassword();
+    // 7. Crear usuario con contraseña temporal (o la provista por el llamador)
+    const passwordTemporal = passwordOverride?.trim() || generarPassword();
     console.log("Creando usuario:", email.trim());
 
     const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({

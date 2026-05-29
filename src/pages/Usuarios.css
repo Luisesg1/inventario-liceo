@@ -60,6 +60,28 @@
   box-shadow: none;
 }
 
+/* ── Botón importar usuarios ─────────────────────────── */
+.btn-importar-usuarios {
+  background: #f0f4ff;
+  color: #1a237e;
+  border: 1.5px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 0 16px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+.btn-importar-usuarios:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  transform: translateY(-1px);
+}
+.btn-importar-usuarios:active { transform: scale(0.97); }
+
 /* ── Formulario de creación ───────────────────────────── */
 .usuarios-form {
   background: #ffffff;

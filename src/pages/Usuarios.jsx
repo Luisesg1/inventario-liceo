@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Usuarios.css'
+import ModalImportarUsuarios from './ModalImportarUsuarios'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
 const REQUISITOS_PASS = [
@@ -1047,6 +1048,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   const [filtroRol, setFiltroRol] = useState('todos')
   const [paginaU, setPaginaU] = useState(1)
   const [modalCrear, setModalCrear] = useState(false)
+  const [modalImportar, setModalImportar] = useState(false)
 
   // Eliminación
   const [confirmandoId, setConfirmandoId] = useState(null)
@@ -1323,9 +1325,14 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
       <div className="usuarios-header">
         <h2 className="usuarios-titulo">Usuarios</h2>
         {puedeInvitar && (
-          <button className="btn-nuevo-usuario" onClick={() => setModalCrear(true)}>
-            + Invitar usuario
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <button className="btn-importar-usuarios" onClick={() => setModalImportar(true)}>
+              📥 Importar usuarios
+            </button>
+            <button className="btn-nuevo-usuario" onClick={() => setModalCrear(true)}>
+              + Invitar usuario
+            </button>
+          </div>
         )}
       </div>
 
@@ -1824,6 +1831,14 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
         <ModalCrearUsuario
           onCerrar={() => setModalCrear(false)}
           onCreado={cargarUsuarios}
+        />
+      )}
+
+      {/* Modal importar usuarios */}
+      {modalImportar && (
+        <ModalImportarUsuarios
+          onCerrar={() => setModalImportar(false)}
+          onImportado={cargarUsuarios}
         />
       )}
 
