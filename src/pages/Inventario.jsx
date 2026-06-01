@@ -3878,10 +3878,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             {!cargandoPrestamo && (
               <div style={{ marginTop: 14, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
                 <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
-                  📋 Historial de préstamos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
+                  📋 Préstamos ya devueltos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
                 </p>
                 {historialPrestamos.length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Sin préstamos anteriores.</p>
+                  <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Ningún préstamo devuelto aún.</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
                     {historialPrestamos.map(p => (
