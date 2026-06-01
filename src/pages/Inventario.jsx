@@ -654,10 +654,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   // ── Cargar IDs de bienes con préstamo activo (para badge en tabla) ────────
   const cargarBienesConPrestamo = async () => {
-    const { data } = await supabase.from('prestamos').select('bien_id, cantidad, fecha_devolucion_esperada').is('fecha_devolucion_real', null)
+    // Intenta con cantidad (requiere migración aplicada); si falla, usa fallback sin ella
+    let rows = []
+    let tieneCantidadCol = true
+    const { data: conCantidad, error: errCol } = await supabase
+      .from('prestamos').select('bien_id, cantidad, fecha_devolucion_esperada').is('fecha_devolucion_real', null)
+    if (errCol) {
+      tieneCantidadCol = false
+      const { data: sinCantidad } = await supabase
+        .from('prestamos').select('bien_id, fecha_devolucion_esperada').is('fecha_devolucion_real', null)
+      rows = sinCantidad ?? []
+    } else {
+      rows = conCantidad ?? []
+    }
     const map = new Map()
-    for (const p of (data ?? [])) {
-      const qty = p.cantidad ?? 1
+    for (const p of rows) {
+      const qty = tieneCantidadCol ? (p.cantidad ?? 1) : 1
       if (!map.has(p.bien_id)) map.set(p.bien_id, { count: 0, cantidadPrestada: 0, fecha: p.fecha_devolucion_esperada })
       const entry = map.get(p.bien_id)
       entry.count++
@@ -1421,7 +1433,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
     setGuardandoPrestamo(true)
     try {
-      const { data, error } = await supabase.from('prestamos').insert({
+      const payload = {
         bien_id: bien.id,
         prestado_a: formPrestamo.prestado_a.trim(),
         cargo: formPrestamo.cargo.trim() || null,
@@ -1430,7 +1442,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         cantidad: cantidadPrestar,
         registrado_por: usuario.id,
         registrado_por_nombre: usuario.nombre,
-      }).select().single()
+      }
+      let { data, error } = await supabase.from('prestamos').insert(payload).select().single()
+      // Si falla por columna cantidad no existente (migración pendiente), reintenta sin ella
+      if (error && (error.code === '42703' || error.message?.includes('cantidad'))) {
+        const { cantidad: _qty, ...payloadSinCantidad } = payload
+        ;({ data, error } = await supabase.from('prestamos').insert(payloadSinCantidad).select().single())
+      }
 
       if (!error && data) {
         setBienesConPrestamo(prev => {
