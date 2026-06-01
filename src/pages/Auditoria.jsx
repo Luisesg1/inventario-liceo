@@ -149,6 +149,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   const [filtroHasta,   setFiltroHasta]   = useState('')
   const [filtroUsuario, setFiltroUsuario] = useState('')
   const [listaUsuarios, setListaUsuarios] = useState([])
+  const [filtroEstadoTicket, setFiltroEstadoTicket] = useState('')
 
   const [exportando,   setExportando]   = useState(false)
   const [menuExportar, setMenuExportar] = useState(false)
@@ -194,14 +195,25 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     return (data ?? []).map(u => u.id)
   }
 
+  // Devuelve los IDs de tickets que tienen el estado indicado (solo para modulo=tickets)
+  const resolverTicketIdsPorEstado = async (estado) => {
+    if (!estado || modulo !== 'tickets') return null
+    const { data } = await supabase.from('tickets').select('id').eq('estado', estado)
+    return (data ?? []).map(t => String(t.id))
+  }
+
   // Aplica los filtros comunes a una query de audit_logs
-  const aplicarFiltros = (q, userIds) => {
+  const aplicarFiltros = (q, userIds, ticketIds) => {
     if (filtroAccion)  q = q.eq('accion', filtroAccion)
     if (filtroRol)     q = q.eq('usuario_rol', filtroRol)
     if (filtroUsuario) q = q.eq('usuario_id', filtroUsuario)
     if (modulo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
     if (filtroDesde)   q = q.gte('creado_en', filtroDesde + 'T00:00:00')
     if (filtroHasta)   q = q.lte('creado_en', filtroHasta + 'T23:59:59')
+    if (ticketIds !== null) {
+      if (ticketIds.length) q = q.in('bien_id', ticketIds)
+      else q = q.eq('bien_id', '00000000-0000-0000-0000-000000000000') // sin coincidencias
+    }
     if (buscar) {
       const clauses = [`bien_nombre.ilike.%${buscar}%`, `usuario_nombre.ilike.%${buscar}%`]
       if (userIds?.length) clauses.push(`usuario_id.in.(${userIds.join(',')})`)
@@ -212,14 +224,15 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   const cargar = useCallback(async () => {
     setCargando(true)
-    const userIds = await resolverUserIds(buscar)
+    const userIds   = await resolverUserIds(buscar)
+    const ticketIds = await resolverTicketIdsPorEstado(filtroEstadoTicket)
     let q = supabase
       .from('audit_logs')
       .select('*', { count: 'exact' })
       .eq('modulo', modulo)
       .order('creado_en', { ascending: false })
       .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
-    q = aplicarFiltros(q, userIds)
+    q = aplicarFiltros(q, userIds, ticketIds)
     const { data, count, error } = await q
     if (error) { setErrorTabla(true); setCargando(false); return }
     setErrorTabla(false)
@@ -227,7 +240,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setTotal(count ?? 0)
     setCargando(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagina, filtroAccion, filtroRol, filtroUsuario, filtroCat, filtroDesde, filtroHasta, buscar, modulo])
+  }, [pagina, filtroAccion, filtroRol, filtroUsuario, filtroCat, filtroDesde, filtroHasta, buscar, modulo, filtroEstadoTicket])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -244,6 +257,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setFiltroAccion(''); setFiltroRol(''); setFiltroCat('')
     setFiltroDesde(''); setFiltroHasta('')
     setFiltroUsuario('')
+    setFiltroEstadoTicket('')
     setPagina(0)
   }
 
@@ -282,14 +296,15 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   // Obtiene TODOS los registros filtrados (sin paginación) y los enriquece con RUT/correo
   const fetchParaExportar = async () => {
-    const userIds = await resolverUserIds(buscar)
+    const userIds   = await resolverUserIds(buscar)
+    const ticketIds = await resolverTicketIdsPorEstado(filtroEstadoTicket)
     let q = supabase
       .from('audit_logs')
       .select('*')
       .eq('modulo', modulo)
       .order('creado_en', { ascending: false })
       .limit(5000)
-    q = aplicarFiltros(q, userIds)
+    q = aplicarFiltros(q, userIds, ticketIds)
     const { data: todos, error } = await q
     if (error || !todos) return []
 
@@ -431,7 +446,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   // ── Paginación / UI helpers ───────────────────────────────
 
   const totalPaginas = Math.ceil(total / POR_PAGINA)
-  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroUsuario || filtroCat || filtroDesde || filtroHasta
+  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroUsuario || filtroCat || filtroDesde || filtroHasta || filtroEstadoTicket
   const agrupados    = agruparPorDia(logs)
 
   const bienesEliminados = useMemo(
@@ -542,6 +557,19 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                 {categorias.map(c => (
                   <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
                 ))}
+              </select>
+            )}
+
+            {modulo === 'tickets' && (
+              <select
+                className={`audit-select ${filtroEstadoTicket ? 'audit-select-active' : ''}`}
+                value={filtroEstadoTicket}
+                onChange={e => { setFiltroEstadoTicket(e.target.value); setPagina(0) }}
+              >
+                <option value="">Todos los estados</option>
+                <option value="Abierto">🔵 Abierto</option>
+                <option value="En proceso">🟡 En proceso</option>
+                <option value="Resuelto">🟢 Resuelto</option>
               </select>
             )}
           </div>
