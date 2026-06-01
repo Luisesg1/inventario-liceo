@@ -286,6 +286,53 @@
 }
 .audit-aviso-close:hover { color: #fff; }
 
+/* ── Exportar ────────────────────────────────────────── */
+.audit-export-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.audit-btn-export {
+  padding: 10px 16px; border-radius: 11px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  background: #f8fafc; color: #374151;
+  font-size: 13px; font-weight: 600;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.audit-btn-export:hover:not(:disabled) {
+  background: #f1f5f9; border-color: #cbd5e1; color: #0f172a;
+}
+.audit-btn-export:disabled { opacity: 0.6; cursor: wait; }
+
+.audit-export-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: #ffffff; border: 1.5px solid rgba(0,0,0,0.08);
+  border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+  overflow: hidden; z-index: 50; min-width: 170px;
+}
+
+.audit-export-item {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border: none; background: transparent;
+  font-size: 13px; font-family: 'Inter', system-ui, sans-serif;
+  color: #374151; cursor: pointer; text-align: left;
+  transition: background 0.12s, color 0.12s;
+  font-weight: 500;
+}
+.audit-export-item:hover { background: #f1f5f9; color: #0f172a; }
+.audit-export-item + .audit-export-item { border-top: 1px solid rgba(0,0,0,0.05); }
+
+.audit-export-icon { font-size: 15px; flex-shrink: 0; }
+
+.audit-aviso-export {
+  bottom: 24px; right: 24px;
+  background: linear-gradient(135deg, #1e3a5f, #2d5a8e) !important;
+  box-shadow: 0 10px 36px rgba(30,58,95,0.35) !important;
+}
+
 /* ── Tablet ───────────────────────────────────────────── */
 @media (max-width: 768px) {
   .audit-date { min-width: 122px; }
@@ -300,6 +347,9 @@
   .audit-select, .audit-btn-ghost { width: 100%; }
   .audit-fecha-row { width: 100%; flex: unset; }
   .audit-fecha-row .audit-date { flex: 1; min-width: 0; }
+  .audit-btn-export { width: 100%; justify-content: center; }
+  .audit-export-wrap { width: 100%; }
+  .audit-export-menu { left: 0; right: 0; }
   .audit-item-header { padding: 12px 14px; gap: 10px; }
   .audit-badge-icon  { width: 30px; height: 30px; font-size: 13px; }
   .audit-pill        { display: none; }
