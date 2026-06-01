@@ -177,6 +177,18 @@ export default function Login({
     if (!REQUISITOS_PASS.every(r => r.test(regPass))) { setFieldError('pass', 'No cumple los requisitos de seguridad'); ok = false }
     if (!ok) return
     setCargando(true)
+
+    // 1. Pre-validar el código de invitación antes de crear la cuenta
+    const { error: codigoError } = await supabase.functions.invoke('register-user', {
+      body: { codigo: regCodigo },
+    })
+    if (codigoError) {
+      setFieldError('codigo', 'El código de invitación no es válido. Revísalo e intenta nuevamente.')
+      setCargando(false)
+      return
+    }
+
+    // 2. Código válido — proceder con el registro completo
     const { data: fnData, error: fnError } = await supabase.functions.invoke('register-user', {
       body: {
         codigo:    regCodigo,
@@ -188,7 +200,9 @@ export default function Login({
       },
     })
     if (fnError || fnData?.error) {
-      setError(fnData?.error || 'Error al crear la cuenta'); setCargando(false); return
+      setError(fnData?.error || 'No se pudo crear la cuenta. Intenta nuevamente.')
+      setCargando(false)
+      return
     }
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: regEmail, password: regPass })
     setCargando(false)
@@ -451,12 +465,14 @@ export default function Login({
                         <label>Código de invitación</label>
                         <div className="login-pass-wrap">
                           <input type={regShowCodigo ? 'text' : 'password'} value={regCodigo}
-                            onChange={e => setRegCodigo(e.target.value)}
-                            placeholder="Código del encargado" required />
+                            onChange={e => { setRegCodigo(e.target.value); clearField('codigo') }}
+                            placeholder="Código del encargado" required
+                            style={regErrors.codigo ? { borderColor: '#dc2626' } : {}} />
                           <button type="button" className="login-eye" onClick={() => setRegShowCodigo(v => !v)} tabIndex={-1}>
                             {regShowCodigo ? <EyeOff size={16} /> : <KeyRound size={16} />}
                           </button>
                         </div>
+                        {regErrors.codigo && <span className="login-field-hint login-field-hint--error">{regErrors.codigo}</span>}
                       </div>
 
                       <AnimatePresence><ErrorMsg msg={error} /></AnimatePresence>
