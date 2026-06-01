@@ -3587,6 +3587,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                               autoFocus
                               style={{ ...inStyle, border: `1px solid ${cantidadMasInvalida ? '#fca5a5' : '#d1d5db'}` }}
                             />
+                            {cantidadMasNum > stockDisponible && (
+                              <p style={{ margin: '4px 0 0', fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                                Cantidad no disponible. Máximo: {stockDisponible} {stockDisponible === 1 ? 'unidad' : 'unidades'}.
+                              </p>
+                            )}
                           </div>
                           <div>
                             <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Notas *</label>
