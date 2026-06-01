@@ -1504,15 +1504,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const cantidadPrestada = bienesConPrestamo.get(bien.id)?.cantidadPrestada ?? 0
     const disponible = Math.max(0, (bien.cantidad ?? 0) - cantidadPrestada)
     if (cantidadAdicional < 1 || cantidadAdicional > disponible) return
+    if (!formPrestarMas.notas.trim()) return
     setGuardandoPrestarMas(true)
     try {
       // Actualizar el préstamo activo: sumar cantidad y registrar movimiento en notas
       const nuevaCantidad = (prestamoBien.cantidad ?? 1) + cantidadAdicional
-      const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo${formPrestarMas.notas.trim() ? `. ${formPrestarMas.notas.trim()}` : '.'}`
+      const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo. ${formPrestarMas.notas.trim()}`
       const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
-      const { error: errUpdate } = await supabase.from('prestamos')
+      let { error: errUpdate } = await supabase.from('prestamos')
         .update({ cantidad: nuevaCantidad, notas: notasActualizadas })
         .eq('id', prestamoBien.id)
+      // Si falla por columna cantidad no existente (migración pendiente), reintenta sin ella
+      if (errUpdate && (errUpdate.code === '42703' || errUpdate.message?.includes('cantidad'))) {
+        ;({ error: errUpdate } = await supabase.from('prestamos')
+          .update({ notas: notasActualizadas })
+          .eq('id', prestamoBien.id))
+      }
       if (errUpdate) return
 
       // Actualizar estado local
@@ -3539,6 +3546,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               const stockDisponible = Math.max(0, (modalPrestamo.cantidad ?? 0) - cantidadPrestadaTotal)
               const cantidadMasNum = parseInt(formPrestarMas.cantidad, 10) || 0
               const cantidadMasInvalida = cantidadMasNum < 1 || cantidadMasNum > stockDisponible
+              const notasMasVacia = !formPrestarMas.notas.trim()
               return (
               <>
                 <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
@@ -3581,17 +3589,17 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                             />
                           </div>
                           <div>
-                            <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Notas (opcional)</label>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Notas *</label>
                             <input
                               value={formPrestarMas.notas}
                               onChange={e => setFormPrestarMas(f => ({ ...f, notas: e.target.value }))}
                               placeholder="ej: Para la sala 2B"
-                              style={inStyle}
+                              style={{ ...inStyle, border: `1px solid ${notasMasVacia ? '#fca5a5' : '#d1d5db'}` }}
                             />
                           </div>
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 2 }}>
                             <button onClick={() => { setPrestarMasMode(false); setFormPrestarMas({ cantidad: 1, notas: '' }) }} style={{ padding: '5px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
-                            <button onClick={prestarMasUnidades} disabled={guardandoPrestarMas || cantidadMasInvalida} style={{ padding: '5px 16px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700, opacity: (guardandoPrestarMas || cantidadMasInvalida) ? 0.5 : 1 }}>
+                            <button onClick={prestarMasUnidades} disabled={guardandoPrestarMas || cantidadMasInvalida || notasMasVacia} style={{ padding: '5px 16px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700, opacity: (guardandoPrestarMas || cantidadMasInvalida || notasMasVacia) ? 0.5 : 1 }}>
                               {guardandoPrestarMas ? 'Guardando…' : 'Confirmar'}
                             </button>
                           </div>
