@@ -1425,14 +1425,20 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const cantidadPrestar = esLibroBien ? (parseInt(formPrestamo.cantidad, 10) || 0) : 1
 
     if (!formPrestamo.prestado_a.trim() || !formPrestamo.fecha_prestamo || !formPrestamo.notas.trim()) return
-    if (esLibroBien) {
-      const cantidadPrestada = bienesConPrestamo.get(bien.id)?.cantidadPrestada ?? 0
-      const disponible = Math.max(0, (bien.cantidad ?? 0) - cantidadPrestada)
-      if (cantidadPrestar < 1 || cantidadPrestar > disponible) return
-    }
+    if (esLibroBien && (cantidadPrestar < 1 || cantidadPrestar > (bien.cantidad ?? 0))) return
 
     setGuardandoPrestamo(true)
     try {
+      if (esLibroBien) {
+        // Re-verificar stock actual en BD y descontar atómicamente
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+        if (!bienActual || cantidadPrestar > bienActual.cantidad) { setGuardandoPrestamo(false); return }
+        const { error: errStock } = await supabase.from('bienes')
+          .update({ cantidad: bienActual.cantidad - cantidadPrestar })
+          .eq('id', bien.id)
+        if (errStock) { setGuardandoPrestamo(false); return }
+      }
+
       const payload = {
         bien_id: bien.id,
         prestado_a: formPrestamo.prestado_a.trim(),
@@ -1451,6 +1457,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       }
 
       if (!error && data) {
+        if (esLibroBien) {
+          // Actualizar estado local: bienes.cantidad ya fue decrementado en BD
+          setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadPrestar } : b))
+        }
         setBienesConPrestamo(prev => {
           const m = new Map(prev)
           const ex = m.get(bien.id)
@@ -1463,6 +1473,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         })
         if (verDetalle?.id === bien.id) setPrestamoBien(data)
         cerrarModalPrestamo()
+      } else if (esLibroBien && error) {
+        // Revertir el descuento si el INSERT falló
+        const { data: b2 } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+        if (b2) await supabase.from('bienes').update({ cantidad: b2.cantidad + cantidadPrestar }).eq('id', bien.id)
       }
     } finally {
       setGuardandoPrestamo(false)
@@ -1472,6 +1486,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const marcarDevuelto = async () => {
     if (!prestamoBien) return
     const bienId = modalPrestamo?.id ?? verDetalle?.id
+    const esLibroBien = esLibro(modalPrestamo?.categoria ?? verDetalle?.categoria)
     const cantidadRestaurar = prestamoBien.cantidad ?? 1
 
     const { error } = await supabase.rpc('devolver_prestamo', {
@@ -1481,6 +1496,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     if (!error) {
       if (notaDevolucion.trim()) {
         await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
+      }
+      if (esLibroBien) {
+        // El RPC ya restauró bienes.cantidad en BD; reflejar en estado local
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadRestaurar } : b))
       }
       setPrestamoBien(null)
       setConfirmDevolucion(false)
@@ -1501,12 +1520,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const prestarMasUnidades = async () => {
     const bien = modalPrestamo
     const cantidadAdicional = parseInt(formPrestarMas.cantidad, 10) || 0
-    const cantidadPrestada = bienesConPrestamo.get(bien.id)?.cantidadPrestada ?? 0
-    const disponible = Math.max(0, (bien.cantidad ?? 0) - cantidadPrestada)
+    const disponible = bien.cantidad ?? 0   // bienes.cantidad ES el disponible real
     if (cantidadAdicional < 1 || cantidadAdicional > disponible) return
     if (!formPrestarMas.notas.trim()) return
     setGuardandoPrestarMas(true)
     try {
+      // Re-verificar stock en BD y descontar
+      const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+      if (!bienActual || cantidadAdicional > bienActual.cantidad) return
+      const { error: errStock } = await supabase.from('bienes')
+        .update({ cantidad: bienActual.cantidad - cantidadAdicional })
+        .eq('id', bien.id)
+      if (errStock) return
+
       // Actualizar el préstamo activo: sumar cantidad y registrar movimiento en notas
       const nuevaCantidad = (prestamoBien.cantidad ?? 1) + cantidadAdicional
       const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo. ${formPrestarMas.notas.trim()}`
@@ -1520,10 +1546,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           .update({ notas: notasActualizadas })
           .eq('id', prestamoBien.id))
       }
-      if (errUpdate) return
+      if (errUpdate) {
+        // Revertir el descuento si la actualización del préstamo falló
+        await supabase.from('bienes').update({ cantidad: bienActual.cantidad }).eq('id', bien.id)
+        return
+      }
 
       // Actualizar estado local
       setPrestamoBien(p => ({ ...p, cantidad: nuevaCantidad, notas: notasActualizadas }))
+      setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadAdicional } : b))
+      setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) - cantidadAdicional }))
       setBienesConPrestamo(prev => {
         const m = new Map(prev)
         const ex = m.get(bien.id)
@@ -3117,10 +3149,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   {catActual !== 'computadores' && !esBiblioteca(catActual) && <td className="td-hide-mobile">{b.cantidad}</td>}
                   {esBiblioteca(catActual) && (() => {
                     const cantidadPrestada = bienesConPrestamo.get(b.id)?.cantidadPrestada ?? 0
-                    const disponible = Math.max(0, b.cantidad - cantidadPrestada)
+                    const total = b.cantidad + cantidadPrestada   // disponible + prestado
+                    const disponible = b.cantidad                  // bienes.cantidad ES el disponible real
                     return (
                       <>
-                        <td className="td-hide-mobile" style={{ textAlign: 'center', color: '#475569' }}>{b.cantidad}</td>
+                        <td className="td-hide-mobile" style={{ textAlign: 'center', color: '#475569' }}>{total}</td>
                         <td className="td-hide-mobile" style={{ textAlign: 'center' }}>
                           <span style={{ fontWeight: 700, color: disponible === 0 ? '#f87171' : disponible <= 2 ? '#fbbf24' : '#4ade80' }}>
                             {disponible}
@@ -3542,8 +3575,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             {!cargandoPrestamo && prestamoBien && (() => {
               const esLibroBien = esLibro(modalPrestamo.categoria)
-              const cantidadPrestadaTotal = bienesConPrestamo.get(modalPrestamo.id)?.cantidadPrestada ?? 0
-              const stockDisponible = Math.max(0, (modalPrestamo.cantidad ?? 0) - cantidadPrestadaTotal)
+              const stockDisponible = modalPrestamo.cantidad ?? 0  // bienes.cantidad ES el disponible real
               const cantidadMasNum = parseInt(formPrestarMas.cantidad, 10) || 0
               const cantidadMasInvalida = cantidadMasNum < 1 || cantidadMasNum > stockDisponible
               const notasMasVacia = !formPrestarMas.notas.trim()
@@ -3650,8 +3682,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             {!cargandoPrestamo && !prestamoBien && (() => {
               const esLibroBien = esLibro(modalPrestamo.categoria)
-              const cantidadPrestadaTotal = bienesConPrestamo.get(modalPrestamo.id)?.cantidadPrestada ?? 0
-              const stockDisponible = Math.max(0, (modalPrestamo.cantidad ?? 0) - cantidadPrestadaTotal)
+              const stockDisponible = modalPrestamo.cantidad ?? 0  // bienes.cantidad ES el disponible real
               const cantidadNum = parseInt(formPrestamo.cantidad, 10) || 0
               const sinStock = esLibroBien && stockDisponible === 0
               const cantidadInvalida = esLibroBien && (cantidadNum < 1 || cantidadNum > stockDisponible)
