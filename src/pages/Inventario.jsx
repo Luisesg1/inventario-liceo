@@ -200,6 +200,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [devParcialMode, setDevParcialMode]             = useState(false)
   const [formDevParcial, setFormDevParcial]             = useState({ cantidad: 1, notas: '' })
   const [guardandoDevParcial, setGuardandoDevParcial]   = useState(false)
+  const [tabHistorial, setTabHistorial]                 = useState(null) // null=auto | 'prestados' | 'devueltos'
   const [catsVisible, setCatsVisible] = useState(true)
 
   const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
@@ -1422,6 +1423,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setFormPrestarMas({ cantidad: 1, notas: '' })
     setDevParcialMode(false)
     setFormDevParcial({ cantidad: 1, notas: '' })
+    setTabHistorial(null)
   }
 
   const registrarPrestamo = async () => {
@@ -1522,79 +1524,78 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     }
   }
 
-  const devolverParcial = async () => {
+  // Núcleo de devolución — usado por el formulario manual y por las acciones de la tabla
+  const _ejecutarDevolucion = async (cantidadDev, nota) => {
     const bien = modalPrestamo
-    const cantidadDev = parseInt(formDevParcial.cantidad, 10) || 0
+    const bienId = bien.id
     const maxDev = prestamoBien.cantidad ?? 1
-    if (cantidadDev < 1 || cantidadDev > maxDev || !formDevParcial.notas.trim()) return
-    setGuardandoDevParcial(true)
-    try {
-      const bienId = bien.id
-      const nuevaCantidadPrestamo = maxDev - cantidadDev
-      const notaMovimiento = `Se devolvieron ${cantidadDev} ${cantidadDev === 1 ? 'unidad' : 'unidades'}. ${formDevParcial.notas.trim()}`
-      const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
+    if (cantidadDev < 1 || cantidadDev > maxDev) return false
+    const nuevaCantidadPrestamo = maxDev - cantidadDev
+    const notaMovimiento = `Se devolvieron ${cantidadDev} ${cantidadDev === 1 ? 'unidad' : 'unidades'}. ${nota}`
+    const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
 
-      if (nuevaCantidadPrestamo <= 0) {
-        // Devolución total — usar RPC (marca préstamo como devuelto y restaura stock)
-        const { error } = await supabase.rpc('devolver_prestamo', {
-          p_prestamo_id: prestamoBien.id,
-          p_devuelto_por: formDevParcial.notas.trim(),
-        })
-        if (error) return
-        await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
+    if (nuevaCantidadPrestamo <= 0) {
+      const { error } = await supabase.rpc('devolver_prestamo', { p_prestamo_id: prestamoBien.id, p_devuelto_por: nota })
+      if (error) return false
+      await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
+      setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadDev } : b))
+      setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) + cantidadDev }))
+      setBienesConPrestamo(prev => {
+        const m = new Map(prev)
+        const ex = m.get(bienId)
+        if (!ex) return m
+        const newCount = ex.count - 1
+        const newCP = Math.max(0, (ex.cantidadPrestada ?? cantidadDev) - cantidadDev)
+        if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCP, fecha: ex.fecha })
+        else m.delete(bienId)
+        return m
+      })
+      setPrestamoBien(null)
+      setConfirmDevolucion(false)
+    } else {
+      let { error: errPrestamo } = await supabase.from('prestamos')
+        .update({ cantidad: nuevaCantidadPrestamo, notas: notasActualizadas })
+        .eq('id', prestamoBien.id)
+      const columnaExiste = !(errPrestamo?.code === '42703' || errPrestamo?.message?.includes('cantidad'))
+      if (errPrestamo && !columnaExiste) {
+        ;({ error: errPrestamo } = await supabase.from('prestamos').update({ notas: notasActualizadas }).eq('id', prestamoBien.id))
+      }
+      if (errPrestamo) return false
+      if (columnaExiste) {
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
+        if (bienActual) await supabase.from('bienes').update({ cantidad: bienActual.cantidad + cantidadDev }).eq('id', bienId)
         setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadDev } : b))
         setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) + cantidadDev }))
         setBienesConPrestamo(prev => {
           const m = new Map(prev)
           const ex = m.get(bienId)
-          if (!ex) return m
-          const newCount = ex.count - 1
-          const newCP = Math.max(0, (ex.cantidadPrestada ?? cantidadDev) - cantidadDev)
-          if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCP, fecha: ex.fecha })
-          else m.delete(bienId)
+          if (ex) m.set(bienId, { ...ex, cantidadPrestada: Math.max(0, (ex.cantidadPrestada ?? 0) - cantidadDev) })
           return m
         })
-        setPrestamoBien(null)
-        setConfirmDevolucion(false)
-        setDevParcialMode(false)
-        setFormDevParcial({ cantidad: 1, notas: '' })
-      } else {
-        // Devolución parcial — actualizar cantidad en préstamo y restaurar stock
-        let { error: errPrestamo } = await supabase.from('prestamos')
-          .update({ cantidad: nuevaCantidadPrestamo, notas: notasActualizadas })
-          .eq('id', prestamoBien.id)
-        // Fallback si columna cantidad aún no existe
-        const columnaExiste = !(errPrestamo?.code === '42703' || errPrestamo?.message?.includes('cantidad'))
-        if (errPrestamo && !columnaExiste) {
-          ;({ error: errPrestamo } = await supabase.from('prestamos')
-            .update({ notas: notasActualizadas })
-            .eq('id', prestamoBien.id))
-        }
-        if (errPrestamo) return
-
-        // Restaurar stock en bienes (solo si la columna existe y la cantidad quedó guardada)
-        if (columnaExiste) {
-          const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
-          if (bienActual) {
-            await supabase.from('bienes').update({ cantidad: bienActual.cantidad + cantidadDev }).eq('id', bienId)
-          }
-          setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadDev } : b))
-          setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) + cantidadDev }))
-          setBienesConPrestamo(prev => {
-            const m = new Map(prev)
-            const ex = m.get(bienId)
-            if (ex) m.set(bienId, { ...ex, cantidadPrestada: Math.max(0, (ex.cantidadPrestada ?? 0) - cantidadDev) })
-            return m
-          })
-        }
-        setPrestamoBien(p => ({
-          ...p,
-          cantidad: columnaExiste ? nuevaCantidadPrestamo : (p.cantidad ?? 1),
-          notas: notasActualizadas,
-        }))
-        setDevParcialMode(false)
-        setFormDevParcial({ cantidad: 1, notas: '' })
       }
+      setPrestamoBien(p => ({ ...p, cantidad: columnaExiste ? nuevaCantidadPrestamo : (p.cantidad ?? 1), notas: notasActualizadas }))
+    }
+    return true
+  }
+
+  const devolverParcial = async () => {
+    const cantidadDev = parseInt(formDevParcial.cantidad, 10) || 0
+    if (cantidadDev < 1 || !formDevParcial.notas.trim()) return
+    setGuardandoDevParcial(true)
+    try {
+      const ok = await _ejecutarDevolucion(cantidadDev, formDevParcial.notas.trim())
+      if (ok) { setDevParcialMode(false); setFormDevParcial({ cantidad: 1, notas: '' }) }
+    } finally {
+      setGuardandoDevParcial(false)
+    }
+  }
+
+  const devolverTodosDeCurso = async (cursoLabel, pendiente) => {
+    if (pendiente < 1) return
+    setGuardandoDevParcial(true)
+    try {
+      const ok = await _ejecutarDevolucion(pendiente, cursoLabel)
+      if (ok) { setDevParcialMode(false); setFormDevParcial({ cantidad: 1, notas: '' }) }
     } finally {
       setGuardandoDevParcial(false)
     }
@@ -3874,17 +3875,74 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               )
             })()}
 
-            {/* Historial de préstamos devueltos */}
-            {!cargandoPrestamo && (
+            {/* Sección inferior con pestañas */}
+            {!cargandoPrestamo && (() => {
+              // ── Parser de "Prestados a" desde las notas del préstamo activo ──
+              const parsearPrestadosA = (pb) => {
+                if (!pb) return []
+                const lineas = (pb.notas ?? '').split('\n').map(l => l.trim()).filter(Boolean)
+                const map = new Map()
+                for (const linea of lineas) {
+                  const mAgr = linea.match(/^Se agregaron (\d+) unidades? al préstamo\. (.+)$/)
+                  if (mAgr) {
+                    const qty = parseInt(mAgr[1]); const curso = mAgr[2].trim()
+                    const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
+                    map.set(curso, { ...cur, prestado: cur.prestado + qty }); continue
+                  }
+                  const mDev = linea.match(/^Se devolvieron (\d+) unidades?\. (.+)$/)
+                  if (mDev) {
+                    const qty = parseInt(mDev[1]); const curso = mDev[2].trim()
+                    const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
+                    map.set(curso, { ...cur, devuelto: cur.devuelto + qty })
+                  }
+                }
+                const totalPendienteMapa = [...map.values()].reduce((s, e) => s + Math.max(0, e.prestado - e.devuelto), 0)
+                const initialPendiente = Math.max(0, (pb.cantidad ?? 1) - totalPendienteMapa)
+                const entries = []
+                const initialLabel = pb.prestado_a + (pb.cargo ? ` · ${pb.cargo}` : '')
+                if (initialPendiente > 0 || !map.size) {
+                  entries.push({ label: initialLabel, prestado: null, devuelto: null, pendiente: initialPendiente })
+                }
+                for (const [curso, d] of map.entries()) {
+                  entries.push({ label: curso, prestado: d.prestado, devuelto: d.devuelto, pendiente: Math.max(0, d.prestado - d.devuelto) })
+                }
+                return entries
+              }
+              const esPrestadosTab = prestamoBien && (tabHistorial === 'prestados' || (tabHistorial === null))
+              const tabActiva = prestamoBien ? (tabHistorial ?? 'prestados') : 'devueltos'
+              const entriesPrestados = parsearPrestadosA(prestamoBien)
+              const btnTabStyle = (activa) => ({
+                padding: '5px 12px', fontSize: 12, fontWeight: activa ? 700 : 400,
+                background: activa ? '#1a237e' : '#f3f4f6', color: activa ? '#fff' : '#6b7280',
+                border: 'none', borderRadius: '6px 6px 0 0', cursor: 'pointer', whiteSpace: 'nowrap',
+              })
+              return (
               <div style={{ marginTop: 14, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-                <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
-                  📋 Préstamos ya devueltos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
-                </p>
-                {historialPrestamos.length === 0 ? (
-                  <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Ningún préstamo devuelto aún.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
-                    {historialPrestamos.map(p => (
+                {/* Headers de pestañas — solo si hay préstamo activo */}
+                {prestamoBien && (
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                    <button style={btnTabStyle(tabActiva === 'prestados')} onClick={() => setTabHistorial('prestados')}>
+                      👥 Prestados a
+                    </button>
+                    <button style={btnTabStyle(tabActiva === 'devueltos')} onClick={() => setTabHistorial('devueltos')}>
+                      📋 Ya devueltos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
+                    </button>
+                  </div>
+                )}
+
+                {/* Pestaña: Préstamos ya devueltos */}
+                {tabActiva === 'devueltos' && (
+                  <>
+                    {!prestamoBien && (
+                      <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                        📋 Préstamos ya devueltos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
+                      </p>
+                    )}
+                    {historialPrestamos.length === 0 ? (
+                      <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Ningún préstamo devuelto aún.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
+                        {historialPrestamos.map(p => (
                       <div key={p.id} style={{ background: '#f9fafb', border: `1px solid ${confirmBorrarHistorial === p.id ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
                         {editandoHistorial === p.id ? (
                           /* ── Modo edición ── */
@@ -3929,11 +3987,55 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                           </>
                         )}
                       </div>
-                    ))}
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Pestaña: Prestados a */}
+                {tabActiva === 'prestados' && prestamoBien && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
+                    {entriesPrestados.length === 0 && (
+                      <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Sin detalle disponible.</p>
+                    )}
+                    {entriesPrestados.map(entry => {
+                      const todo = entry.pendiente <= 0
+                      return (
+                        <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: todo ? '#f0fdf4' : '#f9fafb', border: `1px solid ${todo ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 8 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, fontWeight: 600, fontSize: 12, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280' }}>
+                              {entry.prestado !== null && <>Prest. <strong>{entry.prestado}</strong> · Dev. <strong>{entry.devuelto}</strong> · </>}
+                              <span style={{ fontWeight: 700, color: todo ? '#16a34a' : '#b45309' }}>
+                                {todo ? '✓ Devuelto' : `Pend. ${entry.pendiente}`}
+                              </span>
+                            </p>
+                          </div>
+                          {!todo && (
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                              <button
+                                disabled={guardandoDevParcial}
+                                onClick={() => { setDevParcialMode(true); setFormDevParcial({ cantidad: 1, notas: entry.label }) }}
+                                style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 5, cursor: 'pointer' }}>
+                                ↩ Dev.
+                              </button>
+                              <button
+                                disabled={guardandoDevParcial}
+                                onClick={() => devolverTodosDeCurso(entry.label, entry.pendiente)}
+                                style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', opacity: guardandoDevParcial ? 0.5 : 1 }}>
+                                Todos
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
-            )}
+              )
+            })()}
           </div>
         </div>
         )
