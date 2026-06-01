@@ -3994,45 +3994,60 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 )}
 
                 {/* Pestaña: Prestados a */}
-                {tabActiva === 'prestados' && prestamoBien && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 240, overflowY: 'auto' }}>
-                    {entriesPrestados.length === 0 && (
-                      <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Sin detalle disponible.</p>
-                    )}
-                    {entriesPrestados.map(entry => {
-                      const todo = entry.pendiente <= 0
-                      return (
-                        <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: todo ? '#f0fdf4' : '#f9fafb', border: `1px solid ${todo ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 8 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontWeight: 600, fontSize: 12, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</p>
-                            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b7280' }}>
-                              {entry.prestado !== null && <>Prest. <strong>{entry.prestado}</strong> · Dev. <strong>{entry.devuelto}</strong> · </>}
-                              <span style={{ fontWeight: 700, color: todo ? '#16a34a' : '#b45309' }}>
-                                {todo ? '✓ Devuelto' : `Pend. ${entry.pendiente}`}
-                              </span>
-                            </p>
-                          </div>
-                          {!todo && (
-                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                              <button
-                                disabled={guardandoDevParcial}
-                                onClick={() => { setDevParcialMode(true); setFormDevParcial({ cantidad: 1, notas: entry.label }) }}
-                                style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 5, cursor: 'pointer' }}>
-                                ↩ Dev.
-                              </button>
-                              <button
-                                disabled={guardandoDevParcial}
-                                onClick={() => devolverTodosDeCurso(entry.label, entry.pendiente)}
-                                style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', opacity: guardandoDevParcial ? 0.5 : 1 }}>
-                                Todos
-                              </button>
+                {tabActiva === 'prestados' && prestamoBien && (() => {
+                  const totalActivo = prestamoBien.cantidad ?? 1
+                  const sumPend = entriesPrestados.reduce((s, e) => s + e.pendiente, 0)
+                  const descuadre = sumPend !== totalActivo
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {/* Resumen: total real del préstamo activo */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 7, fontSize: 11 }}>
+                        <span style={{ color: '#92400e', fontWeight: 600 }}>📚 Total activo: <strong>{totalActivo}</strong> {totalActivo === 1 ? 'unidad' : 'unidades'}</span>
+                        {descuadre && <span style={{ color: '#b45309', fontStyle: 'italic' }}>⚠ Historial aproximado</span>}
+                      </div>
+                      {/* Filas por curso */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 200, overflowY: 'auto' }}>
+                        {entriesPrestados.length === 0 && (
+                          <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Sin detalle disponible.</p>
+                        )}
+                        {entriesPrestados.map(entry => {
+                          const todo = entry.pendiente <= 0
+                          return (
+                            <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: todo ? '#f0fdf4' : '#f9fafb', border: `1px solid ${todo ? '#bbf7d0' : '#e5e7eb'}`, borderRadius: 7 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: 0, fontWeight: 600, fontSize: 12, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</p>
+                                {entry.prestado !== null && (
+                                  <p style={{ margin: '1px 0 0', fontSize: 10, color: '#9ca3af' }}>
+                                    Prest. {entry.prestado} · Dev. {entry.devuelto}
+                                  </p>
+                                )}
+                                <p style={{ margin: '1px 0 0', fontSize: 11, fontWeight: 700, color: todo ? '#16a34a' : '#b45309' }}>
+                                  {todo ? '✓ Devuelto' : `${entry.pendiente} pend.`}
+                                </p>
+                              </div>
+                              {!todo && (
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                  <button
+                                    disabled={guardandoDevParcial}
+                                    onClick={() => { setDevParcialMode(true); setFormDevParcial({ cantidad: 1, notas: entry.label }) }}
+                                    style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 5, cursor: 'pointer' }}>
+                                    ↩ Dev.
+                                  </button>
+                                  <button
+                                    disabled={guardandoDevParcial}
+                                    onClick={() => devolverTodosDeCurso(entry.label, entry.pendiente)}
+                                    style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', opacity: guardandoDevParcial ? 0.5 : 1 }}>
+                                    Todos
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
               )
             })()}
