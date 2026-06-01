@@ -3875,13 +3875,15 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             })()}
 
             {/* Historial de préstamos devueltos */}
-            {!cargandoPrestamo && historialPrestamos.length > 0 && (
+            {!cargandoPrestamo && (
               <div style={{ marginTop: 14, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
-                <button onClick={() => setVerHistorial(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#6b7280', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  📋 Historial de préstamos ({historialPrestamos.length}) {verHistorial ? '▲' : '▼'}
-                </button>
-                {verHistorial && (
-                  <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                  📋 Historial de préstamos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
+                </p>
+                {historialPrestamos.length === 0 ? (
+                  <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Sin préstamos anteriores.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
                     {historialPrestamos.map(p => (
                       <div key={p.id} style={{ background: '#f9fafb', border: `1px solid ${confirmBorrarHistorial === p.id ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
                         {editandoHistorial === p.id ? (
