@@ -186,7 +186,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [verHistorial, setVerHistorial]       = useState(false)
   const [cargandoPrestamo, setCargandoPrestamo] = useState(false)
   const [modalPrestamo, setModalPrestamo]     = useState(null)
-  const [formPrestamo, setFormPrestamo]       = useState({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '' })
+  const [formPrestamo, setFormPrestamo]       = useState({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '', cantidad: 1 })
   const [guardandoPrestamo, setGuardandoPrestamo] = useState(false)
   const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map())
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
@@ -569,6 +569,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const obj = categorias.find(c => c.id === cat)
     const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     return label.includes('biblio')
+  }
+  const esLibro = (cat) => {
+    if (!cat) return false
+    const obj = categorias.find(c => c.id === cat)
+    const label = (obj?.label ?? cat).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return label.includes('libro') || label.includes('libreria') || label.includes('biblio')
   }
 
   // Campos activos según categoría actual (sin labels, para lógica de validación)
@@ -1385,7 +1391,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   const cerrarModalPrestamo = () => {
     setModalPrestamo(null)
-    setFormPrestamo({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '' })
+    setFormPrestamo({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '', cantidad: 1 })
     setVerHistorial(false)
     setConfirmDevolucion(false)
     setNotaDevolucion('')
@@ -1394,45 +1400,84 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const registrarPrestamo = async () => {
-    if (!formPrestamo.prestado_a.trim() || !formPrestamo.fecha_prestamo || !formPrestamo.notas.trim()) return
-    setGuardandoPrestamo(true)
     const bien = modalPrestamo
-    const { data, error } = await supabase.from('prestamos').insert({
-      bien_id: bien.id,
-      prestado_a: formPrestamo.prestado_a.trim(),
-      cargo: formPrestamo.cargo.trim() || null,
-      fecha_prestamo: formPrestamo.fecha_prestamo,
-      notas: formPrestamo.notas.trim(),
-      registrado_por: usuario.id,
-      registrado_por_nombre: usuario.nombre,
-    }).select().single()
-    if (!error && data) {
-      setBienesConPrestamo(prev => {
-        const m = new Map(prev)
-        const ex = m.get(bien.id)
-        m.set(bien.id, { count: (ex?.count ?? 0) + 1, fecha: formPrestamo.fecha_prestamo })
-        return m
-      })
-      if (verDetalle?.id === bien.id) setPrestamoBien(data)
-      cerrarModalPrestamo()
+    const esLibroBien = esLibro(bien.categoria)
+    const cantidadPrestar = esLibroBien ? (parseInt(formPrestamo.cantidad, 10) || 0) : 1
+
+    if (!formPrestamo.prestado_a.trim() || !formPrestamo.fecha_prestamo || !formPrestamo.notas.trim()) return
+    if (esLibroBien && (cantidadPrestar < 1 || cantidadPrestar > (bien.cantidad ?? 0))) return
+
+    setGuardandoPrestamo(true)
+    try {
+      if (esLibroBien) {
+        // Re-verificar stock actual en BD antes de descontar
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+        if (!bienActual || cantidadPrestar > bienActual.cantidad) {
+          setGuardandoPrestamo(false)
+          return
+        }
+        const { error: errStock } = await supabase.from('bienes')
+          .update({ cantidad: bienActual.cantidad - cantidadPrestar })
+          .eq('id', bien.id)
+        if (errStock) { setGuardandoPrestamo(false); return }
+      }
+
+      const { data, error } = await supabase.from('prestamos').insert({
+        bien_id: bien.id,
+        prestado_a: formPrestamo.prestado_a.trim(),
+        cargo: formPrestamo.cargo.trim() || null,
+        fecha_prestamo: formPrestamo.fecha_prestamo,
+        notas: formPrestamo.notas.trim(),
+        cantidad: cantidadPrestar,
+        registrado_por: usuario.id,
+        registrado_por_nombre: usuario.nombre,
+      }).select().single()
+
+      if (!error && data) {
+        if (esLibroBien) {
+          setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadPrestar } : b))
+        }
+        setBienesConPrestamo(prev => {
+          const m = new Map(prev)
+          const ex = m.get(bien.id)
+          m.set(bien.id, { count: (ex?.count ?? 0) + 1, fecha: formPrestamo.fecha_prestamo })
+          return m
+        })
+        if (verDetalle?.id === bien.id) setPrestamoBien(data)
+        cerrarModalPrestamo()
+      } else if (esLibroBien && error) {
+        // Revertir el descuento de stock si el insert falló
+        const { data: bienActual2 } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+        if (bienActual2) {
+          await supabase.from('bienes').update({ cantidad: bienActual2.cantidad + cantidadPrestar }).eq('id', bien.id)
+        }
+      }
+    } finally {
+      setGuardandoPrestamo(false)
     }
-    setGuardandoPrestamo(false)
   }
 
   const marcarDevuelto = async () => {
     if (!prestamoBien) return
+    const bienId = modalPrestamo?.id ?? verDetalle?.id
+    const esLibroBien = esLibro(modalPrestamo?.categoria ?? verDetalle?.categoria)
+    const cantidadRestaurar = prestamoBien.cantidad ?? 1
+
     const { error } = await supabase.rpc('devolver_prestamo', {
       p_prestamo_id: prestamoBien.id,
       p_devuelto_por: usuario.nombre,
+      p_restaurar_stock: esLibroBien,
     })
     if (!error) {
       if (notaDevolucion.trim()) {
         await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
       }
+      if (esLibroBien) {
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadRestaurar } : b))
+      }
       setPrestamoBien(null)
       setConfirmDevolucion(false)
       setNotaDevolucion('')
-      const bienId = modalPrestamo?.id ?? verDetalle?.id
       setBienesConPrestamo(prev => {
         const m = new Map(prev)
         const ex = m.get(bienId)
@@ -3458,6 +3503,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       Prestado el: <strong>{fmtFecha(prestamoBien.fecha_prestamo)}</strong>
                     </p>
                   )}
+                  {esLibro(modalPrestamo.categoria) && (prestamoBien.cantidad ?? 1) > 0 && (
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: '#78350f' }}>
+                      Cantidad prestada: <strong>{prestamoBien.cantidad ?? 1} {(prestamoBien.cantidad ?? 1) === 1 ? 'unidad' : 'unidades'}</strong>
+                    </p>
+                  )}
                   {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
                 </div>
@@ -3479,8 +3529,20 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               </>
             )}
 
-            {!cargandoPrestamo && !prestamoBien && (
+            {!cargandoPrestamo && !prestamoBien && (() => {
+              const esLibroBien = esLibro(modalPrestamo.categoria)
+              const stockDisponible = modalPrestamo.cantidad ?? 0
+              const cantidadNum = parseInt(formPrestamo.cantidad, 10) || 0
+              const sinStock = esLibroBien && stockDisponible === 0
+              const cantidadInvalida = esLibroBien && (cantidadNum < 1 || cantidadNum > stockDisponible)
+              const btnDisabled = guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.fecha_prestamo || !formPrestamo.notas.trim() || sinStock || cantidadInvalida
+              return (
               <>
+                {sinStock && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+                    No hay unidades disponibles para prestar.
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Prestado a *</label>
@@ -3498,15 +3560,33 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Notas *</label>
                     <input value={formPrestamo.notas} onChange={e => setFormPrestamo(p => ({ ...p, notas: e.target.value }))} placeholder="ej: Usar en sala 3B hasta el viernes" style={{ width: '100%', padding: '8px 11px', border: `1px solid ${formPrestamo.notas.trim() ? '#d1d5db' : '#fca5a5'}`, borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
                   </div>
+                  {esLibroBien && (
+                    <div style={{ gridColumn: '1/-1' }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 5 }}>Cantidad a prestar *</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={stockDisponible}
+                        value={formPrestamo.cantidad}
+                        onChange={e => setFormPrestamo(p => ({ ...p, cantidad: e.target.value }))}
+                        disabled={sinStock}
+                        style={{ width: '100%', padding: '8px 11px', border: `1px solid ${cantidadInvalida ? '#fca5a5' : '#d1d5db'}`, borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }}
+                      />
+                      <p style={{ margin: '5px 0 0', fontSize: 11, color: stockDisponible > 0 ? '#6b7280' : '#dc2626' }}>
+                        Disponibles: <strong>{stockDisponible}</strong> {stockDisponible === 1 ? 'unidad' : 'unidades'}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
                   <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cancelar</button>
-                  <button onClick={registrarPrestamo} disabled={guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.fecha_prestamo || !formPrestamo.notas.trim()} style={{ padding: '8px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: (guardandoPrestamo || !formPrestamo.prestado_a.trim() || !formPrestamo.notas.trim()) ? 0.5 : 1 }}>
+                  <button onClick={registrarPrestamo} disabled={btnDisabled} style={{ padding: '8px 20px', background: '#1a237e', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: btnDisabled ? 0.5 : 1 }}>
                     {guardandoPrestamo ? 'Guardando…' : 'Guardar préstamo'}
                   </button>
                 </div>
               </>
-            )}
+              )
+            })()}
 
             {/* Historial de préstamos devueltos */}
             {!cargandoPrestamo && historialPrestamos.length > 0 && (
