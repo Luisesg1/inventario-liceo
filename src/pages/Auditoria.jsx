@@ -142,11 +142,13 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   const [buscar,       setBuscar]       = useState('')
   const [buscadorVal,  setBuscadorVal]  = useState('')
-  const [filtroAccion, setFiltroAccion] = useState('')
-  const [filtroRol,    setFiltroRol]    = useState('')
-  const [filtroCat,    setFiltroCat]    = useState('')
-  const [filtroDesde,  setFiltroDesde]  = useState('')
-  const [filtroHasta,  setFiltroHasta]  = useState('')
+  const [filtroAccion,  setFiltroAccion]  = useState('')
+  const [filtroRol,     setFiltroRol]     = useState('')
+  const [filtroCat,     setFiltroCat]     = useState('')
+  const [filtroDesde,   setFiltroDesde]   = useState('')
+  const [filtroHasta,   setFiltroHasta]   = useState('')
+  const [filtroUsuario, setFiltroUsuario] = useState('')
+  const [listaUsuarios, setListaUsuarios] = useState([])
 
   const [exportando,   setExportando]   = useState(false)
   const [menuExportar, setMenuExportar] = useState(false)
@@ -169,6 +171,11 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
       .then(({ data }) => { if (data) setCategorias(data) })
   }, [])
 
+  useEffect(() => {
+    supabase.from('usuarios').select('id,nombre,rol').order('nombre')
+      .then(({ data }) => { if (data) setListaUsuarios(data) })
+  }, [])
+
   const campoLabel = (campo) => {
     if (modulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
     if (modulo === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
@@ -189,11 +196,12 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   // Aplica los filtros comunes a una query de audit_logs
   const aplicarFiltros = (q, userIds) => {
-    if (filtroAccion) q = q.eq('accion', filtroAccion)
-    if (filtroRol)    q = q.eq('usuario_rol', filtroRol)
+    if (filtroAccion)  q = q.eq('accion', filtroAccion)
+    if (filtroRol)     q = q.eq('usuario_rol', filtroRol)
+    if (filtroUsuario) q = q.eq('usuario_id', filtroUsuario)
     if (modulo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
-    if (filtroDesde)  q = q.gte('creado_en', filtroDesde + 'T00:00:00')
-    if (filtroHasta)  q = q.lte('creado_en', filtroHasta + 'T23:59:59')
+    if (filtroDesde)   q = q.gte('creado_en', filtroDesde + 'T00:00:00')
+    if (filtroHasta)   q = q.lte('creado_en', filtroHasta + 'T23:59:59')
     if (buscar) {
       const clauses = [`bien_nombre.ilike.%${buscar}%`, `usuario_nombre.ilike.%${buscar}%`]
       if (userIds?.length) clauses.push(`usuario_id.in.(${userIds.join(',')})`)
@@ -219,7 +227,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setTotal(count ?? 0)
     setCargando(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagina, filtroAccion, filtroRol, filtroCat, filtroDesde, filtroHasta, buscar, modulo])
+  }, [pagina, filtroAccion, filtroRol, filtroUsuario, filtroCat, filtroDesde, filtroHasta, buscar, modulo])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -235,6 +243,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setBuscadorVal(''); setBuscar('')
     setFiltroAccion(''); setFiltroRol(''); setFiltroCat('')
     setFiltroDesde(''); setFiltroHasta('')
+    setFiltroUsuario('')
     setPagina(0)
   }
 
@@ -422,7 +431,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   // ── Paginación / UI helpers ───────────────────────────────
 
   const totalPaginas = Math.ceil(total / POR_PAGINA)
-  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroCat || filtroDesde || filtroHasta
+  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroUsuario || filtroCat || filtroDesde || filtroHasta
   const agrupados    = agruparPorDia(logs)
 
   const bienesEliminados = useMemo(
@@ -493,6 +502,22 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
             </div>
           </div>
 
+          {/* ── Filtro por usuario ── */}
+          {listaUsuarios.length > 0 && (
+            <div className="audit-filtros-row">
+              <select
+                className={`audit-select audit-select-usuario ${filtroUsuario ? 'audit-select-active' : ''}`}
+                value={filtroUsuario}
+                onChange={e => { setFiltroUsuario(e.target.value); setPagina(0) }}
+              >
+                <option value="">👤 Todos los usuarios</option>
+                {listaUsuarios.map(u => (
+                  <option key={u.id} value={u.id}>{u.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="audit-filtros-row">
             <select className="audit-select" value={filtroAccion}
               onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}>
@@ -556,6 +581,11 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
           <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>
             {hayFiltros ? 'No hay registros con los filtros aplicados.' : 'Aún no hay registros de auditoría.'}
           </p>
+          {!hayFiltros && modulo === 'tickets' && (
+            <p style={{ margin: '10px 0 0', fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
+              Para activar el registro automático, ejecuta <strong>supabase_auditoria_tickets.sql</strong> en el SQL Editor de Supabase.
+            </p>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
