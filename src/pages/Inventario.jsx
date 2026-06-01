@@ -194,9 +194,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [editandoHistorial, setEditandoHistorial] = useState(null) // id del prestamo en edición
   const [formEditHistorial, setFormEditHistorial] = useState({})
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
-  const [prestarMasMode, setPrestarMasMode]         = useState(false)
-  const [formPrestarMas, setFormPrestarMas]         = useState({ cantidad: 1, notas: '' })
-  const [guardandoPrestarMas, setGuardandoPrestarMas] = useState(false)
+  const [prestarMasMode, setPrestarMasMode]             = useState(false)
+  const [formPrestarMas, setFormPrestarMas]             = useState({ cantidad: 1, notas: '' })
+  const [guardandoPrestarMas, setGuardandoPrestarMas]   = useState(false)
+  const [devParcialMode, setDevParcialMode]             = useState(false)
+  const [formDevParcial, setFormDevParcial]             = useState({ cantidad: 1, notas: '' })
+  const [guardandoDevParcial, setGuardandoDevParcial]   = useState(false)
   const [catsVisible, setCatsVisible] = useState(true)
 
   const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
@@ -1417,6 +1420,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setConfirmBorrarHistorial(null)
     setPrestarMasMode(false)
     setFormPrestarMas({ cantidad: 1, notas: '' })
+    setDevParcialMode(false)
+    setFormDevParcial({ cantidad: 1, notas: '' })
   }
 
   const registrarPrestamo = async () => {
@@ -1514,6 +1519,84 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         else m.delete(bienId)
         return m
       })
+    }
+  }
+
+  const devolverParcial = async () => {
+    const bien = modalPrestamo
+    const cantidadDev = parseInt(formDevParcial.cantidad, 10) || 0
+    const maxDev = prestamoBien.cantidad ?? 1
+    if (cantidadDev < 1 || cantidadDev > maxDev || !formDevParcial.notas.trim()) return
+    setGuardandoDevParcial(true)
+    try {
+      const bienId = bien.id
+      const nuevaCantidadPrestamo = maxDev - cantidadDev
+      const notaMovimiento = `Se devolvieron ${cantidadDev} ${cantidadDev === 1 ? 'unidad' : 'unidades'}. ${formDevParcial.notas.trim()}`
+      const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
+
+      if (nuevaCantidadPrestamo <= 0) {
+        // Devolución total — usar RPC (marca préstamo como devuelto y restaura stock)
+        const { error } = await supabase.rpc('devolver_prestamo', {
+          p_prestamo_id: prestamoBien.id,
+          p_devuelto_por: formDevParcial.notas.trim(),
+        })
+        if (error) return
+        await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadDev } : b))
+        setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) + cantidadDev }))
+        setBienesConPrestamo(prev => {
+          const m = new Map(prev)
+          const ex = m.get(bienId)
+          if (!ex) return m
+          const newCount = ex.count - 1
+          const newCP = Math.max(0, (ex.cantidadPrestada ?? cantidadDev) - cantidadDev)
+          if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCP, fecha: ex.fecha })
+          else m.delete(bienId)
+          return m
+        })
+        setPrestamoBien(null)
+        setConfirmDevolucion(false)
+        setDevParcialMode(false)
+        setFormDevParcial({ cantidad: 1, notas: '' })
+      } else {
+        // Devolución parcial — actualizar cantidad en préstamo y restaurar stock
+        let { error: errPrestamo } = await supabase.from('prestamos')
+          .update({ cantidad: nuevaCantidadPrestamo, notas: notasActualizadas })
+          .eq('id', prestamoBien.id)
+        // Fallback si columna cantidad aún no existe
+        const columnaExiste = !(errPrestamo?.code === '42703' || errPrestamo?.message?.includes('cantidad'))
+        if (errPrestamo && !columnaExiste) {
+          ;({ error: errPrestamo } = await supabase.from('prestamos')
+            .update({ notas: notasActualizadas })
+            .eq('id', prestamoBien.id))
+        }
+        if (errPrestamo) return
+
+        // Restaurar stock en bienes (solo si la columna existe y la cantidad quedó guardada)
+        if (columnaExiste) {
+          const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
+          if (bienActual) {
+            await supabase.from('bienes').update({ cantidad: bienActual.cantidad + cantidadDev }).eq('id', bienId)
+          }
+          setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: b.cantidad + cantidadDev } : b))
+          setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) + cantidadDev }))
+          setBienesConPrestamo(prev => {
+            const m = new Map(prev)
+            const ex = m.get(bienId)
+            if (ex) m.set(bienId, { ...ex, cantidadPrestada: Math.max(0, (ex.cantidadPrestada ?? 0) - cantidadDev) })
+            return m
+          })
+        }
+        setPrestamoBien(p => ({
+          ...p,
+          cantidad: columnaExiste ? nuevaCantidadPrestamo : (p.cantidad ?? 1),
+          notas: notasActualizadas,
+        }))
+        setDevParcialMode(false)
+        setFormDevParcial({ cantidad: 1, notas: '' })
+      }
+    } finally {
+      setGuardandoDevParcial(false)
     }
   }
 
@@ -3658,20 +3741,73 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   )
                 )}
 
-                {confirmDevolucion ? (
+                {/* Panel devolución parcial */}
+                {devParcialMode && !confirmDevolucion && (() => {
+                  const maxDev = prestamoBien.cantidad ?? 1
+                  const cantDevNum = parseInt(formDevParcial.cantidad, 10) || 0
+                  const cantDevInvalida = cantDevNum < 1 || cantDevNum > maxDev
+                  const notaDevVacia = !formDevParcial.notas.trim()
+                  const btnDevDisabled = guardandoDevParcial || cantDevInvalida || notaDevVacia
+                  return (
+                    <div style={{ background: '#fdf4ff', border: '1px solid #e9d5ff', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
+                      <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 700, color: '#7e22ce' }}>↩ Registrar devolución parcial</p>
+                      <p style={{ margin: '0 0 10px', fontSize: 11, color: '#9333ea' }}>
+                        Pendientes de devolver: <strong>{maxDev}</strong> {maxDev === 1 ? 'unidad' : 'unidades'}
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Cantidad a devolver *</label>
+                          <input
+                            type="number" min={1} max={maxDev}
+                            value={formDevParcial.cantidad}
+                            onChange={e => setFormDevParcial(f => ({ ...f, cantidad: e.target.value }))}
+                            autoFocus
+                            style={{ ...inStyle, border: `1px solid ${cantDevInvalida ? '#fca5a5' : '#d1d5db'}` }}
+                          />
+                          {cantDevNum > maxDev && (
+                            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#dc2626', fontWeight: 600 }}>
+                              Máximo: {maxDev} {maxDev === 1 ? 'unidad' : 'unidades'}.
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Quién devuelve * <span style={{ fontWeight: 400, color: '#9ca3af' }}>(ej: Curso 2B)</span></label>
+                          <input
+                            value={formDevParcial.notas}
+                            onChange={e => setFormDevParcial(f => ({ ...f, notas: e.target.value }))}
+                            placeholder="ej: Curso 3°B · Profe García"
+                            style={{ ...inStyle, border: `1px solid ${notaDevVacia ? '#fca5a5' : '#d1d5db'}` }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 2 }}>
+                          <button onClick={() => { setDevParcialMode(false); setFormDevParcial({ cantidad: 1, notas: '' }) }} style={{ padding: '5px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
+                          <button onClick={devolverParcial} disabled={btnDevDisabled} style={{ padding: '5px 16px', background: '#9333ea', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700, opacity: btnDevDisabled ? 0.5 : 1 }}>
+                            {guardandoDevParcial ? 'Guardando…' : cantDevNum >= maxDev ? '✓ Devolver todo' : `↩ Devolver ${cantDevNum || ''}`}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Confirmación devolución total */}
+                {confirmDevolucion && !devParcialMode ? (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#166534', display: 'block', marginBottom: 5 }}>Nota de devolución (opcional)</label>
                     <input value={notaDevolucion} onChange={e => setNotaDevolucion(e.target.value)} placeholder="ej: Devuelto en buen estado" style={{ ...inStyle, marginBottom: 10 }} autoFocus />
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <button onClick={() => { setConfirmDevolucion(false); setNotaDevolucion('') }} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
-                      <button onClick={async () => { await marcarDevuelto(); cerrarModalPrestamo() }} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓ Confirmar devolución</button>
+                      <button onClick={async () => { await marcarDevuelto(); cerrarModalPrestamo() }} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓ Confirmar devolución total</button>
                     </div>
                   </div>
                 ) : (
-                  !prestarMasMode && (
-                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
-                      <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
-                      <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
+                  !prestarMasMode && !devParcialMode && (
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
+                      <button onClick={cerrarModalPrestamo} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
+                      {esLibroBien && (prestamoBien.cantidad ?? 1) > 1 && (
+                        <button onClick={() => setDevParcialMode(true)} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
+                      )}
+                      <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
                     </div>
                   )
                 )}
