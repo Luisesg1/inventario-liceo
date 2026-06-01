@@ -55,6 +55,7 @@ export default function Layout({
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
   puedeVerInventario = false, puedeGestionarTickets = false,
+  puedeVerAuditoriaTickets = false,
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
@@ -323,16 +324,16 @@ export default function Layout({
   }
 
   // ── Nav items ─────────────────────────────────────────
-  const navItems = [
-    { id: 'tickets', Icon: Ticket, label: 'Tickets' },
-  ]
+  const navItems = []
 
-  const inventarioActivo    = paginaActual === 'inventario' || paginaActual === 'auditoria'
+  const inventarioActivo     = paginaActual === 'inventario' || paginaActual === 'auditoria'
   const requerimientosActivo = paginaActual === 'requerimientos' || paginaActual === 'auditoria_requerimientos'
-  const permisosActivo      = paginaActual === 'permisos' || paginaActual === 'mis_ausencias' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
-  const [inventarioAbierto,    setInventarioAbierto]    = useState(inventarioActivo)
-  const [requerimientosAbierto, setRequerimientosAbierto] = useState(requerimientosActivo)
-  const [permisosAbierto,      setPermisosAbierto]      = useState(permisosActivo)
+  const ticketsActivo        = paginaActual === 'tickets' || paginaActual === 'auditoria_tickets'
+  const permisosActivo       = paginaActual === 'permisos' || paginaActual === 'mis_ausencias' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
+  const [inventarioAbierto,      setInventarioAbierto]      = useState(inventarioActivo)
+  const [requerimientosAbierto,  setRequerimientosAbierto]  = useState(requerimientosActivo)
+  const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
+  const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos' || paginaActual === 'usuarios'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
@@ -348,8 +349,9 @@ export default function Layout({
     permisos:                 'Gestión de ausencias',
     auditoria_permisos:       'Auditoría de Ausencias',
     compensatorios:           'Días Compensatorios',
-    requerimientos: 'Requerimientos',
-    tickets:        'Tickets',
+    requerimientos:    'Requerimientos',
+    tickets:           'Tickets',
+    auditoria_tickets: 'Auditoría de Tickets',
     ajustes:    'Personalizar',
     campos:     'Campos por categoría',
   }
@@ -532,21 +534,20 @@ export default function Layout({
             </>
           )}
 
-          {/* Tickets */}
-          {navItems.map(({ id, Icon, label }) => (
+          {/* Tickets con submenú */}
+          <>
             <motion.div
-              key={id}
-              className={`nav-item ${paginaActual === id ? 'active' : ''}`}
-              onClick={() => handleNav(id)}
+              className={`nav-item nav-item--parent ${ticketsActivo ? 'active' : ''}`}
+              onClick={() => setTicketsAbierto(o => !o)}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               <span className="nav-icon">
-                <Icon size={15} strokeWidth={paginaActual === id ? 2.5 : 2} />
+                <Ticket size={15} strokeWidth={2} />
               </span>
-              {label}
-              {id === 'tickets' && puedeGestionarTickets && (
+              Tickets
+              {puedeGestionarTickets && (
                 <AnimatePresence>
                   {ticketsAbiertos > 0 && (
                     <motion.span
@@ -561,6 +562,55 @@ export default function Layout({
                   )}
                 </AnimatePresence>
               )}
+              <span className={`nav-chevron ${ticketsAbierto ? 'nav-chevron--open' : ''}`}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
+            </motion.div>
+            <AnimatePresence initial={false}>
+              {ticketsAbierto && (
+                <motion.div
+                  className="nav-submenu"
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className={`nav-subitem ${paginaActual === 'tickets' ? 'active' : ''}`}
+                    onClick={() => handleNav('tickets')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Ver tickets
+                  </div>
+                  {puedeVerAuditoriaTickets && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'auditoria_tickets' ? 'active' : ''}`}
+                      onClick={() => handleNav('auditoria_tickets')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+
+          {/* Items adicionales (para extensión futura) */}
+          {navItems.map(({ id, Icon, label }) => (
+            <motion.div
+              key={id}
+              className={`nav-item ${paginaActual === id ? 'active' : ''}`}
+              onClick={() => handleNav(id)}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <Icon size={15} strokeWidth={paginaActual === id ? 2.5 : 2} />
+              </span>
+              {label}
             </motion.div>
           ))}
 

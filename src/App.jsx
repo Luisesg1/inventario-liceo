@@ -24,6 +24,7 @@ const RUTA_A_PAGINA = {
   '/requerimientos':           'requerimientos',
   '/requerimientos/auditoria': 'auditoria_requerimientos',
   '/tickets':                  'tickets',
+  '/tickets/auditoria':        'auditoria_tickets',
   '/ausencias/mis-ausencias':  'mis_ausencias',
   '/ausencias/gestion':        'permisos',
   '/ausencias/compensatorios': 'compensatorios',
@@ -40,6 +41,7 @@ const PAGINA_A_RUTA = {
   requerimientos:           '/requerimientos',
   auditoria_requerimientos: '/requerimientos/auditoria',
   tickets:                  '/tickets',
+  auditoria_tickets:        '/tickets/auditoria',
   mis_ausencias:            '/ausencias/mis-ausencias',
   permisos:                 '/ausencias/gestion',
   compensatorios:           '/ausencias/compensatorios',
@@ -81,6 +83,7 @@ export default function App() {
   const puedeVerAlertasTickets      = esAdmin || esSoporte || !!p.ver_alertas_tickets
   const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
   const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
+  const puedeVerAuditoriaTickets    = esAdmin || !!p.gestionar_tickets
   const permisosTickets = {
     verPropios: esAdmin || !!p.ver_tickets,
     crear:      esAdmin || p.crear_ticket !== false,
@@ -126,6 +129,7 @@ export default function App() {
     || (pagina === 'compensatorios'   && !puedeVerCompensatorios)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
+    || (pagina === 'auditoria_tickets'        && !puedeVerAuditoriaTickets)
   const soloStaff = pagina === 'inventario'
     || (pagina === 'requerimientos' && !permisosReqs.ver)
 
@@ -269,7 +273,7 @@ export default function App() {
       const { data: pd } = await supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
       if (pd?.permisos) setPermisosUsuario(pd.permisos)
     } else {
-      setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true })
+      setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true, gestionar_tickets: true })
     }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
     setCargando(false)
@@ -308,6 +312,7 @@ export default function App() {
       nombreInstitucion={nombreInstitucion}
       puedeVerAuditoriaReq={puedeVerAuditoriaReq}
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
+      puedeVerAuditoriaTickets={puedeVerAuditoriaTickets}
       puedeVerInventario={puedeVerInventario}
       puedeGestionarTickets={puedeGestionarTickets}
       esSoporte={esSoporte}
@@ -322,6 +327,7 @@ export default function App() {
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
+      {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}

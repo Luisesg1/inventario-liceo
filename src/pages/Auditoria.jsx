@@ -55,6 +55,17 @@ const CAMPO_LABEL_AUSENCIAS = {
   jornada: 'Jornada', hora_inicio: 'Hora inicio', hora_fin: 'Hora fin', notas: 'Motivo',
 }
 
+const CAMPO_LABEL_TICKETS = {
+  titulo:              'Título',
+  descripcion:         'Descripción',
+  area_reporte:        'Área',
+  lugar_falla:         'Lugar',
+  marca_modelo_falla:  'Marca/Modelo',
+  prioridad:           'Prioridad',
+  estado:              'Estado',
+  notas:               'Notas / Resolución',
+}
+
 const POR_PAGINA = 15
 
 const secTitle = {
@@ -64,7 +75,7 @@ const secTitle = {
 
 const MODULO_LABEL = {
   inventario: 'Inventario', requerimientos: 'Requerimientos',
-  permisos: 'Permisos', ausencias: 'Ausencias',
+  permisos: 'Permisos', ausencias: 'Ausencias', tickets: 'Tickets',
 }
 
 const EXPORT_HEADERS = [
@@ -162,6 +173,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (modulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
     if (modulo === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
     if (modulo === 'ausencias')      return CAMPO_LABEL_AUSENCIAS[campo] ?? campo
+    if (modulo === 'tickets')        return CAMPO_LABEL_TICKETS[campo] ?? campo
     return CAMPO_LABEL[campo] ?? campo
   }
 
@@ -422,6 +434,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     modulo === 'requerimientos' ? 'Buscar por requerimiento, usuario, RUT o correo…' :
     modulo === 'permisos'       ? 'Buscar por usuario, RUT o correo…' :
     modulo === 'ausencias'      ? 'Buscar por funcionario, RUT o correo…' :
+    modulo === 'tickets'        ? 'Buscar por ticket, usuario, RUT o correo…' :
     'Buscar por bien, usuario, RUT o correo…'
 
   return (
