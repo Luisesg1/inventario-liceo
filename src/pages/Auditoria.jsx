@@ -567,9 +567,9 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                 onChange={e => { setFiltroEstadoTicket(e.target.value); setPagina(0) }}
               >
                 <option value="">Todos los estados</option>
-                <option value="Abierto">🔵 Abierto</option>
-                <option value="En proceso">🟡 En proceso</option>
-                <option value="Resuelto">🟢 Resuelto</option>
+                <option value="Abierto">Abierto</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Resuelto">Resuelto</option>
               </select>
             )}
           </div>
