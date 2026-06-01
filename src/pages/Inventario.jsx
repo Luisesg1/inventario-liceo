@@ -1429,16 +1429,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
     setGuardandoPrestamo(true)
     try {
+      // 1. Verificar stock actual en BD (sin tocar nada aún)
       if (esLibroBien) {
-        // Re-verificar stock actual en BD y descontar atómicamente
         const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
-        if (!bienActual || cantidadPrestar > bienActual.cantidad) { setGuardandoPrestamo(false); return }
-        const { error: errStock } = await supabase.from('bienes')
-          .update({ cantidad: bienActual.cantidad - cantidadPrestar })
-          .eq('id', bien.id)
-        if (errStock) { setGuardandoPrestamo(false); return }
+        if (!bienActual || cantidadPrestar > bienActual.cantidad) return
       }
 
+      // 2. Insertar el préstamo primero (con cantidad)
       const payload = {
         bien_id: bien.id,
         prestado_a: formPrestamo.prestado_a.trim(),
@@ -1450,16 +1447,23 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         registrado_por_nombre: usuario.nombre,
       }
       let { data, error } = await supabase.from('prestamos').insert(payload).select().single()
-      // Si falla por columna cantidad no existente (migración pendiente), reintenta sin ella
-      if (error && (error.code === '42703' || error.message?.includes('cantidad'))) {
+
+      // Si falla por columna cantidad no existente (migración pendiente):
+      // reintenta sin cantidad y NO descuenta bienes — datos consistentes
+      const columnaExiste = !(error?.code === '42703' || error?.message?.includes('cantidad'))
+      if (error && !columnaExiste) {
         const { cantidad: _qty, ...payloadSinCantidad } = payload
         ;({ data, error } = await supabase.from('prestamos').insert(payloadSinCantidad).select().single())
       }
 
       if (!error && data) {
-        if (esLibroBien) {
-          // Actualizar estado local: bienes.cantidad ya fue decrementado en BD
-          setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadPrestar } : b))
+        // 3. Solo descontar bienes si la columna cantidad existe y el préstamo la guardó
+        if (esLibroBien && columnaExiste) {
+          const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+          if (bienActual) {
+            await supabase.from('bienes').update({ cantidad: Math.max(0, bienActual.cantidad - cantidadPrestar) }).eq('id', bien.id)
+            setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: Math.max(0, b.cantidad - cantidadPrestar) } : b))
+          }
         }
         setBienesConPrestamo(prev => {
           const m = new Map(prev)
@@ -1473,10 +1477,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         })
         if (verDetalle?.id === bien.id) setPrestamoBien(data)
         cerrarModalPrestamo()
-      } else if (esLibroBien && error) {
-        // Revertir el descuento si el INSERT falló
-        const { data: b2 } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
-        if (b2) await supabase.from('bienes').update({ cantidad: b2.cantidad + cantidadPrestar }).eq('id', bien.id)
       }
     } finally {
       setGuardandoPrestamo(false)
@@ -1520,46 +1520,45 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const prestarMasUnidades = async () => {
     const bien = modalPrestamo
     const cantidadAdicional = parseInt(formPrestarMas.cantidad, 10) || 0
-    const disponible = bien.cantidad ?? 0   // bienes.cantidad ES el disponible real
+    const disponible = bien.cantidad ?? 0
     if (cantidadAdicional < 1 || cantidadAdicional > disponible) return
     if (!formPrestarMas.notas.trim()) return
     setGuardandoPrestarMas(true)
     try {
-      // Re-verificar stock en BD y descontar
+      // 1. Verificar stock en BD (sin tocar nada aún)
       const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
       if (!bienActual || cantidadAdicional > bienActual.cantidad) return
-      const { error: errStock } = await supabase.from('bienes')
-        .update({ cantidad: bienActual.cantidad - cantidadAdicional })
-        .eq('id', bien.id)
-      if (errStock) return
 
-      // Actualizar el préstamo activo: sumar cantidad y registrar movimiento en notas
+      // 2. Actualizar el préstamo primero (cantidad + notas)
       const nuevaCantidad = (prestamoBien.cantidad ?? 1) + cantidadAdicional
       const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo. ${formPrestarMas.notas.trim()}`
       const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
       let { error: errUpdate } = await supabase.from('prestamos')
         .update({ cantidad: nuevaCantidad, notas: notasActualizadas })
         .eq('id', prestamoBien.id)
-      // Si falla por columna cantidad no existente (migración pendiente), reintenta sin ella
-      if (errUpdate && (errUpdate.code === '42703' || errUpdate.message?.includes('cantidad'))) {
+
+      // Si falla por columna cantidad no existente: guarda solo notas, NO descuenta bienes
+      const columnaExiste = !(errUpdate?.code === '42703' || errUpdate?.message?.includes('cantidad'))
+      if (errUpdate && !columnaExiste) {
         ;({ error: errUpdate } = await supabase.from('prestamos')
           .update({ notas: notasActualizadas })
           .eq('id', prestamoBien.id))
       }
-      if (errUpdate) {
-        // Revertir el descuento si la actualización del préstamo falló
-        await supabase.from('bienes').update({ cantidad: bienActual.cantidad }).eq('id', bien.id)
-        return
+      if (errUpdate) return
+
+      // 3. Solo descontar bienes si la columna cantidad existe y quedó guardada
+      if (columnaExiste) {
+        await supabase.from('bienes').update({ cantidad: Math.max(0, bienActual.cantidad - cantidadAdicional) }).eq('id', bien.id)
+        setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: Math.max(0, b.cantidad - cantidadAdicional) } : b))
+        setModalPrestamo(prev => ({ ...prev, cantidad: Math.max(0, (prev.cantidad ?? 0) - cantidadAdicional) }))
       }
 
-      // Actualizar estado local
-      setPrestamoBien(p => ({ ...p, cantidad: nuevaCantidad, notas: notasActualizadas }))
-      setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadAdicional } : b))
-      setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) - cantidadAdicional }))
+      // Actualizar estado local del préstamo y del mapa
+      setPrestamoBien(p => ({ ...p, cantidad: columnaExiste ? nuevaCantidad : (p.cantidad ?? 1), notas: notasActualizadas }))
       setBienesConPrestamo(prev => {
         const m = new Map(prev)
         const ex = m.get(bien.id)
-        if (ex) m.set(bien.id, { ...ex, cantidadPrestada: (ex.cantidadPrestada ?? 0) + cantidadAdicional })
+        if (ex && columnaExiste) m.set(bien.id, { ...ex, cantidadPrestada: (ex.cantidadPrestada ?? 0) + cantidadAdicional })
         return m
       })
       setPrestarMasMode(false)
