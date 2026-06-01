@@ -194,6 +194,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [editandoHistorial, setEditandoHistorial] = useState(null) // id del prestamo en edición
   const [formEditHistorial, setFormEditHistorial] = useState({})
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
+  const [prestarMasMode, setPrestarMasMode]         = useState(false)
+  const [formPrestarMas, setFormPrestarMas]         = useState({ cantidad: 1, notas: '' })
+  const [guardandoPrestarMas, setGuardandoPrestarMas] = useState(false)
   const [catsVisible, setCatsVisible] = useState(true)
 
   const [modalIncidencias, setModalIncidencias] = useState(null) // bien object
@@ -1397,6 +1400,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setNotaDevolucion('')
     setEditandoHistorial(null)
     setConfirmBorrarHistorial(null)
+    setPrestarMasMode(false)
+    setFormPrestarMas({ cantidad: 1, notas: '' })
   }
 
   const registrarPrestamo = async () => {
@@ -1485,6 +1490,46 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         else m.delete(bienId)
         return m
       })
+    }
+  }
+
+  const prestarMasUnidades = async () => {
+    const bien = modalPrestamo
+    const cantidadAdicional = parseInt(formPrestarMas.cantidad, 10) || 0
+    if (cantidadAdicional < 1 || cantidadAdicional > (bien.cantidad ?? 0)) return
+    setGuardandoPrestarMas(true)
+    try {
+      // Re-verificar stock en BD
+      const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
+      if (!bienActual || cantidadAdicional > bienActual.cantidad) return
+
+      // Descontar stock
+      const { error: errStock } = await supabase.from('bienes')
+        .update({ cantidad: bienActual.cantidad - cantidadAdicional })
+        .eq('id', bien.id)
+      if (errStock) return
+
+      // Actualizar el préstamo activo: sumar cantidad y registrar movimiento en notas
+      const nuevaCantidad = (prestamoBien.cantidad ?? 1) + cantidadAdicional
+      const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo${formPrestarMas.notas.trim() ? `. ${formPrestarMas.notas.trim()}` : '.'}`
+      const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
+      const { error: errUpdate } = await supabase.from('prestamos')
+        .update({ cantidad: nuevaCantidad, notas: notasActualizadas })
+        .eq('id', prestamoBien.id)
+      if (errUpdate) {
+        // Revertir el descuento de stock
+        await supabase.from('bienes').update({ cantidad: bienActual.cantidad }).eq('id', bien.id)
+        return
+      }
+
+      // Actualizar estado local
+      setPrestamoBien(p => ({ ...p, cantidad: nuevaCantidad, notas: notasActualizadas }))
+      setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: b.cantidad - cantidadAdicional } : b))
+      setModalPrestamo(prev => ({ ...prev, cantidad: (prev.cantidad ?? 0) - cantidadAdicional }))
+      setPrestarMasMode(false)
+      setFormPrestarMas({ cantidad: 1, notas: '' })
+    } finally {
+      setGuardandoPrestarMas(false)
     }
   }
 
@@ -3491,7 +3536,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             {cargandoPrestamo && <p style={{ fontSize: 13, color: '#9ca3af' }}>Cargando…</p>}
 
-            {!cargandoPrestamo && prestamoBien && (
+            {!cargandoPrestamo && prestamoBien && (() => {
+              const esLibroBien = esLibro(modalPrestamo.categoria)
+              const stockDisponible = modalPrestamo.cantidad ?? 0
+              const cantidadMasNum = parseInt(formPrestarMas.cantidad, 10) || 0
+              const cantidadMasInvalida = cantidadMasNum < 1 || cantidadMasNum > stockDisponible
+              return (
               <>
                 <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
                   <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#92400e' }}>
@@ -3503,14 +3553,69 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       Prestado el: <strong>{fmtFecha(prestamoBien.fecha_prestamo)}</strong>
                     </p>
                   )}
-                  {esLibro(modalPrestamo.categoria) && (prestamoBien.cantidad ?? 1) > 0 && (
+                  {esLibroBien && (prestamoBien.cantidad ?? 1) > 0 && (
                     <p style={{ margin: '4px 0 0', fontSize: 13, color: '#78350f' }}>
                       Cantidad prestada: <strong>{prestamoBien.cantidad ?? 1} {(prestamoBien.cantidad ?? 1) === 1 ? 'unidad' : 'unidades'}</strong>
                     </p>
                   )}
-                  {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207' }}>📝 {prestamoBien.notas}</p>}
+                  {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207', whiteSpace: 'pre-line' }}>📝 {prestamoBien.notas}</p>}
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
                 </div>
+
+                {/* Sección "Prestar más unidades" — solo libros */}
+                {esLibroBien && !confirmDevolucion && (
+                  stockDisponible > 0 ? (
+                    prestarMasMode ? (
+                      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
+                        <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, color: '#1e40af' }}>Prestar más unidades</p>
+                        <p style={{ margin: '0 0 10px', fontSize: 11, color: '#3b82f6' }}>
+                          Disponibles para prestar: <strong>{stockDisponible}</strong> {stockDisponible === 1 ? 'unidad' : 'unidades'}
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <div>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Cantidad adicional *</label>
+                            <input
+                              type="number" min={1} max={stockDisponible}
+                              value={formPrestarMas.cantidad}
+                              onChange={e => setFormPrestarMas(f => ({ ...f, cantidad: e.target.value }))}
+                              autoFocus
+                              style={{ ...inStyle, border: `1px solid ${cantidadMasInvalida ? '#fca5a5' : '#d1d5db'}` }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Notas (opcional)</label>
+                            <input
+                              value={formPrestarMas.notas}
+                              onChange={e => setFormPrestarMas(f => ({ ...f, notas: e.target.value }))}
+                              placeholder="ej: Para la sala 2B"
+                              style={inStyle}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 2 }}>
+                            <button onClick={() => { setPrestarMasMode(false); setFormPrestarMas({ cantidad: 1, notas: '' }) }} style={{ padding: '5px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
+                            <button onClick={prestarMasUnidades} disabled={guardandoPrestarMas || cantidadMasInvalida} style={{ padding: '5px 16px', background: '#1d4ed8', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700, opacity: (guardandoPrestarMas || cantidadMasInvalida) ? 0.5 : 1 }}>
+                              {guardandoPrestarMas ? 'Guardando…' : 'Confirmar'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                        <span style={{ fontSize: 12, color: '#0369a1' }}>
+                          Disponibles para prestar: <strong>{stockDisponible}</strong> {stockDisponible === 1 ? 'unidad' : 'unidades'}
+                        </span>
+                        <button onClick={() => setPrestarMasMode(true)} style={{ padding: '4px 12px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 10 }}>
+                          + Prestar más
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <p style={{ margin: '0 0 14px', fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>
+                      No quedan unidades disponibles para prestar.
+                    </p>
+                  )
+                )}
+
                 {confirmDevolucion ? (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#166534', display: 'block', marginBottom: 5 }}>Nota de devolución (opcional)</label>
@@ -3521,13 +3626,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
-                    <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
-                    <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
-                  </div>
+                  !prestarMasMode && (
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
+                      <button onClick={cerrarModalPrestamo} style={{ padding: '8px 18px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
+                      <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
+                    </div>
+                  )
                 )}
               </>
-            )}
+              )
+            })()}
 
             {!cargandoPrestamo && !prestamoBien && (() => {
               const esLibroBien = esLibro(modalPrestamo.categoria)
