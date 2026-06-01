@@ -898,3 +898,127 @@
   .tickets-kpi-bar-fill { transition: none; }
   .tk-check-box { transition: none; }
 }
+
+/* ── Exportación ──────────────────────────────────────── */
+.btn-exportar-tickets {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  height: 42px;
+  background: #ffffff;
+  color: #374151;
+  border: 1.5px solid rgba(0,0,0,0.13);
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: 'Inter', system-ui, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+.btn-exportar-tickets:hover:not(:disabled) {
+  border-color: rgba(99,102,241,0.4);
+  background: #f5f7ff;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.1);
+}
+.btn-exportar-tickets:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@keyframes tk-spin {
+  to { transform: rotate(360deg); }
+}
+.tk-export-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(99,102,241,0.25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: tk-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.tk-export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  background: #0d1628;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  min-width: 210px;
+  overflow: hidden;
+}
+.tk-export-menu-title {
+  margin: 0;
+  padding: 8px 14px 6px;
+  font-size: 0.7rem;
+  color: rgba(148,163,184,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+.tk-export-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.tk-export-menu-item:hover { background: rgba(27,43,69,0.6); }
+.tk-export-menu-label {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #e5e7eb;
+}
+.tk-export-menu-desc {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+@keyframes tk-aviso-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tk-aviso-export {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f1f5f9;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 11px 22px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 9999;
+  animation: tk-aviso-in 0.22s ease both;
+  white-space: nowrap;
+}
+.tk-aviso-export--error {
+  background: #450a0a;
+  border-color: rgba(239,68,68,0.3);
+  color: #fca5a5;
+}
+
+@media (max-width: 600px) {
+  .btn-exportar-tickets { width: 100%; justify-content: center; }
+  .tk-export-menu { right: auto; left: 0; min-width: 100%; }
+  .tk-aviso-export { width: calc(100% - 32px); text-align: center; white-space: normal; }
+}

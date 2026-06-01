@@ -118,6 +118,9 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const [busqueda,        setBusqueda]        = useState('')
   const [exito,           setExito]           = useState(false)
   const [paginaT,         setPaginaT]         = useState(1)
+  const [menuExportar,    setMenuExportar]    = useState(false)
+  const [exportando,      setExportando]      = useState(false)
+  const [avisoExport,     setAvisoExport]     = useState('')
 
   useEffect(() => { cargar() }, [])
   useEffect(() => { setPaginaT(1) }, [filtroEstado, filtroPrioridad, filtroArea, filtroRol, busqueda])
@@ -288,6 +291,144 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   }
 
   const fmt = (iso) => new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
+  const fmtCorta = (iso) => iso ? new Date(iso).toLocaleDateString('es-CL') : ''
+
+  const nombreArchivo = (ext) => {
+    const fecha = new Date().toISOString().slice(0, 10)
+    return `${esGestor ? 'tickets' : 'mis-tickets'}_${fecha}.${ext}`
+  }
+
+  const getResumen = (datos) => {
+    const resueltos = datos.filter(t => t.estado === 'Resuelto' && t.actualizado_en && t.creado_en)
+    const promedio = resueltos.length
+      ? (resueltos.reduce((s, t) => s + (new Date(t.actualizado_en) - new Date(t.creado_en)), 0) / resueltos.length / 86400000).toFixed(1)
+      : null
+    return {
+      total:     datos.length,
+      abiertos:  datos.filter(t => t.estado === 'Abierto').length,
+      enProceso: datos.filter(t => t.estado === 'En proceso').length,
+      resueltos: datos.filter(t => t.estado === 'Resuelto').length,
+      urgentes:  datos.filter(t => t.prioridad === 'alta').length,
+      promedio,
+    }
+  }
+
+  const mostrarAviso = (msg) => { setAvisoExport(msg); setTimeout(() => setAvisoExport(''), 3500) }
+
+  const exportarCSVTickets = () => {
+    if (!filtrados.length) { mostrarAviso('No hay tickets para exportar.'); return }
+    const COLS   = ['id','titulo','descripcion','area_reporte','lugar_falla','marca_modelo_falla','prioridad','estado','creado_en','actualizado_en','creado_por_nombre','rol_solicitante','correo_contacto','notas']
+    const LABELS = ['N° Ticket','Título / Área','Descripción','Área','Lugar','Marca/Modelo','Prioridad','Estado','Fecha Creación','Última Actualización','Solicitante','Rol','Correo','Notas / Resolución']
+    const esc = (v) => { if (v == null) return ''; const s = String(v); return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g,'""')}"` : s }
+    const filas = [LABELS.join(','), ...filtrados.map(t => COLS.map(c => {
+      if (c === 'titulo')        return esc(areaLabel(t))
+      if (c === 'creado_en' || c === 'actualizado_en') return esc(fmtCorta(t[c]))
+      return esc(t[c])
+    }).join(','))]
+    const blob = new Blob(['﻿' + filas.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = nombreArchivo('csv'); a.click(); URL.revokeObjectURL(url)
+    setMenuExportar(false)
+    mostrarAviso('✅ CSV generado correctamente.')
+  }
+
+  const exportarExcelTickets = () => {
+    if (!filtrados.length) { mostrarAviso('No hay tickets para exportar.'); return }
+    setExportando(true); setMenuExportar(false)
+    const cargar = () => {
+      const res = getResumen(filtrados)
+      const wb  = window.XLSX.utils.book_new()
+      const wsResData = [
+        ['Resumen de Tickets de Soporte'],
+        ['Generado el', new Date().toLocaleDateString('es-CL')],
+        [],
+        ['Total de tickets', res.total],
+        ['Abiertos',         res.abiertos],
+        ['En proceso',       res.enProceso],
+        ['Resueltos',        res.resueltos],
+        ['Urgentes (Alta)',  res.urgentes],
+        ['Prom. resolución (días)', res.promedio ?? 'N/A'],
+      ]
+      const wsRes = window.XLSX.utils.aoa_to_sheet(wsResData)
+      wsRes['!cols'] = [{ wch: 30 }, { wch: 14 }]
+      window.XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen')
+      const LABELS = ['N° Ticket','Título / Área','Descripción','Área','Lugar','Marca/Modelo','Prioridad','Estado','Fecha Creación','Última Actualización','Solicitante','Rol','Correo','Notas / Resolución']
+      const filas  = [LABELS, ...filtrados.map(t => [
+        t.id, areaLabel(t), t.descripcion ?? '', t.area_reporte ?? '', t.lugar_falla ?? '', t.marca_modelo_falla ?? '',
+        t.prioridad ?? 'Sin asignar', t.estado,
+        fmtCorta(t.creado_en), fmtCorta(t.actualizado_en),
+        t.creado_por_nombre ?? '', t.rol_solicitante ?? '', t.correo_contacto ?? '', t.notas ?? '',
+      ])]
+      const ws = window.XLSX.utils.aoa_to_sheet(filas)
+      ws['!cols'] = [8,24,38,18,18,18,13,13,15,17,22,18,26,38].map(w => ({ wch: w }))
+      window.XLSX.utils.book_append_sheet(wb, ws, 'Tickets')
+      window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
+      setExportando(false); mostrarAviso('✅ Excel generado correctamente.')
+    }
+    if (window.XLSX) { cargar(); return }
+    const s = document.createElement('script')
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    s.onload  = cargar
+    s.onerror = () => { setExportando(false); mostrarAviso('❌ No se pudo cargar la librería de Excel.') }
+    document.head.appendChild(s)
+  }
+
+  const exportarPDFTickets = () => {
+    if (!filtrados.length) { mostrarAviso('No hay tickets para exportar.'); return }
+    setExportando(true); setMenuExportar(false)
+    const res   = getResumen(filtrados)
+    const fecha = new Date().toLocaleDateString('es-CL')
+    const pBg = (p) => p === 'alta' ? '#fee2e2' : p === 'media' ? '#fef3c7' : p === 'baja' ? '#dcfce7' : '#f1f5f9'
+    const eBg = (e) => e === 'Abierto' ? '#dbeafe' : e === 'En proceso' ? '#fef3c7' : e === 'Resuelto' ? '#dcfce7' : '#f1f5f9'
+    const htmlContent = `<html><head><meta charset="utf-8"><style>
+      body{font-family:Arial,sans-serif;font-size:10px;color:#111;margin:0;padding:20px}
+      .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;border-bottom:2px solid #1e3a8a;padding-bottom:10px}
+      h1{font-size:15px;margin:0 0 3px;color:#1e3a8a} .sub{font-size:10px;color:#6b7280;margin:0}
+      .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px}
+      .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:7px 8px;text-align:center}
+      .kv{font-size:18px;font-weight:800;line-height:1;margin:0} .kl{font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:3px 0 0}
+      table{width:100%;border-collapse:collapse}
+      th{background:#1e3a8a;color:white;padding:5px 6px;text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:.04em}
+      td{padding:4px 6px;border-bottom:1px solid #e5e7eb;font-size:9px;vertical-align:top}
+      tr:nth-child(even) td{background:#f9fafb}
+      .badge{display:inline-block;padding:2px 6px;border-radius:20px;font-size:8px;font-weight:700}
+    </style></head><body>
+      <div class="hdr"><div><h1>🎫 Tickets de Soporte</h1><p class="sub">Generado el ${fecha} · ${filtrados.length} ticket${filtrados.length !== 1 ? 's' : ''}</p></div></div>
+      <div class="kpis">
+        <div class="kpi"><p class="kv">${res.total}</p><p class="kl">Total</p></div>
+        <div class="kpi"><p class="kv" style="color:#1d4ed8">${res.abiertos}</p><p class="kl">Abiertos</p></div>
+        <div class="kpi"><p class="kv" style="color:#b45309">${res.enProceso}</p><p class="kl">En proceso</p></div>
+        <div class="kpi"><p class="kv" style="color:#15803d">${res.resueltos}</p><p class="kl">Resueltos</p></div>
+        <div class="kpi"><p class="kv" style="color:#b91c1c">${res.urgentes}</p><p class="kl">Urgentes</p></div>
+        <div class="kpi"><p class="kv">${res.promedio !== null ? res.promedio + 'd' : '—'}</p><p class="kl">Prom. resolución</p></div>
+      </div>
+      <table><thead><tr><th>#</th><th>Título / Área</th><th>Descripción</th><th>Lugar</th><th>Prioridad</th><th>Estado</th><th>Creado</th><th>Actualizado</th><th>Solicitante</th><th>Notas</th></tr></thead>
+      <tbody>${filtrados.map(t => `<tr>
+        <td>${t.id}</td>
+        <td>${areaLabel(t)}</td>
+        <td>${(t.descripcion ?? '—').replace(/</g,'&lt;')}</td>
+        <td>${(t.lugar_falla ?? '—').replace(/</g,'&lt;')}</td>
+        <td><span class="badge" style="background:${pBg(t.prioridad)};color:#374151">${t.prioridad ?? '—'}</span></td>
+        <td><span class="badge" style="background:${eBg(t.estado)};color:#374151">${t.estado}</span></td>
+        <td>${fmtCorta(t.creado_en)}</td>
+        <td>${fmtCorta(t.actualizado_en)}</td>
+        <td>${(t.creado_por_nombre ?? '—').replace(/</g,'&lt;')}${t.rol_solicitante ? `<br/><span style="color:#6b7280;font-size:8px">${t.rol_solicitante}</span>` : ''}</td>
+        <td>${(t.notas ?? '—').replace(/</g,'&lt;')}</td>
+      </tr>`).join('')}</tbody></table>
+    </body></html>`
+    const cargar = () => {
+      const opt = { margin:[10,8,10,8], filename: nombreArchivo('pdf'), image:{ type:'jpeg', quality:0.97 }, html2canvas:{ scale:2, backgroundColor:'#ffffff' }, jsPDF:{ unit:'mm', format:'a4', orientation:'landscape' } }
+      const el = document.createElement('div'); el.innerHTML = htmlContent; document.body.appendChild(el)
+      window.html2pdf().set(opt).from(el).save().then(() => { document.body.removeChild(el); setExportando(false); mostrarAviso('✅ PDF generado correctamente.') })
+        .catch(() => { document.body.removeChild(el); setExportando(false); mostrarAviso('❌ Error al generar el PDF.') })
+    }
+    if (window.html2pdf) { cargar(); return }
+    const s = document.createElement('script')
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
+    s.onload  = cargar
+    s.onerror = () => { setExportando(false); mostrarAviso('❌ No se pudo cargar la librería de PDF.') }
+    document.head.appendChild(s)
+  }
 
   if (cargando) return (
     <div className="tickets-wrap">
@@ -363,7 +504,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
         </div>
       )}
 
-      {/* Fila buscador + botón nuevo */}
+      {/* Fila buscador + botones */}
       <div className="tickets-toolbar-row" style={{ display: 'flex', gap: 10, marginBottom: '0.9rem', alignItems: 'center' }}>
         <div className="tickets-search-wrap" style={{ flex: 1, marginBottom: 0 }}>
           <span className="tickets-search-icon">🔍</span>
@@ -378,6 +519,40 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
             <button className="tickets-search-clear" onClick={() => setBusqueda('')}>✕</button>
           )}
         </div>
+
+        {/* Botón Exportar */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <button className="btn-exportar-tickets" onClick={() => setMenuExportar(v => !v)} disabled={exportando}>
+            {exportando ? <span className="tk-export-spinner" /> : '⬇'}
+            {exportando ? ' Generando…' : ' Exportar ▾'}
+          </button>
+          {menuExportar && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setMenuExportar(false)} />
+              <div className="tk-export-menu">
+                <p className="tk-export-menu-title">
+                  {filtroEstado || filtroPrioridad || filtroArea || filtroRol || busqueda.trim()
+                    ? `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
+                    : 'Exportar vista actual'}
+                </p>
+                {[
+                  { icon: '📄', label: 'CSV',   desc: 'Texto separado por comas',  fn: exportarCSVTickets },
+                  { icon: '📊', label: 'Excel', desc: 'Hoja de cálculo .xlsx',     fn: exportarExcelTickets },
+                  { icon: '📕', label: 'PDF',   desc: 'Tabla en PDF A4 (apaisado)', fn: exportarPDFTickets },
+                ].map(({ icon, label, desc, fn }) => (
+                  <button key={label} className="tk-export-menu-item" onClick={fn}>
+                    <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                    <div>
+                      <p className="tk-export-menu-label">{label}</p>
+                      <p className="tk-export-menu-desc">{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         {puedeCrear && <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>}
       </div>
 
@@ -727,6 +902,12 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
               </div>
             )}
           </div>
+        </div>
+      )}
+      {/* Toast exportación */}
+      {avisoExport && (
+        <div className={`tk-aviso-export ${avisoExport.startsWith('❌') ? 'tk-aviso-export--error' : ''}`}>
+          {avisoExport}
         </div>
       )}
     </motion.div>
