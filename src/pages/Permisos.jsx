@@ -2012,6 +2012,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const [cargandoAPI,        setCargandoAPI]        = useState(false)
   const [modalInhabilitados, setModalInhabilitados] = useState(false)
   const [emailNotif,         setEmailNotif]         = useState(null) // null | 'ok' | 'error'
+  const [añoSeleccionado,    setAñoSeleccionado]    = useState(new Date().getFullYear())
 
   function toggleColapso(key) {
     setExpandidos(prev => {
@@ -2039,7 +2040,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }, [])
 
   // Limpia selección al cambiar filtros o página
-  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, paginaP])
+  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, paginaP, añoSeleccionado])
 
   useEffect(() => { cargarDatos(); cargarDiasInhabilitados() }, [])
 
@@ -2545,6 +2546,20 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
 
   const thisYear = new Date().getFullYear()
 
+  // Años con registros + año actual, para el selector de período
+  const añosDisponibles = (() => {
+    const yrs = new Set([thisYear])
+    permisos.forEach(p => {
+      if (p.fecha_inicio) yrs.add(parseInt(p.fecha_inicio.slice(0, 4)))
+    })
+    return [...yrs].sort((a, b) => b - a)
+  })()
+
+  // Registros filtrados al año seleccionado (renovación automática por año calendario)
+  const permisosDelAño = permisos.filter(p =>
+    p.fecha_inicio?.startsWith(String(añoSeleccionado))
+  )
+
   // Mapa fecha → etiqueta para el calendario (feriados + días especiales)
   const feriadosLabelsMap = (() => {
     const m = new Map()
@@ -2598,27 +2613,23 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }
   const fechaHoyCorta = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })
 
-  // ── Stats por RUT (año actual, sin filtrar) ────────────────────────────────
+  // ── Stats por RUT (año seleccionado, renovación automática anual) ───────────
   const userStatsMap = (() => {
     const map = {}
-    permisos.forEach(p => {
+    permisosDelAño.forEach(p => {
       const rut = p.usuario?.rut ?? p.externo_rut ?? p.snapshot_rut
       const key = rut ? normRut(rut) : (p.usuario_id ?? '__ext__')
       if (!map[key]) map[key] = { count: 0, dias: 0 }
-      const startYear = p.fecha_inicio ? parseInt(p.fecha_inicio.slice(0, 4)) : null
-      if (startYear === thisYear) {
-        map[key].count++
-        // Solo suma días hábiles si el tipo descuenta del cupo
-        if (!TIPOS_SIN_DESCUENTO.has(p.tipo)) {
-          map[key].dias += calcDiasTotales([p], false, diasInhabilitados)
-        }
+      map[key].count++
+      if (!TIPOS_SIN_DESCUENTO.has(p.tipo)) {
+        map[key].dias += calcDiasTotales([p], false, diasInhabilitados)
       }
     })
     return map
   })()
 
-  // ── Filtrado ──────────────────────────────────────────────────────────────
-  const permisosFiltrados = permisos.filter(p => {
+  // ── Filtrado (sobre el año seleccionado) ─────────────────────────────────
+  const permisosFiltrados = permisosDelAño.filter(p => {
     const u = resolveUser(p)
     if (!u) return false // ocultar borrados sin reemplazo
     if (busqueda.trim()) {
@@ -2708,6 +2719,49 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               ? 'Historial de tus ausencias registradas.'
               : 'Gestiona las ausencias del personal.'}
           </p>
+        </div>
+        {/* Selector de período anual */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: añoSeleccionado === thisYear ? '#eff6ff' : '#fefce8',
+            border: `1.5px solid ${añoSeleccionado === thisYear ? '#bfdbfe' : '#fde68a'}`,
+            borderRadius: 10, padding: '7px 14px',
+          }}>
+            <CalendarRange size={14} strokeWidth={2.2}
+              style={{ color: añoSeleccionado === thisYear ? '#2563eb' : '#b45309', flexShrink: 0 }} />
+            <span style={{
+              fontSize: 13, fontWeight: 600,
+              color: añoSeleccionado === thisYear ? '#1d4ed8' : '#92400e',
+              whiteSpace: 'nowrap',
+            }}>
+              Período: 01/01/{añoSeleccionado} – 31/12/{añoSeleccionado}
+            </span>
+            {añoSeleccionado !== thisYear && (
+              <span style={{
+                fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                borderRadius: 6, background: '#fde68a', color: '#78350f',
+              }}>Histórico</span>
+            )}
+          </div>
+          {añosDisponibles.length > 1 && (
+            <select
+              value={añoSeleccionado}
+              onChange={e => setAñoSeleccionado(Number(e.target.value))}
+              style={{
+                padding: '7px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8,
+                fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer',
+                fontWeight: 500,
+              }}
+              title="Cambiar año del período"
+            >
+              {añosDisponibles.map(y => (
+                <option key={y} value={y}>
+                  {y}{y === thisYear ? ' (actual)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -2888,10 +2942,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               <Loader2 size={18} className="animate-spin" style={{ margin: '0 auto 8px', display: 'block' }} />
               Cargando…
             </div>
-          ) : permisos.length === 0 ? (
+          ) : permisosDelAño.length === 0 ? (
             <div className="permisos-empty">
               <div className="permisos-empty-icon"><CalendarCheck size={20} strokeWidth={1.5} /></div>
-              No hay ausencias registradas aún.
+              {añoSeleccionado === thisYear
+                ? 'No hay ausencias registradas aún.'
+                : `No hay ausencias registradas en el período ${añoSeleccionado}.`}
             </div>
           ) : grupos.length === 0 ? (
             <div className="permisos-empty">
