@@ -1526,6 +1526,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const marcarDevuelto = async () => {
+    console.log('[marcarDevuelto] inicio', { prestamoBien, guardandoDevolucion })
     if (!prestamoBien || guardandoDevolucion) return
     const bienId = modalPrestamo?.id ?? verDetalle?.id
     const esLibroBien = esLibro(modalPrestamo?.categoria ?? verDetalle?.categoria)
@@ -1534,6 +1535,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       // Calcular total pendiente REAL desde notas (prestamoBien.cantidad puede ser incorrecto en BD)
       const entriesActuales = parsearPrestadosA(prestamoBien)
       const cantidadRestaurar = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
+      console.log('[marcarDevuelto] entriesActuales', entriesActuales, 'cantidadRestaurar', cantidadRestaurar)
 
       // Corregir prestamos.cantidad en BD antes del RPC para que restaure el stock correcto
       if (cantidadRestaurar > 0) {
@@ -1544,6 +1546,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         p_prestamo_id: prestamoBien.id,
         p_devuelto_por: usuario.nombre,
       })
+      console.log('[marcarDevuelto] rpc result', { error })
 
       // Tratar "ya devuelto" como éxito: el préstamo fue cerrado por una
       // operación anterior ("Todos") que actualizó BD pero no el estado local
@@ -1592,6 +1595,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   // Núcleo de devolución — usado por el formulario manual y por las acciones de la tabla
   const _ejecutarDevolucion = async (cantidadDev, nota) => {
+    console.log('[_ejecutarDevolucion] inicio', { cantidadDev, nota, prestamoBien })
     const bien = modalPrestamo
     const bienId = bien.id
     const esLibroBien = esLibro(bien.categoria)
@@ -1599,7 +1603,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const entriesActuales = parsearPrestadosA(prestamoBien)
     const totalPending = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
     const maxDev = totalPending
-    if (cantidadDev < 1 || cantidadDev > maxDev) return false
+    console.log('[_ejecutarDevolucion] entriesActuales', entriesActuales, 'totalPending', totalPending, 'maxDev', maxDev)
+    if (cantidadDev < 1 || cantidadDev > maxDev) {
+      console.warn('[_ejecutarDevolucion] BLOQUEADO: cantidadDev fuera de rango', { cantidadDev, maxDev })
+      return false
+    }
     const nuevaCantidadPrestamo = maxDev - cantidadDev
     const notaMovimiento = `Se devolvieron ${cantidadDev} ${cantidadDev === 1 ? 'unidad' : 'unidades'}. ${nota}`
     const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
@@ -1688,10 +1696,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const devolverTodosDeCurso = async (cursoLabel, pendiente) => {
+    console.log('[devolverTodosDeCurso] inicio', { cursoLabel, pendiente })
     if (pendiente < 1) return
     setGuardandoDevParcial(true)
     try {
       const ok = await _ejecutarDevolucion(pendiente, cursoLabel)
+      console.log('[devolverTodosDeCurso] resultado', { ok })
       if (ok) { setDevParcialMode(false); setFormDevParcial({ cantidad: 1, notas: '' }) }
     } finally {
       setGuardandoDevParcial(false)
@@ -3896,7 +3906,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <input value={notaDevolucion} onChange={e => setNotaDevolucion(e.target.value)} placeholder="ej: Devuelto en buen estado" style={{ ...inStyle, marginBottom: 10 }} autoFocus />
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <button onClick={() => { setConfirmDevolucion(false); setNotaDevolucion('') }} disabled={guardandoDevolucion} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
-                      <button onClick={marcarDevuelto} disabled={guardandoDevolucion} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, opacity: guardandoDevolucion ? 0.6 : 1 }}>
+                      <button onClick={() => { console.log('[btn Confirmar] click', { guardandoDevolucion, prestamoBien }); marcarDevuelto() }} disabled={guardandoDevolucion} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, opacity: guardandoDevolucion ? 0.6 : 1 }}>
                         {guardandoDevolucion ? 'Guardando…' : '✓ Confirmar devolución total'}
                       </button>
                     </div>
@@ -4103,7 +4113,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                                 </button>
                                 <button
                                   disabled={guardandoDevParcial}
-                                  onClick={() => devolverTodosDeCurso(entry.label, entry.pendiente)}
+                                  onClick={() => { console.log('[btn Todos] click', { label: entry.label, pendiente: entry.pendiente }); devolverTodosDeCurso(entry.label, entry.pendiente) }}
                                   style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer', opacity: guardandoDevParcial ? 0.5 : 1 }}>
                                   Todos
                                 </button>
