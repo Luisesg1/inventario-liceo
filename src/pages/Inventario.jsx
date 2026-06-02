@@ -4563,19 +4563,24 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
       )}
 
       {/* ── Modal Configurar campos por categoría ────────── */}
-      {modalCamposCategoria && catActual !== 'todos' && catInfo && catInfo.id !== 'todos' && (
-        <ModalCamposCategoria
-          catObj={catInfo}
-          usuario={usuario}
-          onClose={() => setModalCamposCategoria(false)}
-          onCatUpdated={() => {
-            supabase.from('categorias').select('*').eq('id', catActual).single()
-              .then(({ data }) => {
-                if (data) setCategorias(prev => prev.map(c => c.id === catActual ? data : c))
-              })
-          }}
-        />
-      )}
+      {modalCamposCategoria && (() => {
+        const _catCampos = categorias.find(c => c.id === catActual)
+        if (!_catCampos) return null
+        return (
+          <ModalCamposCategoria
+            key={catActual}
+            catObj={_catCampos}
+            usuario={usuario}
+            onClose={() => setModalCamposCategoria(false)}
+            onCatUpdated={() => {
+              supabase.from('categorias').select('*').eq('id', catActual).single()
+                .then(({ data }) => {
+                  if (data) setCategorias(prev => prev.map(c => c.id === catActual ? data : c))
+                })
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }
