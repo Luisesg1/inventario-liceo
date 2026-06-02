@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 
 const TIPOS = [
@@ -457,9 +458,9 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
   const tipoObj = TIPOS.find(t => t.value === nuevoTipo)
   const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id && !c._global)).length
 
-  return (
+  return createPortal(
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.60)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 950, padding: '16px' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.60)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}
       onClick={onClose}
     >
       <div
@@ -812,6 +813,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   )
 }
