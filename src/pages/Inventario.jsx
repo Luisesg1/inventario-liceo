@@ -3944,10 +3944,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     ) : (
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
                         <button onClick={cerrarModalPrestamo} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
-                        {esLibroBien && totalActivoHeader > 1 && (
-                          <button onClick={() => { setDevParcialMode(true); if (pendientesHeader.length === 1) setFormDevParcial(f => ({ ...f, notas: pendientesHeader[0].label })) }} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
+                        {/* Para no-libros mantener Marcar devuelto ya que no tienen tab Prestados a */}
+                        {!esLibroBien && (
+                          <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
                         )}
-                        <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
                       </div>
                     )
                   )
