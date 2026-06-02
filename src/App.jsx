@@ -113,11 +113,12 @@ export default function App() {
     eliminarUsuario: esAdmin || !!p.eliminar_usuario,
   }
   const permisosComp = {
-    ver:     esAdmin || !!p.ver_compensatorios,
+    ver:      esAdmin || !!p.ver_compensatorios,
     gestionar:esAdmin || !!p.gestionar_compensatorios,
-    crear:   esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
-    editar:  esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
-    eliminar:esAdmin || !!p.eliminar_compensatorios,
+    crear:    esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
+    editar:   esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
+    eliminar: esAdmin || !!p.eliminar_compensatorios,
+    exportar: esAdmin || !!p.exportar_compensatorios,
   }
   const puedeVerCompensatorios  = permisosComp.ver
   const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
