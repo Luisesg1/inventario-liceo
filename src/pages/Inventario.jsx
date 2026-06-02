@@ -3890,7 +3890,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 })()}
 
                 {/* Confirmación devolución total */}
-                {confirmDevolucion && !devParcialMode ? (
+                {confirmDevolucion && !devParcialMode && (!esLibroBien || totalActivoHeader > 0) ? (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '12px 14px', marginBottom: 14 }}>
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#166534', display: 'block', marginBottom: 5 }}>Nota de devolución (opcional)</label>
                     <input value={notaDevolucion} onChange={e => setNotaDevolucion(e.target.value)} placeholder="ej: Devuelto en buen estado" style={{ ...inStyle, marginBottom: 10 }} autoFocus />
@@ -3903,13 +3903,20 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   </div>
                 ) : (
                   !prestarMasMode && !devParcialMode && (
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
-                      <button onClick={cerrarModalPrestamo} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
-                      {esLibroBien && (prestamoBien.cantidad ?? 1) > 1 && (
-                        <button onClick={() => setDevParcialMode(true)} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
-                      )}
-                      <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
-                    </div>
+                    esLibroBien && totalActivoHeader === 0 ? (
+                      <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <p style={{ margin: 0, fontSize: 13, color: '#166534', fontWeight: 600 }}>✅ Este préstamo ya fue devuelto completamente.</p>
+                        <button onClick={cerrarModalPrestamo} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>Cerrar</button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
+                        <button onClick={cerrarModalPrestamo} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
+                        {esLibroBien && totalActivoHeader > 1 && (
+                          <button onClick={() => setDevParcialMode(true)} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
+                        )}
+                        <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
+                      </div>
+                    )
                   )
                 )}
               </>
