@@ -1545,6 +1545,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       const { error } = await supabase.rpc('devolver_prestamo', {
         p_prestamo_id: prestamoBien.id,
         p_devuelto_por: usuario.nombre,
+        p_restaurar_stock: true,
       })
       console.log('[marcarDevuelto] rpc result', { error })
       if (error) console.error('[marcarDevuelto] RPC ERROR:', error.code, error.message, error.details, error.hint)
@@ -1624,6 +1625,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       const { error } = await supabase.rpc('devolver_prestamo', {
         p_prestamo_id: prestamoBien.id,
         p_devuelto_por: usuario.nombre,
+        p_restaurar_stock: true,
       })
       console.log('[_ejecutarDevolucion] rpc devolver_prestamo result', { error })
       if (error) return false
