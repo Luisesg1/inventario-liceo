@@ -1411,6 +1411,39 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     win.document.close()
   }
 
+  // ── Parser de historial de préstamo desde las notas ─────────────────────
+  // Incluye a la persona original (prestado_a) como primera entrada del mapa,
+  // usando pb.cantidad como su base prestada. Las entradas adicionales provienen
+  // de las líneas "Se agregaron / Se devolvieron" en las notas.
+  // Este cálculo NO depende de que prestamos.cantidad esté actualizado en BD.
+  const parsearPrestadosA = (pb) => {
+    if (!pb) return []
+    const initialLabel = pb.prestado_a + (pb.cargo ? ` · ${pb.cargo}` : '')
+    const lineas = (pb.notas ?? '').split('\n').map(l => l.trim()).filter(Boolean)
+    // Semilla: persona original con la cantidad base del préstamo
+    const map = new Map([[initialLabel, { prestado: pb.cantidad ?? 1, devuelto: 0 }]])
+    for (const linea of lineas) {
+      const mAgr = linea.match(/^Se agregaron (\d+) unidades? al préstamo\. (.+)$/)
+      if (mAgr) {
+        const qty = parseInt(mAgr[1]); const curso = mAgr[2].trim()
+        const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
+        map.set(curso, { ...cur, prestado: cur.prestado + qty }); continue
+      }
+      const mDev = linea.match(/^Se devolvieron (\d+) unidades?\. (.+)$/)
+      if (mDev) {
+        const qty = parseInt(mDev[1]); const curso = mDev[2].trim()
+        const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
+        map.set(curso, { ...cur, devuelto: cur.devuelto + qty })
+      }
+    }
+    return [...map.entries()].map(([label, d]) => ({
+      label,
+      prestado: d.prestado,
+      devuelto: d.devuelto,
+      pendiente: Math.max(0, d.prestado - d.devuelto),
+    }))
+  }
+
   const cerrarModalPrestamo = () => {
     setModalPrestamo(null)
     setFormPrestamo({ prestado_a: '', cargo: '', fecha_prestamo: new Date().toISOString().slice(0,10), notas: '', cantidad: 1 })
@@ -1494,7 +1527,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     if (!prestamoBien) return
     const bienId = modalPrestamo?.id ?? verDetalle?.id
     const esLibroBien = esLibro(modalPrestamo?.categoria ?? verDetalle?.categoria)
-    const cantidadRestaurar = prestamoBien.cantidad ?? 1
+    // Calcular total pendiente REAL desde notas (prestamoBien.cantidad puede ser incorrecto en BD)
+    const entriesActuales = parsearPrestadosA(prestamoBien)
+    const cantidadRestaurar = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
+
+    // Corregir prestamos.cantidad en BD antes del RPC para que el RPC restaure el stock correcto
+    await supabase.from('prestamos').update({ cantidad: cantidadRestaurar }).eq('id', prestamoBien.id)
 
     const { error } = await supabase.rpc('devolver_prestamo', {
       p_prestamo_id: prestamoBien.id,
@@ -1540,7 +1578,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const bien = modalPrestamo
     const bienId = bien.id
     const esLibroBien = esLibro(bien.categoria)
-    const maxDev = prestamoBien.cantidad ?? 1
+    // Calcular total pendiente REAL desde notas (prestamoBien.cantidad puede ser incorrecto en BD)
+    const entriesActuales = parsearPrestadosA(prestamoBien)
+    const totalPending = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
+    const maxDev = totalPending
     if (cantidadDev < 1 || cantidadDev > maxDev) return false
     const nuevaCantidadPrestamo = maxDev - cantidadDev
     const notaMovimiento = `Se devolvieron ${cantidadDev} ${cantidadDev === 1 ? 'unidad' : 'unidades'}. ${nota}`
@@ -3778,7 +3819,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
                 {/* Panel devolución parcial */}
                 {devParcialMode && !confirmDevolucion && (() => {
-                  const maxDev = prestamoBien.cantidad ?? 1
+                  // maxDev = total pendiente real calculado desde notas
+                  const maxDev = parsearPrestadosA(prestamoBien).reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
                   const cantDevNum = parseInt(formDevParcial.cantidad, 10) || 0
                   const cantDevInvalida = cantDevNum < 1 || cantDevNum > maxDev
                   const notaDevVacia = !formDevParcial.notas.trim()
@@ -3911,37 +3953,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
             {/* Sección inferior con pestañas */}
             {!cargandoPrestamo && (() => {
-              // ── Parser de "Prestados a" desde las notas del préstamo activo ──
-              const parsearPrestadosA = (pb) => {
-                if (!pb) return []
-                const lineas = (pb.notas ?? '').split('\n').map(l => l.trim()).filter(Boolean)
-                const map = new Map()
-                for (const linea of lineas) {
-                  const mAgr = linea.match(/^Se agregaron (\d+) unidades? al préstamo\. (.+)$/)
-                  if (mAgr) {
-                    const qty = parseInt(mAgr[1]); const curso = mAgr[2].trim()
-                    const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
-                    map.set(curso, { ...cur, prestado: cur.prestado + qty }); continue
-                  }
-                  const mDev = linea.match(/^Se devolvieron (\d+) unidades?\. (.+)$/)
-                  if (mDev) {
-                    const qty = parseInt(mDev[1]); const curso = mDev[2].trim()
-                    const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
-                    map.set(curso, { ...cur, devuelto: cur.devuelto + qty })
-                  }
-                }
-                const totalPendienteMapa = [...map.values()].reduce((s, e) => s + Math.max(0, e.prestado - e.devuelto), 0)
-                const initialPendiente = Math.max(0, (pb.cantidad ?? 1) - totalPendienteMapa)
-                const entries = []
-                const initialLabel = pb.prestado_a + (pb.cargo ? ` · ${pb.cargo}` : '')
-                if (initialPendiente > 0 || !map.size) {
-                  entries.push({ label: initialLabel, prestado: null, devuelto: null, pendiente: initialPendiente })
-                }
-                for (const [curso, d] of map.entries()) {
-                  entries.push({ label: curso, prestado: d.prestado, devuelto: d.devuelto, pendiente: Math.max(0, d.prestado - d.devuelto) })
-                }
-                return entries
-              }
               const esPrestadosTab = prestamoBien && (tabHistorial === 'prestados' || (tabHistorial === null))
               const tabActiva = prestamoBien ? (tabHistorial ?? 'prestados') : 'devueltos'
               const entriesPrestados = parsearPrestadosA(prestamoBien)
@@ -4029,17 +4040,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
                 {/* Pestaña: Prestados a */}
                 {tabActiva === 'prestados' && prestamoBien && (() => {
-                  const totalActivo = prestamoBien.cantidad ?? 1
-                  const sumPend = entriesPrestados.reduce((s, e) => s + e.pendiente, 0)
-                  const descuadre = sumPend !== totalActivo
-                  // Mostrar SOLO personas con pendiente > 0
+                  // Total real = suma de pendientes de todas las personas (no prestamoBien.cantidad que puede estar desactualizado)
                   const entriesPendientes = entriesPrestados.filter(e => e.pendiente > 0)
+                  const totalActivo = entriesPrestados.reduce((s, e) => s + e.pendiente, 0)
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {/* Resumen: total real del préstamo activo */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 7, fontSize: 11 }}>
+                      {/* Resumen: total real del préstamo activo (calculado desde notas) */}
+                      <div style={{ padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 7, fontSize: 11 }}>
                         <span style={{ color: '#92400e', fontWeight: 600 }}>📚 Total activo: <strong>{totalActivo}</strong> {totalActivo === 1 ? 'unidad' : 'unidades'}</span>
-                        {descuadre && <span style={{ color: '#b45309', fontStyle: 'italic' }}>⚠ Historial aproximado</span>}
                       </div>
                       {/* Filas por curso — solo pendientes */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 200, overflowY: 'auto' }}>
