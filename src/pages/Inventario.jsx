@@ -191,6 +191,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [bienesConPrestamo, setBienesConPrestamo] = useState(new Map())
   const [confirmDevolucion, setConfirmDevolucion] = useState(false)
   const [notaDevolucion, setNotaDevolucion]     = useState('')
+  const [guardandoDevolucion, setGuardandoDevolucion] = useState(false)
   const [editandoHistorial, setEditandoHistorial] = useState(null) // id del prestamo en edición
   const [formEditHistorial, setFormEditHistorial] = useState({})
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
@@ -1450,6 +1451,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setVerHistorial(false)
     setConfirmDevolucion(false)
     setNotaDevolucion('')
+    setGuardandoDevolucion(false)
     setEditandoHistorial(null)
     setConfirmBorrarHistorial(null)
     setPrestarMasMode(false)
@@ -1524,52 +1526,67 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const marcarDevuelto = async () => {
-    if (!prestamoBien) return
+    if (!prestamoBien || guardandoDevolucion) return
     const bienId = modalPrestamo?.id ?? verDetalle?.id
     const esLibroBien = esLibro(modalPrestamo?.categoria ?? verDetalle?.categoria)
-    // Calcular total pendiente REAL desde notas (prestamoBien.cantidad puede ser incorrecto en BD)
-    const entriesActuales = parsearPrestadosA(prestamoBien)
-    const cantidadRestaurar = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
+    setGuardandoDevolucion(true)
+    try {
+      // Calcular total pendiente REAL desde notas (prestamoBien.cantidad puede ser incorrecto en BD)
+      const entriesActuales = parsearPrestadosA(prestamoBien)
+      const cantidadRestaurar = entriesActuales.reduce((s, e) => s + e.pendiente, 0) || (prestamoBien.cantidad ?? 1)
 
-    // Corregir prestamos.cantidad en BD antes del RPC para que el RPC restaure el stock correcto
-    await supabase.from('prestamos').update({ cantidad: cantidadRestaurar }).eq('id', prestamoBien.id)
+      // Corregir prestamos.cantidad en BD antes del RPC para que restaure el stock correcto
+      if (cantidadRestaurar > 0) {
+        await supabase.from('prestamos').update({ cantidad: cantidadRestaurar }).eq('id', prestamoBien.id)
+      }
 
-    const { error } = await supabase.rpc('devolver_prestamo', {
-      p_prestamo_id: prestamoBien.id,
-      p_devuelto_por: usuario.nombre,
-    })
-    if (!error) {
-      if (notaDevolucion.trim()) {
-        await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
-      }
-      // Leer stock real del DB (RPC ya aplicó LEAST(cantidad_total, ...) — nunca supera total)
-      if (esLibroBien) {
-        const { data: bienActual } = await supabase.from('bienes').select('cantidad,cantidad_total').eq('id', bienId).single()
-        const newCantidad = bienActual ? bienActual.cantidad : (modalPrestamo?.cantidad ?? 0) + cantidadRestaurar
-        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad, cantidad_total: bienActual?.cantidad_total ?? b.cantidad_total } : b))
-        setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
-      }
-      // Recargar historial desde DB para que "Ya devueltos" muestre el préstamo recién cerrado
-      const { data: hist } = await supabase.from('prestamos')
-        .select('*')
-        .eq('bien_id', bienId)
-        .not('fecha_devolucion_real', 'is', null)
-        .order('fecha_prestamo', { ascending: false })
-      setHistorialPrestamos(hist ?? [])
-      setPrestamoBien(null)
-      setConfirmDevolucion(false)
-      setNotaDevolucion('')
-      setTabHistorial('devueltos')
-      setBienesConPrestamo(prev => {
-        const m = new Map(prev)
-        const ex = m.get(bienId)
-        if (!ex) return m
-        const newCount = ex.count - 1
-        const newCantidadPrestada = Math.max(0, (ex.cantidadPrestada ?? cantidadRestaurar) - cantidadRestaurar)
-        if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCantidadPrestada, fecha: ex.fecha })
-        else m.delete(bienId)
-        return m
+      const { error } = await supabase.rpc('devolver_prestamo', {
+        p_prestamo_id: prestamoBien.id,
+        p_devuelto_por: usuario.nombre,
       })
+
+      // Tratar "ya devuelto" como éxito: el préstamo fue cerrado por una
+      // operación anterior ("Todos") que actualizó BD pero no el estado local
+      const yaDevuelto = error?.message?.includes('ya devuelto') ||
+                         error?.message?.includes('no encontrado') ||
+                         error?.code === 'P0001'
+      if (!error || yaDevuelto) {
+        if (!error && notaDevolucion.trim()) {
+          await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
+        }
+        // Leer stock real del DB (RPC ya aplicó LEAST(cantidad_total, ...) — nunca supera total)
+        if (esLibroBien) {
+          const { data: bienActual } = await supabase.from('bienes').select('cantidad,cantidad_total').eq('id', bienId).single()
+          if (bienActual) {
+            const newCantidad = bienActual.cantidad
+            setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad, cantidad_total: bienActual.cantidad_total ?? b.cantidad_total } : b))
+            setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
+          }
+        }
+        // Recargar historial desde DB
+        const { data: hist } = await supabase.from('prestamos')
+          .select('*')
+          .eq('bien_id', bienId)
+          .not('fecha_devolucion_real', 'is', null)
+          .order('fecha_prestamo', { ascending: false })
+        setHistorialPrestamos(hist ?? [])
+        setPrestamoBien(null)
+        setConfirmDevolucion(false)
+        setNotaDevolucion('')
+        setTabHistorial('devueltos')
+        setBienesConPrestamo(prev => {
+          const m = new Map(prev)
+          const ex = m.get(bienId)
+          if (!ex) return m
+          const newCount = ex.count - 1
+          const newCantidadPrestada = Math.max(0, (ex.cantidadPrestada ?? cantidadRestaurar) - cantidadRestaurar)
+          if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCantidadPrestada, fecha: ex.fecha })
+          else m.delete(bienId)
+          return m
+        })
+      }
+    } finally {
+      setGuardandoDevolucion(false)
     }
   }
 
@@ -3878,8 +3895,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     <label style={{ fontSize: 12, fontWeight: 600, color: '#166534', display: 'block', marginBottom: 5 }}>Nota de devolución (opcional)</label>
                     <input value={notaDevolucion} onChange={e => setNotaDevolucion(e.target.value)} placeholder="ej: Devuelto en buen estado" style={{ ...inStyle, marginBottom: 10 }} autoFocus />
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                      <button onClick={() => { setConfirmDevolucion(false); setNotaDevolucion('') }} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
-                      <button onClick={marcarDevuelto} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓ Confirmar devolución total</button>
+                      <button onClick={() => { setConfirmDevolucion(false); setNotaDevolucion('') }} disabled={guardandoDevolucion} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, color: '#6b7280' }}>Cancelar</button>
+                      <button onClick={marcarDevuelto} disabled={guardandoDevolucion} style={{ padding: '6px 16px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, opacity: guardandoDevolucion ? 0.6 : 1 }}>
+                        {guardandoDevolucion ? 'Guardando…' : '✓ Confirmar devolución total'}
+                      </button>
                     </div>
                   </div>
                 ) : (
