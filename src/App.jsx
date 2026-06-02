@@ -124,8 +124,10 @@ export default function App() {
   const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
+  const puedeGestionarAjustes   = esAdmin || !!p.gestionar_ajustes
+  const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos
 
-  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || pagina === 'ajustes' || pagina === 'campos'
+  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || (pagina === 'ajustes' && !puedeGestionarAjustes) || (pagina === 'campos' && !puedeGestionarCampos)
     || (pagina === 'permisos'         && !puedeGestionarAusencias)
     || (pagina === 'compensatorios'   && !puedeVerCompensatorios)
     || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
@@ -322,6 +324,8 @@ export default function App() {
       puedeVerCompensatorios={puedeVerCompensatorios}
       puedeGestionarAusencias={puedeGestionarAusencias}
       puedeAccederUsuarios={puedeAccederUsuarios}
+      puedeGestionarAjustes={puedeGestionarAjustes}
+      puedeGestionarCampos={puedeGestionarCampos}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}

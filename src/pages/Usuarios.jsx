@@ -68,6 +68,9 @@ const ACCIONES = [
   { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
   { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
+  // Configuración del sistema
+  { key: 'gestionar_ajustes', label: 'Personalizar sistema',            labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
+  { key: 'gestionar_campos',  label: 'Gestionar campos por categoría', labelCorto: 'Campos',    desc: 'Permite configurar los campos personalizados de cada categoría del inventario.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -99,7 +102,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
-    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo'],
+    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'gestionar_ajustes', 'gestionar_campos'],
   },
   {
     key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,

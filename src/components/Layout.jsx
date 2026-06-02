@@ -60,6 +60,8 @@ export default function Layout({
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
   puedeAccederUsuarios = false,
+  puedeGestionarAjustes = false,
+  puedeGestionarCampos = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -685,7 +687,7 @@ export default function Layout({
           </>
 
           {/* Ajustes con submenú */}
-          {(esAdmin || puedeAccederUsuarios) && (
+          {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarCampos) && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
@@ -713,7 +715,7 @@ export default function Layout({
                     exit="closed"
                     style={{ overflow: 'hidden' }}
                   >
-                    {esAdmin && (
+                    {(esAdmin || puedeGestionarAjustes) && (
                       <div
                         className={`nav-subitem ${paginaActual === 'ajustes' ? 'active' : ''}`}
                         onClick={() => handleNav('ajustes')}
@@ -722,7 +724,7 @@ export default function Layout({
                         Personalizar
                       </div>
                     )}
-                    {esAdmin && (
+                    {(esAdmin || puedeGestionarCampos) && (
                       <div
                         className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
                         onClick={() => handleNav('campos')}
