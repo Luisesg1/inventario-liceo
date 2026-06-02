@@ -5,8 +5,10 @@ import {
   Gift, Plus, X, Search, Pencil, Trash2,
   CalendarDays, ChevronDown, Loader2, AlertTriangle,
   TrendingUp, CheckCircle2, Clock, Eye,
-  ChevronLeft, ChevronRight as ChevronRightIcon,
+  ChevronLeft, ChevronRight as ChevronRightIcon, Download,
 } from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
 import './Compensatorios.css'
 
@@ -79,9 +81,10 @@ function estadoEfectivo(rec) {
 export default function Compensatorios({ usuario, permisos = {} }) {
   const esAdmin      = usuario?.rol === 'admin'
   const puedeGest    = esAdmin || !!permisos.gestionar  // gestionar es el campo genérico heredado
-  const puedeCrear   = esAdmin || !!(permisos.crear  ?? permisos.gestionar)
-  const puedeEditar  = esAdmin || !!(permisos.editar ?? permisos.gestionar)
-  const puedeElim    = esAdmin || !!permisos.eliminar
+  const puedeCrear    = esAdmin || !!(permisos.crear  ?? permisos.gestionar)
+  const puedeEditar   = esAdmin || !!(permisos.editar ?? permisos.gestionar)
+  const puedeElim     = esAdmin || !!permisos.eliminar
+  const puedeExportar = esAdmin || !!permisos.exportar
 
   const [registros,  setRegistros]  = useState([])
   const [usuarios,   setUsuarios]   = useState([])
@@ -102,6 +105,11 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   // Paginación
   const POR_PAGINA = 10
   const [pagActual, setPagActual]   = useState(1)
+
+  // Exportación
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [seleccionados,  setSeleccionados]  = useState(new Set())
+  const exportMenuRef = useRef(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -134,8 +142,18 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   // ── Filtrado ──────────────────────────────────────────
   const norm = s => s?.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '') ?? ''
 
-  // Reset página al filtrar
+  // Cierra menú de exportación al hacer click fuera
+  useEffect(() => {
+    function handler(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Reset página y selección al filtrar
   useEffect(() => { setPagActual(1) }, [busq, filtTipo, filtEstado])
+  useEffect(() => { setSeleccionados(new Set()) }, [busq, filtTipo, filtEstado])
 
   const filas = registros.filter(r => {
     if (!esAdmin && r.usuario_id !== usuario?.id) return false
@@ -191,6 +209,102 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   const pagSegura  = Math.min(pagActual, totalPags)
   const filasPag   = filas.slice((pagSegura - 1) * POR_PAGINA, pagSegura * POR_PAGINA)
 
+  function toggleSeleccion(id) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleTodos() {
+    const todosVisibles = filas.every(r => seleccionados.has(r.id))
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      if (todosVisibles) filas.forEach(r => next.delete(r.id))
+      else filas.forEach(r => next.add(r.id))
+      return next
+    })
+  }
+
+  function exportarCompensatorios(formato) {
+    setExportMenuOpen(false)
+    const datos = seleccionados.size > 0
+      ? filas.filter(r => seleccionados.has(r.id))
+      : filas
+    if (datos.length === 0) return
+
+    const headers = ['Usuario', 'RUT', 'Tipo', 'Días generados', 'Saldo restante', 'Fecha ganado', 'Vencimiento', 'Estado', 'Motivo', 'Observaciones']
+    const rows = datos.map(r => {
+      const u      = r.usuario
+      const estado = estadoEfectivo(r)
+      return {
+        'Usuario':          u?.nombre ?? '—',
+        'RUT':              u?.rut ?? '—',
+        'Tipo':             TIPO_MAP[r.tipo]?.label ?? r.tipo,
+        'Días generados':   String(r.cantidad),
+        'Saldo restante':   String(r.saldo_restante ?? r.cantidad),
+        'Fecha ganado':     fmtFecha(r.fecha_ganado),
+        'Vencimiento':      r.vence_en ? fmtFecha(r.vence_en) : 'Sin vencimiento',
+        'Estado':           { disponible: 'Disponible', usado: 'Usado', vencido: 'Vencido' }[estado] ?? estado,
+        'Motivo':           r.motivo ?? '—',
+        'Observaciones':    r.observaciones ?? '—',
+      }
+    })
+
+    if (formato === 'csv') {
+      const csv = [
+        headers.map(h => `"${h}"`).join(','),
+        ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(',')),
+      ].join('\n')
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'compensatorios.csv'; a.click()
+      URL.revokeObjectURL(url)
+
+    } else if (formato === 'excel') {
+      const table = `<table><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${
+        rows.map(r => `<tr>${headers.map(h => `<td>${r[h] ?? ''}</td>`).join('')}</tr>`).join('')
+      }</table>`
+      const blob = new Blob([table], { type: 'application/vnd.ms-excel;charset=utf-8;' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = 'compensatorios.xls'; a.click()
+      URL.revokeObjectURL(url)
+
+    } else if (formato === 'pdf') {
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(14)
+      doc.setTextColor(79, 70, 229)
+      doc.text('Días Compensatorios', 14, 16)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text(
+        `Exportado el ${new Date().toLocaleDateString('es-CL')} · ${datos.length} ${datos.length === 1 ? 'registro' : 'registros'}`,
+        14, 22,
+      )
+      autoTable(doc, {
+        startY: 27,
+        head: [headers],
+        body: rows.map(r => headers.map(h => r[h] ?? '')),
+        styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 34 }, 1: { cellWidth: 22 }, 8: { cellWidth: 38 }, 9: { cellWidth: 38 } },
+        margin: { left: 14, right: 14 },
+        didDrawPage: (data) => {
+          doc.setFontSize(7.5)
+          doc.setTextColor(148, 163, 184)
+          doc.text(`Pág. ${data.pageNumber}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' })
+        },
+      })
+      doc.save('compensatorios.pdf')
+    }
+  }
+
   return (
     <div className="comp-page">
       {/* Header */}
@@ -230,8 +344,61 @@ export default function Compensatorios({ usuario, permisos = {} }) {
         <div className="comp-card-header">
           <div>
             <p className="comp-card-title">Historial de días compensatorios</p>
-            <p className="comp-card-desc">{filas.length} registro{filas.length !== 1 ? 's' : ''}</p>
+            <p className="comp-card-desc">
+              {filas.length} registro{filas.length !== 1 ? 's' : ''} encontrado{filas.length !== 1 ? 's' : ''}
+              {seleccionados.size > 0 && ` · ${seleccionados.size} seleccionado${seleccionados.size !== 1 ? 's' : ''}`}
+            </p>
           </div>
+          {puedeExportar && filas.length > 0 && (
+            <div style={{ position: 'relative' }} ref={exportMenuRef}>
+              <button
+                className="comp-btn-secondary"
+                onClick={() => setExportMenuOpen(prev => !prev)}
+                style={seleccionados.size > 0
+                  ? { display: 'flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1.5px solid #86efac', color: '#15803d' }
+                  : { display: 'flex', alignItems: 'center', gap: 6 }}
+                title={seleccionados.size > 0
+                  ? `Exportar ${seleccionados.size} seleccionado${seleccionados.size !== 1 ? 's' : ''}`
+                  : `Exportar ${filas.length} registro${filas.length !== 1 ? 's' : ''}`}
+              >
+                <Download size={13} strokeWidth={2.5} />
+                {seleccionados.size > 0 ? `Exportar (${seleccionados.size})` : 'Exportar'}
+                <ChevronDown size={12} strokeWidth={2.5} style={{ transition: 'transform 0.18s', transform: exportMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+              </button>
+              {exportMenuOpen && (
+                <div style={{
+                  position: 'absolute', right: 0, top: 'calc(100% + 4px)',
+                  background: '#fff', border: '1px solid #e2e8f0', borderRadius: 9,
+                  boxShadow: '0 6px 24px rgba(0,0,0,0.10)', zIndex: 200,
+                  minWidth: 164, overflow: 'hidden', padding: '4px 0',
+                }}>
+                  <div style={{ padding: '7px 14px 5px', fontSize: 11, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', marginBottom: 2 }}>
+                    {seleccionados.size > 0
+                      ? `${seleccionados.size} seleccionado${seleccionados.size !== 1 ? 's' : ''}`
+                      : `${filas.length} registro${filas.length !== 1 ? 's' : ''} filtrados`}
+                  </div>
+                  {[
+                    { label: 'PDF',   fmt: 'pdf',   icon: '📄' },
+                    { label: 'Excel', fmt: 'excel', icon: '📊' },
+                    { label: 'CSV',   fmt: 'csv',   icon: '📋' },
+                  ].map(({ label, fmt, icon }) => (
+                    <button key={fmt} onClick={() => exportarCompensatorios(fmt)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                        padding: '9px 14px', background: 'none', border: 'none',
+                        cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left',
+                        fontFamily: 'inherit', transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <span>{icon}</span>{label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filtros */}
@@ -278,6 +445,18 @@ export default function Compensatorios({ usuario, permisos = {} }) {
               <table className="comp-table">
                 <thead>
                   <tr>
+                    {puedeExportar && (
+                      <th style={{ width: 36, textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={filas.length > 0 && filas.every(r => seleccionados.has(r.id))}
+                          ref={el => { if (el) el.indeterminate = seleccionados.size > 0 && !filas.every(r => seleccionados.has(r.id)) }}
+                          onChange={toggleTodos}
+                          title="Seleccionar todos"
+                          style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#4f46e5' }}
+                        />
+                      </th>
+                    )}
                     {esAdmin && <th>Usuario</th>}
                     <th>Tipo</th>
                     <th>Días</th>
@@ -296,6 +475,9 @@ export default function Compensatorios({ usuario, permisos = {} }) {
                         esAdmin={esAdmin}
                         puedeEditar={puedeEditar}
                         puedeElim={puedeElim}
+                        puedeExportar={puedeExportar}
+                        seleccionado={seleccionados.has(r.id)}
+                        onToggle={() => toggleSeleccion(r.id)}
                         onVer={() => setVerDetalle(r)}
                         onEditar={() => { setEditData(r); setModalOpen(true) }}
                         onEliminar={() => setEliminar(r)}
@@ -433,7 +615,7 @@ function KPICard({ icon, variant, value, label }) {
 
 // ── Fila tabla ────────────────────────────────────────────
 
-function FilaRegistro({ r, esAdmin, puedeEditar, puedeElim, onVer, onEditar, onEliminar }) {
+function FilaRegistro({ r, esAdmin, puedeEditar, puedeElim, puedeExportar, seleccionado, onToggle, onVer, onEditar, onEliminar }) {
   const u      = r.usuario
   const estado = estadoEfectivo(r)
   const tipo   = TIPO_MAP[r.tipo]
@@ -458,8 +640,20 @@ function FilaRegistro({ r, esAdmin, puedeEditar, puedeElim, onVer, onEditar, onE
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
-      style={{ display: 'table-row' }}
+      style={{ display: 'table-row', background: seleccionado ? 'rgba(99,102,241,0.04)' : undefined }}
     >
+      {puedeExportar && (
+        <td style={{ textAlign: 'center', paddingLeft: 8 }}>
+          <input
+            type="checkbox"
+            checked={!!seleccionado}
+            onChange={onToggle}
+            onClick={e => e.stopPropagation()}
+            title="Seleccionar para exportar"
+            style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#4f46e5' }}
+          />
+        </td>
+      )}
       {esAdmin && (
         <td>
           <div className="comp-user-cell">

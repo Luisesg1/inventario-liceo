@@ -1986,7 +1986,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const puedeCrear      = !modoMisAusencias && (permisosAcceso.crear    !== undefined ? permisosAcceso.crear    : puedeGestionar)
   const puedeEditar     = !modoMisAusencias && (permisosAcceso.editar   !== undefined ? permisosAcceso.editar   : puedeGestionar)
   const puedeEliminar   = !modoMisAusencias && (permisosAcceso.eliminar !== undefined ? permisosAcceso.eliminar : esAdmin)
-  const puedeExportar   = permisosAcceso.exportar !== undefined ? permisosAcceso.exportar : esAdmin
+  const puedeExportar   = modoMisAusencias || (permisosAcceso.exportar !== undefined ? permisosAcceso.exportar : esAdmin)
   const [usuarios,        setUsuarios]        = useState([])
   const [permisos,        setPermisos]        = useState([])
   const [cargando,        setCargando]        = useState(true)
@@ -1999,6 +1999,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const [busqueda,        setBusqueda]        = useState('')
   const [filtroTipo,      setFiltroTipo]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')
+  const [filtroEstado,    setFiltroEstado]    = useState('')
   const [expandidos,      setExpandidos]      = useState(new Set()) // keys de grupos abiertos
   const [paginaP,         setPaginaP]         = useState(1)
   const [seleccionados,   setSeleccionados]   = useState(new Set()) // IDs de ausencias seleccionadas para exportar
@@ -2040,7 +2041,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }, [])
 
   // Limpia selección al cambiar filtros o página
-  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, paginaP, añoSeleccionado])
+  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, filtroEstado, paginaP, añoSeleccionado])
 
   useEffect(() => { cargarDatos(); cargarDiasInhabilitados() }, [])
 
@@ -2635,13 +2636,27 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     if (busqueda.trim()) {
       const q    = normStr(busqueda)
       const qRut = normRut(busqueda)
-      const ok   = normStr(u.nombre ?? '').includes(q)
-        || normStr(u.email ?? '').includes(q)
-        || (qRut.length > 1 && normRut(u.rut ?? '').includes(qRut))
-      if (!ok) return false
+      if (modoMisAusencias) {
+        // En "Mis ausencias" buscar por tipo, jornada o notas/motivo
+        const ok = normStr(TIPO_LABEL[p.tipo] ?? '').includes(q)
+          || normStr(JORNADA_LABEL[p.jornada] ?? '').includes(q)
+          || normStr(p.notas ?? '').includes(q)
+        if (!ok) return false
+      } else {
+        const ok = normStr(u.nombre ?? '').includes(q)
+          || normStr(u.email ?? '').includes(q)
+          || (qRut.length > 1 && normRut(u.rut ?? '').includes(qRut))
+        if (!ok) return false
+      }
     }
     if (filtroTipo && p.tipo !== filtroTipo) return false
-    if (filtroRol  && (p.usuario?.rol ?? null) !== filtroRol) return false
+    if (filtroRol  && !modoMisAusencias && (p.usuario?.rol ?? null) !== filtroRol) return false
+    if (filtroEstado) {
+      const hoy = new Date().toISOString().slice(0, 10)
+      if (filtroEstado === 'futura'  && !(p.fecha_inicio > hoy))                           return false
+      if (filtroEstado === 'activa'  && !(p.fecha_inicio <= hoy && p.fecha_fin >= hoy))    return false
+      if (filtroEstado === 'pasada'  && !(p.fecha_fin < hoy))                              return false
+    }
     return true
   })
 
@@ -2905,20 +2920,26 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
 
         {/* ── Buscador + Filtros ── */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
-          {/* Búsqueda por nombre solo en modo gestión (no tiene sentido en mis ausencias) */}
-          {!modoMisAusencias && (
-            <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
-              <Search size={13} strokeWidth={2.5}
-                style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
-              <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-                placeholder="Buscar por nombre, RUT o email…"
-                style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
-            </div>
-          )}
+          {/* Búsqueda: por nombre/RUT/email en gestión, por tipo/notas en Mis ausencias */}
+          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
+            <Search size={13} strokeWidth={2.5}
+              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+            <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
+              placeholder={modoMisAusencias ? 'Buscar por tipo o motivo…' : 'Buscar por nombre, RUT o email…'}
+              style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
+          </div>
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
             style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
             <option value="">Todos los tipos</option>
             {TIPOS_PERMISO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+          {/* Filtro por estado temporal (pasada / activa / futura) */}
+          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
+            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+            <option value="">Todos los estados</option>
+            <option value="activa">En curso</option>
+            <option value="futura">Futura</option>
+            <option value="pasada">Pasada</option>
           </select>
           {/* Filtro por rol solo en modo gestión */}
           {!modoMisAusencias && (
@@ -2928,8 +2949,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
           )}
-          {(busqueda || filtroTipo || filtroRol) && (
-            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol('') }}
+          {(busqueda || filtroTipo || filtroRol || filtroEstado) && (
+            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol(''); setFiltroEstado('') }}
               style={{ padding: '6px 10px', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
               <X size={12} strokeWidth={2.5} /> Limpiar
             </button>
