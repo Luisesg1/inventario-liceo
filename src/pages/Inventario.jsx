@@ -1617,10 +1617,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       // Corregir prestamos.cantidad al total real pendiente ANTES del RPC
       // (el RPC usa ese valor para restaurar bienes.cantidad correctamente)
       await supabase.from('prestamos').update({ cantidad: totalPending, notas: notasActualizadas }).eq('id', prestamoBien.id)
+      // Actualizar estado local con las notas ya ANTES del RPC para que la UI
+      // quede consistente aunque el RPC falle (muestra "completamente devuelto")
+      setPrestamoBien(p => ({ ...p, notas: notasActualizadas, cantidad: totalPending }))
       const { error } = await supabase.rpc('devolver_prestamo', {
         p_prestamo_id: prestamoBien.id,
         p_devuelto_por: usuario.nombre,
       })
+      console.log('[_ejecutarDevolucion] rpc devolver_prestamo result', { error })
       if (error) return false
       await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
       // Leer stock real desde DB (RPC ya aplicó LEAST(cantidad_total, ...) — nunca supera total)
@@ -3916,7 +3920,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                     esLibroBien && totalActivoHeader === 0 ? (
                       <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                         <p style={{ margin: 0, fontSize: 13, color: '#166534', fontWeight: 600 }}>✅ Este préstamo ya fue devuelto completamente.</p>
-                        <button onClick={cerrarModalPrestamo} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 7, cursor: 'pointer', fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>Cerrar</button>
+                        <button
+                          onClick={marcarDevuelto}
+                          disabled={guardandoDevolucion}
+                          style={{ padding: '6px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, cursor: guardandoDevolucion ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', opacity: guardandoDevolucion ? 0.6 : 1 }}>
+                          {guardandoDevolucion ? 'Cerrando…' : '✓ Cerrar préstamo'}
+                        </button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
