@@ -724,15 +724,6 @@ export default function Layout({
                         Personalizar
                       </div>
                     )}
-                    {(esAdmin || puedeGestionarCampos) && (
-                      <div
-                        className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
-                        onClick={() => handleNav('campos')}
-                      >
-                        <span className="nav-subitem-dot" />
-                        Campos por categoría
-                      </div>
-                    )}
                     <div
                       className={`nav-subitem ${paginaActual === 'usuarios' ? 'active' : ''}`}
                       onClick={() => handleNav('usuarios')}
