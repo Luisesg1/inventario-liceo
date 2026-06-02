@@ -3775,7 +3775,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 .join('\n')
                 .trim()
               // Total activo real (suma de pendientes de todas las personas)
-              const totalActivoHeader = parsearPrestadosA(prestamoBien).reduce((s, e) => s + e.pendiente, 0)
+              const entriesHeader = parsearPrestadosA(prestamoBien)
+              const totalActivoHeader = entriesHeader.reduce((s, e) => s + e.pendiente, 0)
+              const pendientesHeader = entriesHeader.filter(e => e.pendiente > 0)
               return (
               <>
                 <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
@@ -3887,7 +3889,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                           )}
                         </div>
                         <div>
-                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>Quién devuelve * <span style={{ fontWeight: 400, color: '#9ca3af' }}>(ej: Curso 2B)</span></label>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 3 }}>
+                            Quién devuelve *{' '}
+                            {pendientesHeader.length > 1
+                              ? <span style={{ fontWeight: 400, color: '#9ca3af' }}>— usa exactamente: {pendientesHeader.map(e => `"${e.label}"`).join(' o ')}</span>
+                              : <span style={{ fontWeight: 400, color: '#9ca3af' }}>(ej: Curso 2B)</span>
+                            }
+                          </label>
                           <input
                             value={formDevParcial.notas}
                             onChange={e => setFormDevParcial(f => ({ ...f, notas: e.target.value }))}
@@ -3934,7 +3942,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: historialPrestamos.length > 0 ? 14 : 0 }}>
                         <button onClick={cerrarModalPrestamo} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #d1d5db', borderRadius: 8, cursor: 'pointer', fontSize: 13, color: '#6b7280' }}>Cerrar</button>
                         {esLibroBien && totalActivoHeader > 1 && (
-                          <button onClick={() => setDevParcialMode(true)} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
+                          <button onClick={() => { setDevParcialMode(true); if (pendientesHeader.length === 1) setFormDevParcial(f => ({ ...f, notas: pendientesHeader[0].label })) }} style={{ padding: '8px 16px', background: '#f3e8ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>↩ Devolver parcial</button>
                         )}
                         <button onClick={() => setConfirmDevolucion(true)} style={{ padding: '8px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Marcar devuelto</button>
                       </div>
