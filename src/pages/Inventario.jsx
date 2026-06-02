@@ -1105,6 +1105,10 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         base.cpu_generacion = ''
       }
     }
+    // Para libros: el campo editable es el TOTAL de inventario, no el disponible
+    if (esBiblioteca(bien.categoria) && bien.cantidad_total != null) {
+      base.cantidad = bien.cantidad_total
+    }
     setForm(base)
     setCamposExtra(bien.campos_extra || {})
     setErrores({})
@@ -1198,6 +1202,33 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     delete payload._pendiente
     delete payload._pendienteEdit
 
+
+    // Para libros: recalcular disponible = total - pendientes activos
+    if (esBiblioteca(form.categoria)) {
+      const nuevoCantidadTotal = parseInt(form.cantidad) || 1
+      payload.cantidad_total = nuevoCantidadTotal
+
+      if (editandoId !== null) {
+        // Calcular pendientes reales desde préstamos activos en DB
+        const { data: activosDB } = await supabase
+          .from('prestamos')
+          .select('prestado_a, cargo, cantidad, notas')
+          .eq('bien_id', editandoId)
+          .is('fecha_devolucion_real', null)
+        const pendientesActivos = (activosDB ?? []).reduce((sum, p) => {
+          return sum + parsearPrestadosA(p).reduce((s, e) => s + e.pendiente, 0)
+        }, 0)
+        if (nuevoCantidadTotal < pendientesActivos) {
+          setAviso(`No es posible establecer un total menor a las ${pendientesActivos} unidades actualmente prestadas.`)
+          setGuardando(false)
+          return
+        }
+        payload.cantidad = nuevoCantidadTotal - pendientesActivos
+      } else {
+        // Libro nuevo: sin préstamos activos, disponible = total
+        payload.cantidad = nuevoCantidadTotal
+      }
+    }
 
     // Helper: detectar error de red (sin conexión real aunque navigator.onLine diga true)
     const esErrorRed = (e) => e instanceof TypeError && e.message.toLowerCase().includes('fetch')
@@ -2195,7 +2226,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <input value={form.codigo} readOnly className="input-readonly" />
               </div>
               <div className="field">
-                <label>Cantidad</label>
+                <label>{esBiblioteca(form.categoria) ? 'Total en inventario' : 'Cantidad'}</label>
                 <input name="cantidad" type="number" min="1" value={form.cantidad} onChange={handleChange} />
               </div>
               <div className="field">
@@ -2705,7 +2736,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 <input value={form.codigo} readOnly className="input-readonly" />
               </div>
               <div className="field">
-                <label>Cantidad</label>
+                <label>{esBiblioteca(form.categoria) ? 'Total en inventario' : 'Cantidad'}</label>
                 <input name="cantidad" type="number" min="1" value={form.cantidad} onChange={handleChange} />
               </div>
               <div className="field">
