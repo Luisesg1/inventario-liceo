@@ -1057,6 +1057,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   // Confirmación de cambio de rol
   const [confirmCambioRol, setConfirmCambioRol] = useState(null) // { userId, nombreUsuario, rolActual, nuevoRol }
   const [aplicandoRol,     setAplicandoRol]     = useState(false)
+  const [mensajeRol,       setMensajeRol]       = useState({ tipo: '', texto: '' })
 
   // Panel activo: null | { id, modo: 'editar'|'permisos' }
   const [panelActivo, setPanelActivo] = useState(null)
@@ -1181,8 +1182,16 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     if (errRol)      console.error('[cambioRol] error actualizando rol:', errRol)
     if (errPermisos) console.error('[cambioRol] error actualizando permisos:', errPermisos)
     setUsuarios((prev) => prev.map((u) => u.id === userId ? { ...u, rol: nuevoRol } : u))
+    if (panelActivo?.id === userId) setPanelActivo(null)
     setConfirmCambioRol(null)
     setAplicandoRol(false)
+    if (!errRol && !errPermisos) {
+      setMensajeRol({ tipo: 'exito', texto: 'Rol y permisos actualizados correctamente.' })
+      setTimeout(() => setMensajeRol({ tipo: '', texto: '' }), 3500)
+    } else {
+      setMensajeRol({ tipo: 'error', texto: 'Hubo un error al actualizar. Revisa la consola.' })
+      setTimeout(() => setMensajeRol({ tipo: '', texto: '' }), 4000)
+    }
   }
 
   async function eliminarUsuario(userId) {
@@ -1263,7 +1272,24 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
       return
     }
 
-    // 2. Si cambió email o hay nueva contraseña, actualizar en Supabase Auth
+    // 2. Si cambió el rol, reemplazar permisos del usuario por los del nuevo rol
+    const rolCambio = editRol !== uOriginal?.rol
+    if (rolCambio) {
+      const perfilNuevo = PERMISOS_POR_ROL[editRol] ?? { permisos: { ...PERMISOS_VACIO }, categorias: ['todos'] }
+      const { error: errPermisos } = await supabase
+        .from('permisos_usuario')
+        .upsert(
+          { usuario_id: userId, permisos: perfilNuevo.permisos, categorias: perfilNuevo.categorias },
+          { onConflict: 'usuario_id' }
+        )
+      if (errPermisos) {
+        setMensajeEdit({ tipo: 'error', texto: 'Error al actualizar permisos: ' + errPermisos.message })
+        setGuardandoEdit(false)
+        return
+      }
+    }
+
+    // 3. Si cambió email o hay nueva contraseña, actualizar en Supabase Auth
     const emailCambio    = editEmail.trim().toLowerCase() !== uOriginal?.email?.toLowerCase()
     const passwordCambio = editPassword.trim().length > 0
 
@@ -1294,7 +1320,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
       }
     }
 
-    setMensajeEdit({ tipo: 'exito', texto: 'Cambios guardados.' })
+    setMensajeEdit({ tipo: 'exito', texto: rolCambio ? 'Rol y permisos actualizados correctamente.' : 'Cambios guardados.' })
     setEditPassword(''); setEditConfirmPass('')
     await cargarUsuarios()
     setTimeout(() => { setPanelActivo(null); setMensajeEdit({ tipo: '', texto: '' }) }, 1200)
@@ -1490,6 +1516,23 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
             : `${usuariosFiltrados.length} resultado${usuariosFiltrados.length !== 1 ? 's' : ''}`}
         </p>
       )}
+
+      {/* Toast cambio de rol */}
+      <AnimatePresence>
+        {mensajeRol.texto && (
+          <motion.div
+            key="toast-rol"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
+            className={`form-mensaje ${mensajeRol.tipo}`}
+            style={{ marginBottom: 12 }}
+          >
+            {mensajeRol.texto}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Lista */}
       <div className="usuarios-lista">
