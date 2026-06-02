@@ -1547,6 +1547,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         p_devuelto_por: usuario.nombre,
       })
       console.log('[marcarDevuelto] rpc result', { error })
+      if (error) console.error('[marcarDevuelto] RPC ERROR:', error.code, error.message, error.details, error.hint)
 
       // Tratar "ya devuelto" como éxito: el préstamo fue cerrado por una
       // operación anterior ("Todos") que actualizó BD pero no el estado local
