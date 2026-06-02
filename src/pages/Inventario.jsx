@@ -1542,11 +1542,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       if (notaDevolucion.trim()) {
         await supabase.from('prestamos').update({ nota_devolucion: notaDevolucion.trim() }).eq('id', prestamoBien.id)
       }
-      // Leer cantidad real del DB (el RPC ya la actualizó) para mantener estado local en sync
+      // Leer stock real del DB (RPC ya aplicó LEAST(cantidad_total, ...) — nunca supera total)
       if (esLibroBien) {
-        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad,cantidad_total').eq('id', bienId).single()
         const newCantidad = bienActual ? bienActual.cantidad : (modalPrestamo?.cantidad ?? 0) + cantidadRestaurar
-        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad } : b))
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad, cantidad_total: bienActual?.cantidad_total ?? b.cantidad_total } : b))
         setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
       }
       // Recargar historial desde DB para que "Ya devueltos" muestre el préstamo recién cerrado
@@ -1598,11 +1598,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       })
       if (error) return false
       await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
-      // Leer stock real desde DB (el RPC ya restauró bienes.cantidad)
+      // Leer stock real desde DB (RPC ya aplicó LEAST(cantidad_total, ...) — nunca supera total)
       if (esLibroBien) {
-        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad,cantidad_total').eq('id', bienId).single()
         const newCantidad = bienActual ? bienActual.cantidad : (modalPrestamo?.cantidad ?? 0) + totalPending
-        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad } : b))
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad, cantidad_total: bienActual?.cantidad_total ?? b.cantidad_total } : b))
         setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
       }
       // Recargar historial desde DB
@@ -1634,14 +1634,17 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         .eq('id', prestamoBien.id)
       if (errPrestamo) return false
       if (esLibroBien) {
-        // Leer valor actual del DB antes de sumar para evitar desync
-        const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
-        if (bienActual) {
-          const newCantidad = bienActual.cantidad + cantidadDev
-          await supabase.from('bienes').update({ cantidad: newCantidad }).eq('id', bienId)
-          setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad } : b))
-          setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
-        }
+        // Restaurar stock con RPC segura: LEAST(cantidad_total, actual + cantidadDev)
+        // Garantiza que disponible nunca supere el total del inventario
+        const { data: newDisp } = await supabase.rpc('incrementar_disponible_seguro', {
+          p_bien_id: bienId,
+          p_incremento: cantidadDev,
+        })
+        // Leer valor real del DB (ya clampeado por la RPC)
+        const { data: bienActual } = await supabase.from('bienes').select('cantidad,cantidad_total').eq('id', bienId).single()
+        const newCantidad = bienActual?.cantidad ?? (newDisp ?? 0)
+        setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad, cantidad_total: bienActual?.cantidad_total ?? b.cantidad_total } : b))
+        setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
         setBienesConPrestamo(prev => {
           const m = new Map(prev)
           const ex = m.get(bienId)
@@ -3300,8 +3303,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   {catActual !== 'computadores' && !esBiblioteca(catActual) && <td className="td-hide-mobile">{b.cantidad}</td>}
                   {esBiblioteca(catActual) && (() => {
                     const cantidadPrestada = bienesConPrestamo.get(b.id)?.cantidadPrestada ?? 0
-                    const total = b.cantidad + cantidadPrestada   // disponible + prestado
-                    const disponible = b.cantidad                  // bienes.cantidad ES el disponible real
+                    // Preferir cantidad_total (fuente de verdad) sobre el valor computado
+                    const total = b.cantidad_total ?? (b.cantidad + cantidadPrestada)
+                    const disponible = Math.min(b.cantidad, total)  // nunca mostrar disponible > total
                     return (
                       <>
                         <td className="td-hide-mobile" style={{ textAlign: 'center', color: '#475569' }}>{total}</td>
