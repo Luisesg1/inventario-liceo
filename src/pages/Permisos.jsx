@@ -2637,8 +2637,11 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       const q    = normStr(busqueda)
       const qRut = normRut(busqueda)
       if (modoMisAusencias) {
-        // En "Mis ausencias" buscar por tipo, jornada o notas/motivo
-        const ok = normStr(TIPO_LABEL[p.tipo] ?? '').includes(q)
+        // En "Mis ausencias" buscar por nombre, RUT, tipo, jornada o notas/motivo
+        const ok = normStr(u.nombre ?? '').includes(q)
+          || normStr(u.email ?? '').includes(q)
+          || (qRut.length > 1 && normRut(u.rut ?? '').includes(qRut))
+          || normStr(TIPO_LABEL[p.tipo] ?? '').includes(q)
           || normStr(JORNADA_LABEL[p.jornada] ?? '').includes(q)
           || normStr(p.notas ?? '').includes(q)
         if (!ok) return false
@@ -2925,7 +2928,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
             <Search size={13} strokeWidth={2.5}
               style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
             <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder={modoMisAusencias ? 'Buscar por tipo o motivo…' : 'Buscar por nombre, RUT o email…'}
+              placeholder={modoMisAusencias ? 'Buscar por nombre, RUT, tipo o motivo…' : 'Buscar por nombre, RUT o email…'}
               style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
           </div>
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
