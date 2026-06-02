@@ -197,6 +197,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
   const [historialExpandidos, setHistorialExpandidos] = useState(new Set()) // ids expandidos
   const toggleHistorialExpandido = (id) => setHistorialExpandidos(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  const [historialListaExpandida, setHistorialListaExpandida] = useState(false) // lista ya devueltos colapsada por defecto
   const [prestarMasMode, setPrestarMasMode]             = useState(false)
   const [formPrestarMas, setFormPrestarMas]             = useState({ cantidad: 1, notas: '' })
   const [guardandoPrestarMas, setGuardandoPrestarMas]   = useState(false)
@@ -4041,14 +4042,20 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                 {/* Pestaña: Préstamos ya devueltos */}
                 {tabActiva === 'devueltos' && (
                   <>
-                    {!prestamoBien && (
-                      <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                    {/* Header colapsable — siempre visible */}
+                    <div
+                      onClick={() => historialPrestamos.length > 0 && setHistorialListaExpandida(v => !v)}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, cursor: historialPrestamos.length > 0 ? 'pointer' : 'default', userSelect: 'none' }}>
+                      <p style={{ margin: 0, fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
                         📋 Préstamos ya devueltos {historialPrestamos.length > 0 ? `(${historialPrestamos.length})` : ''}
                       </p>
-                    )}
+                      {historialPrestamos.length > 0 && (
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{historialListaExpandida ? '▲ ocultar' : '▼ mostrar'}</span>
+                      )}
+                    </div>
                     {historialPrestamos.length === 0 ? (
                       <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>Ningún préstamo devuelto aún.</p>
-                    ) : (
+                    ) : historialListaExpandida ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 240, overflowY: 'auto' }}>
                         {historialPrestamos.map(p => (
                       <div key={p.id} style={{ background: '#f9fafb', border: `1px solid ${confirmBorrarHistorial === p.id ? '#fca5a5' : '#e5e7eb'}`, borderRadius: 8, padding: '10px 12px', fontSize: 12 }}>
@@ -4121,7 +4128,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       </div>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                   </>
                 )}
 
