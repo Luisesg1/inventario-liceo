@@ -1588,17 +1588,20 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
 
     if (nuevaCantidadPrestamo <= 0) {
-      // Devolución total: cerrar el préstamo
+      // ── Devolución total: cerrar el préstamo ───────────────────────────────
+      // Corregir prestamos.cantidad al total real pendiente ANTES del RPC
+      // (el RPC usa ese valor para restaurar bienes.cantidad correctamente)
+      await supabase.from('prestamos').update({ cantidad: totalPending, notas: notasActualizadas }).eq('id', prestamoBien.id)
       const { error } = await supabase.rpc('devolver_prestamo', {
         p_prestamo_id: prestamoBien.id,
-        p_devuelto_por: usuario.nombre,  // siempre el usuario, no el texto de la nota
+        p_devuelto_por: usuario.nombre,
       })
       if (error) return false
       await supabase.from('prestamos').update({ nota_devolucion: notaMovimiento }).eq('id', prestamoBien.id)
       // Leer stock real desde DB (el RPC ya restauró bienes.cantidad)
       if (esLibroBien) {
         const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
-        const newCantidad = bienActual ? bienActual.cantidad : (modalPrestamo?.cantidad ?? 0) + cantidadDev
+        const newCantidad = bienActual ? bienActual.cantidad : (modalPrestamo?.cantidad ?? 0) + totalPending
         setBienes(prev => prev.map(b => b.id === bienId ? { ...b, cantidad: newCantidad } : b))
         setModalPrestamo(prev => prev ? { ...prev, cantidad: newCantidad } : prev)
       }
@@ -1614,7 +1617,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         const ex = m.get(bienId)
         if (!ex) return m
         const newCount = ex.count - 1
-        const newCP = Math.max(0, (ex.cantidadPrestada ?? cantidadDev) - cantidadDev)
+        const newCP = Math.max(0, (ex.cantidadPrestada ?? totalPending) - totalPending)
         if (newCount > 0) m.set(bienId, { count: newCount, cantidadPrestada: newCP, fecha: ex.fecha })
         else m.delete(bienId)
         return m
@@ -1623,16 +1626,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       setConfirmDevolucion(false)
       setTabHistorial('devueltos')
     } else {
-      // Devolución parcial: actualizar cantidad y stock
-      let { error: errPrestamo } = await supabase.from('prestamos')
-        .update({ cantidad: nuevaCantidadPrestamo, notas: notasActualizadas })
+      // ── Devolución parcial: solo actualizar notas y stock ─────────────────
+      // NO tocar prestamos.cantidad — debe conservarse como la cantidad base de
+      // la persona original para que parsearPrestadosA lo use como semilla
+      const { error: errPrestamo } = await supabase.from('prestamos')
+        .update({ notas: notasActualizadas })
         .eq('id', prestamoBien.id)
-      const columnaExiste = !(errPrestamo?.code === '42703' || errPrestamo?.message?.includes('cantidad'))
-      if (errPrestamo && !columnaExiste) {
-        ;({ error: errPrestamo } = await supabase.from('prestamos').update({ notas: notasActualizadas }).eq('id', prestamoBien.id))
-      }
       if (errPrestamo) return false
-      if (columnaExiste && esLibroBien) {
+      if (esLibroBien) {
         // Leer valor actual del DB antes de sumar para evitar desync
         const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bienId).single()
         if (bienActual) {
@@ -1648,7 +1649,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           return m
         })
       }
-      setPrestamoBien(p => ({ ...p, cantidad: columnaExiste ? nuevaCantidadPrestamo : (p.cantidad ?? 1), notas: notasActualizadas }))
+      // Solo actualizar notas en estado local — cantidad queda como semilla intacta
+      setPrestamoBien(p => ({ ...p, notas: notasActualizadas }))
     }
     return true
   }
@@ -1684,40 +1686,31 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     if (!formPrestarMas.notas.trim()) return
     setGuardandoPrestarMas(true)
     try {
-      // 1. Verificar stock en BD (sin tocar nada aún)
+      // 1. Verificar stock en BD
       const { data: bienActual } = await supabase.from('bienes').select('cantidad').eq('id', bien.id).single()
       if (!bienActual || cantidadAdicional > bienActual.cantidad) return
 
-      // 2. Actualizar el préstamo primero (cantidad + notas)
-      const nuevaCantidad = (prestamoBien.cantidad ?? 1) + cantidadAdicional
+      // 2. Guardar solo la nota de movimiento — NO tocar prestamos.cantidad
+      //    (prestamos.cantidad es la cantidad base de la persona original y no debe cambiar)
       const notaMovimiento = `Se agregaron ${cantidadAdicional} ${cantidadAdicional === 1 ? 'unidad' : 'unidades'} al préstamo. ${formPrestarMas.notas.trim()}`
       const notasActualizadas = prestamoBien.notas ? `${prestamoBien.notas}\n${notaMovimiento}` : notaMovimiento
-      let { error: errUpdate } = await supabase.from('prestamos')
-        .update({ cantidad: nuevaCantidad, notas: notasActualizadas })
+      const { error: errUpdate } = await supabase.from('prestamos')
+        .update({ notas: notasActualizadas })
         .eq('id', prestamoBien.id)
-
-      // Si falla por columna cantidad no existente: guarda solo notas, NO descuenta bienes
-      const columnaExiste = !(errUpdate?.code === '42703' || errUpdate?.message?.includes('cantidad'))
-      if (errUpdate && !columnaExiste) {
-        ;({ error: errUpdate } = await supabase.from('prestamos')
-          .update({ notas: notasActualizadas })
-          .eq('id', prestamoBien.id))
-      }
       if (errUpdate) return
 
-      // 3. Solo descontar bienes si la columna cantidad existe y quedó guardada
-      if (columnaExiste) {
-        await supabase.from('bienes').update({ cantidad: Math.max(0, bienActual.cantidad - cantidadAdicional) }).eq('id', bien.id)
-        setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: Math.max(0, b.cantidad - cantidadAdicional) } : b))
-        setModalPrestamo(prev => ({ ...prev, cantidad: Math.max(0, (prev.cantidad ?? 0) - cantidadAdicional) }))
-      }
+      // 3. Descontar del stock disponible en bienes
+      const newStock = Math.max(0, bienActual.cantidad - cantidadAdicional)
+      await supabase.from('bienes').update({ cantidad: newStock }).eq('id', bien.id)
+      setBienes(prev => prev.map(b => b.id === bien.id ? { ...b, cantidad: newStock } : b))
+      setModalPrestamo(prev => prev ? { ...prev, cantidad: newStock } : prev)
 
-      // Actualizar estado local del préstamo y del mapa
-      setPrestamoBien(p => ({ ...p, cantidad: columnaExiste ? nuevaCantidad : (p.cantidad ?? 1), notas: notasActualizadas }))
+      // 4. Actualizar solo notas en estado local (cantidad queda intacta como semilla del parser)
+      setPrestamoBien(p => ({ ...p, notas: notasActualizadas }))
       setBienesConPrestamo(prev => {
         const m = new Map(prev)
         const ex = m.get(bien.id)
-        if (ex && columnaExiste) m.set(bien.id, { ...ex, cantidadPrestada: (ex.cantidadPrestada ?? 0) + cantidadAdicional })
+        if (ex) m.set(bien.id, { ...ex, cantidadPrestada: (ex.cantidadPrestada ?? 0) + cantidadAdicional })
         return m
       })
       setPrestarMasMode(false)
@@ -3737,6 +3730,14 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
               const cantidadMasNum = parseInt(formPrestarMas.cantidad, 10) || 0
               const cantidadMasInvalida = cantidadMasNum < 1 || cantidadMasNum > stockDisponible
               const notasMasVacia = !formPrestarMas.notas.trim()
+              // Filtrar las líneas de movimiento automático del historial de notas
+              const notasLimpias = (prestamoBien.notas ?? '')
+                .split('\n')
+                .filter(l => !l.match(/^Se (agregaron|devolvieron) \d+/))
+                .join('\n')
+                .trim()
+              // Total activo real (suma de pendientes de todas las personas)
+              const totalActivoHeader = parsearPrestadosA(prestamoBien).reduce((s, e) => s + e.pendiente, 0)
               return (
               <>
                 <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '14px 16px', marginBottom: 14 }}>
@@ -3749,12 +3750,12 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       Prestado el: <strong>{fmtFecha(prestamoBien.fecha_prestamo)}</strong>
                     </p>
                   )}
-                  {esLibroBien && (prestamoBien.cantidad ?? 1) > 0 && (
+                  {esLibroBien && totalActivoHeader > 0 && (
                     <p style={{ margin: '4px 0 0', fontSize: 13, color: '#78350f' }}>
-                      Cantidad prestada: <strong>{prestamoBien.cantidad ?? 1} {(prestamoBien.cantidad ?? 1) === 1 ? 'unidad' : 'unidades'}</strong>
+                      Activo: <strong>{totalActivoHeader} {totalActivoHeader === 1 ? 'unidad' : 'unidades'} pendientes</strong>
                     </p>
                   )}
-                  {prestamoBien.notas && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207', whiteSpace: 'pre-line' }}>📝 {prestamoBien.notas}</p>}
+                  {notasLimpias && <p style={{ margin: '4px 0 0', fontSize: 12, color: '#a16207', whiteSpace: 'pre-line' }}>📝 {notasLimpias}</p>}
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309' }}>Registrado por {prestamoBien.registrado_por_nombre}</p>
                 </div>
 
@@ -4049,29 +4050,25 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                       <div style={{ padding: '6px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 7, fontSize: 11 }}>
                         <span style={{ color: '#92400e', fontWeight: 600 }}>📚 Total activo: <strong>{totalActivo}</strong> {totalActivo === 1 ? 'unidad' : 'unidades'}</span>
                       </div>
-                      {/* Filas por curso — solo pendientes */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 200, overflowY: 'auto' }}>
+                      {/* Filas por persona — solo pendientes, con indicador verde */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 220, overflowY: 'auto' }}>
                         {entriesPendientes.length === 0 ? (
                           <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', margin: 0 }}>No hay préstamos activos para este libro.</p>
                         ) : (
                           entriesPendientes.map(entry => (
-                            <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 7 }}>
+                            <div key={entry.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 7 }}>
+                              <span style={{ fontSize: 10, lineHeight: 1, flexShrink: 0 }}>🟢</span>
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <p style={{ margin: 0, fontWeight: 600, fontSize: 12, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</p>
-                                {entry.prestado !== null && (
-                                  <p style={{ margin: '1px 0 0', fontSize: 10, color: '#9ca3af' }}>
-                                    Prest. {entry.prestado} · Dev. {entry.devuelto}
-                                  </p>
-                                )}
-                                <p style={{ margin: '1px 0 0', fontSize: 11, fontWeight: 700, color: '#b45309' }}>
-                                  {entry.pendiente} pend.
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: 12, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.label}</p>
+                                <p style={{ margin: '2px 0 0', fontSize: 10, color: '#6b7280' }}>
+                                  Prestado: {entry.prestado} · Devuelto: {entry.devuelto} · <strong style={{ color: '#b45309' }}>Pendiente: {entry.pendiente}</strong>
                                 </p>
                               </div>
                               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                                 <button
                                   disabled={guardandoDevParcial}
                                   onClick={() => { setDevParcialMode(true); setFormDevParcial({ cantidad: 1, notas: entry.label }) }}
-                                  style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 5, cursor: 'pointer' }}>
+                                  style={{ padding: '3px 9px', fontSize: 11, fontWeight: 600, background: '#fdf4ff', color: '#7e22ce', border: '1px solid #d8b4fe', borderRadius: 5, cursor: 'pointer', opacity: guardandoDevParcial ? 0.5 : 1 }}>
                                   ↩ Dev.
                                 </button>
                                 <button
