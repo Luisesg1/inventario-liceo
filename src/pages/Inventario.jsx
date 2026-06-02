@@ -1424,13 +1424,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     // Semilla: persona original con la cantidad base del préstamo
     const map = new Map([[initialLabel, { prestado: pb.cantidad ?? 1, devuelto: 0 }]])
     for (const linea of lineas) {
-      const mAgr = linea.match(/^Se agregaron (\d+) unidades? al préstamo\. (.+)$/)
+      const mAgr = linea.match(/^Se agregaron (\d+) unidad(?:es)? al préstamo\. (.+)$/)
       if (mAgr) {
         const qty = parseInt(mAgr[1]); const curso = mAgr[2].trim()
         const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
         map.set(curso, { ...cur, prestado: cur.prestado + qty }); continue
       }
-      const mDev = linea.match(/^Se devolvieron (\d+) unidades?\. (.+)$/)
+      const mDev = linea.match(/^Se devolvieron (\d+) unidad(?:es)?\. (.+)$/)
       if (mDev) {
         const qty = parseInt(mDev[1]); const curso = mDev[2].trim()
         const cur = map.get(curso) ?? { prestado: 0, devuelto: 0 }
