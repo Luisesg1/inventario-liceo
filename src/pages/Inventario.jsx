@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
 import './ImportarCSV.css'
+import ModalCamposCategoria from './ModalCamposCategoria'
 import {
   cachearBienes, cachearCategorias, cachearPermisos,
   obtenerCacheBienes, obtenerCacheCategorias, obtenerCachePermisos,
@@ -131,24 +132,27 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       ? { ver_inventario: true, agregar_bien: true, editar_bien: true,
           eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
           importar_csv: true, gestionar_usuarios: true, exportar: true,
-          registrar_prestamo: true, registrar_incidencia: true }
+          registrar_prestamo: true, registrar_incidencia: true,
+          gestionar_campos: true }
       : { ver_inventario: true, agregar_bien: false, editar_bien: false,
           eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
           importar_csv: false, gestionar_usuarios: false, exportar: false,
-          registrar_prestamo: false, registrar_incidencia: false }
+          registrar_prestamo: false, registrar_incidencia: false,
+          gestionar_campos: false }
   )
   // ['todos'] = acceso a todas las categorías; si no, lista de keys permitidas
   const [categoriasPermitidas, setCategoriasPermitidas] = useState(['todos'])
 
   // Variables derivadas (reemplazan las de rol)
-  const puedeAgregar        = permisos.agregar_bien
-  const puedeEliminar       = permisos.eliminar_bien
-  const puedeEliminarLote   = permisos.eliminar_lote
-  const puedeExportar       = permisos.exportar
-  const puedeImportar       = permisos.importar_csv
-  const puedeGestionarCats  = permisos.gestionar_categorias
-  const puedePrestamo       = permisos.registrar_prestamo
-  const puedeIncidencias    = permisos.registrar_incidencia
+  const puedeAgregar          = permisos.agregar_bien
+  const puedeEliminar         = permisos.eliminar_bien
+  const puedeEliminarLote     = permisos.eliminar_lote
+  const puedeExportar         = permisos.exportar
+  const puedeImportar         = permisos.importar_csv
+  const puedeGestionarCats    = permisos.gestionar_categorias
+  const puedePrestamo         = permisos.registrar_prestamo
+  const puedeIncidencias      = permisos.registrar_incidencia
+  const puedeGestionarCampos  = permisos.gestionar_campos
 
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
@@ -172,6 +176,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [aviso, setAviso]             = useState(null) // {mensaje}
   const [modalImportar, setModalImportar] = useState(false)
   const [modalEditar, setModalEditar] = useState(false)
+  const [modalCamposCategoria, setModalCamposCategoria] = useState(false)
   const [busqueda, setBusqueda]       = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroPrestado, setFiltroPrestado] = useState('')  // '' | 'prestado' | 'disponible'
@@ -278,6 +283,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         eliminar_bien: true, eliminar_lote: true, gestionar_categorias: true,
         importar_csv: true, gestionar_usuarios: true, exportar: true,
         registrar_prestamo: true, registrar_incidencia: true,
+        gestionar_campos: true,
       },
       editor: {
         ver_inventario: true, agregar_bien: true, editar_bien: true,
@@ -2049,6 +2055,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             <span className="btn-label-full">▦ {modoQR ? 'Cancelar QR' : 'Generar QR'}</span>
             <span className="btn-label-short">▦</span>
           </button>
+          {puedeGestionarCampos && catActual !== 'todos' && (
+            <button
+              className="btn-import"
+              onClick={() => setModalCamposCategoria(true)}
+              title="Configurar campos de esta categoría"
+            >
+              <span className="btn-label-full">⚙️ Configurar campos</span>
+              <span className="btn-label-short">⚙️</span>
+            </button>
+          )}
           {puedeAgregar && (
             <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
               {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
@@ -4545,6 +4561,25 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
           </div>
         </div>
       )}
+
+      {/* ── Modal Configurar campos por categoría ────────── */}
+      {modalCamposCategoria && catActual !== 'todos' && (() => {
+        const catObj = categorias.find(c => c.id === catActual)
+        if (!catObj) return null
+        return (
+          <ModalCamposCategoria
+            catObj={catObj}
+            usuario={usuario}
+            onClose={() => setModalCamposCategoria(false)}
+            onCatUpdated={() => {
+              supabase.from('categorias').select('*').eq('id', catActual).single()
+                .then(({ data }) => {
+                  if (data) setCategorias(prev => prev.map(c => c.id === catActual ? data : c))
+                })
+            }}
+          />
+        )
+      })()}
     </div>
   )
 }

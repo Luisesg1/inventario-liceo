@@ -29,7 +29,7 @@ const ACCIONES = [
   { key: 'editar_bien',          label: 'Editar bien',           labelCorto: 'Editar',     desc: 'Permite modificar la información de bienes ya registrados.' },
   { key: 'eliminar_bien',        label: 'Eliminar bien',         labelCorto: 'Eliminar',   desc: 'Permite eliminar bienes individuales del inventario.' },
   { key: 'eliminar_lote',        label: 'Eliminar en lote',      labelCorto: 'Lote',       desc: 'Permite eliminar múltiples bienes al mismo tiempo.' },
-  { key: 'gestionar_categorias', label: 'Gestionar categorías',  labelCorto: 'Categ.',     desc: 'Permite crear, editar y eliminar categorías de bienes.' },
+  { key: 'gestionar_categorias', label: 'Gestionar categorías de inventario',  labelCorto: 'Categ.',     desc: 'Permite crear, editar y eliminar categorías de bienes.' },
   { key: 'importar_csv',         label: 'Importar CSV',          labelCorto: 'CSV',        desc: 'Permite cargar bienes en masa desde un archivo CSV.' },
   { key: 'exportar',             label: 'Exportar inventario',   labelCorto: 'Exportar',   desc: 'Permite exportar el inventario completo o filtrado a Excel o PDF.' },
   { key: 'registrar_prestamo',   label: 'Registrar préstamo',    labelCorto: 'Préstamo',   desc: 'Permite registrar el préstamo de un bien a un funcionario o sala.' },
@@ -69,8 +69,8 @@ const ACCIONES = [
   { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
   // Configuración del sistema
-  { key: 'gestionar_ajustes', label: 'Personalizar sistema',            labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
-  { key: 'gestionar_campos',  label: 'Gestionar campos por categoría', labelCorto: 'Campos',    desc: 'Permite configurar los campos personalizados de cada categoría del inventario.' },
+  { key: 'gestionar_ajustes', label: 'Personalizar sistema',                labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
+  { key: 'gestionar_campos',  label: 'Gestionar campos de inventario',    labelCorto: 'Campos',    desc: 'Permite configurar los campos personalizados de cada categoría desde el módulo de inventario.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -80,7 +80,7 @@ const GRUPOS_PERMISOS = [
     descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
     permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
                'eliminar_lote', 'importar_csv', 'exportar',
-               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias'],
+               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias', 'gestionar_campos'],
   },
   {
     key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
@@ -102,7 +102,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
-    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'gestionar_ajustes', 'gestionar_campos'],
+    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'gestionar_ajustes'],
   },
   {
     key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
