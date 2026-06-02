@@ -195,6 +195,8 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const [editandoHistorial, setEditandoHistorial] = useState(null) // id del prestamo en edición
   const [formEditHistorial, setFormEditHistorial] = useState({})
   const [confirmBorrarHistorial, setConfirmBorrarHistorial] = useState(null) // id
+  const [historialExpandidos, setHistorialExpandidos] = useState(new Set()) // ids expandidos
+  const toggleHistorialExpandido = (id) => setHistorialExpandidos(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
   const [prestarMasMode, setPrestarMasMode]             = useState(false)
   const [formPrestarMas, setFormPrestarMas]             = useState({ cantidad: 1, notas: '' })
   const [guardandoPrestarMas, setGuardandoPrestarMas]   = useState(false)
@@ -4075,33 +4077,43 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                             </div>
                           </div>
                         ) : (
-                          /* ── Vista normal ── */
+                          /* ── Vista normal (colapsable) ── */
                           (() => {
                             const lineas = (p.notas ?? '').split('\n').map(l => l.trim()).filter(Boolean)
                             const notasUsuario = lineas.filter(l => !l.match(/^Se (agregaron|devolvieron) \d+/)).join('\n')
                             const lineasAgregados = lineas.filter(l => l.match(/^Se agregaron \d+/))
+                            const expandido = historialExpandidos.has(p.id)
+                            const tieneDetalle = notasUsuario || lineasAgregados.length > 0 || p.nota_devolucion
                             return (
                             <>
-                              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                                <div style={{ fontWeight: 700, color: '#374151' }}>{p.prestado_a}{p.cargo && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 6 }}>· {p.cargo}</span>}</div>
-                                <div style={{ display: 'flex', gap: 4, flexShrink: 0, marginLeft: 8 }}>
-                                  <button onClick={() => { setEditandoHistorial(p.id); setFormEditHistorial({ prestado_a: p.prestado_a, cargo: p.cargo ?? '', fecha_prestamo: p.fecha_prestamo ? String(p.fecha_prestamo).slice(0,10) : '', notas: p.notas ?? '', nota_devolucion: p.nota_devolucion ?? '' }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Editar">✏️</button>
-                                  <button onClick={() => setConfirmBorrarHistorial(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Eliminar">🗑️</button>
+                              {/* Cabecera siempre visible — click para expandir */}
+                              <div
+                                onClick={() => tieneDetalle && toggleHistorialExpandido(p.id)}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: tieneDetalle ? 'pointer' : 'default', gap: 6 }}>
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <span style={{ fontWeight: 700, color: '#374151' }}>{p.prestado_a}</span>
+                                  {p.cargo && <span style={{ fontWeight: 400, color: '#6b7280', marginLeft: 6 }}>· {p.cargo}</span>}
+                                  <span style={{ color: '#9ca3af', marginLeft: 8, fontSize: 11 }}>
+                                    {p.fecha_prestamo && fmtFecha(p.fecha_prestamo)}
+                                    {p.fecha_devolucion_real && <> → {fmtFecha(p.fecha_devolucion_real)}</>}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                                  {tieneDetalle && <span style={{ fontSize: 10, color: '#9ca3af' }}>{expandido ? '▲' : '▼'}</span>}
+                                  <button onClick={e => { e.stopPropagation(); setEditandoHistorial(p.id); setFormEditHistorial({ prestado_a: p.prestado_a, cargo: p.cargo ?? '', fecha_prestamo: p.fecha_prestamo ? String(p.fecha_prestamo).slice(0,10) : '', notas: p.notas ?? '', nota_devolucion: p.nota_devolucion ?? '' }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Editar">✏️</button>
+                                  <button onClick={e => { e.stopPropagation(); setConfirmBorrarHistorial(p.id) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12, padding: '1px 4px', borderRadius: 4 }} title="Eliminar">🗑️</button>
                                 </div>
                               </div>
-                              <div style={{ color: '#6b7280', marginTop: 2 }}>
-                                {p.fecha_prestamo && <>Préstamo: <strong>{fmtFecha(p.fecha_prestamo)}</strong></>}
-                                {p.fecha_devolucion_real && <> · Dev.: <strong>{fmtFecha(p.fecha_devolucion_real)}</strong></>}
-                              </div>
-                              {notasUsuario && <div style={{ color: '#9ca3af', marginTop: 2, whiteSpace: 'pre-line' }}>📝 {notasUsuario}</div>}
-                              {lineasAgregados.length > 0 && (
-                                <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              {/* Detalle expandible */}
+                              {expandido && tieneDetalle && (
+                                <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #f3f4f6', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                  {notasUsuario && <div style={{ color: '#9ca3af', whiteSpace: 'pre-line' }}>📝 {notasUsuario}</div>}
                                   {lineasAgregados.map((l, i) => (
-                                    <div key={i} style={{ fontSize: 10, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4, padding: '2px 6px', display: 'inline-block', alignSelf: 'flex-start' }}>➕ {l}</div>
+                                    <div key={i} style={{ fontSize: 10, color: '#2563eb', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4, padding: '2px 6px', alignSelf: 'flex-start' }}>➕ {l}</div>
                                   ))}
+                                  {p.nota_devolucion && <div style={{ color: '#9ca3af', whiteSpace: 'pre-line' }}>🔄 {p.nota_devolucion}</div>}
                                 </div>
                               )}
-                              {p.nota_devolucion && <div style={{ color: '#9ca3af', marginTop: 2, whiteSpace: 'pre-line' }}>🔄 {p.nota_devolucion}</div>}
                             </>
                             )
                           })()
