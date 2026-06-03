@@ -2073,12 +2073,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           {puedeGestionarCampos && catActual !== 'todos' && (
             <button
               className="btn-import"
-              onClick={(e) => {
-                // Detener propagación nativa para que el click no llegue al overlay del portal
-                e.stopPropagation()
-                e.nativeEvent?.stopImmediatePropagation()
-                setModalCamposCategoria(true)
-              }}
+              onClick={() => setModalCamposCategoria(true)}
               title="Configurar campos de esta categoría"
             >
               <span className="btn-label-full">⚙️ Configurar campos</span>
@@ -4583,16 +4578,17 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
       )}
 
       {/* ── Modal Configurar campos por categoría ────────── */}
-      {modalCamposCategoria && _catParaCampos && (
+      {modalCamposCategoria && (_catParaCampos || catActual !== 'todos') && (
         <ModalCamposCategoria
-          key={_catParaCampos.id}
-          catObj={_catParaCampos}
+          key={(_catParaCampos || { id: catActual }).id}
+          catObj={_catParaCampos || { id: catActual, label: catActual, icon: '📦' }}
           usuario={usuario}
           onClose={() => setModalCamposCategoria(false)}
           onCatUpdated={() => {
-            supabase.from('categorias').select('*').eq('id', _catParaCampos.id).single()
+            const catId = (_catParaCampos || { id: catActual }).id
+            supabase.from('categorias').select('*').eq('id', catId).single()
               .then(({ data }) => {
-                if (data) setCategorias(prev => prev.map(c => c.id === _catParaCampos.id ? data : c))
+                if (data) setCategorias(prev => prev.map(c => c.id === catId ? data : c))
               })
           }}
         />
