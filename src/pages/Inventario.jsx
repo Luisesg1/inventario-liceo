@@ -1879,6 +1879,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   return (
     <div className="inv">
 
+      {/* ── DEBUG BANNER ─────────────────────────────────── */}
+      {modalCamposCategoria && (
+        <div style={{ background:'#dc2626', color:'#fff', padding:'16px 20px', fontSize:16, fontWeight:700, borderRadius:8, margin:'0 0 12px', zIndex:1 }}>
+          ⚠️ DEBUG: modalCamposCategoria = TRUE — si ves esto, React funciona
+        </div>
+      )}
+
       {/* Banner sin conexión */}
       {!online && (
         <div style={{
