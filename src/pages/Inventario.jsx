@@ -4606,25 +4606,14 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
         </div>
       )}
 
-      {/* ── Modal Configurar campos por categoría ────────── */}
-      {modalCamposCategoria && _catParaCampos && createPortal(
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:99999, display:'flex', alignItems:'center', justifyContent:'center' }}
-          onClick={() => setModalCamposCategoria(false)}>
-          <div style={{ background:'white', borderRadius:12, padding:32, maxWidth:400, width:'90%', textAlign:'center' }}
-            onClick={e => e.stopPropagation()}>
-            <p style={{ fontWeight:800, fontSize:16, marginBottom:8 }}>🔧 TEST PORTAL MANUAL</p>
-            <p style={{ color:'#555', marginBottom:16 }}>Categoría: <strong>{_catParaCampos.id}</strong></p>
-            <p style={{ color:'#888', fontSize:12, marginBottom:16 }}>
-              Si ves esto → el problema está dentro de ModalCamposCategoria.<br/>
-              Si NO ves esto → el problema está en el render de Inventario.
-            </p>
-            <button onClick={() => setModalCamposCategoria(false)}
-              style={{ background:'#1a237e', color:'white', border:'none', borderRadius:8, padding:'10px 24px', cursor:'pointer', fontWeight:700 }}>
-              Cerrar
-            </button>
+      {/* ── TEST A: div inline (sin portal) ──────────────── */}
+      {modalCamposCategoria && _catParaCampos && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(255,0,0,0.85)', zIndex:2147483647, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'white', borderRadius:12, padding:32, maxWidth:400, textAlign:'center' }}>
+            <p style={{ fontWeight:800, color:'red' }}>TEST INLINE — {_catParaCampos.id}</p>
+            <button onClick={() => setModalCamposCategoria(false)} style={{ marginTop:16, padding:'8px 24px', background:'#1a237e', color:'white', border:'none', borderRadius:8, cursor:'pointer' }}>Cerrar</button>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
     </div>
   )
