@@ -4591,6 +4591,20 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
         </div>
       )}
 
+      {/* ── TEST: indicador visual mínimo ────────────────── */}
+      {modalCamposCategoria && (
+        <div style={{
+          position: 'fixed', bottom: 16, left: 16, zIndex: 99999,
+          background: _catParaCampos ? '#16a34a' : '#dc2626',
+          color: '#fff', borderRadius: 8, padding: '8px 16px',
+          fontSize: 13, fontWeight: 700, boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        }}>
+          {_catParaCampos
+            ? `✅ Cat OK: ${_catParaCampos.id} — montando modal…`
+            : '❌ Cat NO encontrada'}
+        </div>
+      )}
+
       {/* ── Modal Configurar campos por categoría ────────── */}
       {modalCamposCategoria && _catParaCampos && (
         <ModalCamposCategoria

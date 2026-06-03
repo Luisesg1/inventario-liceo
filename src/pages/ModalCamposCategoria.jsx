@@ -447,6 +447,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
     else registrarAuditoria('campo reordenado', dragInfo.id)
   }
 
+  console.log('[ModalCamposCategoria] render — catObj:', catObj?.id, '| cargando:', cargando)
   const _base      = getCamposSistema(catObj)
   const _allFields = [
     ..._base.map(c => ({ ...c, _tipo: 'sistema' })),
