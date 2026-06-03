@@ -54,11 +54,13 @@ export default function Layout({
   onRefreshTicketBadge, logoUrl,
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
-  puedeVerInventario = false, puedeGestionarTickets = false,
+  puedeVerAuditoriaInventario = false,
+  puedeVerInventario = false, puedeVerTickets = true, puedeGestionarTickets = false,
   puedeVerAuditoriaTickets = false,
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
+  puedeAccederAusencias = true,
   puedeAccederUsuarios = false,
   puedeGestionarAjustes = false,
   puedeGestionarCampos = false,
@@ -471,7 +473,7 @@ export default function Layout({
                       <span className="nav-subitem-dot" />
                       Ver inventario
                     </div>
-                    {esAdmin && (
+                    {puedeVerAuditoriaInventario && (
                       <div
                         className={`nav-subitem ${paginaActual === 'auditoria' ? 'active' : ''}`}
                         onClick={() => handleNav('auditoria')}
@@ -537,7 +539,7 @@ export default function Layout({
           )}
 
           {/* Tickets con submenú */}
-          <>
+          {puedeVerTickets && <>
             <motion.div
               className={`nav-item nav-item--parent ${ticketsActivo ? 'active' : ''}`}
               onClick={() => setTicketsAbierto(o => !o)}
@@ -597,7 +599,7 @@ export default function Layout({
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
+          </>}
 
           {/* Items adicionales (para extensión futura) */}
           {navItems.map(({ id, Icon, label }) => (
@@ -617,7 +619,7 @@ export default function Layout({
           ))}
 
           {/* Ausencias con submenú */}
-          <>
+          {puedeAccederAusencias && <>
             <motion.div
               className={`nav-item nav-item--parent ${permisosActivo ? 'active' : ''}`}
               onClick={() => setPermisosAbierto(o => !o)}
@@ -684,7 +686,7 @@ export default function Layout({
                 </motion.div>
               )}
             </AnimatePresence>
-          </>
+          </>}
 
           {/* Ajustes con submenú */}
           {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarCampos) && (
@@ -724,13 +726,15 @@ export default function Layout({
                         Personalizar
                       </div>
                     )}
-                    <div
-                      className={`nav-subitem ${paginaActual === 'usuarios' ? 'active' : ''}`}
-                      onClick={() => handleNav('usuarios')}
-                    >
-                      <span className="nav-subitem-dot" />
-                      Usuarios
-                    </div>
+                    {puedeAccederUsuarios && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'usuarios' ? 'active' : ''}`}
+                        onClick={() => handleNav('usuarios')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Usuarios
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

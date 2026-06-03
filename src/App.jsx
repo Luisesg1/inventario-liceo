@@ -73,41 +73,55 @@ export default function App() {
   const sesionCargada      = useRef(false)
 
   // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
-  const esAdmin    = usuario?.rol === 'admin'
-  const esVisorReq = usuario?.rol === 'visor_requerimientos'
-  const esSoporte  = usuario?.rol === 'soporte'
-  const p          = permisosUsuario ?? {}
+  const esAdmin      = usuario?.rol === 'admin'
+  const esVisorReq   = usuario?.rol === 'visor_requerimientos'
+  const esSoporte    = usuario?.rol === 'soporte'
+  const esDirectivo  = usuario?.rol === 'directivo'
+  const p            = permisosUsuario ?? {}
+
+  // Restricciones duras por rol que prevalecen sobre el JSONB almacenado
+  // Garantizan cumplimiento de la matriz incluso para usuarios con permisos legacy
+  const rolPermiteTickets     = !esDirectivo
+  const rolPermiteReqs        = !esDirectivo && !esSoporte
+  const rolPermiteAusencias   = !esDirectivo
+  const rolPermiteAjustesMenu = !esDirectivo
 
   const puedeVerInventario          = esAdmin || !!p.ver_inventario
-  const puedeGestionarTickets       = esAdmin || !!p.gestionar_tickets
-  const puedeVerAlertasTickets      = esAdmin || esSoporte || !!p.ver_alertas_tickets
-  const puedeVerAuditoriaReq        = esAdmin || !!p.ver_auditoria_requerimientos
-  const puedeVerAuditoriaPermisos   = esAdmin || !!p.ver_auditoria_permisos
-  const puedeVerAuditoriaTickets    = esAdmin || !!p.gestionar_tickets
+  const puedeVerAuditoriaInventario = esAdmin || !!p.ver_auditoria_inventario
+  const puedeVerTickets             = rolPermiteTickets  && (esAdmin || !!p.ver_tickets || !!p.gestionar_tickets)
+  const puedeGestionarTickets       = rolPermiteTickets  && (esAdmin || !!p.gestionar_tickets)
+  const puedeVerAlertasTickets      = rolPermiteTickets  && (esAdmin || esSoporte || !!p.ver_alertas_tickets)
+  const puedeVerAuditoriaReq        = rolPermiteReqs     && (esAdmin || !!p.ver_auditoria_requerimientos)
+  const puedeVerAuditoriaPermisos   = rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos)
+  const puedeVerAuditoriaTickets    = rolPermiteTickets  && (esAdmin || !!p.gestionar_tickets)
+  const puedeAccederAusencias       = rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias || !!p.ver_ausencias ||
+    !!p.crear_ausencias || !!p.editar_ausencias || !!p.aprobar_ausencias || !!p.gestionar_ausencias)
   const permisosTickets = {
-    verPropios: esAdmin || !!p.ver_tickets,
-    crear:      esAdmin || p.crear_ticket !== false,
-    gestionar:  esAdmin || !!p.gestionar_tickets,
-    eliminar:   esAdmin || !!p.eliminar_ticket,
+    verPropios: rolPermiteTickets && (esAdmin || !!p.ver_tickets),
+    crear:      rolPermiteTickets && (esAdmin || p.crear_ticket !== false),
+    editar:     rolPermiteTickets && (esAdmin || !!p.editar_ticket),
+    gestionar:  rolPermiteTickets && (esAdmin || !!p.gestionar_tickets),
+    eliminar:   rolPermiteTickets && (esAdmin || !!p.eliminar_ticket),
+    exportar:   rolPermiteTickets && (esAdmin || p.exportar_tickets !== false),
   }
   const permisosReqs = {
-    ver:          esAdmin || !!p.ver_requerimientos,
-    crear:        esAdmin || !!p.crear_requerimiento,
-    editar:       esAdmin || !!p.editar_requerimiento,
-    eliminar:     esAdmin || !!p.eliminar_requerimiento,
-    importar:     esAdmin || !!p.importar_requerimientos,
-    exportar:     esAdmin || !!p.exportar_requerimientos,
-    verAuditoria: esAdmin || !!p.ver_auditoria_requerimientos,
+    ver:          rolPermiteReqs && (esAdmin || !!p.ver_requerimientos),
+    crear:        rolPermiteReqs && (esAdmin || !!p.crear_requerimiento),
+    editar:       rolPermiteReqs && (esAdmin || !!p.editar_requerimiento),
+    eliminar:     rolPermiteReqs && (esAdmin || !!p.eliminar_requerimiento),
+    importar:     rolPermiteReqs && (esAdmin || !!p.importar_requerimientos),
+    exportar:     rolPermiteReqs && (esAdmin || !!p.exportar_requerimientos),
+    verAuditoria: rolPermiteReqs && (esAdmin || !!p.ver_auditoria_requerimientos),
   }
   const permisosAusencia = {
-    ver:             esAdmin || !!p.ver_ausencias,
-    gestionar:       esAdmin || !!p.gestionar_ausencias,
-    crear:           esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias,
-    editar:          esAdmin || !!p.gestionar_ausencias || !!p.editar_ausencias,
-    eliminar:        esAdmin || !!p.eliminar_ausencias,
-    aprobar:         esAdmin || !!p.aprobar_ausencias,
-    exportar:        esAdmin || !!p.exportar_ausencias,
-    verAuditoria:    esAdmin || !!p.ver_auditoria_permisos,
+    ver:             rolPermiteAusencias && (esAdmin || !!p.ver_ausencias),
+    gestionar:       rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias),
+    crear:           rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias),
+    editar:          rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias || !!p.editar_ausencias),
+    eliminar:        rolPermiteAusencias && (esAdmin || !!p.eliminar_ausencias),
+    aprobar:         rolPermiteAusencias && (esAdmin || !!p.aprobar_ausencias),
+    exportar:        rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias),
+    verAuditoria:    rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos),
     invitarUsuario:  esAdmin || !!p.invitar_usuario,
     editarUsuario:   esAdmin || !!p.editar_usuario,
     eliminarUsuario: esAdmin || !!p.eliminar_usuario,
@@ -124,15 +138,21 @@ export default function App() {
   const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
-  const puedeGestionarAjustes   = esAdmin || !!p.gestionar_ajustes
+  const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes)
   const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos
 
-  const soloAdmin = (pagina === 'usuarios' && !puedeAccederUsuarios) || pagina === 'auditoria' || (pagina === 'ajustes' && !puedeGestionarAjustes) || (pagina === 'campos' && !puedeGestionarCampos)
-    || (pagina === 'permisos'         && !puedeGestionarAusencias)
-    || (pagina === 'compensatorios'   && !puedeVerCompensatorios)
-    || (pagina === 'auditoria_requerimientos' && !puedeVerAuditoriaReq)
-    || (pagina === 'auditoria_permisos'       && !puedeVerAuditoriaPermisos)
-    || (pagina === 'auditoria_tickets'        && !puedeVerAuditoriaTickets)
+  const soloAdmin = (pagina === 'usuarios'       && !puedeAccederUsuarios)
+    || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
+    || (pagina === 'ajustes'                     && !puedeGestionarAjustes)
+    || (pagina === 'campos'                      && !puedeGestionarCampos)
+    || (pagina === 'permisos'                    && !puedeGestionarAusencias)
+    || (pagina === 'compensatorios'              && !puedeVerCompensatorios)
+    || (pagina === 'auditoria_requerimientos'    && !puedeVerAuditoriaReq)
+    || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos)
+    || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
+    || (pagina === 'tickets'                     && !puedeVerTickets)
+    || (pagina === 'requerimientos'              && !permisosReqs.ver)
+    || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
   const soloStaff = pagina === 'inventario'
     || (pagina === 'requerimientos' && !permisosReqs.ver)
 
@@ -141,7 +161,7 @@ export default function App() {
     : (!puedeVerInventario && soloStaff) ? 'tickets'
     : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
     : usuario.rol !== 'admin' && soloAdmin
-      ? (PAGINAS_AUSENCIAS.has(pagina) ? 'mis_ausencias' : 'dashboard')
+      ? (PAGINAS_AUSENCIAS.has(pagina) ? (puedeAccederAusencias ? 'mis_ausencias' : 'dashboard') : 'dashboard')
     : pagina
 
   // ── Navegación ───────────────────────────────────────────────────
@@ -316,13 +336,16 @@ export default function App() {
       puedeVerAuditoriaReq={puedeVerAuditoriaReq}
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
       puedeVerAuditoriaTickets={puedeVerAuditoriaTickets}
+      puedeVerAuditoriaInventario={puedeVerAuditoriaInventario}
       puedeVerInventario={puedeVerInventario}
+      puedeVerTickets={puedeVerTickets}
       puedeGestionarTickets={puedeGestionarTickets}
       esSoporte={esSoporte}
       puedeVerAusencias={permisosAusencia.ver}
       puedeVerRequerimientos={permisosReqs.ver}
       puedeVerCompensatorios={puedeVerCompensatorios}
       puedeGestionarAusencias={puedeGestionarAusencias}
+      puedeAccederAusencias={puedeAccederAusencias}
       puedeAccederUsuarios={puedeAccederUsuarios}
       puedeGestionarAjustes={puedeGestionarAjustes}
       puedeGestionarCampos={puedeGestionarCampos}
@@ -333,7 +356,7 @@ export default function App() {
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
       {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
       {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={irATickets} onIrARequerimientos={irAReqs} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={() => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias')} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
+      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}

@@ -783,10 +783,10 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       </section>}
 
       {/* ── Fila inferior: Tickets + Requerimientos ── */}
-      <div className="dash-bottom-grid" style={!puedeVerRequerimientos ? { gridTemplateColumns: '1fr' } : undefined}>
+      {(onIrATickets || puedeVerRequerimientos) && <div className="dash-bottom-grid" style={(!puedeVerRequerimientos || !onIrATickets) ? { gridTemplateColumns: '1fr' } : undefined}>
 
         {/* Tickets */}
-        <motion.div
+        {onIrATickets && <motion.div
           className="dash-card"
           initial={rm ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -838,7 +838,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
               Resueltos: <strong style={{ color: '#166534' }}>{tResueltos}</strong>
             </span>
           </div>
-        </motion.div>
+        </motion.div>}
 
         {/* Requerimientos — solo si tiene permiso */}
         {puedeVerRequerimientos && <motion.div
@@ -928,7 +928,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           </div>
         </motion.div>}
 
-      </div>
+      </div>}
     </motion.div>
   )
 }

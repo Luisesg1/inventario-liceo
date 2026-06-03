@@ -87,9 +87,10 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
   // Permisos: usa prop si viene de App, sino fallback a lógica de roles
-  const esGestor    = permisos.gestionar ?? (esAdmin || esSoporte)
-  const puedeCrear  = permisos.crear     ?? true   // cualquiera puede crear por defecto
-  const puedeElim   = permisos.eliminar  ?? (esAdmin || esSoporte)
+  const esGestor      = permisos.gestionar ?? (esAdmin || esSoporte)
+  const puedeCrear    = permisos.crear     ?? true
+  const puedeElim     = permisos.eliminar  ?? (esAdmin || esSoporte)
+  const puedeExportar = permisos.exportar  ?? true
   const shouldReduce = useReducedMotion()
   const kpiAnim = (i) => ({
     initial: shouldReduce ? false : { opacity: 0, y: 10 },
@@ -521,7 +522,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
         </div>
 
         {/* Botón Exportar */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
+        {puedeExportar && <div style={{ position: 'relative', flexShrink: 0 }}>
           <button className="btn-exportar-tickets" onClick={() => setMenuExportar(v => !v)} disabled={exportando}>
             {exportando ? <span className="tk-export-spinner" /> : '⬇'}
             {exportando ? ' Generando…' : ' Exportar ▾'}
@@ -551,7 +552,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
               </div>
             </>
           )}
-        </div>
+        </div>}
 
         {puedeCrear && <button className="btn-nuevo-ticket" onClick={abrirNuevo}>+ Nuevo ticket</button>}
       </div>

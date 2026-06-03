@@ -34,12 +34,15 @@ const ACCIONES = [
   { key: 'exportar',             label: 'Exportar inventario',   labelCorto: 'Exportar',   desc: 'Permite exportar el inventario completo o filtrado a Excel o PDF.' },
   { key: 'registrar_prestamo',   label: 'Registrar préstamo',    labelCorto: 'Préstamo',   desc: 'Permite registrar el préstamo de un bien a un funcionario o sala.' },
   { key: 'registrar_incidencia', label: 'Registrar incidencia',  labelCorto: 'Incidencia', desc: 'Permite reportar fallas, daños o incidencias asociadas a bienes.' },
+  { key: 'ver_auditoria_inventario', label: 'Ver auditoría de inventario', labelCorto: 'Aud. Inv.', desc: 'Permite ver el historial de cambios en el módulo de inventario.' },
   // Tickets
   { key: 'ver_tickets',         label: 'Ver tickets propios',              labelCorto: 'Ver tick.',    desc: 'Permite ver los tickets creados por el propio usuario.' },
   { key: 'crear_ticket',        label: 'Crear nuevo ticket',               labelCorto: 'Crear tick.',  desc: 'Permite abrir solicitudes de soporte técnico.' },
+  { key: 'editar_ticket',       label: 'Editar ticket propio',             labelCorto: 'Editar tick.', desc: 'Permite editar un ticket propio mientras está abierto.' },
   { key: 'gestionar_tickets',   label: 'Gestionar todos los tickets',      labelCorto: 'Gest. tick.',  desc: 'Permite ver, responder y cambiar el estado de cualquier ticket.' },
   { key: 'eliminar_ticket',     label: 'Eliminar tickets',                 labelCorto: 'Elim. tick.',  desc: 'Permite eliminar tickets del sistema de forma permanente.' },
   { key: 'ver_alertas_tickets', label: 'Ver alertas de tickets',           labelCorto: 'Alert. tick.', desc: 'Muestra un banner de alertas con tickets abiertos en el Dashboard.' },
+  { key: 'exportar_tickets',    label: 'Exportar tickets',                 labelCorto: 'Exp. tick.',   desc: 'Permite exportar el listado de tickets a CSV, Excel o PDF.' },
   // Requerimientos
   { key: 'ver_requerimientos',           label: 'Ver requerimientos',          labelCorto: 'Ver req.',    desc: 'Permite consultar las solicitudes de compra o requerimientos registrados.' },
   { key: 'crear_requerimiento',          label: 'Crear requerimiento',         labelCorto: 'Crear req.',  desc: 'Permite ingresar nuevas solicitudes de compra o requerimientos.' },
@@ -80,12 +83,13 @@ const GRUPOS_PERMISOS = [
     descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
     permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
                'eliminar_lote', 'importar_csv', 'exportar',
-               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias', 'gestionar_campos'],
+               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias', 'gestionar_campos',
+               'ver_auditoria_inventario'],
   },
   {
     key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de tickets de soporte.',
-    permisos: ['ver_tickets', 'crear_ticket', 'gestionar_tickets', 'eliminar_ticket', 'ver_alertas_tickets'],
+    permisos: ['ver_tickets', 'crear_ticket', 'editar_ticket', 'gestionar_tickets', 'eliminar_ticket', 'ver_alertas_tickets', 'exportar_tickets'],
   },
   {
     key: 'requerimientos', label: 'Requerimientos', paso: 5, soloPersonalizado: false,
@@ -128,38 +132,48 @@ const PERMISOS_POR_ROL = {
   },
   directivo: {
     permisos: {
+      ...PERMISOS_VACIO,
       ver_inventario: true, agregar_bien: true, editar_bien: true,
-      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-      importar_csv: false, exportar: true,
+      importar_csv: true, exportar: true,
       registrar_prestamo: true, registrar_incidencia: true,
-      // Tickets
-      ver_tickets: true, crear_ticket: true, gestionar_tickets: true, eliminar_ticket: false, ver_alertas_tickets: true,
-      // Requerimientos
-      ver_requerimientos: true, crear_requerimiento: true, editar_requerimiento: true,
-      eliminar_requerimiento: false, importar_requerimientos: false, exportar_requerimientos: true,
-      ver_auditoria_requerimientos: true,
-      // Ausencia
-      ver_ausencias: true, gestionar_ausencias: true,
-      crear_ausencias: true, editar_ausencias: true, eliminar_ausencias: false,
-      aprobar_ausencias: false, exportar_ausencias: true,
-      ver_auditoria_permisos: false, gestionar_usuarios: false,
+      ver_auditoria_inventario: true,
     },
     categorias: ['todos'],
   },
   coordinador: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_alertas_tickets: true, ver_requerimientos: true, crear_requerimiento: true },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      exportar_ausencias: true,
+      gestionar_ajustes: true,
+    },
     categorias: ['todos'],
   },
   docente: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      exportar_ausencias: true,
+      gestionar_ajustes: true,
+    },
     categorias: ['todos'],
   },
   asistente: {
-    permisos: { ...PERMISOS_VACIO, ver_tickets: true, crear_ticket: true, ver_requerimientos: true },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      exportar_ausencias: true,
+      gestionar_ajustes: true,
+    },
     categorias: ['todos'],
   },
   administrativo: {
-    permisos: { ...PERMISOS_VACIO, ver_requerimientos: true },
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      exportar_ausencias: true,
+      gestionar_ajustes: true,
+    },
     categorias: ['todos'],
   },
   // Legacy — usuarios existentes con roles anteriores
@@ -168,7 +182,16 @@ const PERMISOS_POR_ROL = {
   encargado_permisos:   { permisos: { ...PERMISOS_VACIO, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true }, categorias: ['todos'] },
   editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
   encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
-  soporte:              { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true }, categorias: ['todos'] },
+  soporte: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true,
+      gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
+      exportar_ausencias: true,
+      gestionar_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
   visor_requerimientos: { permisos: { ...PERMISOS_VACIO, ver_tickets: true }, categorias: [] },
 }
 
