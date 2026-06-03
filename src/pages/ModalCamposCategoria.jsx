@@ -303,7 +303,6 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
   const [dragOverId, setDragOverId] = useState(null)
 
   useEffect(() => {
-    console.log('[ModalCamposCategoria] montado/actualizado — catObj:', catObj)
     cargarCategoria()
   }, [catObj?.id]) // eslint-disable-line
 
@@ -314,14 +313,12 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
   }, [onClose])
 
   async function cargarCategoria() {
-    console.log('[cargarCategoria] consultando Supabase para catObj.id:', catObj.id)
     setCargando(true)
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('categorias')
       .select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden')
       .eq('id', catObj.id)
       .single()
-    console.log('[cargarCategoria] respuesta — data:', data, '| error:', error)
     setCampos(data?.campos_personalizados || [])
     setCamposOcultos(data?.campos_ocultos  || [])
     setCamposNombres(data?.campos_nombres  || {})
@@ -447,7 +444,6 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
     else registrarAuditoria('campo reordenado', dragInfo.id)
   }
 
-  console.log('[ModalCamposCategoria] render — catObj:', catObj?.id, '| cargando:', cargando)
   const _base      = getCamposSistema(catObj)
   const _allFields = [
     ..._base.map(c => ({ ...c, _tipo: 'sistema' })),

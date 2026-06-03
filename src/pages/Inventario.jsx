@@ -274,11 +274,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   useEffect(() => { cargarDatos() }, [])
 
-  // Log para confirmar que modalCamposCategoria cambia de estado
-  useEffect(() => {
-    console.log('[useEffect] modalCamposCategoria cambió a:', modalCamposCategoria)
-  }, [modalCamposCategoria])
-
   // Resetear catActual si la categoría ya no existe (localStorage obsoleto o categoría eliminada)
   useEffect(() => {
     if (categorias.length === 0 || catActual === 'todos') return
@@ -1874,17 +1869,9 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   // Categoría seleccionada para el modal de campos — calculada fuera del JSX
   const _catParaCampos = categorias.find(c => c.id === catActual)
     || categorias.find(c => String(c.id) === String(catActual))
-  console.log('[Render] modalCamposCategoria:', modalCamposCategoria, '| _catParaCampos:', _catParaCampos?.id ?? null)
 
   return (
     <div className="inv">
-
-      {/* ── DEBUG BANNER ─────────────────────────────────── */}
-      {modalCamposCategoria && (
-        <div style={{ background:'#dc2626', color:'#fff', padding:'16px 20px', fontSize:16, fontWeight:700, borderRadius:8, margin:'0 0 12px', zIndex:1 }}>
-          ⚠️ DEBUG: modalCamposCategoria = TRUE — si ves esto, React funciona
-        </div>
-      )}
 
       {/* Banner sin conexión */}
       {!online && (
@@ -2086,15 +2073,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           {puedeGestionarCampos && catActual !== 'todos' && (
             <button
               className="btn-import"
-              onClick={() => {
-                console.log('[CamposBtn] click — catActual:', catActual, '| tipo:', typeof catActual)
-                console.log('[CamposBtn] categorias:', categorias.map(c => ({ id: c.id, tipo: typeof c.id, label: c.label })))
-                console.log('[CamposBtn] puedeGestionarCampos:', puedeGestionarCampos, '| esAdmin:', esAdmin, '| permisos.gestionar_campos:', permisos.gestionar_campos)
-                const found = categorias.find(c => c.id === catActual)
-                  || categorias.find(c => String(c.id) === String(catActual))
-                console.log('[CamposBtn] categoría encontrada:', found)
+              onClick={(e) => {
+                // Detener propagación nativa para que el click no llegue al overlay del portal
+                e.stopPropagation()
+                e.nativeEvent?.stopImmediatePropagation()
                 setModalCamposCategoria(true)
-                console.log('[CamposBtn] modalCamposCategoria seteado a true')
               }}
               title="Configurar campos de esta categoría"
             >
@@ -4599,28 +4582,20 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
         </div>
       )}
 
-      {/* ── TEST: indicador visual mínimo ────────────────── */}
-      {modalCamposCategoria && (
-        <div style={{
-          position: 'fixed', bottom: 16, left: 16, zIndex: 99999,
-          background: _catParaCampos ? '#16a34a' : '#dc2626',
-          color: '#fff', borderRadius: 8, padding: '8px 16px',
-          fontSize: 13, fontWeight: 700, boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-        }}>
-          {_catParaCampos
-            ? `✅ Cat OK: ${_catParaCampos.id} — montando modal…`
-            : '❌ Cat NO encontrada'}
-        </div>
-      )}
-
-      {/* ── TEST A: div inline (sin portal) ──────────────── */}
+      {/* ── Modal Configurar campos por categoría ────────── */}
       {modalCamposCategoria && _catParaCampos && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(255,0,0,0.85)', zIndex:2147483647, display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div style={{ background:'white', borderRadius:12, padding:32, maxWidth:400, textAlign:'center' }}>
-            <p style={{ fontWeight:800, color:'red' }}>TEST INLINE — {_catParaCampos.id}</p>
-            <button onClick={() => setModalCamposCategoria(false)} style={{ marginTop:16, padding:'8px 24px', background:'#1a237e', color:'white', border:'none', borderRadius:8, cursor:'pointer' }}>Cerrar</button>
-          </div>
-        </div>
+        <ModalCamposCategoria
+          key={_catParaCampos.id}
+          catObj={_catParaCampos}
+          usuario={usuario}
+          onClose={() => setModalCamposCategoria(false)}
+          onCatUpdated={() => {
+            supabase.from('categorias').select('*').eq('id', _catParaCampos.id).single()
+              .then(({ data }) => {
+                if (data) setCategorias(prev => prev.map(c => c.id === _catParaCampos.id ? data : c))
+              })
+          }}
+        />
       )}
     </div>
   )
