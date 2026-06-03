@@ -273,6 +273,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
   useEffect(() => { cargarDatos() }, [])
 
+  // Log para confirmar que modalCamposCategoria cambia de estado
+  useEffect(() => {
+    console.log('[useEffect] modalCamposCategoria cambió a:', modalCamposCategoria)
+  }, [modalCamposCategoria])
+
   // Resetear catActual si la categoría ya no existe (localStorage obsoleto o categoría eliminada)
   useEffect(() => {
     if (categorias.length === 0 || catActual === 'todos') return
@@ -1864,6 +1869,11 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       <p>Cargando inventario...</p>
     </div>
   )
+
+  // Categoría seleccionada para el modal de campos — calculada fuera del JSX
+  const _catParaCampos = categorias.find(c => c.id === catActual)
+    || categorias.find(c => String(c.id) === String(catActual))
+  console.log('[Render] modalCamposCategoria:', modalCamposCategoria, '| _catParaCampos:', _catParaCampos?.id ?? null)
 
   return (
     <div className="inv">
@@ -4582,31 +4592,20 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
       )}
 
       {/* ── Modal Configurar campos por categoría ────────── */}
-      {modalCamposCategoria && (() => {
-        console.log('[ModalCampos] IIFE ejecutada — catActual:', catActual, '| categorias.length:', categorias.length)
-        const _catCampos = categorias.find(c => c.id === catActual)
-          || categorias.find(c => String(c.id) === String(catActual))
-        console.log('[ModalCampos] _catCampos resultado:', _catCampos)
-        if (!_catCampos) {
-          console.warn('[ModalCampos] ⚠️ No se encontró la categoría. El modal no se abrirá.')
-          return null
-        }
-        console.log('[ModalCampos] ✅ Renderizando ModalCamposCategoria con:', _catCampos)
-        return (
-          <ModalCamposCategoria
-            key={_catCampos.id}
-            catObj={_catCampos}
-            usuario={usuario}
-            onClose={() => setModalCamposCategoria(false)}
-            onCatUpdated={() => {
-              supabase.from('categorias').select('*').eq('id', _catCampos.id).single()
-                .then(({ data }) => {
-                  if (data) setCategorias(prev => prev.map(c => c.id === _catCampos.id ? data : c))
-                })
-            }}
-          />
-        )
-      })()}
+      {modalCamposCategoria && _catParaCampos && (
+        <ModalCamposCategoria
+          key={_catParaCampos.id}
+          catObj={_catParaCampos}
+          usuario={usuario}
+          onClose={() => setModalCamposCategoria(false)}
+          onCatUpdated={() => {
+            supabase.from('categorias').select('*').eq('id', _catParaCampos.id).single()
+              .then(({ data }) => {
+                if (data) setCategorias(prev => prev.map(c => c.id === _catParaCampos.id ? data : c))
+              })
+          }}
+        />
+      )}
     </div>
   )
 }
