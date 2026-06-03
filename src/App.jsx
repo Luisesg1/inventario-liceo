@@ -94,8 +94,8 @@ export default function App() {
   const puedeVerAuditoriaReq        = rolPermiteReqs     && (esAdmin || !!p.ver_auditoria_requerimientos)
   const puedeVerAuditoriaPermisos   = rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos)
   const puedeVerAuditoriaTickets    = rolPermiteTickets  && (esAdmin || !!p.gestionar_tickets)
-  const puedeAccederAusencias       = rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias || !!p.ver_ausencias ||
-    !!p.crear_ausencias || !!p.editar_ausencias || !!p.aprobar_ausencias || !!p.gestionar_ausencias)
+  const puedeAccederAusencias       = rolPermiteAusencias && (esAdmin || !!p.ver_propias_ausencias || !!p.exportar_ausencias ||
+    !!p.ver_ausencias || !!p.crear_ausencias || !!p.editar_ausencias || !!p.aprobar_ausencias || !!p.gestionar_ausencias)
   const permisosTickets = {
     verPropios: rolPermiteTickets && (esAdmin || !!p.ver_tickets),
     crear:      rolPermiteTickets && (esAdmin || p.crear_ticket !== false),

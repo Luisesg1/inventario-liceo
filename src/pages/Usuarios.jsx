@@ -52,6 +52,7 @@ const ACCIONES = [
   { key: 'exportar_requerimientos',      label: 'Exportar requerimientos',     labelCorto: 'Exp. req.',   desc: 'Permite exportar el listado de requerimientos a Excel o PDF.' },
   { key: 'ver_auditoria_requerimientos', label: 'Ver auditoría de compras',    labelCorto: 'Aud. Req.',   desc: 'Permite ver el historial de cambios en el módulo de requerimientos.' },
   // Ausencia
+  { key: 'ver_propias_ausencias', label: 'Ver propias ausencias',              labelCorto: 'Ver prop.',   desc: 'Permite al usuario ver su propio registro de ausencias (Mis ausencias).' },
   { key: 'ver_ausencias',         label: 'Ver ausencias del personal',         labelCorto: 'Ver aus.',    desc: 'Permite consultar el registro de ausencias de todo el personal.' },
   { key: 'crear_ausencias',       label: 'Registrar ausencias',                labelCorto: 'Crear aus.',  desc: 'Permite ingresar nuevas ausencias para cualquier funcionario.' },
   { key: 'editar_ausencias',      label: 'Editar ausencias',                   labelCorto: 'Editar aus.', desc: 'Permite modificar ausencias ya registradas.' },
@@ -101,7 +102,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de ausencias del personal. Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
+    permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
   },
   {
     key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
@@ -144,7 +145,7 @@ const PERMISOS_POR_ROL = {
     permisos: {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      exportar_ausencias: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
       gestionar_ajustes: true,
     },
     categorias: ['todos'],
@@ -153,7 +154,7 @@ const PERMISOS_POR_ROL = {
     permisos: {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      exportar_ausencias: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
       gestionar_ajustes: true,
     },
     categorias: ['todos'],
@@ -162,7 +163,7 @@ const PERMISOS_POR_ROL = {
     permisos: {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      exportar_ausencias: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
       gestionar_ajustes: true,
     },
     categorias: ['todos'],
@@ -171,7 +172,7 @@ const PERMISOS_POR_ROL = {
     permisos: {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      exportar_ausencias: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
       gestionar_ajustes: true,
     },
     categorias: ['todos'],
@@ -187,7 +188,7 @@ const PERMISOS_POR_ROL = {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true,
       gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
-      exportar_ausencias: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
       gestionar_ajustes: true,
     },
     categorias: ['todos'],
