@@ -152,7 +152,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const puedeGestionarCats    = permisos.gestionar_categorias
   const puedePrestamo         = permisos.registrar_prestamo
   const puedeIncidencias      = permisos.registrar_incidencia
-  const puedeGestionarCampos  = permisos.gestionar_campos
+  const puedeGestionarCampos  = esAdmin || permisos.gestionar_campos
 
   const [bienes, setBienes]           = useState([])
   const [categorias, setCategorias]   = useState([])
@@ -272,6 +272,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }, []) // eslint-disable-line
 
   useEffect(() => { cargarDatos() }, [])
+
+  // Resetear catActual si la categoría ya no existe (localStorage obsoleto o categoría eliminada)
+  useEffect(() => {
+    if (categorias.length === 0 || catActual === 'todos') return
+    const existe = categorias.some(c => String(c.id) === String(catActual))
+    if (!existe) {
+      setCatActual('todos')
+      localStorage.setItem('inv_catActual', 'todos')
+    }
+  }, [categorias]) // eslint-disable-line
 
   const cargarDatos = async () => {
     setCargando(true)
@@ -2058,7 +2068,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           {puedeGestionarCampos && catActual !== 'todos' && (
             <button
               className="btn-import"
-              onClick={() => setModalCamposCategoria(true)}
+              onClick={() => {
+                console.log('[CamposBtn] click — catActual:', catActual, '| tipo:', typeof catActual)
+                console.log('[CamposBtn] categorias:', categorias.map(c => ({ id: c.id, tipo: typeof c.id, label: c.label })))
+                console.log('[CamposBtn] puedeGestionarCampos:', puedeGestionarCampos, '| esAdmin:', esAdmin, '| permisos.gestionar_campos:', permisos.gestionar_campos)
+                const found = categorias.find(c => c.id === catActual)
+                  || categorias.find(c => String(c.id) === String(catActual))
+                console.log('[CamposBtn] categoría encontrada:', found)
+                setModalCamposCategoria(true)
+                console.log('[CamposBtn] modalCamposCategoria seteado a true')
+              }}
               title="Configurar campos de esta categoría"
             >
               <span className="btn-label-full">⚙️ Configurar campos</span>
@@ -4564,18 +4583,25 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
 
       {/* ── Modal Configurar campos por categoría ────────── */}
       {modalCamposCategoria && (() => {
+        console.log('[ModalCampos] IIFE ejecutada — catActual:', catActual, '| categorias.length:', categorias.length)
         const _catCampos = categorias.find(c => c.id === catActual)
-        if (!_catCampos) return null
+          || categorias.find(c => String(c.id) === String(catActual))
+        console.log('[ModalCampos] _catCampos resultado:', _catCampos)
+        if (!_catCampos) {
+          console.warn('[ModalCampos] ⚠️ No se encontró la categoría. El modal no se abrirá.')
+          return null
+        }
+        console.log('[ModalCampos] ✅ Renderizando ModalCamposCategoria con:', _catCampos)
         return (
           <ModalCamposCategoria
-            key={catActual}
+            key={_catCampos.id}
             catObj={_catCampos}
             usuario={usuario}
             onClose={() => setModalCamposCategoria(false)}
             onCatUpdated={() => {
-              supabase.from('categorias').select('*').eq('id', catActual).single()
+              supabase.from('categorias').select('*').eq('id', _catCampos.id).single()
                 .then(({ data }) => {
-                  if (data) setCategorias(prev => prev.map(c => c.id === catActual ? data : c))
+                  if (data) setCategorias(prev => prev.map(c => c.id === _catCampos.id ? data : c))
                 })
             }}
           />
