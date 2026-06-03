@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../supabase'
 import './Inventario.css'
 import ImportarCSV from './ImportarCSV'
@@ -4606,19 +4607,24 @@ function ModalIncidencias({ bien, usuario, onCerrar }) {
       )}
 
       {/* ── Modal Configurar campos por categoría ────────── */}
-      {modalCamposCategoria && _catParaCampos && (
-        <ModalCamposCategoria
-          key={_catParaCampos.id}
-          catObj={_catParaCampos}
-          usuario={usuario}
-          onClose={() => setModalCamposCategoria(false)}
-          onCatUpdated={() => {
-            supabase.from('categorias').select('*').eq('id', _catParaCampos.id).single()
-              .then(({ data }) => {
-                if (data) setCategorias(prev => prev.map(c => c.id === _catParaCampos.id ? data : c))
-              })
-          }}
-        />
+      {modalCamposCategoria && _catParaCampos && createPortal(
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:99999, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setModalCamposCategoria(false)}>
+          <div style={{ background:'white', borderRadius:12, padding:32, maxWidth:400, width:'90%', textAlign:'center' }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontWeight:800, fontSize:16, marginBottom:8 }}>🔧 TEST PORTAL MANUAL</p>
+            <p style={{ color:'#555', marginBottom:16 }}>Categoría: <strong>{_catParaCampos.id}</strong></p>
+            <p style={{ color:'#888', fontSize:12, marginBottom:16 }}>
+              Si ves esto → el problema está dentro de ModalCamposCategoria.<br/>
+              Si NO ves esto → el problema está en el render de Inventario.
+            </p>
+            <button onClick={() => setModalCamposCategoria(false)}
+              style={{ background:'#1a237e', color:'white', border:'none', borderRadius:8, padding:'10px 24px', cursor:'pointer', fontWeight:700 }}>
+              Cerrar
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   )
