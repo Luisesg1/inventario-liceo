@@ -420,8 +420,8 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 
   const pasoEfectivo = paso
   const stepsBase = [
-    { n: 1, label: 'Módulos' },
-    { n: 2, label: 'Nivel de acceso' },
+    { n: 1, label: 'Nivel de acceso' },
+    { n: 2, label: 'Módulos' },
     { n: 3, label: 'Inventario' },
     { n: 4, label: 'Tickets' },
     { n: 5, label: 'Requerimientos' },
@@ -487,8 +487,8 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
         })}
       </div>
 
-      {/* ── Paso 1: Módulos ── */}
-      {pasoEfectivo === 1 && (
+      {/* ── Paso 2: Módulos ── */}
+      {pasoEfectivo === 2 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, gap: 12 }}>
             <div>
@@ -554,14 +554,15 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>
-            <button onClick={() => setPaso(2)} style={prim}>Siguiente →</button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
+            <button onClick={() => setPaso(1)} style={sec}>← Atrás</button>
+            <button onClick={() => setPaso(pasoSiguiente(2))} style={prim}>Siguiente →</button>
           </div>
         </div>
       )}
 
-      {/* ── Paso 2: Nivel de acceso ── */}
-      {pasoEfectivo === 2 && (
+      {/* ── Paso 1: Nivel de acceso ── */}
+      {pasoEfectivo === 1 && (
         <div>
           <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Nivel de acceso</p>
           <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
@@ -652,11 +653,8 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
             })}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
-            <button onClick={() => setPaso(1)} style={sec}>← Atrás</button>
-            <button onClick={() => setPaso(pasoSiguiente(2))} style={prim}>
-              Siguiente →
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>
+            <button onClick={() => setPaso(2)} style={prim}>Siguiente →</button>
           </div>
         </div>
       )}
