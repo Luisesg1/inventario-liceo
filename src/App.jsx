@@ -126,14 +126,16 @@ export default function App() {
     eliminarUsuario: esAdmin || !!p.eliminar_usuario,
   }
   const permisosComp = {
-    ver:      esAdmin || !!p.ver_compensatorios,
-    gestionar:esAdmin || !!p.gestionar_compensatorios,
-    crear:    esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
-    editar:   esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
-    eliminar: esAdmin || !!p.eliminar_compensatorios,
-    exportar: esAdmin || !!p.exportar_compensatorios,
+    ver:          esAdmin || !!p.ver_compensatorios,
+    gestionar:    esAdmin || !!p.gestionar_compensatorios,
+    crear:        esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
+    editar:       esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
+    eliminar:     esAdmin || !!p.eliminar_compensatorios,
+    exportar:     esAdmin || !!p.exportar_compensatorios,
+    verAuditoria: esAdmin || !!p.ver_auditoria_compensatorios,
   }
-  const puedeVerCompensatorios  = permisosComp.ver
+  const puedeVerCompensatorios          = permisosComp.ver
+  const puedeVerAuditoriaCompensatorios = permisosComp.verAuditoria
   const puedeGestionarAusencias = esAdmin || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
@@ -156,7 +158,7 @@ export default function App() {
     || (pagina === 'permisos'                    && !puedeGestionarAusencias)
     || (pagina === 'compensatorios'              && !puedeVerCompensatorios)
     || (pagina === 'auditoria_requerimientos'    && !puedeVerAuditoriaReq)
-    || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos)
+    || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos && !puedeVerAuditoriaCompensatorios)
     || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
     || (pagina === 'tickets'                     && !puedeVerTickets)
     || (pagina === 'requerimientos'              && !permisosReqs.ver)
@@ -361,6 +363,7 @@ export default function App() {
       nombreInstitucion={nombreInstitucion}
       puedeVerAuditoriaReq={puedeVerAuditoriaReq}
       puedeVerAuditoriaPermisos={puedeVerAuditoriaPermisos}
+      puedeVerAuditoriaCompensatorios={puedeVerAuditoriaCompensatorios}
       puedeVerAuditoriaTickets={puedeVerAuditoriaTickets}
       puedeVerAuditoriaInventario={puedeVerAuditoriaInventario}
       puedeVerInventario={puedeVerInventario}
@@ -380,7 +383,10 @@ export default function App() {
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
       {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
-      {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulo="ausencias" />}
+      {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulos={[
+          ...(puedeVerAuditoriaPermisos        ? ['ausencias']      : []),
+          ...(puedeVerAuditoriaCompensatorios  ? ['compensatorios'] : []),
+        ]} />}
       {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}

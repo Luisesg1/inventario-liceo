@@ -53,7 +53,7 @@ export default function Layout({
   usuario, onLogout, children, paginaActual, setPagina,
   onRefreshTicketBadge, logoUrl,
   nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
-  puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false,
+  puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false, puedeVerAuditoriaCompensatorios = false,
   puedeVerAuditoriaInventario = false,
   puedeVerInventario = false, puedeVerTickets = true, puedeGestionarTickets = false,
   puedeVerAuditoriaTickets = false,
@@ -682,8 +682,8 @@ export default function Layout({
                       Compensatorios
                     </div>
                   )}
-                  {/* Auditoría: solo para quienes tienen permiso explícito */}
-                  {puedeVerAuditoriaPermisos && (
+                  {/* Auditoría: visible si tiene permiso de ausencias o compensatorios */}
+                  {(puedeVerAuditoriaPermisos || puedeVerAuditoriaCompensatorios) && (
                     <div
                       className={`nav-subitem ${paginaActual === 'auditoria_permisos' ? 'active' : ''}`}
                       onClick={() => handleNav('auditoria_permisos')}

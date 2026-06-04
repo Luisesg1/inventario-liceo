@@ -71,6 +71,7 @@ const ACCIONES = [
   { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
   { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
+  { key: 'ver_auditoria_compensatorios', label: 'Ver auditoría de compensatorios', labelCorto: 'Aud. Comp.', desc: 'Permite acceder al historial y auditoría de movimientos de días compensatorios.' },
   // Configurar campos
   { key: 'ver_campos',            label: 'Ver campos inventario',             labelCorto: 'Ver campos',    desc: 'Permite acceder a la sección de campos inventario desde el menú lateral y ver la configuración de cada categoría.' },
   { key: 'agregar_campo',         label: 'Agregar campos',                    labelCorto: 'Agregar campo', desc: 'Permite agregar nuevos campos personalizados a cualquier categoría de inventario.' },
@@ -124,7 +125,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios'],
+    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios', 'ver_auditoria_compensatorios'],
   },
   {
     key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
@@ -139,7 +140,7 @@ const ACCIONES_POR_CATEGORIA = ['ver_inventario', 'agregar_bien', 'editar_bien',
 const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
   'registrar_prestamo', 'registrar_incidencia',
   'ver_tickets', 'gestionar_tickets', 'ver_alertas_tickets',
-  'ver_auditoria_requerimientos', 'ver_auditoria_permisos']
+  'ver_auditoria_requerimientos', 'ver_auditoria_permisos', 'ver_auditoria_compensatorios']
 
 const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
 
