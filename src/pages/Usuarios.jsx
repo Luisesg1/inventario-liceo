@@ -72,9 +72,17 @@ const ACCIONES = [
   { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
   { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
+  // Configurar campos
+  { key: 'ver_campos',            label: 'Ver configurar campos',             labelCorto: 'Ver campos',    desc: 'Permite acceder a la sección de configurar campos desde el menú lateral y ver la configuración de cada categoría.' },
+  { key: 'agregar_campo',         label: 'Agregar campos',                    labelCorto: 'Agregar campo', desc: 'Permite agregar nuevos campos personalizados a cualquier categoría de inventario.' },
+  { key: 'editar_campo',          label: 'Editar campos',                     labelCorto: 'Editar campo',  desc: 'Permite renombrar campos del sistema y modificar campos personalizados existentes.' },
+  { key: 'ocultar_campo',         label: 'Ocultar / mostrar campos',          labelCorto: 'Ocultar campo', desc: 'Permite activar o desactivar la visibilidad de campos del sistema en cada categoría.' },
+  { key: 'eliminar_campo',        label: 'Eliminar campos',                   labelCorto: 'Eliminar campo',desc: 'Permite eliminar campos personalizados de una categoría de inventario.' },
+  { key: 'reordenar_campos',      label: 'Reordenar campos',                  labelCorto: 'Reordenar',     desc: 'Permite cambiar el orden en que se muestran los campos arrastrando y soltando.' },
+  { key: 'gestionar_campos_base', label: 'Gestionar campos base protegidos',  labelCorto: 'Campos base',   desc: 'Permite editar y reorganizar campos protegidos del sistema (marcados como 🔒 base).' },
   // Configuración del sistema
   { key: 'gestionar_ajustes', label: 'Personalizar sistema',                labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
-  { key: 'gestionar_campos',  label: 'Gestionar campos de inventario',    labelCorto: 'Campos',    desc: 'Permite configurar los campos personalizados de cada categoría desde el módulo de inventario.' },
+  { key: 'gestionar_campos',  label: 'Gestionar campos de inventario (legado)', labelCorto: 'Campos',    desc: 'Permiso heredado de gestión completa de campos. Se conserva por compatibilidad.' },
   // Ajustes
   { key: 'ver_ajustes',             label: 'Ver ajustes',                 labelCorto: 'Ver aj.',     desc: 'Permite acceder y visualizar la sección de Ajustes del sistema.' },
   { key: 'gestionar_usuarios',      label: 'Gestionar usuarios',          labelCorto: 'Gest. usr.',  desc: 'Permite ver y administrar la lista completa de usuarios del sistema.' },
@@ -89,38 +97,43 @@ const GRUPOS_PERMISOS = [
     descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
     permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
                'eliminar_lote', 'importar_csv', 'exportar',
-               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias', 'gestionar_campos',
+               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias',
                'ver_auditoria_inventario'],
   },
   {
-    key: 'tickets', label: 'Tickets', paso: 4, soloPersonalizado: false,
+    key: 'configurar_campos', label: 'Configurar campos', paso: 4, soloPersonalizado: false,
+    descripcion: 'Acceso a la sección de configuración de campos por categoría. Controla qué puede hacer el usuario con los campos de cada categoría de inventario.',
+    permisos: ['ver_campos', 'agregar_campo', 'editar_campo', 'ocultar_campo', 'eliminar_campo', 'reordenar_campos', 'gestionar_campos_base'],
+  },
+  {
+    key: 'tickets', label: 'Tickets', paso: 5, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de tickets de soporte.',
     permisos: ['ver_tickets', 'crear_ticket', 'editar_ticket', 'gestionar_tickets', 'eliminar_ticket', 'ver_alertas_tickets', 'exportar_tickets'],
   },
   {
-    key: 'requerimientos', label: 'Requerimientos', paso: 5, soloPersonalizado: false,
+    key: 'requerimientos', label: 'Requerimientos', paso: 6, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de requerimientos y compras.',
     permisos: ['ver_requerimientos', 'crear_requerimiento', 'editar_requerimiento',
                'eliminar_requerimiento', 'importar_requerimientos', 'exportar_requerimientos',
                'ver_auditoria_requerimientos'],
   },
   {
-    key: 'ausencia', label: 'Ausencia', paso: 6, soloPersonalizado: false,
+    key: 'ausencia', label: 'Ausencia', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de ausencias del personal. Cada acción puede activarse de forma independiente.',
     permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
   },
   {
-    key: 'administracion', label: 'Administración', paso: 7, soloPersonalizado: false,
+    key: 'administracion', label: 'Administración', paso: 8, soloPersonalizado: false,
     descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
     permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'gestionar_ajustes'],
   },
   {
-    key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
+    key: 'compensatorios', label: 'Compensatorios', paso: 9, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
     permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios'],
   },
   {
-    key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
+    key: 'ajustes', label: 'Ajustes', paso: 10, soloPersonalizado: false,
     descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
     permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_roles_permisos', 'guardar_cambios_ajustes'],
   },
@@ -365,7 +378,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 9
+  const ULTIMO_PASO = 10
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -430,15 +443,16 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 
   const pasoEfectivo = paso
   const stepsBase = [
-    { n: 1, label: 'Nivel de acceso' },
-    { n: 2, label: 'Módulos' },
-    { n: 3, label: 'Inventario' },
-    { n: 4, label: 'Tickets' },
-    { n: 5, label: 'Requerimientos' },
-    { n: 6, label: 'Ausencia' },
-    { n: 7, label: 'Administración' },
-    { n: 8, label: 'Compensatorios' },
-    { n: 9, label: 'Ajustes' },
+    { n: 1,  label: 'Nivel de acceso' },
+    { n: 2,  label: 'Módulos' },
+    { n: 3,  label: 'Inventario' },
+    { n: 4,  label: 'Config. campos' },
+    { n: 5,  label: 'Tickets' },
+    { n: 6,  label: 'Requerimientos' },
+    { n: 7,  label: 'Ausencia' },
+    { n: 8,  label: 'Administración' },
+    { n: 9,  label: 'Compensatorios' },
+    { n: 10, label: 'Ajustes' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }

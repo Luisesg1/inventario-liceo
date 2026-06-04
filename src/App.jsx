@@ -139,7 +139,16 @@ export default function App() {
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
   const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes || !!p.ver_ajustes || !!p.guardar_cambios_ajustes)
-  const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos
+  const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos || !!p.ver_campos
+  const permisosCampos = {
+    ver:           esAdmin || !!p.ver_campos || !!p.gestionar_campos,
+    agregar:       esAdmin || !!p.agregar_campo || !!p.gestionar_campos,
+    editar:        esAdmin || !!p.editar_campo || !!p.gestionar_campos,
+    ocultar:       esAdmin || !!p.ocultar_campo || !!p.gestionar_campos,
+    eliminar:      esAdmin || !!p.eliminar_campo || !!p.gestionar_campos,
+    reordenar:     esAdmin || !!p.reordenar_campos || !!p.gestionar_campos,
+    gestionarBase: esAdmin || !!p.gestionar_campos_base || !!p.gestionar_campos,
+  }
 
   const soloAdmin = (pagina === 'usuarios'       && !puedeAccederUsuarios)
     || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
@@ -378,7 +387,7 @@ export default function App() {
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
-      {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} />}
+      {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
