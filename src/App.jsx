@@ -256,6 +256,24 @@ export default function App() {
     cargarConfig()
   }, [])
 
+  // ── Realtime: permisos del usuario logueado ──────────────────────
+  useEffect(() => {
+    if (!usuario || usuario.rol === 'admin') return
+    const canal = supabase
+      .channel('permisos-propios')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'permisos_usuario',
+        filter: `usuario_id=eq.${usuario.id}`,
+      }, (payload) => {
+        const nuevos = payload.new?.permisos
+        if (nuevos) setPermisosUsuario(nuevos)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(canal) }
+  }, [usuario?.id])
+
   // ── Verificación de sesión periódica ─────────────────────────────
   useEffect(() => {
     if (!usuario) return
