@@ -330,7 +330,7 @@ export default function Layout({
   // ── Nav items ─────────────────────────────────────────
   const navItems = []
 
-  const inventarioActivo     = paginaActual === 'inventario' || paginaActual === 'auditoria'
+  const inventarioActivo     = paginaActual === 'inventario' || paginaActual === 'auditoria' || paginaActual === 'campos'
   const requerimientosActivo = paginaActual === 'requerimientos' || paginaActual === 'auditoria_requerimientos'
   const ticketsActivo        = paginaActual === 'tickets' || paginaActual === 'auditoria_tickets'
   const permisosActivo       = paginaActual === 'permisos' || paginaActual === 'mis_ausencias' || paginaActual === 'auditoria_permisos' || paginaActual === 'compensatorios'
@@ -339,7 +339,7 @@ export default function Layout({
   const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
   const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
-  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'campos' || paginaActual === 'usuarios'
+  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
   const [herramientasAbierto, setHerramientasAbierto] = useState(false)
 
@@ -473,6 +473,15 @@ export default function Layout({
                       <span className="nav-subitem-dot" />
                       Ver inventario
                     </div>
+                    {puedeGestionarCampos && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'campos' ? 'active' : ''}`}
+                        onClick={() => handleNav('campos')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Configurar campos
+                      </div>
+                    )}
                     {puedeVerAuditoriaInventario && (
                       <div
                         className={`nav-subitem ${paginaActual === 'auditoria' ? 'active' : ''}`}
@@ -689,7 +698,7 @@ export default function Layout({
           </>}
 
           {/* Ajustes con submenú */}
-          {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarCampos) && (
+          {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes) && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}

@@ -2070,16 +2070,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             <span className="btn-label-full">▦ {modoQR ? 'Cancelar QR' : 'Generar QR'}</span>
             <span className="btn-label-short">▦</span>
           </button>
-          {puedeGestionarCampos && catActual !== 'todos' && (
-            <button
-              className="btn-import"
-              onClick={() => setModalCamposCategoria(true)}
-              title="Configurar campos de esta categoría"
-            >
-              <span className="btn-label-full">⚙️ Configurar campos</span>
-              <span className="btn-label-short">⚙️</span>
-            </button>
-          )}
+
           {puedeAgregar && (
             <button className="btn-import btn-agregar" onClick={mostrarForm && !editandoId ? cancelarForm : abrirFormNuevo}>
               {mostrarForm && !editandoId ? '✕' : <><span className="btn-label-full">+ Agregar bien</span><span className="btn-label-short">＋</span></>}
