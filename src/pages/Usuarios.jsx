@@ -75,6 +75,11 @@ const ACCIONES = [
   // Configuración del sistema
   { key: 'gestionar_ajustes', label: 'Personalizar sistema',                labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
   { key: 'gestionar_campos',  label: 'Gestionar campos de inventario',    labelCorto: 'Campos',    desc: 'Permite configurar los campos personalizados de cada categoría desde el módulo de inventario.' },
+  // Ajustes
+  { key: 'ver_ajustes',             label: 'Ver ajustes',                 labelCorto: 'Ver aj.',     desc: 'Permite acceder y visualizar la sección de Ajustes del sistema.' },
+  { key: 'gestionar_usuarios',      label: 'Gestionar usuarios',          labelCorto: 'Gest. usr.',  desc: 'Permite ver y administrar la lista completa de usuarios del sistema.' },
+  { key: 'editar_roles_permisos',   label: 'Editar roles/permisos',       labelCorto: 'Editar roles',desc: 'Permite modificar los roles y permisos asignados a los usuarios.' },
+  { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -114,6 +119,11 @@ const GRUPOS_PERMISOS = [
     descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
     permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios'],
   },
+  {
+    key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
+    descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
+    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_roles_permisos', 'guardar_cambios_ajustes'],
+  },
 ]
 
 // Backward-compat — algunos lugares aún usan estas listas
@@ -146,7 +156,7 @@ const PERMISOS_POR_ROL = {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
       ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
     },
     categorias: ['todos'],
   },
@@ -155,7 +165,7 @@ const PERMISOS_POR_ROL = {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
       ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
     },
     categorias: ['todos'],
   },
@@ -164,7 +174,7 @@ const PERMISOS_POR_ROL = {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
       ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
     },
     categorias: ['todos'],
   },
@@ -173,7 +183,7 @@ const PERMISOS_POR_ROL = {
       ...PERMISOS_VACIO,
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
       ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
     },
     categorias: ['todos'],
   },
@@ -189,7 +199,7 @@ const PERMISOS_POR_ROL = {
       ver_tickets: true, crear_ticket: true, editar_ticket: true,
       gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
       ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
     },
     categorias: ['todos'],
   },
@@ -355,7 +365,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 8
+  const ULTIMO_PASO = 9
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -428,6 +438,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     { n: 6, label: 'Ausencia' },
     { n: 7, label: 'Administración' },
     { n: 8, label: 'Compensatorios' },
+    { n: 9, label: 'Ajustes' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }

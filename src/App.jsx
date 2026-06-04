@@ -137,8 +137,8 @@ export default function App() {
   const puedeVerCompensatorios  = permisosComp.ver
   const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
-  const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario
-  const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes)
+  const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
+  const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes || !!p.ver_ajustes || !!p.guardar_cambios_ajustes)
   const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos
 
   const soloAdmin = (pagina === 'usuarios'       && !puedeAccederUsuarios)
