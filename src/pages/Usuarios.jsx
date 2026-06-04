@@ -69,7 +69,6 @@ const ACCIONES = [
   { key: 'crear_compensatorios',     label: 'Registrar compensatorios',        labelCorto: 'Crear comp.', desc: 'Permite ingresar nuevos días compensatorios para cualquier funcionario.' },
   { key: 'editar_compensatorios',    label: 'Editar compensatorios',           labelCorto: 'Editar comp.',desc: 'Permite modificar registros de días compensatorios ya existentes.' },
   { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
-  { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
   { key: 'ver_auditoria_compensatorios', label: 'Ver auditoría de compensatorios', labelCorto: 'Aud. Comp.', desc: 'Permite acceder al historial y auditoría de movimientos de días compensatorios.' },
   // Configurar campos
@@ -125,7 +124,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios', 'ver_auditoria_compensatorios'],
+    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'ver_auditoria_compensatorios'],
   },
   {
     key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,

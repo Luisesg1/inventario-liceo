@@ -127,9 +127,8 @@ export default function App() {
   }
   const permisosComp = {
     ver:          esAdmin || !!p.ver_compensatorios,
-    gestionar:    esAdmin || !!p.gestionar_compensatorios,
-    crear:        esAdmin || !!p.gestionar_compensatorios || !!p.crear_compensatorios,
-    editar:       esAdmin || !!p.gestionar_compensatorios || !!p.editar_compensatorios,
+    crear:        esAdmin || !!p.crear_compensatorios,
+    editar:       esAdmin || !!p.editar_compensatorios,
     eliminar:     esAdmin || !!p.eliminar_compensatorios,
     exportar:     esAdmin || !!p.exportar_compensatorios,
     verAuditoria: esAdmin || !!p.ver_auditoria_compensatorios,

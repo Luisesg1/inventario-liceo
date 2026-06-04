@@ -80,9 +80,8 @@ function estadoEfectivo(rec) {
 
 export default function Compensatorios({ usuario, permisos = {} }) {
   const esAdmin      = usuario?.rol === 'admin'
-  const puedeGest    = esAdmin || !!permisos.gestionar  // gestionar es el campo genérico heredado
-  const puedeCrear    = esAdmin || !!(permisos.crear  ?? permisos.gestionar)
-  const puedeEditar   = esAdmin || !!(permisos.editar ?? permisos.gestionar)
+  const puedeCrear    = esAdmin || !!permisos.crear
+  const puedeEditar   = esAdmin || !!permisos.editar
   const puedeElim     = esAdmin || !!permisos.eliminar
   const puedeExportar = esAdmin || !!permisos.exportar
 
@@ -436,7 +435,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
             <p className="comp-empty-desc">
               {busq || filtTipo || filtEstado
                 ? 'Ningún registro coincide con los filtros.'
-                : puedeGest ? 'Registra el primer día compensatorio.' : 'Aún no tienes días compensatorios.'}
+                : puedeCrear ? 'Registra el primer día compensatorio.' : 'Aún no tienes días compensatorios.'}
             </p>
           </div>
         ) : (

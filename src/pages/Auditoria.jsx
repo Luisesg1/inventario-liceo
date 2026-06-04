@@ -45,7 +45,6 @@ const CAMPO_LABEL_PERMISOS = {
   ver_auditoria_permisos: 'Ver auditoría de ausencias',
   notificar_ausencia_correo: 'Notificar ausencia por correo',
   ver_compensatorios: 'Ver días compensatorios',
-  gestionar_compensatorios: 'Gestionar días compensatorios',
   invitar_usuario: 'Invitar usuarios', editar_usuario: 'Editar usuarios',
   eliminar_usuario: 'Eliminar usuarios',
 }
