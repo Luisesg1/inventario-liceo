@@ -122,19 +122,14 @@ const GRUPOS_PERMISOS = [
     permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'ver_auditoria_permisos'],
   },
   {
-    key: 'administracion', label: 'Administración', paso: 8, soloPersonalizado: false,
-    descripcion: 'Acceso a la gestión de cuentas: invitar nuevos usuarios, editar datos y rol, eliminar cuentas.',
-    permisos: ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'gestionar_ajustes'],
-  },
-  {
-    key: 'compensatorios', label: 'Compensatorios', paso: 9, soloPersonalizado: false,
+    key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
     permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'gestionar_compensatorios'],
   },
   {
-    key: 'ajustes', label: 'Ajustes', paso: 10, soloPersonalizado: false,
+    key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
     descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
-    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_roles_permisos', 'guardar_cambios_ajustes'],
+    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes'],
   },
 ]
 
@@ -377,7 +372,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 10
+  const ULTIMO_PASO = 9
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -442,16 +437,15 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 
   const pasoEfectivo = paso
   const stepsBase = [
-    { n: 1,  label: 'Nivel de acceso' },
-    { n: 2,  label: 'Módulos' },
-    { n: 3,  label: 'Inventario' },
-    { n: 4,  label: 'Config. campos' },
-    { n: 5,  label: 'Tickets' },
-    { n: 6,  label: 'Requerimientos' },
-    { n: 7,  label: 'Ausencia' },
-    { n: 8,  label: 'Administración' },
-    { n: 9,  label: 'Compensatorios' },
-    { n: 10, label: 'Ajustes' },
+    { n: 1, label: 'Nivel de acceso' },
+    { n: 2, label: 'Módulos' },
+    { n: 3, label: 'Inventario' },
+    { n: 4, label: 'Config. campos' },
+    { n: 5, label: 'Tickets' },
+    { n: 6, label: 'Requerimientos' },
+    { n: 7, label: 'Ausencia' },
+    { n: 8, label: 'Compensatorios' },
+    { n: 9, label: 'Ajustes' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
