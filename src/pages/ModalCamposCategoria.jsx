@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 
 const TIPOS = [
@@ -309,12 +309,27 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
   const [dragInfo,   setDragInfo]   = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
 
+  // Saved baseline for change detection
+  const [savedCampos,        setSavedCampos]        = useState([])
+  const [savedCamposOcultos, setSavedCamposOcultos] = useState([])
+
+  // Confirmation modals
+  const [confirmGuardar, setConfirmGuardar] = useState(false)
+  const [confirmCerrar,  setConfirmCerrar]  = useState(false)
+
+  // Ref to read latest hayambios value inside the stable Escape key handler
+  const hayambiosRef = useRef(false)
+
   useEffect(() => {
     cargarCategoria()
   }, [catObj?.id]) // eslint-disable-line
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (hayambiosRef.current) { setConfirmCerrar(true) } else { onClose() }
+      }
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
@@ -330,6 +345,8 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
     setCamposOcultos(data?.campos_ocultos  || [])
     setCamposNombres(data?.campos_nombres  || {})
     setCamposOrden(data?.campos_orden      || [])
+    setSavedCampos(data?.campos_personalizados || [])
+    setSavedCamposOcultos(data?.campos_ocultos || [])
     setCargando(false)
   }
 
@@ -409,10 +426,14 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
       const { data: fresh } = await supabase.from('categorias')
         .select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden')
         .eq('id', catObj.id).single()
-      setCampos(fresh?.campos_personalizados || [])
-      setCamposOcultos(fresh?.campos_ocultos  || [])
+      const cp = fresh?.campos_personalizados || []
+      const co = fresh?.campos_ocultos        || []
+      setCampos(cp)
+      setCamposOcultos(co)
       setCamposNombres(fresh?.campos_nombres  || {})
       setCamposOrden(fresh?.campos_orden      || [])
+      setSavedCampos(cp)
+      setSavedCamposOcultos(co)
       setExito(true)
       setTimeout(() => setExito(false), 3000)
       onCatUpdated?.()
@@ -465,10 +486,18 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
   const tipoObj = TIPOS.find(t => t.value === nuevoTipo)
   const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id && !c._global)).length
 
+  const hayambios = JSON.stringify(campos) !== JSON.stringify(savedCampos) ||
+    JSON.stringify([...camposOcultos].sort()) !== JSON.stringify([...savedCamposOcultos].sort())
+  hayambiosRef.current = hayambios
+
+  function handleClose() {
+    if (hayambios) { setConfirmCerrar(true) } else { onClose() }
+  }
+
   return (
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.60)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         style={{ background: '#f8fafc', borderRadius: 20, width: '100%', maxWidth: 1060, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.30)', overflow: 'hidden' }}
@@ -485,7 +514,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
             <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Define qué información se registra en cada bien de esta categoría</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.22)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
@@ -761,11 +790,15 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                     ✓ Cambios guardados
                   </div>
                 )}
-                <button onClick={guardar} disabled={guardando}
+                {!hayambios && !exito && (
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>No hay cambios para guardar</span>
+                )}
+                <button onClick={() => hayambios && setConfirmGuardar(true)} disabled={guardando || !hayambios}
                   style={{ padding: '10px 26px', borderRadius: 10, border: 'none',
                     background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff',
-                    fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
-                    opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    fontSize: 13, fontWeight: 700,
+                    cursor: guardando ? 'wait' : !hayambios ? 'default' : 'pointer',
+                    opacity: guardando || !hayambios ? 0.45 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
                 </button>
               </div>}
@@ -832,6 +865,65 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
               <button onClick={() => { agregarOActualizarCampo(); setConfirmActualizarCampo(false) }}
                 style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
                 Sí, actualizar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar guardar cambios ──────────────── */}
+      {confirmGuardar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => setConfirmGuardar(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 400, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>💾</div>
+              <div>
+                <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Guardar cambios en los campos?</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                  Se actualizará la configuración de campos de la categoría seleccionada.<br />
+                  Los cambios afectarán el formulario de creación y edición de bienes de esta categoría.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmGuardar(false)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { setConfirmGuardar(false); guardar() }}
+                style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(26,35,126,0.35)' }}>
+                💾 Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal confirmar cerrar con cambios pendientes ─ */}
+      {confirmCerrar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          onClick={() => setConfirmCerrar(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fefce8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
+              <div>
+                <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#111827' }}>Hay cambios sin guardar</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                  ¿Deseas salir igualmente? Los cambios pendientes se perderán.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmCerrar(false)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Permanecer
+              </button>
+              <button onClick={() => { setConfirmCerrar(false); onClose() }}
+                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
+                Salir sin guardar
               </button>
             </div>
           </div>
