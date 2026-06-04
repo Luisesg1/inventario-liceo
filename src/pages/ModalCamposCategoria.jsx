@@ -280,7 +280,15 @@ function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
   )
 }
 
-export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUpdated }) {
+export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUpdated, permisos = {} }) {
+  const esAdmin       = usuario?.rol === 'admin'
+  const pAgregar      = esAdmin || !!permisos.agregar
+  const pEditar       = esAdmin || !!permisos.editar
+  const pOcultar      = esAdmin || !!permisos.ocultar
+  const pEliminar     = esAdmin || !!permisos.eliminar
+  const pReordenar    = esAdmin || !!permisos.reordenar
+  const soloLectura   = !pAgregar && !pEditar && !pOcultar && !pEliminar && !pReordenar
+
   const [campos,       setCampos]       = useState([])
   const [camposOcultos, setCamposOcultos] = useState([])
   const [camposNombres, setCamposNombres] = useState({})
@@ -510,7 +518,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
               <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
                 <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos</p>
-                  <span style={{ fontSize: 9, color: '#a5b4fc' }}>· arrastra ⠿ para reordenar</span>
+                  {pReordenar && <span style={{ fontSize: 9, color: '#a5b4fc' }}>· arrastra ⠿ para reordenar</span>}
                   {nOcultos > 0 && (
                     <span style={{ background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '1px 6px', fontSize: 9, fontWeight: 700 }}>
                       {nOcultos} oculto{nOcultos !== 1 ? 's' : ''}
@@ -552,25 +560,26 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
 
                     return (
                       <div key={campo.id}
-                        onDragOver={e => { e.preventDefault(); try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }; setDragOverId(campo.id) }}
+                        onDragOver={e => { if (!pReordenar) return; e.preventDefault(); try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }; setDragOverId(campo.id) }}
                         onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null) }}
-                        onDrop={e => { e.preventDefault(); void handleDropUnified(campo.id); setDragOverId(null) }}
+                        onDrop={e => { e.preventDefault(); if (pReordenar) void handleDropUnified(campo.id); setDragOverId(null) }}
                         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px 9px 0',
                           borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
                           borderLeft: `3px solid ${oculto ? '#e2e8f0' : isSistema ? tc : '#6366f1'}`,
                           background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#fafafa' : estaEditandoC ? '#fffbeb' : '#fff',
                           transition: 'all 0.15s' }}>
 
-                        {/* Drag handle */}
+                        {/* Drag handle — only rendered when user can reorder */}
                         <div
-                          draggable
+                          draggable={pReordenar}
                           onDragStart={e => {
+                            if (!pReordenar) return
                             try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', campo.id) } catch { /* noop */ }
                             setDragInfo({ id: campo.id, tipo: campo._tipo })
                           }}
                           onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: 'grab', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
-                          {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: oculto ? '#e2e8f0' : '#d1d5db' }} />)}
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: pReordenar ? 'grab' : 'default', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
+                          {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: oculto ? '#e2e8f0' : pReordenar ? '#d1d5db' : '#f1f5f9' }} />)}
                         </div>
 
                         {/* Tipo ícono */}
@@ -612,34 +621,40 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                             <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 5, background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }}>🔒 base</span>
                           ) : isSistema ? (
                             <>
-                              {!oculto && !estaEditandoS && (
+                              {!oculto && !estaEditandoS && pEditar && (
                                 <button onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }} title="Renombrar"
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: 12, padding: '4px', borderRadius: 6, lineHeight: 1 }}
                                   onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
                                   onMouseOut={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' }}>✏️</button>
                               )}
-                              <div
-                                onClick={e => {
-                                  e.stopPropagation()
-                                  const nuevoOculto = oculto ? camposOcultos.filter(id => id !== campo.id) : [...camposOcultos, campo.id]
-                                  setCamposOcultos(nuevoOculto)
-                                  registrarAuditoria(oculto ? 'campo activado' : 'campo desactivado', campo.nombre)
-                                }}
-                                title={oculto ? 'Activar campo' : 'Desactivar campo'}
-                                style={{ width: 40, height: 22, borderRadius: 11, background: oculto ? '#e2e8f0' : '#bbf7d0', border: `1.5px solid ${oculto ? '#cbd5e1' : '#86efac'}`, cursor: 'pointer', transition: 'all 0.2s', position: 'relative', flexShrink: 0 }}>
-                                <div style={{ position: 'absolute', top: 2, left: oculto ? 2 : 18, width: 14, height: 14, borderRadius: '50%', background: oculto ? '#94a3b8' : '#16a34a', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
-                              </div>
+                              {pOcultar && (
+                                <div
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    const nuevoOculto = oculto ? camposOcultos.filter(id => id !== campo.id) : [...camposOcultos, campo.id]
+                                    setCamposOcultos(nuevoOculto)
+                                    registrarAuditoria(oculto ? 'campo activado' : 'campo desactivado', campo.nombre)
+                                  }}
+                                  title={oculto ? 'Activar campo' : 'Desactivar campo'}
+                                  style={{ width: 40, height: 22, borderRadius: 11, background: oculto ? '#e2e8f0' : '#bbf7d0', border: `1.5px solid ${oculto ? '#cbd5e1' : '#86efac'}`, cursor: 'pointer', transition: 'all 0.2s', position: 'relative', flexShrink: 0 }}>
+                                  <div style={{ position: 'absolute', top: 2, left: oculto ? 2 : 18, width: 14, height: 14, borderRadius: '50%', background: oculto ? '#94a3b8' : '#16a34a', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
+                                </div>
+                              )}
                             </>
                           ) : (
                             <>
-                              <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }} title="Editar campo"
-                                style={{ background: estaEditandoC ? '#fef9c3' : 'none', border: estaEditandoC ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: estaEditandoC ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                                onMouseOver={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
-                                onMouseOut={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>✏️</button>
-                              <button onClick={e => { e.stopPropagation(); setConfirmBorrarCampo(campo) }} title="Eliminar campo"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                                onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                                onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>✕</button>
+                              {pEditar && (
+                                <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }} title="Editar campo"
+                                  style={{ background: estaEditandoC ? '#fef9c3' : 'none', border: estaEditandoC ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: estaEditandoC ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
+                                  onMouseOver={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
+                                  onMouseOut={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>✏️</button>
+                              )}
+                              {pEliminar && (
+                                <button onClick={e => { e.stopPropagation(); setConfirmBorrarCampo(campo) }} title="Eliminar campo"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
+                                  onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
+                                  onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>✕</button>
+                              )}
                             </>
                           )}
                         </div>
@@ -649,8 +664,8 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                 </div>
               </div>
 
-              {/* ── Formulario agregar / editar campo ──────────── */}
-              <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: `1.5px solid ${editandoCampoId ? '#fcd34d' : '#f1f1f3'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              {/* ── Formulario agregar / editar campo (solo si tiene permisos) ── */}
+              {(pAgregar || (pEditar && editandoCampoId)) && <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: `1.5px solid ${editandoCampoId ? '#fcd34d' : '#f1f1f3'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
                 <div style={{ padding: '13px 18px 11px', borderBottom: `1px solid ${editandoCampoId ? '#fde68a' : '#f3f4f6'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: editandoCampoId ? '#d97706' : '#10b981' }} />
                   <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: editandoCampoId ? '#d97706' : '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -727,10 +742,20 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>}
+
+              {/* Banner solo lectura */}
+              {soloLectura && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fefce8', border: '1.5px solid #fde047', borderRadius: 10, padding: '10px 14px' }}>
+                  <span style={{ fontSize: 16 }}>👁️</span>
+                  <p style={{ margin: 0, fontSize: 13, color: '#854d0e', fontWeight: 500 }}>
+                    Modo solo lectura — no tienes permisos para modificar campos.
+                  </p>
+                </div>
+              )}
 
               {/* ── Guardar ──────────────────────────────────────── */}
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 4 }}>
+              {!soloLectura && <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 4 }}>
                 {exito && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '7px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
                     ✓ Cambios guardados
@@ -743,7 +768,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                     opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
                 </button>
-              </div>
+              </div>}
             </div>
 
             {/* ── Columna preview ────────────────────────────── */}

@@ -253,6 +253,7 @@ function FieldConfigCard({
   editandoSistema, setEditandoSistema, onConfirmarRenombre,
   onToggleHide, onEditCustom, onDeleteCustom,
   dragInfo, setDragInfo, dragOverId, setDragOverId, onDrop,
+  pEditar, pOcultar, pEliminar, pReordenar,
 }) {
   const [hover, setHover] = useState(false)
   const isLocked   = !!campo._global
@@ -289,24 +290,26 @@ function FieldConfigCard({
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      draggable={!isLocked}
+      draggable={!isLocked && pReordenar}
       onDragStart={e => {
+        if (!pReordenar) return
         try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', campo.id) } catch { /* noop */ }
         setDragInfo({ id: campo.id, tipo: campo._tipo })
       }}
       onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
       onDragOver={e => {
+        if (!pReordenar) return
         e.preventDefault()
         try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }
         setDragOverId(campo.id)
       }}
       onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null) }}
-      onDrop={e => { e.preventDefault(); onDrop(campo.id); setDragOverId(null) }}
+      onDrop={e => { e.preventDefault(); if (pReordenar) onDrop(campo.id); setDragOverId(null) }}
       style={{
         borderRadius: 10, padding: '8px 10px 10px',
         opacity: oculto ? 0.55 : 1, transition: 'all 0.18s',
         background: cardBg, border: cardBorder, boxShadow: cardShadow,
-        cursor: isLocked ? 'default' : 'grab',
+        cursor: isLocked || !pReordenar ? 'default' : 'grab',
       }}
     >
       {/* Label + controls row */}
@@ -338,24 +341,26 @@ function FieldConfigCard({
         )}
 
         {/* Controls — low opacity at rest, full on hover */}
-        {!isLocked && !estaEditS && (
+        {!isLocked && !estaEditS && (pEditar || pOcultar || pEliminar) && (
           <div style={{ display: 'flex', gap: 1, flexShrink: 0, opacity: hover ? 1 : 0.25, transition: 'opacity 0.18s', pointerEvents: hover ? 'auto' : 'none' }}>
             {isSistema ? (
               <>
-                {ctrlBtn('Renombrar campo', '✏️', () => setEditandoSistema({ id: campo.id }), '#4f46e5', '#eef2ff')}
-                <button
-                  title={oculto ? 'Mostrar en formulario' : 'Ocultar del formulario'}
-                  onClick={e => { e.stopPropagation(); onToggleHide() }}
-                  style={{ background: oculto ? '#dcfce7' : 'none', color: oculto ? '#16a34a' : '#94a3b8', border: 'none', cursor: 'pointer', fontSize: 13, padding: '3px 6px', borderRadius: 6, lineHeight: 1, transition: 'all 0.12s' }}
-                  onMouseOver={e => { if (!oculto) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
-                  onMouseOut={e => { if (!oculto) { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' } }}>
-                  {oculto ? '👁' : '🙈'}
-                </button>
+                {pEditar && ctrlBtn('Renombrar campo', '✏️', () => setEditandoSistema({ id: campo.id }), '#4f46e5', '#eef2ff')}
+                {pOcultar && (
+                  <button
+                    title={oculto ? 'Mostrar en formulario' : 'Ocultar del formulario'}
+                    onClick={e => { e.stopPropagation(); onToggleHide() }}
+                    style={{ background: oculto ? '#dcfce7' : 'none', color: oculto ? '#16a34a' : '#94a3b8', border: 'none', cursor: 'pointer', fontSize: 13, padding: '3px 6px', borderRadius: 6, lineHeight: 1, transition: 'all 0.12s' }}
+                    onMouseOver={e => { if (!oculto) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
+                    onMouseOut={e => { if (!oculto) { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' } }}>
+                    {oculto ? '👁' : '🙈'}
+                  </button>
+                )}
               </>
             ) : (
               <>
-                {ctrlBtn('Editar campo', '✏️', onEditCustom, '#b45309', '#fef9c3')}
-                {ctrlBtn('Eliminar campo', '🗑️', onDeleteCustom, '#dc2626', '#fef2f2')}
+                {pEditar && ctrlBtn('Editar campo', '✏️', onEditCustom, '#b45309', '#fef9c3')}
+                {pEliminar && ctrlBtn('Eliminar campo', '🗑️', onDeleteCustom, '#dc2626', '#fef2f2')}
               </>
             )}
           </div>
@@ -364,8 +369,8 @@ function FieldConfigCard({
 
       <FieldInputMock tipo={campo.tipo} nombre={nombreMostrado} oculto={oculto} isCustom={isCustom} />
 
-      {/* Drag hint — only when hovered and not locked */}
-      {!isLocked && hover && (
+      {/* Drag hint — only when hovered, not locked and has reorder permission */}
+      {!isLocked && pReordenar && hover && (
         <div style={{ textAlign: 'center', marginTop: 4, fontSize: 9, color: '#b0b8c8', letterSpacing: '0.08em' }}>
           ⠿ arrastrar para reordenar
         </div>
@@ -539,6 +544,7 @@ function FormularioConfigurable({
   setCamposOcultos, setConfirmBorrarCampo, onEditCustomField,
   dragInfo, setDragInfo, dragOverId, setDragOverId, onDrop,
   addingSectionIdx, setAddingSectionIdx, onAddField, camposIds,
+  pAgregar, pEditar, pOcultar, pEliminar, pReordenar,
 }) {
   // Assign fields to sections based on their order position
   const sectionOf = {}
@@ -587,6 +593,10 @@ function FormularioConfigurable({
         dragOverId={dragOverId}
         setDragOverId={setDragOverId}
         onDrop={onDrop}
+        pEditar={pEditar}
+        pOcultar={pOcultar}
+        pEliminar={pEliminar}
+        pReordenar={pReordenar}
       />
     )
   }
@@ -683,8 +693,8 @@ function FormularioConfigurable({
                 </div>
               )}
 
-              {/* + Agregar campo (not in footer) */}
-              {!isFooter && (
+              {/* + Agregar campo (not in footer, only with permission) */}
+              {!isFooter && pAgregar && (
                 addingSectionIdx === si ? (
                   <AddFieldInline
                     sectionLabel={sec.label}
@@ -746,8 +756,14 @@ function FormularioConfigurable({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export default function CamposCategoria({ usuario }) {
-  const esAdmin = usuario?.rol === 'admin'
+export default function CamposCategoria({ usuario, permisos = {} }) {
+  const esAdmin       = usuario?.rol === 'admin'
+  const pAgregar      = esAdmin || !!permisos.agregar
+  const pEditar       = esAdmin || !!permisos.editar
+  const pOcultar      = esAdmin || !!permisos.ocultar
+  const pEliminar     = esAdmin || !!permisos.eliminar
+  const pReordenar    = esAdmin || !!permisos.reordenar
+  const soloLectura   = !pAgregar && !pEditar && !pOcultar && !pEliminar && !pReordenar
 
   const [categorias,         setCategorias]         = useState([])
   const [catActiva,          setCatActiva]          = useState(null)
@@ -762,6 +778,14 @@ export default function CamposCategoria({ usuario }) {
   const [camposOrden,        setCamposOrden]        = useState([])
 
   const [editandoSistema,    setEditandoSistema]    = useState(null)
+
+  // Saved baseline for change detection
+  const [savedCampos,        setSavedCampos]        = useState([])
+  const [savedCamposOcultos, setSavedCamposOcultos] = useState([])
+
+  // Confirmation modals
+  const [confirmGuardar,     setConfirmGuardar]     = useState(false)
+  const [confirmSalirCat,    setConfirmSalirCat]    = useState(null)
 
   // Drag & drop
   const [dragInfo,           setDragInfo]           = useState(null)
@@ -794,6 +818,8 @@ export default function CamposCategoria({ usuario }) {
         setCamposOcultos(target.campos_ocultos  || [])
         setCamposNombres(target.campos_nombres  || {})
         setCamposOrden(target.campos_orden      || [])
+        setSavedCampos(target.campos_personalizados || [])
+        setSavedCamposOcultos(target.campos_ocultos || [])
       }
     }
     setCargando(false)
@@ -1058,6 +1084,15 @@ export default function CamposCategoria({ usuario }) {
         {catObj && (
           <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+            {soloLectura && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fefce8', border: '1.5px solid #fde047', borderRadius: 10, padding: '10px 14px' }}>
+                <span style={{ fontSize: 16 }}>👁️</span>
+                <p style={{ margin: 0, fontSize: 13, color: '#854d0e', fontWeight: 500 }}>
+                  Modo solo lectura — no tienes permisos para modificar campos en esta sección.
+                </p>
+              </div>
+            )}
+
             <FormularioConfigurable
               catObj={catObj}
               catType={catType}
@@ -1081,24 +1116,31 @@ export default function CamposCategoria({ usuario }) {
               setAddingSectionIdx={setAddingSectionIdx}
               onAddField={handleAddField}
               camposIds={campos.map(c => c.id)}
+              pAgregar={pAgregar}
+              pEditar={pEditar}
+              pOcultar={pOcultar}
+              pEliminar={pEliminar}
+              pReordenar={pReordenar}
             />
 
-            {/* Save button */}
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 8 }}>
-              {exito && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '7px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                  ✓ Cambios guardados
-                </div>
-              )}
-              <button onClick={guardar} disabled={guardando}
-                style={{ padding: '10px 26px', borderRadius: 10, border: 'none',
-                  background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff',
-                  fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
-                  opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)',
-                  display: 'flex', alignItems: 'center', gap: 8 }}>
-                {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
-              </button>
-            </div>
+            {/* Save button — hidden when read-only */}
+            {!soloLectura && (
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 8 }}>
+                {exito && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '7px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                    ✓ Cambios guardados
+                  </div>
+                )}
+                <button onClick={guardar} disabled={guardando}
+                  style={{ padding: '10px 26px', borderRadius: 10, border: 'none',
+                    background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff',
+                    fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
+                    opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)',
+                    display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
