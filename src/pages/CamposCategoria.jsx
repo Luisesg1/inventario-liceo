@@ -840,6 +840,8 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
     setCamposOcultos(data?.campos_ocultos  || [])
     setCamposNombres(data?.campos_nombres  || {})
     setCamposOrden(data?.campos_orden      || [])
+    setSavedCampos(data?.campos_personalizados || [])
+    setSavedCamposOcultos(data?.campos_ocultos || [])
   }
 
   // ── Persist functions ───────────────────────────────────────────────────
@@ -861,6 +863,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
       const cn = fresh?.campos_nombres        || {}
       const or = fresh?.campos_orden          || []
       setCampos(cp); setCamposOcultos(co); setCamposNombres(cn); setCamposOrden(or)
+      setSavedCampos(cp); setSavedCamposOcultos(co)
       setCategorias(prev => prev.map(c => c.id === catActiva
         ? { ...c, campos_personalizados: cp, campos_ocultos: co, campos_nombres: cn, campos_orden: or }
         : c))
@@ -995,6 +998,9 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
     : _allIds
   const unifiedSortedFields = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
 
+  const hayambios = JSON.stringify(campos) !== JSON.stringify(savedCampos) ||
+    JSON.stringify([...camposOcultos].sort()) !== JSON.stringify([...savedCamposOcultos].sort())
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   if (cargando) return (
@@ -1048,7 +1054,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
               const nCampos = (cat.campos_personalizados || []).length
               const activa  = cat.id === catActiva
               return (
-                <div key={cat.id} onClick={() => seleccionarCat(cat)} className="ajustes-cat-item"
+                <div key={cat.id} onClick={() => hayambios && cat.id !== catActiva ? setConfirmSalirCat(cat) : seleccionarCat(cat)} className="ajustes-cat-item"
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px 9px 12px', cursor: 'pointer',
                     background: activa ? 'rgba(99,102,241,0.08)' : 'transparent',
                     borderLeft: `3px solid ${activa ? '#6366f1' : 'transparent'}`,
@@ -1131,11 +1137,15 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
                     ✓ Cambios guardados
                   </div>
                 )}
-                <button onClick={guardar} disabled={guardando}
+                {!hayambios && !exito && (
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>No hay cambios para guardar</span>
+                )}
+                <button onClick={() => hayambios && setConfirmGuardar(true)} disabled={guardando || !hayambios}
                   style={{ padding: '10px 26px', borderRadius: 10, border: 'none',
                     background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff',
-                    fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
-                    opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)',
+                    fontSize: 13, fontWeight: 700,
+                    cursor: guardando ? 'wait' : !hayambios ? 'default' : 'pointer',
+                    opacity: guardando || !hayambios ? 0.45 : 1, boxShadow: '0 4px 14px rgba(26,35,126,0.35)',
                     display: 'flex', alignItems: 'center', gap: 8 }}>
                   {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
                 </button>
@@ -1191,6 +1201,63 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
               <button onClick={() => { eliminarCampo(confirmBorrarCampo.id); setConfirmBorrarCampo(null) }}
                 style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(239,68,68,0.35)' }}>
                 Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmGuardar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+          onClick={() => setConfirmGuardar(false)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 400, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>💾</div>
+              <div>
+                <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Guardar cambios en los campos?</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                  Se actualizará la configuración de campos de la categoría seleccionada.<br />
+                  Los cambios afectarán el formulario de creación y edición de bienes de esta categoría.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmGuardar(false)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={() => { setConfirmGuardar(false); guardar() }}
+                style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(26,35,126,0.35)' }}>
+                💾 Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmSalirCat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+          onClick={() => setConfirmSalirCat(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 380, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fefce8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
+              <div>
+                <p style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 15, color: '#111827' }}>Hay cambios sin guardar</p>
+                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>
+                  ¿Deseas salir igualmente? Los cambios pendientes se perderán.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmSalirCat(null)}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Permanecer
+              </button>
+              <button onClick={() => { const cat = confirmSalirCat; setConfirmSalirCat(null); seleccionarCat(cat) }}
+                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
+                Salir sin guardar
               </button>
             </div>
           </div>
