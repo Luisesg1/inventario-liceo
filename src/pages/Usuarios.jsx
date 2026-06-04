@@ -566,14 +566,14 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
         <div>
           <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>Nivel de acceso</p>
           <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
-            Elige un rol del sistema para aplicar sus permisos automáticamente, o usa un nivel genérico.
+            Elige un rol del sistema para aplicar sus permisos automáticamente.
           </p>
 
           {/* ── Sección: Roles del sistema ── */}
           <p style={{ margin: '0 0 10px', fontWeight: 600, fontSize: 12.5, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Roles del sistema
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 10, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 10 }}>
             {rolesDisponibles.map(r => {
               const sel = nivel === 'rol:' + r.key
               return (
@@ -609,21 +609,15 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
                 </div>
               )
             })}
-          </div>
-
-          {/* ── Sección: Niveles genéricos ── */}
-          <p style={{ margin: '0 0 10px', fontWeight: 600, fontSize: 12.5, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Nivel genérico
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-            {NIVELES_ACCESO.map(n => {
-              const sel = nivel === n.key
+            {/* ── Personalizado (dentro de Roles del sistema) ── */}
+            {(() => {
+              const sel = nivel === 'personalizado'
+              const n = NIVELES_ACCESO.find(x => x.key === 'personalizado')
               return (
                 <div
-                  key={n.key}
-                  onClick={() => aplicarNivel(n.key)}
+                  onClick={() => aplicarNivel('personalizado')}
                   style={{
-                    padding: '18px 16px', borderRadius: 12, position: 'relative',
+                    padding: '14px 13px', borderRadius: 12, position: 'relative',
                     border: `2px solid ${sel ? 'rgb(var(--primary-rgb))' : '#e5e7eb'}`,
                     background: sel ? 'rgba(var(--primary-rgb),0.05)' : '#fff',
                     cursor: 'pointer', transition: 'all 0.18s', userSelect: 'none',
@@ -634,23 +628,23 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
                 >
                   {sel && (
                     <div style={{
-                      position: 'absolute', top: 10, right: 10,
-                      width: 20, height: 20, borderRadius: '50%',
+                      position: 'absolute', top: 8, right: 8,
+                      width: 18, height: 18, borderRadius: '50%',
                       background: 'rgb(var(--primary-rgb))', color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 700,
+                      fontSize: 10, fontWeight: 700,
                     }}>✓</div>
                   )}
-                  <div style={{ fontSize: 24, marginBottom: 10 }}>{n.icon}</div>
-                  <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 14, color: sel ? 'rgb(var(--primary-rgb))' : '#111827' }}>
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>{n.icon}</div>
+                  <p style={{ margin: '0 0 3px', fontWeight: 700, fontSize: 13, color: sel ? 'rgb(var(--primary-rgb))' : '#111827' }}>
                     {n.label}
                   </p>
-                  <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.4 }}>
+                  <p style={{ margin: 0, fontSize: 11.5, color: '#6b7280', lineHeight: 1.4 }}>
                     {n.desc}
                   </p>
                 </div>
               )
-            })}
+            })()}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22 }}>
