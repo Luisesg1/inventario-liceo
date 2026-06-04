@@ -479,7 +479,7 @@ export default function Layout({
                         onClick={() => handleNav('campos')}
                       >
                         <span className="nav-subitem-dot" />
-                        Configurar campos
+                        Campos inventario
                       </div>
                     )}
                     {puedeVerAuditoriaInventario && (

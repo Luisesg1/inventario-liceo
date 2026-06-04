@@ -72,7 +72,7 @@ const ACCIONES = [
   { key: 'gestionar_compensatorios', label: 'Gestionar compensatorios (legado)', labelCorto: 'Gest. comp.',desc: 'Permiso heredado de gestión completa de compensatorios. Se conserva por compatibilidad.' },
   { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
   // Configurar campos
-  { key: 'ver_campos',            label: 'Ver configurar campos',             labelCorto: 'Ver campos',    desc: 'Permite acceder a la sección de configurar campos desde el menú lateral y ver la configuración de cada categoría.' },
+  { key: 'ver_campos',            label: 'Ver campos inventario',             labelCorto: 'Ver campos',    desc: 'Permite acceder a la sección de campos inventario desde el menú lateral y ver la configuración de cada categoría.' },
   { key: 'agregar_campo',         label: 'Agregar campos',                    labelCorto: 'Agregar campo', desc: 'Permite agregar nuevos campos personalizados a cualquier categoría de inventario.' },
   { key: 'editar_campo',          label: 'Editar campos',                     labelCorto: 'Editar campo',  desc: 'Permite renombrar campos del sistema y modificar campos personalizados existentes.' },
   { key: 'ocultar_campo',         label: 'Ocultar / mostrar campos',          labelCorto: 'Ocultar campo', desc: 'Permite activar o desactivar la visibilidad de campos del sistema en cada categoría.' },
@@ -100,8 +100,8 @@ const GRUPOS_PERMISOS = [
                'ver_auditoria_inventario'],
   },
   {
-    key: 'configurar_campos', label: 'Configurar campos', paso: 4, soloPersonalizado: false,
-    descripcion: 'Acceso a la sección de configuración de campos por categoría. Controla qué puede hacer el usuario con los campos de cada categoría de inventario.',
+    key: 'configurar_campos', label: 'Campos inventario', paso: 4, soloPersonalizado: false,
+    descripcion: 'Permite administrar los campos de las categorías de inventario: agregar, editar, ocultar, eliminar y reordenar campos.',
     permisos: ['ver_campos', 'agregar_campo', 'editar_campo', 'ocultar_campo', 'eliminar_campo', 'reordenar_campos', 'gestionar_campos_base'],
   },
   {
@@ -440,7 +440,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     { n: 1, label: 'Nivel de acceso' },
     { n: 2, label: 'Módulos' },
     { n: 3, label: 'Inventario' },
-    { n: 4, label: 'Config. campos' },
+    { n: 4, label: 'Campos inv.' },
     { n: 5, label: 'Tickets' },
     { n: 6, label: 'Requerimientos' },
     { n: 7, label: 'Ausencia' },

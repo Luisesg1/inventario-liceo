@@ -510,7 +510,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
             {catObj.icon || '📦'}
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff' }}>Configurar campos · {catObj.label}</p>
+            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff' }}>Campos inventario · {catObj.label}</p>
             <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Define qué información se registra en cada bien de esta categoría</p>
           </div>
           <button
