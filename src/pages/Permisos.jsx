@@ -321,6 +321,7 @@ function CalendarioFeriados({
   value, onChange, min, max,
   inhabilitados = new Set(), etiquetas = new Map(),
   placeholder = 'Seleccionar fecha',
+  disabled = false,
 }) {
   const [abierto, setAbierto] = useState(false)
   const ref  = useRef(null)
@@ -374,8 +375,8 @@ function CalendarioFeriados({
     <div style={{ position: 'relative' }} ref={ref}>
       {/* Trigger */}
       <button type="button" className="mp-input"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', width: '100%', textAlign: 'left' }}
-        onClick={() => setAbierto(a => !a)}>
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: disabled ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left', opacity: disabled ? 0.55 : 1, background: disabled ? '#f1f5f9' : undefined }}
+        onClick={() => { if (!disabled) setAbierto(a => !a) }}>
         <span style={{ color: value ? '#374151' : '#9ca3af', fontSize: 13 }}>{displayValue()}</span>
         <CalendarCheck size={13} strokeWidth={2} style={{ color: '#94a3b8', flexShrink: 0 }} />
       </button>
@@ -692,9 +693,14 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
   useEffect(() => {
     if (!fechaInicio) return
+    if (jornada === 'medio_dia') { setFechaFin(fechaInicio); return }
     if (!fechaFin) { setFechaFin(fechaInicio); return }
     if (fechaFin < fechaInicio) setFechaFin(fechaInicio)
   }, [fechaInicio])
+
+  useEffect(() => {
+    if (jornada === 'medio_dia' && fechaInicio) setFechaFin(fechaInicio)
+  }, [jornada])
 
   useEffect(() => {
     if (!fechaInicio || !fechaFin) return
@@ -1386,6 +1392,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                       min={fechaInicio}
                       inhabilitados={diasInhabilitados} etiquetas={feriadosLabels}
                       placeholder="Seleccionar…"
+                      disabled={jornada === 'medio_dia'}
                     />
                   </div>
                 </div>
