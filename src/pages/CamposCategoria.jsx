@@ -229,14 +229,15 @@ function ModalCategoria({ cat, onClose, onSave }) {
   )
 }
 
-// Disabled form input — looks like the real form
-function FieldInputMock({ tipo, nombre, oculto }) {
+// Preview form input — looks active but is not interactive
+function FieldInputMock({ tipo, nombre, oculto, isCustom }) {
   const s = {
     width: '100%', padding: '8px 11px', borderRadius: 8,
-    border: `1.5px solid ${oculto ? '#f1f5f9' : '#e5e7eb'}`,
+    border: `1.5px solid ${oculto ? '#e2e8f0' : isCustom ? '#c7d2fe' : '#d1d5db'}`,
     fontSize: 13, fontFamily: 'inherit',
-    background: oculto ? '#f8fafc' : '#fcfcff',
-    color: '#c0cadb', outline: 'none', boxSizing: 'border-box',
+    background: oculto ? '#f8fafc' : isCustom ? '#f5f3ff' : '#fff',
+    color: oculto ? '#b0b8c8' : '#64748b',
+    outline: 'none', boxSizing: 'border-box',
     cursor: 'default', pointerEvents: 'none',
   }
   if (tipo === 'fecha')    return <input type="date" disabled style={s} />
@@ -258,6 +259,31 @@ function FieldConfigCard({
   const estaEditS  = isSistema && editandoSistema?.id === campo.id
   const isDragOver = dragOverId === campo.id
   const isDragging = dragInfo?.id === campo.id
+  const isCustom   = !isSistema
+
+  // Card visual state
+  let cardBg      = isCustom ? '#faf9ff' : '#fff'
+  let cardBorder  = isCustom ? '1.5px solid #e0d9ff' : '1.5px solid #e5e8ee'
+  let cardShadow  = 'none'
+  if (oculto)     { cardBg = '#f8fafc'; cardBorder = '1.5px solid #e2e8f0' }
+  if (isDragging) { cardBg = '#eef2ff'; cardBorder = '1.5px solid #818cf8' }
+  if (isDragOver) { cardBg = '#ede9fe'; cardBorder = '2px dashed #7c3aed'; cardShadow = '0 0 0 3px rgba(124,58,237,0.1)' }
+  if (hover && !oculto && !isDragOver) {
+    cardBg     = isCustom ? '#f0eeff' : '#f0f6ff'
+    cardBorder = isCustom ? '1.5px solid #7c3aed' : '1.5px solid #3b82f6'
+    cardShadow = isCustom ? '0 2px 8px rgba(124,58,237,0.12)' : '0 2px 8px rgba(59,130,246,0.1)'
+  }
+
+  const labelColor = oculto ? '#94a3b8' : isCustom ? '#5b21b6' : '#1e293b'
+
+  const ctrlBtn = (title, emoji, onClick, hoverColor, hoverBg) => (
+    <button title={title} onClick={e => { e.stopPropagation(); onClick() }}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: '3px 6px', borderRadius: 6, color: '#94a3b8', lineHeight: 1, transition: 'all 0.12s' }}
+      onMouseOver={e => { e.currentTarget.style.color = hoverColor; e.currentTarget.style.background = hoverBg }}
+      onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>
+      {emoji}
+    </button>
+  )
 
   return (
     <div
@@ -277,15 +303,14 @@ function FieldConfigCard({
       onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null) }}
       onDrop={e => { e.preventDefault(); onDrop(campo.id); setDragOverId(null) }}
       style={{
-        position: 'relative', borderRadius: 9, padding: '7px 9px 9px',
-        opacity: oculto ? 0.42 : 1, transition: 'all 0.15s',
-        background: isDragging ? '#eef2ff' : isDragOver ? '#f0f4ff' : hover ? '#f8faff' : 'transparent',
-        outline: isDragOver ? '2px dashed #a5b4fc' : hover ? '1px solid #e0e7ff' : '1px solid transparent',
+        borderRadius: 10, padding: '8px 10px 10px',
+        opacity: oculto ? 0.55 : 1, transition: 'all 0.18s',
+        background: cardBg, border: cardBorder, boxShadow: cardShadow,
         cursor: isLocked ? 'default' : 'grab',
       }}
     >
       {/* Label + controls row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, minHeight: 22, gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, minHeight: 22, gap: 4 }}>
         {estaEditS ? (
           <input autoFocus defaultValue={nombreMostrado}
             onKeyDown={e => {
@@ -293,38 +318,35 @@ function FieldConfigCard({
               if (e.key === 'Escape') setEditandoSistema(null)
             }}
             onBlur={e => onConfirmarRenombre(e.target.value.trim())}
-            style={{ flex: 1, padding: '2px 7px', borderRadius: 6, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#f8f9ff', color: '#111827' }}
+            style={{ flex: 1, padding: '3px 8px', borderRadius: 6, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#f8f9ff', color: '#111827', boxShadow: '0 0 0 3px rgba(99,102,241,0.15)' }}
           />
         ) : (
           <label style={{
-            flex: 1, fontSize: 12, fontWeight: 700, userSelect: 'none', cursor: 'inherit',
-            color: oculto ? '#94a3b8' : isSistema ? '#374151' : '#4338ca',
+            flex: 1, fontSize: 11, fontWeight: 700, userSelect: 'none', cursor: 'inherit',
+            color: labelColor, letterSpacing: '0.03em',
             textDecoration: oculto ? 'line-through' : 'none',
+            textTransform: 'uppercase',
             display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0,
           }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombreMostrado}</span>
-            {campo.requerido && <span style={{ color: '#ef4444', fontWeight: 900, flexShrink: 0 }}>*</span>}
-            {!isSistema && (
-              <span style={{ fontSize: 9, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 4px', fontWeight: 800, flexShrink: 0, lineHeight: 1.6 }}>C</span>
+            {campo.requerido && <span style={{ color: '#ef4444', fontWeight: 900, flexShrink: 0, textTransform: 'none' }}>*</span>}
+            {isCustom && (
+              <span style={{ fontSize: 9, background: '#ede9fe', color: '#7c3aed', borderRadius: 4, padding: '1px 5px', fontWeight: 800, flexShrink: 0, lineHeight: 1.6, letterSpacing: 0, textTransform: 'none' }}>CUSTOM</span>
             )}
-            {isLocked && <span title="Campo base protegido" style={{ fontSize: 10, color: '#cbd5e1', cursor: 'help', flexShrink: 0 }}>🔒</span>}
+            {isLocked && <span title="Campo base protegido" style={{ fontSize: 10, color: '#c4cdd9', cursor: 'help', flexShrink: 0, textTransform: 'none' }}>🔒</span>}
           </label>
         )}
 
-        {/* Controls — visible on hover */}
+        {/* Controls — low opacity at rest, full on hover */}
         {!isLocked && !estaEditS && (
-          <div style={{ display: 'flex', gap: 2, flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 0.15s', pointerEvents: hover ? 'auto' : 'none' }}>
+          <div style={{ display: 'flex', gap: 1, flexShrink: 0, opacity: hover ? 1 : 0.25, transition: 'opacity 0.18s', pointerEvents: hover ? 'auto' : 'none' }}>
             {isSistema ? (
               <>
-                <button title="Renombrar"
-                  onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
-                  onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
-                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>✏️</button>
+                {ctrlBtn('Renombrar campo', '✏️', () => setEditandoSistema({ id: campo.id }), '#4f46e5', '#eef2ff')}
                 <button
                   title={oculto ? 'Mostrar en formulario' : 'Ocultar del formulario'}
                   onClick={e => { e.stopPropagation(); onToggleHide() }}
-                  style={{ background: oculto ? '#dcfce7' : 'none', color: oculto ? '#16a34a' : '#94a3b8', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, lineHeight: 1 }}
+                  style={{ background: oculto ? '#dcfce7' : 'none', color: oculto ? '#16a34a' : '#94a3b8', border: 'none', cursor: 'pointer', fontSize: 13, padding: '3px 6px', borderRadius: 6, lineHeight: 1, transition: 'all 0.12s' }}
                   onMouseOver={e => { if (!oculto) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
                   onMouseOut={e => { if (!oculto) { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' } }}>
                   {oculto ? '👁' : '🙈'}
@@ -332,23 +354,22 @@ function FieldConfigCard({
               </>
             ) : (
               <>
-                <button title="Editar campo"
-                  onClick={e => { e.stopPropagation(); onEditCustom() }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
-                  onMouseOver={e => { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' }}
-                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>✏️</button>
-                <button title="Eliminar campo"
-                  onClick={e => { e.stopPropagation(); onDeleteCustom() }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
-                  onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>🗑️</button>
+                {ctrlBtn('Editar campo', '✏️', onEditCustom, '#b45309', '#fef9c3')}
+                {ctrlBtn('Eliminar campo', '🗑️', onDeleteCustom, '#dc2626', '#fef2f2')}
               </>
             )}
           </div>
         )}
       </div>
 
-      <FieldInputMock tipo={campo.tipo} nombre={nombreMostrado} oculto={oculto} />
+      <FieldInputMock tipo={campo.tipo} nombre={nombreMostrado} oculto={oculto} isCustom={isCustom} />
+
+      {/* Drag hint — only when hovered and not locked */}
+      {!isLocked && hover && (
+        <div style={{ textAlign: 'center', marginTop: 4, fontSize: 9, color: '#b0b8c8', letterSpacing: '0.08em' }}>
+          ⠿ arrastrar para reordenar
+        </div>
+      )}
     </div>
   )
 }
@@ -603,31 +624,24 @@ function FormularioConfigurable({
       </div>
 
       {/* Legend */}
-      <div style={{ padding: '8px 24px', background: '#f8faff', borderBottom: '1px solid #eef0f6', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#e5e7eb', border: '1px solid #d1d5db' }} />
-          Campo del sistema
+      <div style={{ padding: '10px 24px', background: '#f0f4ff', borderBottom: '1px solid #dde3f5', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 4 }}>Leyenda:</span>
+        {[
+          { bg: '#fff', border: '#d1d5db', text: 'Sistema', color: '#374151' },
+          { bg: '#ede9fe', border: '#c4b5fd', text: 'Personalizado', color: '#5b21b6' },
+        ].map(({ bg, border, text, color }) => (
+          <span key={text} style={{ display: 'flex', alignItems: 'center', gap: 5, background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: '2px 8px' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color }}>{text}</span>
+          </span>
+        ))}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 8px' }}>
+          <span style={{ fontSize: 10, color: '#6b7280' }}>🔒 Base = protegido</span>
         </span>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ display: 'inline-block', fontSize: 9, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 4px', fontWeight: 800, lineHeight: 1.6 }}>C</span>
-          Campo personalizado
-        </span>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span>🔒</span> Base (protegido)
-        </span>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span>✏️</span> Renombrar
-        </span>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span>🙈</span> Ocultar
-        </span>
-        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span>⠿</span> Arrastrar para reordenar
-        </span>
+        <span style={{ fontSize: 10, color: '#6b7280', marginLeft: 'auto' }}>Pasa el cursor para editar · Arrastra para reordenar</span>
       </div>
 
       {/* Form body */}
-      <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ padding: '22px 24px 28px', display: 'flex', flexDirection: 'column', gap: 2 }}>
 
         {sections.map((sec, si) => {
           const fields   = sectionFields[si]
@@ -638,21 +652,21 @@ function FormularioConfigurable({
             <div key={si}>
               {/* Section divider */}
               {!isHeader && !isFooter && sec.label && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0 12px', padding: '10px 14px', borderRadius: 10, background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(79,70,229,0.02))', border: '1px solid rgba(99,102,241,0.12)' }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap' }}>{sec.label}</span>
-                  <div style={{ flex: 1, height: 1, background: 'rgba(99,102,241,0.15)' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0 12px', padding: '11px 16px', borderRadius: 12, background: 'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 100%)', boxShadow: '0 2px 8px rgba(29,78,216,0.25)' }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{sec.label}</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.2)' }} />
                 </div>
               )}
 
               {/* Observaciones footer */}
               {isFooter ? (
-                <div style={{ marginTop: 18 }}>
+                <div style={{ marginTop: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
                     <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                    <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>🔒 base</span>
+                    <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600, background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 5, padding: '1px 7px' }}>🔒 base</span>
                   </div>
-                  <div style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fcfcff', fontSize: 13, color: '#c0cadb', minHeight: 66, boxSizing: 'border-box' }}>
+                  <div style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #d1d5db', background: '#f9fafb', fontSize: 13, color: '#94a3b8', minHeight: 66, boxSizing: 'border-box' }}>
                     Observación adicional…
                   </div>
                   {/* Custom fields that ended up in the footer section */}
@@ -664,7 +678,7 @@ function FormularioConfigurable({
                 </div>
               ) : (
                 /* Header & regular sections — 3-column grid */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
                   {fields.map(renderField)}
                 </div>
               )}
@@ -684,27 +698,31 @@ function FormularioConfigurable({
                   <button
                     onClick={() => setAddingSectionIdx(si)}
                     style={{
-                      width: '100%', padding: '7px 12px', marginTop: 8,
-                      border: '1.5px dashed #c7d2fe', borderRadius: 9,
-                      background: 'transparent', cursor: 'pointer',
-                      fontSize: 12, fontWeight: 600, color: '#818cf8',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                      transition: 'all 0.15s',
+                      width: '100%', padding: '9px 14px', marginTop: 10,
+                      border: 'none', borderRadius: 10,
+                      background: 'linear-gradient(135deg,#6366f1,#4f46e5)',
+                      cursor: 'pointer',
+                      fontSize: 12, fontWeight: 700, color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                      transition: 'all 0.18s',
+                      boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+                      opacity: 0.82,
                     }}
                     onMouseOver={e => {
-                      e.currentTarget.style.background = '#eef2ff'
-                      e.currentTarget.style.borderColor = '#818cf8'
-                      e.currentTarget.style.color = '#4f46e5'
+                      e.currentTarget.style.opacity = '1'
+                      e.currentTarget.style.boxShadow = '0 4px 14px rgba(99,102,241,0.45)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
                     }}
                     onMouseOut={e => {
-                      e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.borderColor = '#c7d2fe'
-                      e.currentTarget.style.color = '#818cf8'
+                      e.currentTarget.style.opacity = '0.82'
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(99,102,241,0.3)'
+                      e.currentTarget.style.transform = 'translateY(0)'
                     }}
                   >
-                    + Agregar campo
+                    <span style={{ fontSize: 15, lineHeight: 1 }}>+</span>
+                    Agregar campo personalizado
                     {sec.label && (
-                      <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>
+                      <span style={{ fontSize: 10, opacity: 0.75, fontWeight: 400 }}>
                         · {sec.label.replace(/^[^\w\s]+\s*/, '')}
                       </span>
                     )}
