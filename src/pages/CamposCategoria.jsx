@@ -20,84 +20,108 @@ const CAMPOS_SISTEMA = [
 
 const ICONOS = ['📦','🪑','📚','📖','🖨️','💻','🖥️','🖱️','📷','📱','🔧','🗂️','🗃️','🖼️','🏫','⚗️','🎨','🎒','🔬','🪞','⚽','🏀','🏐','🏈','🎾','🏓','🏸','🥊','🏋️','🎽','🎵','🎭','🔭','🧪','🖊️','📐','🗑️','🎸','🎹','🎺','🎻','🎙️','🖋️','✂️','🔑','💡','🧲','🧰','🪣','🧹','🛒']
 
-const TIPO_COLOR = { texto: '#6366f1', numero: '#0ea5e9', fecha: '#8b5cf6', booleano: '#10b981', select: '#f59e0b' }
-
-// Campos predeterminados por tipo de categoría
 const CAMPOS_PREDET = {
   computadores: [
-    { id: 'numero_serie',       nombre: 'Número de serie',          tipo: 'texto',  _global: true },
-    { id: 'codigo',             nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
-    { id: 'estado',             nombre: 'Estado',                   tipo: 'select', _global: true },
-    { id: 'ubicacion',          nombre: 'Ubicación',                tipo: 'texto',  _global: true },
-    { id: 'area',               nombre: 'Área',                     tipo: 'texto',  _global: true },
-    { id: 'responsable',        nombre: 'Responsable',              tipo: 'texto',  _global: true },
-    { id: 'tipo',               nombre: 'Tipo de equipo',           tipo: 'select' },
-    { id: 'marca',              nombre: 'Marca',                    tipo: 'texto'  },
-    { id: 'modelo',             nombre: 'Modelo',                   tipo: 'texto'  },
-    { id: 'pantalla',           nombre: 'Pantalla',                 tipo: 'texto'  },
-    { id: 'cpu_marca',          nombre: 'Marca CPU',                tipo: 'select' },
-    { id: 'cpu_modelo',         nombre: 'Modelo CPU',               tipo: 'texto'  },
-    { id: 'cpu_generacion',     nombre: 'Versión / generación CPU', tipo: 'texto'  },
-    { id: 'ram',                nombre: 'RAM (capacidad)',          tipo: 'texto'  },
-    { id: 'ram_tipo',           nombre: 'Tipo RAM',                 tipo: 'select' },
-    { id: 'ram_slots',          nombre: 'Slots RAM',                tipo: 'texto'  },
-    { id: 'memoria',            nombre: 'Almacenamiento',           tipo: 'texto'  },
-    { id: 'tipo_almacenamiento',nombre: 'Tecnología almacenamiento',tipo: 'select' },
-    { id: 'sistema_operativo',  nombre: 'Sistema operativo',        tipo: 'texto'  },
-    { id: 'fecha_adquisicion',  nombre: 'Fecha adquisición',        tipo: 'fecha'  },
-    { id: 'proveedor',          nombre: 'Proveedor',                tipo: 'texto'  },
-    { id: 'numero_factura',     nombre: 'N° factura',               tipo: 'texto'  },
-    { id: 'garantia',           nombre: 'Garantía',                 tipo: 'texto'  },
-    { id: 'obs',                nombre: 'Observaciones',            tipo: 'texto',  _global: true },
+    { id: 'numero_serie',        nombre: 'Número de serie',           tipo: 'texto',  _global: true },
+    { id: 'codigo',              nombre: 'Código / N° inventario',    tipo: 'texto',  _global: true },
+    { id: 'estado',              nombre: 'Estado',                    tipo: 'select', _global: true },
+    { id: 'ubicacion',           nombre: 'Ubicación',                 tipo: 'texto',  _global: true },
+    { id: 'area',                nombre: 'Área',                      tipo: 'texto',  _global: true },
+    { id: 'responsable',         nombre: 'Responsable',               tipo: 'texto',  _global: true },
+    { id: 'tipo',                nombre: 'Tipo de equipo',            tipo: 'select' },
+    { id: 'marca',               nombre: 'Marca',                     tipo: 'texto'  },
+    { id: 'modelo',              nombre: 'Modelo',                    tipo: 'texto'  },
+    { id: 'pantalla',            nombre: 'Pantalla',                  tipo: 'texto'  },
+    { id: 'cpu_marca',           nombre: 'Marca CPU',                 tipo: 'select' },
+    { id: 'cpu_modelo',          nombre: 'Modelo CPU',                tipo: 'texto'  },
+    { id: 'cpu_generacion',      nombre: 'Versión / generación CPU',  tipo: 'texto'  },
+    { id: 'ram',                 nombre: 'RAM (capacidad)',           tipo: 'texto'  },
+    { id: 'ram_tipo',            nombre: 'Tipo RAM',                  tipo: 'select' },
+    { id: 'ram_slots',           nombre: 'Slots RAM',                 tipo: 'texto'  },
+    { id: 'memoria',             nombre: 'Almacenamiento',            tipo: 'texto'  },
+    { id: 'tipo_almacenamiento', nombre: 'Tecnología almacenamiento', tipo: 'select' },
+    { id: 'sistema_operativo',   nombre: 'Sistema operativo',         tipo: 'texto'  },
+    { id: 'fecha_adquisicion',   nombre: 'Fecha adquisición',         tipo: 'fecha'  },
+    { id: 'proveedor',           nombre: 'Proveedor',                 tipo: 'texto'  },
+    { id: 'numero_factura',      nombre: 'N° factura',                tipo: 'texto'  },
+    { id: 'garantia',            nombre: 'Garantía',                  tipo: 'texto'  },
+    { id: 'obs',                 nombre: 'Observaciones',             tipo: 'texto',  _global: true },
   ],
   tecno: [
-    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
-    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
-    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
-    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
-    { id: 'area',        nombre: 'Área',                    tipo: 'texto',  _global: true },
-    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
-    { id: 'tipo',              nombre: 'Tipo',              tipo: 'texto' },
-    { id: 'tecnologia',        nombre: 'Tecnología',        tipo: 'texto' },
-    { id: 'marca',             nombre: 'Marca',             tipo: 'texto' },
-    { id: 'modelo',            nombre: 'Modelo',            tipo: 'texto' },
-    { id: 'numero_serie',      nombre: 'N° de serie',       tipo: 'texto' },
-    { id: 'consumible',        nombre: 'Consumible',        tipo: 'texto' },
-    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
-    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
-    { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
-    { id: 'numero_orden',      nombre: 'N° orden compra',   tipo: 'texto' },
-    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
-    { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
-    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
+    { id: 'codigo',              nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
+    { id: 'cantidad',            nombre: 'Cantidad',                  tipo: 'numero', _global: true },
+    { id: 'estado',              nombre: 'Estado',                    tipo: 'select', _global: true },
+    { id: 'ubicacion',           nombre: 'Ubicación',                 tipo: 'texto',  _global: true },
+    { id: 'area',                nombre: 'Área',                      tipo: 'texto',  _global: true },
+    { id: 'responsable',         nombre: 'Responsable',               tipo: 'texto',  _global: true },
+    { id: 'tipo',                nombre: 'Tipo',                      tipo: 'texto'  },
+    { id: 'tecnologia',          nombre: 'Tecnología',                tipo: 'texto'  },
+    { id: 'marca',               nombre: 'Marca',                     tipo: 'texto'  },
+    { id: 'modelo',              nombre: 'Modelo',                    tipo: 'texto'  },
+    { id: 'numero_serie',        nombre: 'N° de serie',               tipo: 'texto'  },
+    { id: 'consumible',          nombre: 'Consumible',                tipo: 'texto'  },
+    { id: 'fecha_adquisicion',   nombre: 'Fecha adquisición',         tipo: 'fecha'  },
+    { id: 'proveedor',           nombre: 'Proveedor',                 tipo: 'texto'  },
+    { id: 'numero_factura',      nombre: 'N° factura',                tipo: 'texto'  },
+    { id: 'numero_orden',        nombre: 'N° orden compra',           tipo: 'texto'  },
+    { id: 'fondo',               nombre: 'Fondo',                     tipo: 'texto'  },
+    { id: 'garantia',            nombre: 'Garantía',                  tipo: 'texto'  },
+    { id: 'obs',                 nombre: 'Observaciones',             tipo: 'texto',  _global: true },
   ],
   biblio: [
-    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
-    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
-    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
-    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
-    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
-    { id: 'isbn',              nombre: 'ISBN',              tipo: 'texto' },
-    { id: 'autor',             nombre: 'Autor',             tipo: 'texto' },
-    { id: 'genero',            nombre: 'Género',            tipo: 'texto' },
-    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
-    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
-    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
-    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
+    { id: 'codigo',              nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
+    { id: 'cantidad',            nombre: 'Cantidad',                  tipo: 'numero', _global: true },
+    { id: 'estado',              nombre: 'Estado',                    tipo: 'select', _global: true },
+    { id: 'ubicacion',           nombre: 'Ubicación',                 tipo: 'texto',  _global: true },
+    { id: 'responsable',         nombre: 'Responsable',               tipo: 'texto',  _global: true },
+    { id: 'isbn',                nombre: 'ISBN',                      tipo: 'texto'  },
+    { id: 'autor',               nombre: 'Autor',                     tipo: 'texto'  },
+    { id: 'genero',              nombre: 'Género',                    tipo: 'texto'  },
+    { id: 'fecha_adquisicion',   nombre: 'Fecha adquisición',         tipo: 'fecha'  },
+    { id: 'proveedor',           nombre: 'Proveedor',                 tipo: 'texto'  },
+    { id: 'fondo',               nombre: 'Fondo',                     tipo: 'texto'  },
+    { id: 'obs',                 nombre: 'Observaciones',             tipo: 'texto',  _global: true },
   ],
   generico: [
-    { id: 'codigo',      nombre: 'Código / N° inventario', tipo: 'texto',  _global: true },
-    { id: 'cantidad',    nombre: 'Cantidad',                tipo: 'numero', _global: true },
-    { id: 'estado',      nombre: 'Estado',                  tipo: 'select', _global: true },
-    { id: 'ubicacion',   nombre: 'Ubicación',               tipo: 'texto',  _global: true },
-    { id: 'responsable', nombre: 'Responsable',             tipo: 'texto',  _global: true },
-    { id: 'fecha_adquisicion', nombre: 'Fecha adquisición', tipo: 'fecha' },
-    { id: 'proveedor',         nombre: 'Proveedor',         tipo: 'texto' },
-    { id: 'numero_factura',    nombre: 'N° factura',        tipo: 'texto' },
-    { id: 'numero_orden',      nombre: 'N° orden',          tipo: 'texto' },
-    { id: 'fondo',             nombre: 'Fondo',             tipo: 'texto' },
-    { id: 'garantia',          nombre: 'Garantía',          tipo: 'texto' },
-    { id: 'obs',         nombre: 'Observaciones',           tipo: 'texto',  _global: true },
+    { id: 'codigo',              nombre: 'Código / N° inventario',   tipo: 'texto',  _global: true },
+    { id: 'cantidad',            nombre: 'Cantidad',                  tipo: 'numero', _global: true },
+    { id: 'estado',              nombre: 'Estado',                    tipo: 'select', _global: true },
+    { id: 'ubicacion',           nombre: 'Ubicación',                 tipo: 'texto',  _global: true },
+    { id: 'responsable',         nombre: 'Responsable',               tipo: 'texto',  _global: true },
+    { id: 'fecha_adquisicion',   nombre: 'Fecha adquisición',         tipo: 'fecha'  },
+    { id: 'proveedor',           nombre: 'Proveedor',                 tipo: 'texto'  },
+    { id: 'numero_factura',      nombre: 'N° factura',                tipo: 'texto'  },
+    { id: 'numero_orden',        nombre: 'N° orden',                  tipo: 'texto'  },
+    { id: 'fondo',               nombre: 'Fondo',                     tipo: 'texto'  },
+    { id: 'garantia',            nombre: 'Garantía',                  tipo: 'texto'  },
+    { id: 'obs',                 nombre: 'Observaciones',             tipo: 'texto',  _global: true },
+  ],
+}
+
+// Sections matching the real Agregar bien form layout
+const FORM_SECTIONS = {
+  comp: [
+    { label: null,                  ids: ['numero_serie','codigo','estado','ubicacion','area','responsable'], _header: true },
+    { label: '💻 Especificaciones', ids: ['tipo','marca','modelo','pantalla','cpu_marca','cpu_modelo','cpu_generacion','ram','ram_tipo','ram_slots','memoria','tipo_almacenamiento','sistema_operativo'] },
+    { label: '🛒 Adquisición',      ids: ['fecha_adquisicion','proveedor','fondo','numero_factura','numero_orden','garantia'] },
+    { label: null,                  ids: ['obs'], _footer: true },
+  ],
+  tecno: [
+    { label: null,                  ids: ['codigo','cantidad','estado','ubicacion','area','responsable'], _header: true },
+    { label: '🖨️ Datos del equipo', ids: ['tipo','tecnologia','marca','modelo','numero_serie','consumible'] },
+    { label: '🛒 Adquisición',      ids: ['proveedor','numero_factura','fecha_adquisicion','numero_orden','fondo','garantia'] },
+    { label: null,                  ids: ['obs'], _footer: true },
+  ],
+  biblio: [
+    { label: null,                  ids: ['codigo','cantidad','estado','ubicacion','responsable'], _header: true },
+    { label: '📚 Datos del libro',  ids: ['isbn','autor','genero'] },
+    { label: '🛒 Adquisición',      ids: ['fecha_adquisicion','proveedor','fondo'] },
+    { label: null,                  ids: ['obs'], _footer: true },
+  ],
+  generico: [
+    { label: null,                  ids: ['codigo','cantidad','estado','ubicacion','responsable'], _header: true },
+    { label: '🛒 Adquisición',      ids: ['fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia'] },
+    { label: null,                  ids: ['obs'], _footer: true },
   ],
 }
 
@@ -110,75 +134,15 @@ function getCamposSistema(cat) {
   return CAMPOS_PREDET.generico
 }
 
-function ModalCategoria({ cat, onClose, onSave }) {
-  const esEdicion = !!cat
-  const [label, setLabel] = useState(cat?.label || '')
-  const [icon,  setIcon]  = useState(cat?.icon  || '📦')
-  const [error, setError] = useState('')
-  const [guardando, setGuardando] = useState(false)
-
-  async function guardar() {
-    const lbl = label.trim()
-    if (!lbl) { setError('El nombre es obligatorio'); return }
-    setGuardando(true); setError('')
-    await onSave({ label: lbl, icon })
-    setGuardando(false)
-  }
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
-      onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 18, padding: '26px 28px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)', maxWidth: 440, width: '92%', display: 'flex', flexDirection: 'column', gap: 18 }}
-        onClick={e => e.stopPropagation()}>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{icon}</div>
-          <div>
-            <p style={{ margin: 0, fontWeight: 800, fontSize: 16, color: '#111827' }}>{esEdicion ? 'Editar categoría' : 'Nueva categoría'}</p>
-            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>{esEdicion ? `Modificar "${cat.label}"` : 'Agregar al sistema de inventario'}</p>
-          </div>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</label>
-          <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ej: Mobiliario escolar" maxLength={50} autoFocus
-            onKeyDown={e => e.key === 'Enter' && guardar()}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
-            onFocus={e => e.target.style.borderColor = '#6366f1'}
-            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ícono</label>
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
-            {ICONOS.map(ic => (
-              <button key={ic} onClick={() => setIcon(ic)}
-                style={{ fontSize: 18, padding: '5px 6px', borderRadius: 8, border: `2px solid ${icon === ic ? '#6366f1' : '#e5e7eb'}`, background: icon === ic ? '#eef2ff' : '#fff', cursor: 'pointer', lineHeight: 1, transition: 'all 0.12s' }}>
-                {ic}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {error}</p>}
-
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose}
-            style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Cancelar
-          </button>
-          <button onClick={guardar} disabled={guardando}
-            style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
-            {guardando ? '⏳ Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear categoría'}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+function getCatType(cat) {
+  if (!cat) return 'generico'
+  if (cat.id === 'computadores') return 'comp'
+  const lbl = (cat.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  if (lbl.includes('tecnol')) return 'tecno'
+  if (lbl.includes('biblio') || lbl.includes('libreri')) return 'biblio'
+  return 'generico'
 }
 
-// Inserta campos faltantes en su posición natural (basada en naturalOrder), no al final
 function smartMergeOrder(savedOrder, naturalOrder) {
   const result = [...savedOrder]
   const missing = naturalOrder.filter(id => !savedOrder.includes(id))
@@ -203,218 +167,606 @@ function smartMergeOrder(savedOrder, naturalOrder) {
   return result
 }
 
-// Secciones del formulario real de agregar bien, por tipo de categoría
-const PREVIEW_SECTIONS = {
-  tecno: [
-    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'area', 'responsable'], _header: true },
-    { label: '🖨️ Datos del equipo', ids: ['tipo', 'tecnologia', 'marca', 'modelo', 'numero_serie', 'consumible'] },
-    { label: '🛒 Adquisición',      ids: ['proveedor', 'numero_factura', 'fecha_adquisicion', 'numero_orden', 'fondo', 'garantia'] },
-    { label: null, ids: ['obs'], _footer: true },
-  ],
-  comp: [
-    { label: null, ids: ['numero_serie', 'codigo', 'estado', 'ubicacion', 'area', 'responsable'], _header: true },
-    { label: '💻 Especificaciones',  ids: ['tipo', 'marca', 'modelo', 'pantalla', 'cpu_marca', 'cpu_modelo', 'cpu_generacion', 'ram', 'ram_tipo', 'ram_slots', 'memoria', 'tipo_almacenamiento', 'sistema_operativo'] },
-    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo', 'numero_factura', 'numero_orden', 'garantia'] },
-    { label: null, ids: ['obs'], _footer: true },
-  ],
-  biblio: [
-    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
-    { label: '📚 Datos del libro',   ids: ['isbn', 'autor', 'genero'] },
-    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'fondo'] },
-    { label: null, ids: ['obs'], _footer: true },
-  ],
-  generico: [
-    { label: null, ids: ['codigo', 'cantidad', 'estado', 'ubicacion', 'responsable'], _header: true },
-    { label: '🛒 Adquisición',       ids: ['fecha_adquisicion', 'proveedor', 'numero_factura', 'numero_orden', 'fondo', 'garantia'] },
-    { label: null, ids: ['obs'], _footer: true },
-  ],
-}
+// ── Sub-components ─────────────────────────────────────────────────────────
 
-function getCatType(cat) {
-  if (!cat) return 'generico'
-  if (cat.id === 'computadores') return 'comp'
-  const lbl = (cat.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  if (lbl.includes('tecnol')) return 'tecno'
-  if (lbl.includes('biblio') || lbl.includes('libreri')) return 'biblio'
-  return 'generico'
-}
+function ModalCategoria({ cat, onClose, onSave }) {
+  const esEdicion = !!cat
+  const [label, setLabel] = useState(cat?.label || '')
+  const [icon,  setIcon]  = useState(cat?.icon  || '📦')
+  const [error, setError] = useState('')
+  const [guardando, setGuardando] = useState(false)
 
-function MockField({ nombre, tipo, requerido, opciones, custom }) {
-  const tc   = custom ? '#6366f1' : '#64748b'
-  const base = { width: '100%', padding: '5px 8px', borderRadius: 6, border: `1.5px solid ${custom ? '#c7d2fe' : '#e5e7eb'}`, fontSize: 10, background: custom ? '#f8f9ff' : '#fff', color: '#374151', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }
+  async function guardar() {
+    const lbl = label.trim()
+    if (!lbl) { setError('El nombre es obligatorio'); return }
+    setGuardando(true); setError('')
+    await onSave({ label: lbl, icon })
+    setGuardando(false)
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 8, fontWeight: 700, color: tc, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {nombre}{requerido && <span style={{ color: '#ef4444' }}>*</span>}
-        {custom && <span style={{ fontSize: 7, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 3px', fontWeight: 800 }}>C</span>}
-      </label>
-      {tipo === 'fecha'     ? <input type="date" readOnly style={base} />
-      : tipo === 'booleano' ? <select disabled style={base}><option>Sí</option><option>No</option></select>
-      : tipo === 'select'   ? <select disabled style={base}>{(opciones?.length ? opciones : ['Seleccionar…']).map(o => <option key={o}>{o}</option>)}</select>
-      : <input readOnly type={tipo === 'numero' ? 'number' : 'text'} placeholder={`${nombre}…`} style={{ ...base, color: '#9ca3af' }} />}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+      onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 18, padding: '26px 28px', boxShadow: '0 24px 64px rgba(0,0,0,0.25)', maxWidth: 440, width: '92%', display: 'flex', flexDirection: 'column', gap: 18 }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#f0f4ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{icon}</div>
+          <div>
+            <p style={{ margin: 0, fontWeight: 800, fontSize: 16, color: '#111827' }}>{esEdicion ? 'Editar categoría' : 'Nueva categoría'}</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>{esEdicion ? `Modificar "${cat.label}"` : 'Agregar al sistema de inventario'}</p>
+          </div>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</label>
+          <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Ej: Mobiliario escolar" maxLength={50} autoFocus
+            onKeyDown={e => e.key === 'Enter' && guardar()}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+            onFocus={e => e.target.style.borderColor = '#6366f1'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ícono</label>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
+            {ICONOS.map(ic => (
+              <button key={ic} onClick={() => setIcon(ic)}
+                style={{ fontSize: 18, padding: '5px 6px', borderRadius: 8, border: `2px solid ${icon === ic ? '#6366f1' : '#e5e7eb'}`, background: icon === ic ? '#eef2ff' : '#fff', cursor: 'pointer', lineHeight: 1, transition: 'all 0.12s' }}>
+                {ic}
+              </button>
+            ))}
+          </div>
+        </div>
+        {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {error}</p>}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={guardar} disabled={guardando}
+            style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: guardando ? 'wait' : 'pointer', opacity: guardando ? 0.75 : 1, boxShadow: '0 4px 12px rgba(99,102,241,0.4)' }}>
+            {guardando ? '⏳ Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear categoría'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
 
-function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
-  const catType  = getCatType(catObj)
-  const sections = PREVIEW_SECTIONS[catType] || PREVIEW_SECTIONS.generico
+// Disabled form input — looks like the real form
+function FieldInputMock({ tipo, nombre, oculto }) {
+  const s = {
+    width: '100%', padding: '8px 11px', borderRadius: 8,
+    border: `1.5px solid ${oculto ? '#f1f5f9' : '#e5e7eb'}`,
+    fontSize: 13, fontFamily: 'inherit',
+    background: oculto ? '#f8fafc' : '#fcfcff',
+    color: '#c0cadb', outline: 'none', boxSizing: 'border-box',
+    cursor: 'default', pointerEvents: 'none',
+  }
+  if (tipo === 'fecha')    return <input type="date" disabled style={s} />
+  if (tipo === 'booleano') return <select disabled style={s}><option>Sí</option><option>No</option></select>
+  if (tipo === 'select')   return <select disabled style={s}><option>— seleccionar —</option></select>
+  if (tipo === 'numero')   return <input type="number" disabled placeholder="0" style={s} />
+  return <input type="text" disabled placeholder={`${nombre}…`} style={{ ...s, textOverflow: 'ellipsis' }} />
+}
 
-  // Assign each field to a section by ID
+// Single field in the form editor with hover controls
+function FieldConfigCard({
+  campo, isSistema, oculto, nombreMostrado,
+  editandoSistema, setEditandoSistema, onConfirmarRenombre,
+  onToggleHide, onEditCustom, onDeleteCustom,
+  dragInfo, setDragInfo, dragOverId, setDragOverId, onDrop,
+}) {
+  const [hover, setHover] = useState(false)
+  const isLocked   = !!campo._global
+  const estaEditS  = isSistema && editandoSistema?.id === campo.id
+  const isDragOver = dragOverId === campo.id
+  const isDragging = dragInfo?.id === campo.id
+
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      draggable={!isLocked}
+      onDragStart={e => {
+        try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', campo.id) } catch { /* noop */ }
+        setDragInfo({ id: campo.id, tipo: campo._tipo })
+      }}
+      onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
+      onDragOver={e => {
+        e.preventDefault()
+        try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }
+        setDragOverId(campo.id)
+      }}
+      onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null) }}
+      onDrop={e => { e.preventDefault(); onDrop(campo.id); setDragOverId(null) }}
+      style={{
+        position: 'relative', borderRadius: 9, padding: '7px 9px 9px',
+        opacity: oculto ? 0.42 : 1, transition: 'all 0.15s',
+        background: isDragging ? '#eef2ff' : isDragOver ? '#f0f4ff' : hover ? '#f8faff' : 'transparent',
+        outline: isDragOver ? '2px dashed #a5b4fc' : hover ? '1px solid #e0e7ff' : '1px solid transparent',
+        cursor: isLocked ? 'default' : 'grab',
+      }}
+    >
+      {/* Label + controls row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, minHeight: 22, gap: 4 }}>
+        {estaEditS ? (
+          <input autoFocus defaultValue={nombreMostrado}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onConfirmarRenombre(e.target.value.trim())
+              if (e.key === 'Escape') setEditandoSistema(null)
+            }}
+            onBlur={e => onConfirmarRenombre(e.target.value.trim())}
+            style={{ flex: 1, padding: '2px 7px', borderRadius: 6, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', fontFamily: 'inherit', background: '#f8f9ff', color: '#111827' }}
+          />
+        ) : (
+          <label style={{
+            flex: 1, fontSize: 12, fontWeight: 700, userSelect: 'none', cursor: 'inherit',
+            color: oculto ? '#94a3b8' : isSistema ? '#374151' : '#4338ca',
+            textDecoration: oculto ? 'line-through' : 'none',
+            display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0,
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nombreMostrado}</span>
+            {campo.requerido && <span style={{ color: '#ef4444', fontWeight: 900, flexShrink: 0 }}>*</span>}
+            {!isSistema && (
+              <span style={{ fontSize: 9, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 4px', fontWeight: 800, flexShrink: 0, lineHeight: 1.6 }}>C</span>
+            )}
+            {isLocked && <span title="Campo base protegido" style={{ fontSize: 10, color: '#cbd5e1', cursor: 'help', flexShrink: 0 }}>🔒</span>}
+          </label>
+        )}
+
+        {/* Controls — visible on hover */}
+        {!isLocked && !estaEditS && (
+          <div style={{ display: 'flex', gap: 2, flexShrink: 0, opacity: hover ? 1 : 0, transition: 'opacity 0.15s', pointerEvents: hover ? 'auto' : 'none' }}>
+            {isSistema ? (
+              <>
+                <button title="Renombrar"
+                  onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
+                  onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
+                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>✏️</button>
+                <button
+                  title={oculto ? 'Mostrar en formulario' : 'Ocultar del formulario'}
+                  onClick={e => { e.stopPropagation(); onToggleHide() }}
+                  style={{ background: oculto ? '#dcfce7' : 'none', color: oculto ? '#16a34a' : '#94a3b8', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, lineHeight: 1 }}
+                  onMouseOver={e => { if (!oculto) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
+                  onMouseOut={e => { if (!oculto) { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' } }}>
+                  {oculto ? '👁' : '🙈'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button title="Editar campo"
+                  onClick={e => { e.stopPropagation(); onEditCustom() }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
+                  onMouseOver={e => { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' }}
+                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>✏️</button>
+                <button title="Eliminar campo"
+                  onClick={e => { e.stopPropagation(); onDeleteCustom() }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '3px 5px', borderRadius: 5, color: '#94a3b8', lineHeight: 1 }}
+                  onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
+                  onMouseOut={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none' }}>🗑️</button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <FieldInputMock tipo={campo.tipo} nombre={nombreMostrado} oculto={oculto} />
+    </div>
+  )
+}
+
+// Inline form for adding a new custom field inside a section
+function AddFieldInline({ sectionLabel, onAdd, onCancel, existingIds }) {
+  const [nombre,   setNombre]   = useState('')
+  const [tipo,     setTipo]     = useState('texto')
+  const [requerido, setReq]     = useState(false)
+  const [opts,     setOpts]     = useState('')
+  const [err,      setErr]      = useState('')
+
+  function submit() {
+    const n = nombre.trim()
+    if (!n) { setErr('El nombre es obligatorio'); return }
+    const id = n.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+    if (!id) { setErr('Nombre inválido — usa solo letras y espacios'); return }
+    if (CAMPOS_SISTEMA.includes(id)) { setErr(`"${id}" es un nombre reservado del sistema`); return }
+    if (existingIds.includes(id)) { setErr('Ya existe un campo con ese nombre'); return }
+    onAdd({ id, nombre: n, tipo, requerido, opts })
+  }
+
+  const colBorder = '#c7d2fe'
+  return (
+    <div style={{ background: 'linear-gradient(135deg,#f5f7ff,#fafafe)', border: `1.5px dashed ${colBorder}`, borderRadius: 10, padding: '14px 16px', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#6366f1' }}>+ Nuevo campo</span>
+        {sectionLabel && <span style={{ fontSize: 11, color: '#94a3b8' }}>en {sectionLabel}</span>}
+        <button onClick={onCancel} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}>✕</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ flex: '2 1 160px' }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nombre del campo</label>
+          <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Color, N° serie…" autoFocus
+            onKeyDown={e => e.key === 'Enter' && submit()}
+            style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827' }}
+            onFocus={e => e.target.style.borderColor = '#6366f1'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+        <div style={{ flex: '1 1 130px' }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipo</label>
+          <select value={tipo} onChange={e => setTipo(e.target.value)}
+            style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}>
+            {TIPOS.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {tipo === 'select' && (
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Opciones (separadas por coma)</label>
+          <input value={opts} onChange={e => setOpts(e.target.value)} placeholder="Ej: Rojo, Verde, Azul"
+            style={{ width: '100%', padding: '8px 11px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827' }}
+            onFocus={e => e.target.style.borderColor = '#6366f1'}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+        </div>
+      )}
+
+      {err && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '7px 10px', borderRadius: 7, border: '1px solid #fecaca' }}>⚠️ {err}</p>}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
+          <input type="checkbox" checked={requerido} onChange={e => setReq(e.target.checked)} style={{ width: 14, height: 14, accentColor: '#6366f1' }} />
+          Campo requerido
+        </label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onCancel} style={{ padding: '7px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={submit} style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 3px 10px rgba(99,102,241,0.3)' }}>+ Agregar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Modal to edit an existing custom field
+function EditFieldModal({ campo, onSave, onClose }) {
+  const [nombre,   setNombre]   = useState(campo.nombre)
+  const [tipo,     setTipo]     = useState(campo.tipo)
+  const [requerido, setReq]     = useState(campo.requerido || false)
+  const [opts,     setOpts]     = useState((campo.opciones || []).join(', '))
+  const [err,      setErr]      = useState('')
+
+  function submit() {
+    const n = nombre.trim()
+    if (!n) { setErr('El nombre es obligatorio'); return }
+    const saved = {
+      ...campo,
+      nombre: n,
+      tipo,
+      requerido,
+    }
+    if (tipo === 'select' && opts.trim()) {
+      saved.opciones = opts.split(',').map(o => o.trim()).filter(Boolean)
+    } else {
+      delete saved.opciones
+    }
+    onSave(saved)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
+      onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 18, padding: '24px 26px', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', maxWidth: 440, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef9c3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>✏️</div>
+          <div>
+            <p style={{ margin: 0, fontWeight: 800, fontSize: 15, color: '#111827' }}>Editar campo personalizado</p>
+            <p style={{ margin: 0, fontSize: 12, color: '#9ca3af' }}>ID: {campo.id}</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: '2 1 160px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nombre</label>
+            <input value={nombre} onChange={e => setNombre(e.target.value)} autoFocus
+              onKeyDown={e => e.key === 'Enter' && submit()}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827' }}
+              onFocus={e => e.target.style.borderColor = '#6366f1'}
+              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+          <div style={{ flex: '1 1 120px' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipo</label>
+            <select value={tipo} onChange={e => setTipo(e.target.value)}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}>
+              {TIPOS.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {tipo === 'select' && (
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Opciones (separadas por coma)</label>
+            <input value={opts} onChange={e => setOpts(e.target.value)} placeholder="Ej: Rojo, Verde, Azul"
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827' }}
+              onFocus={e => e.target.style.borderColor = '#6366f1'}
+              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+        )}
+
+        {err && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {err}</p>}
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
+          <input type="checkbox" checked={requerido} onChange={e => setReq(e.target.checked)} style={{ width: 14, height: 14, accentColor: '#6366f1' }} />
+          Campo requerido
+        </label>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={submit} style={{ padding: '9px 22px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main form-editor component ──────────────────────────────────────────────
+function FormularioConfigurable({
+  catObj, catType, sections, unifiedSortedFields, _fullOrder,
+  camposOcultos, camposNombres,
+  editandoSistema, setEditandoSistema, onConfirmarRenombre,
+  setCamposOcultos, setConfirmBorrarCampo, onEditCustomField,
+  dragInfo, setDragInfo, dragOverId, setDragOverId, onDrop,
+  addingSectionIdx, setAddingSectionIdx, onAddField, camposIds,
+}) {
+  // Assign fields to sections based on their order position
   const sectionOf = {}
   sections.forEach((sec, i) => sec.ids.forEach(id => { sectionOf[id] = i }))
 
   const sectionFields = sections.map(() => [])
   let curSection = 0
-  for (const f of unifiedVisibleFields) {
-    if (sectionOf[f.id] !== undefined) {
-      curSection = sectionOf[f.id]
-      sectionFields[curSection].push(f)
-    } else if (f._tipo === 'custom') {
-      sectionFields[curSection].push(f)
-    }
+  for (const f of unifiedSortedFields) {
+    if (sectionOf[f.id] !== undefined) curSection = sectionOf[f.id]
+    sectionFields[curSection].push(f)
   }
 
-  const total = unifiedVisibleFields.length
+  // Position after which to insert when user adds to a section
+  function getInsertAfterPos(si) {
+    const fields = sectionFields[si]
+    if (fields.length > 0) return _fullOrder.indexOf(fields[fields.length - 1].id)
+    for (let i = si + 1; i < sections.length; i++) {
+      const ff = sectionFields[i][0]
+      if (ff) {
+        const p = _fullOrder.indexOf(ff.id)
+        return p > 0 ? p - 1 : -1
+      }
+    }
+    return _fullOrder.length - 1
+  }
+
+  const renderField = campo => {
+    const isSistema     = campo._tipo === 'sistema'
+    const oculto        = isSistema && !campo._global && camposOcultos.includes(campo.id)
+    const nombreMostrado = isSistema ? (camposNombres[campo.id] || campo.nombre) : campo.nombre
+    return (
+      <FieldConfigCard
+        key={campo.id}
+        campo={campo}
+        isSistema={isSistema}
+        oculto={oculto}
+        nombreMostrado={nombreMostrado}
+        editandoSistema={editandoSistema}
+        setEditandoSistema={setEditandoSistema}
+        onConfirmarRenombre={val => onConfirmarRenombre(campo.id, val)}
+        onToggleHide={() => setCamposOcultos(prev => oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id])}
+        onEditCustom={() => onEditCustomField(campo)}
+        onDeleteCustom={() => setConfirmBorrarCampo(campo)}
+        dragInfo={dragInfo}
+        setDragInfo={setDragInfo}
+        dragOverId={dragOverId}
+        setDragOverId={setDragOverId}
+        onDrop={onDrop}
+      />
+    )
+  }
+
+  const totalOcultos = camposOcultos.filter(id => {
+    const f = unifiedSortedFields.find(x => x.id === id)
+    return f && f._tipo === 'sistema' && !f._global
+  }).length
 
   return (
-    <div style={{ background: '#f8fafc', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0', fontSize: 11 }}>
-      {/* Header */}
-      <div style={{ padding: '11px 14px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -14, right: -14, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{catObj.icon || '📦'}</div>
+    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e8eaee', boxShadow: '0 2px 16px rgba(0,0,0,0.07)', overflow: 'hidden' }}>
+
+      {/* Form header — identical gradient to the real form */}
+      <div style={{ padding: '20px 24px', background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -24, right: -24, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ position: 'absolute', bottom: -30, right: 80, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+            {catObj.icon || '📦'}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff' }}>
               {catType === 'comp' ? 'Nuevo computador' : catType === 'tecno' ? 'Nuevo artículo tecnológico' : `Nuevo bien · ${catObj.label}`}
             </p>
-            <p style={{ margin: 0, fontSize: 8, color: 'rgba(255,255,255,0.55)' }}>Vista previa · {total} campos</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.58)' }}>
+              Vista de edición de campos · pasa el cursor sobre un campo para editarlo · arrastra para reordenar
+            </p>
           </div>
+          {totalOcultos > 0 && (
+            <div style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, background: 'rgba(251,191,36,0.22)', color: '#fcd34d', borderRadius: 8, padding: '4px 10px', border: '1px solid rgba(251,191,36,0.3)' }}>
+              {totalOcultos} oculto{totalOcultos !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Form content */}
-      <div style={{ padding: '10px 12px 14px', display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 520, overflowY: 'auto' }}>
+      {/* Legend */}
+      <div style={{ padding: '8px 24px', background: '#f8faff', borderBottom: '1px solid #eef0f6', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: '#e5e7eb', border: '1px solid #d1d5db' }} />
+          Campo del sistema
+        </span>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'inline-block', fontSize: 9, background: '#eef2ff', color: '#6366f1', borderRadius: 3, padding: '0 4px', fontWeight: 800, lineHeight: 1.6 }}>C</span>
+          Campo personalizado
+        </span>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span>🔒</span> Base (protegido)
+        </span>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span>✏️</span> Renombrar
+        </span>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span>🙈</span> Ocultar
+        </span>
+        <span style={{ fontSize: 11, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span>⠿</span> Arrastrar para reordenar
+        </span>
+      </div>
+
+      {/* Form body */}
+      <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+
         {sections.map((sec, si) => {
-          const fields = sectionFields[si]
-          if (!fields.length) return null
+          const fields   = sectionFields[si]
+          const isFooter = !!sec._footer
+          const isHeader = !!sec._header
 
-          if (sec._header) {
-            // Header section: render as two rows (codigo/cantidad/estado + ubicacion/responsable)
-            const extraH = fields.filter(f => !['codigo','cantidad','estado','ubicacion','responsable'].includes(f.id))
-            return (
-              <div key={si}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
-                  {fields.filter(f => ['codigo','cantidad','estado'].includes(f.id)).map(f => (
-                    <MockField key={f.id} nombre={camposNombres[f.id] || f.nombre} tipo={f.tipo} requerido={f.id === 'codigo'} custom={f._tipo === 'custom'} />
-                  ))}
-                  {extraH.map(f => <MockField key={f.id} nombre={f.nombre} tipo={f.tipo} requerido={f.requerido} custom />)}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginTop: 5 }}>
-                  {fields.filter(f => ['ubicacion','responsable'].includes(f.id)).map(f => (
-                    <MockField key={f.id} nombre={camposNombres[f.id] || f.nombre} tipo={f.tipo} custom={f._tipo === 'custom'} />
-                  ))}
-                </div>
-              </div>
-            )
-          }
-
-          if (sec._footer) {
-            // Footer (obs) section
-            return (
-              <div key={si} style={{ marginTop: 2 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
-                  <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-                </div>
-                <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
-                {fields.filter(f => f._tipo === 'custom').map(f => (
-                  <MockField key={f.id} nombre={f.nombre} tipo={f.tipo} requerido={f.requerido} custom />
-                ))}
-              </div>
-            )
-          }
-
-          // Regular section
           return (
             <div key={si}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0 5px' }}>
-                <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>{sec.label}</span>
-                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-                {fields.map(f => {
-                  const nombre = f._tipo === 'sistema' ? (camposNombres[f.id] || f.nombre) : f.nombre
-                  return <MockField key={f.id} nombre={nombre} tipo={f.tipo} opciones={f.opciones} requerido={f.requerido} custom={f._tipo === 'custom'} />
-                })}
-              </div>
+              {/* Section divider */}
+              {!isHeader && !isFooter && sec.label && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0 12px', padding: '10px 14px', borderRadius: 10, background: 'linear-gradient(135deg,rgba(99,102,241,0.07),rgba(79,70,229,0.02))', border: '1px solid rgba(99,102,241,0.12)' }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', whiteSpace: 'nowrap' }}>{sec.label}</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(99,102,241,0.15)' }} />
+                </div>
+              )}
+
+              {/* Observaciones footer */}
+              {isFooter ? (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
+                    <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
+                    <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 600 }}>🔒 base</span>
+                  </div>
+                  <div style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fcfcff', fontSize: 13, color: '#c0cadb', minHeight: 66, boxSizing: 'border-box' }}>
+                    Observación adicional…
+                  </div>
+                  {/* Custom fields that ended up in the footer section */}
+                  {fields.filter(f => f._tipo === 'custom').length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+                      {fields.filter(f => f._tipo === 'custom').map(renderField)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Header & regular sections — 3-column grid */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {fields.map(renderField)}
+                </div>
+              )}
+
+              {/* + Agregar campo (not in footer) */}
+              {!isFooter && (
+                addingSectionIdx === si ? (
+                  <AddFieldInline
+                    sectionLabel={sec.label}
+                    existingIds={camposIds}
+                    onAdd={({ id, nombre, tipo, requerido, opts }) =>
+                      onAddField({ id, nombre, tipo, requerido, opts }, si, getInsertAfterPos(si))
+                    }
+                    onCancel={() => setAddingSectionIdx(null)}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setAddingSectionIdx(si)}
+                    style={{
+                      width: '100%', padding: '7px 12px', marginTop: 8,
+                      border: '1.5px dashed #c7d2fe', borderRadius: 9,
+                      background: 'transparent', cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600, color: '#818cf8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.background = '#eef2ff'
+                      e.currentTarget.style.borderColor = '#818cf8'
+                      e.currentTarget.style.color = '#4f46e5'
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.borderColor = '#c7d2fe'
+                      e.currentTarget.style.color = '#818cf8'
+                    }}
+                  >
+                    + Agregar campo
+                    {sec.label && (
+                      <span style={{ fontSize: 10, opacity: 0.7, fontWeight: 400 }}>
+                        · {sec.label.replace(/^[^\w\s]+\s*/, '')}
+                      </span>
+                    )}
+                  </button>
+                )
+              )}
             </div>
           )
         })}
 
-        {/* Comp type: keep original footer (no sections for obs) */}
-        {catType === 'comp' && (
-          <>
-            <div style={{ marginTop: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 8, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Observaciones</span>
-                <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
-              </div>
-              <div style={{ width: '100%', height: 36, borderRadius: 6, border: '1.5px solid #e5e7eb', background: '#fff', padding: '4px 8px', boxSizing: 'border-box', fontSize: 9, color: '#9ca3af' }}>Observación adicional…</div>
-            </div>
-          </>
-        )}
-
-        {/* Save button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
-          <div style={{ padding: '6px 14px', borderRadius: 7, background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 9, fontWeight: 700 }}>Guardar bien</div>
+        {/* Decorative save button — like the real form */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 22, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ padding: '10px 26px', borderRadius: 10, background: 'linear-gradient(135deg,#1a237e,#2563eb)', color: '#fff', fontSize: 14, fontWeight: 700, opacity: 0.5, cursor: 'default', userSelect: 'none', letterSpacing: '0.01em' }}>
+            Guardar bien
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
+// ── Main component ──────────────────────────────────────────────────────────
+
 export default function CamposCategoria({ usuario }) {
   const esAdmin = usuario?.rol === 'admin'
 
-  const [categorias,      setCategorias]      = useState([])
-  const [catActiva,       setCatActiva]       = useState(null)
-  const [campos,          setCampos]          = useState([])
-  const [cargando,        setCargando]        = useState(true)
-  const [guardando,       setGuardando]       = useState(false)
-  const [exito,           setExito]           = useState(false)
-  const [error,           setError]           = useState('')
+  const [categorias,         setCategorias]         = useState([])
+  const [catActiva,          setCatActiva]          = useState(null)
+  const [campos,             setCampos]             = useState([])
+  const [cargando,           setCargando]           = useState(true)
+  const [guardando,          setGuardando]          = useState(false)
+  const [exito,              setExito]              = useState(false)
+  const [error,              setError]              = useState('')
 
-  // Formulario campo
-  const [nuevoNombre,     setNuevoNombre]     = useState('')
-  const [nuevoTipo,       setNuevoTipo]       = useState('texto')
-  const [nuevoReq,        setNuevoReq]        = useState(false)
-  const [nuevoOpts,       setNuevoOpts]       = useState('')
-  const [editandoCampoId,       setEditandoCampoId]       = useState(null)
-  const [confirmBorrarCampo,   setConfirmBorrarCampo]   = useState(null) // campo obj
-  const [confirmActualizarCampo, setConfirmActualizarCampo] = useState(false)
-  const [camposPanelAbierto,   setCamposPanelAbierto]   = useState(true)
+  const [camposOcultos,      setCamposOcultos]      = useState([])
+  const [camposNombres,      setCamposNombres]      = useState({})
+  const [camposOrden,        setCamposOrden]        = useState([])
 
-  const [camposOcultos,        setCamposOcultos]        = useState([])
-  const [sistemaCamposExpanded, setSistemaCamposExpanded] = useState(false)
-  const [editandoSistema,       setEditandoSistema]       = useState(null)
-  const [camposNombres,         setCamposNombres]         = useState({})
-  const [camposOrden,           setCamposOrden]           = useState([])
+  const [editandoSistema,    setEditandoSistema]    = useState(null)
 
   // Drag & drop
-  const [dragInfo,   setDragInfo]   = useState(null) // { id, tipo: 'sistema'|'custom' }
-  const [dragOverId, setDragOverId] = useState(null)
+  const [dragInfo,           setDragInfo]           = useState(null)
+  const [dragOverId,         setDragOverId]         = useState(null)
 
-  // Modales categoría
-  const [modalCat,        setModalCat]        = useState(null) // null | 'nueva' | cat_obj (edición)
-  const [confirmBorrar,   setConfirmBorrar]   = useState(null) // cat obj
-  const [borrandoCat,     setBorrandoCat]     = useState(false)
+  // Category modals
+  const [modalCat,           setModalCat]           = useState(null)
+  const [confirmBorrar,      setConfirmBorrar]      = useState(null)
+  const [borrandoCat,        setBorrandoCat]        = useState(false)
+
+  // Field actions
+  const [confirmBorrarCampo, setConfirmBorrarCampo] = useState(null)
+  const [addingSectionIdx,   setAddingSectionIdx]   = useState(null)
+  const [editingCustomField, setEditingCustomField] = useState(null)
 
   useEffect(() => { cargarCategorias() }, []) // eslint-disable-line
 
   async function cargarCategorias() {
     setCargando(true)
-    const { data } = await supabase.from('categorias').select('id, label, icon, campos_personalizados, campos_ocultos, campos_nombres, campos_orden, fija').order('label')
+    const { data } = await supabase
+      .from('categorias')
+      .select('id, label, icon, campos_personalizados, campos_ocultos, campos_nombres, campos_orden, fija')
+      .order('label')
     if (data) {
       setCategorias(data)
       if (data.length > 0) {
@@ -431,7 +783,10 @@ export default function CamposCategoria({ usuario }) {
 
   async function seleccionarCat(cat) {
     setCatActiva(cat.id)
-    setError(''); setExito(false); resetForm()
+    setError('')
+    setAddingSectionIdx(null)
+    setEditingCustomField(null)
+    setEditandoSistema(null)
     const { data } = await supabase
       .from('categorias')
       .select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden')
@@ -441,70 +796,30 @@ export default function CamposCategoria({ usuario }) {
     setCamposOcultos(data?.campos_ocultos  || [])
     setCamposNombres(data?.campos_nombres  || {})
     setCamposOrden(data?.campos_orden      || [])
-    setSistemaCamposExpanded(false)
-    setEditandoSistema(null)
   }
 
-  function resetForm() {
-    setNuevoNombre(''); setNuevoTipo('texto'); setNuevoReq(false); setNuevoOpts('')
-    setEditandoCampoId(null)
-  }
-
-  // ── Campos ────────────────────────────────────────────────
-
-  function iniciarEditarCampo(campo) {
-    setEditandoCampoId(campo.id)
-    setNuevoNombre(campo.nombre); setNuevoTipo(campo.tipo)
-    setNuevoReq(campo.requerido || false)
-    setNuevoOpts((campo.opciones || []).join(', '))
-    setError('')
-  }
-
-  function agregarOActualizarCampo() {
-    const nombre = nuevoNombre.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
-    if (!nombre) { setError('El nombre del campo es obligatorio'); return }
-    if (CAMPOS_SISTEMA.includes(nombre)) { setError(`"${nombre}" es un nombre reservado del sistema`); return }
-    const nuevoCampo = {
-      id:        editandoCampoId || nombre,
-      nombre:    nuevoNombre.trim(),
-      tipo:      nuevoTipo,
-      requerido: nuevoReq,
-      ...(nuevoTipo === 'select' && nuevoOpts.trim()
-        ? { opciones: nuevoOpts.split(',').map(o => o.trim()).filter(Boolean) }
-        : {}),
-    }
-    if (editandoCampoId) {
-      setCampos(prev => prev.map(c => c.id === editandoCampoId ? nuevoCampo : c))
-    } else {
-      if (campos.some(c => c.id === nombre)) { setError('Ya existe un campo con ese nombre'); return }
-      setCampos(prev => [...prev, nuevoCampo])
-    }
-    resetForm(); setError('')
-  }
-
-  function eliminarCampo(id) {
-    setCampos(prev => prev.filter(c => c.id !== id))
-    if (editandoCampoId === id) resetForm()
-  }
+  // ── Persist functions ───────────────────────────────────────────────────
 
   async function guardar() {
     if (!catActiva) return
-    setGuardando(true); setError(''); setExito(false)
+    setGuardando(true); setError('')
     const { error: err } = await supabase.from('categorias')
       .update({ campos_personalizados: campos, campos_ocultos: camposOcultos, campos_nombres: camposNombres, campos_orden: camposOrden })
       .eq('id', catActiva)
-    if (err) { setError('Error al guardar: ' + err.message) }
-    else {
-      const { data: fresh } = await supabase.from('categorias').select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden').eq('id', catActiva).single()
-      const camposGuardados  = fresh?.campos_personalizados || []
-      const ocultosGuardados = fresh?.campos_ocultos        || []
-      const nombresGuardados = fresh?.campos_nombres        || {}
-      const ordenGuardado    = fresh?.campos_orden          || []
-      setCampos(camposGuardados)
-      setCamposOcultos(ocultosGuardados)
-      setCamposNombres(nombresGuardados)
-      setCamposOrden(ordenGuardado)
-      setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_personalizados: camposGuardados, campos_ocultos: ocultosGuardados, campos_nombres: nombresGuardados, campos_orden: ordenGuardado } : c))
+    if (err) {
+      setError('Error al guardar: ' + err.message)
+    } else {
+      const { data: fresh } = await supabase.from('categorias')
+        .select('campos_personalizados, campos_ocultos, campos_nombres, campos_orden')
+        .eq('id', catActiva).single()
+      const cp = fresh?.campos_personalizados || []
+      const co = fresh?.campos_ocultos        || []
+      const cn = fresh?.campos_nombres        || {}
+      const or = fresh?.campos_orden          || []
+      setCampos(cp); setCamposOcultos(co); setCamposNombres(cn); setCamposOrden(or)
+      setCategorias(prev => prev.map(c => c.id === catActiva
+        ? { ...c, campos_personalizados: cp, campos_ocultos: co, campos_nombres: cn, campos_orden: or }
+        : c))
       setExito(true); setTimeout(() => setExito(false), 3000)
     }
     setGuardando(false)
@@ -518,22 +833,63 @@ export default function CamposCategoria({ usuario }) {
   async function guardarOrden(newOrden) {
     if (!catActiva) return
     const { error: err } = await supabase.from('categorias').update({ campos_orden: newOrden }).eq('id', catActiva)
-    if (err) {
-      setError('No se pudo guardar el orden: ' + err.message)
-      return false
-    }
-    setCategorias(prev => prev.map(c => (c.id === catActiva ? { ...c, campos_orden: newOrden } : c)))
+    if (err) { setError('No se pudo guardar el orden: ' + err.message); return false }
+    setCategorias(prev => prev.map(c => c.id === catActiva ? { ...c, campos_orden: newOrden } : c))
     return true
   }
 
-  async function guardarCamposPersonalizados(newCampos) {
-    if (!catActiva) return
-    await supabase.from('categorias').update({ campos_personalizados: newCampos }).eq('id', catActiva)
+  // ── Field handlers ──────────────────────────────────────────────────────
+
+  function onConfirmarRenombre(fieldId, val) {
+    setCamposNombres(prev => {
+      const next = { ...prev }
+      const originalNombre = (_base.find(c => c.id === fieldId) || {}).nombre
+      if (val && val !== originalNombre) next[fieldId] = val
+      else delete next[fieldId]
+      guardarNombres(next)
+      return next
+    })
+    setEditandoSistema(null)
+  }
+
+  function handleAddField({ id, nombre, tipo, requerido, opts }, _si, insertAfterPos) {
+    const nuevoCampo = {
+      id,
+      nombre,
+      tipo,
+      requerido,
+      ...(tipo === 'select' && opts.trim()
+        ? { opciones: opts.split(',').map(o => o.trim()).filter(Boolean) }
+        : {}),
+    }
+    setCampos(prev => [...prev, nuevoCampo])
+    const newOrder = [..._fullOrder]
+    newOrder.splice(insertAfterPos + 1, 0, id)
+    setCamposOrden(newOrder)
+    setAddingSectionIdx(null)
+  }
+
+  function handleEditCustomField(updated) {
+    setCampos(prev => prev.map(c => c.id === updated.id ? updated : c))
+    setEditingCustomField(null)
+  }
+
+  function eliminarCampo(id) {
+    setCampos(prev => prev.filter(c => c.id !== id))
+  }
+
+  async function handleDropUnified(targetId) {
+    if (!dragInfo || dragInfo.id === targetId) return
+    const newOrder = moverItem(_fullOrder, dragInfo.id, targetId)
+    if (JSON.stringify(newOrder) === JSON.stringify(_fullOrder)) return
+    setCamposOrden(newOrder)
+    const ok = await guardarOrden(newOrder)
+    if (!ok && catObj) await seleccionarCat(catObj)
   }
 
   function moverItem(arr, fromId, toId) {
-    const from = arr.findIndex(x => (typeof x === 'string' ? x : x.id) === fromId)
-    const to   = arr.findIndex(x => (typeof x === 'string' ? x : x.id) === toId)
+    const from = arr.indexOf(fromId)
+    const to   = arr.indexOf(toId)
     if (from === -1 || to === -1 || from === to) return arr
     const next = [...arr]
     const [item] = next.splice(from, 1)
@@ -541,22 +897,21 @@ export default function CamposCategoria({ usuario }) {
     return next
   }
 
-  // ── Categorías ────────────────────────────────────────────
+  // ── Category handlers ───────────────────────────────────────────────────
 
   async function handleGuardarCat({ label, icon }) {
     if (modalCat === 'nueva') {
-      const id = label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')
-      if (!id) return
-      if (categorias.some(c => c.id === id)) return
+      const id = label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+      if (!id || categorias.some(c => c.id === id)) return
       const { data, error: err } = await supabase.from('categorias')
         .insert({ id, label, icon, fija: false, campos_personalizados: [] }).select().single()
-      if (err) { throw new Error(err.message) }
+      if (err) throw new Error(err.message)
       const nuevas = [...categorias, data].sort((a, b) => a.label.localeCompare(b.label))
       setCategorias(nuevas); setModalCat(null)
       setCatActiva(data.id); setCampos([])
     } else {
       const { error: err } = await supabase.from('categorias').update({ label, icon }).eq('id', modalCat.id)
-      if (err) { throw new Error(err.message) }
+      if (err) throw new Error(err.message)
       setCategorias(prev => prev.map(c => c.id === modalCat.id ? { ...c, label, icon } : c))
       setModalCat(null)
     }
@@ -580,10 +935,12 @@ export default function CamposCategoria({ usuario }) {
     }
   }
 
-  const catObj  = categorias.find(c => c.id === catActiva)
-  const tipoObj = TIPOS.find(t => t.value === nuevoTipo)
+  // ── Computed values ─────────────────────────────────────────────────────
 
-  const _base      = catObj ? getCamposSistema(catObj) : []
+  const catObj  = categorias.find(c => c.id === catActiva)
+  const catType = getCatType(catObj)
+  const _base   = catObj ? getCamposSistema(catObj) : []
+
   const _allFields = catObj ? [
     ..._base.map(c => ({ ...c, _tipo: 'sistema' })),
     ...campos.map(c => ({ ...c, _tipo: 'custom' })),
@@ -592,8 +949,9 @@ export default function CamposCategoria({ usuario }) {
   const _fullOrder = camposOrden.length
     ? smartMergeOrder(camposOrden.filter(id => _allIds.includes(id)), _allIds)
     : _allIds
-  const unifiedSortedFields  = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
-  const unifiedVisibleFields = unifiedSortedFields.filter(c => c._tipo !== 'sistema' || c._global || !camposOcultos.includes(c.id))
+  const unifiedSortedFields = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   if (cargando) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.5)', flexDirection: 'column', gap: 14 }}>
@@ -606,7 +964,7 @@ export default function CamposCategoria({ usuario }) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Cabecera */}
+      {/* Page header */}
       <div style={{ background: 'linear-gradient(135deg,#1a237e 0%,#2563eb 100%)', borderRadius: 16, padding: '20px 24px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
         <div style={{ position: 'absolute', bottom: -30, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
@@ -614,7 +972,7 @@ export default function CamposCategoria({ usuario }) {
           <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🗂️</div>
           <div>
             <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#fff' }}>Campos por categoría</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Define qué información adicional se registra en cada tipo de bien</p>
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Edita los campos directamente sobre el formulario real de cada categoría</p>
           </div>
         </div>
       </div>
@@ -627,10 +985,10 @@ export default function CamposCategoria({ usuario }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-        {/* ── Lista categorías ──────────────────────────── */}
-        <div style={{ width: 'min(220px, 100%)', flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
+        {/* ── Category list sidebar ──────────────────────────── */}
+        <div style={{ width: 'min(220px, 100%)', flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden', alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
           <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Categorías</p>
             {esAdmin && (
@@ -678,283 +1036,36 @@ export default function CamposCategoria({ usuario }) {
           </div>
         </div>
 
-        {/* ── Panel derecho ─────────────────────────────── */}
+        {/* ── Form editor + save button ──────────────────────── */}
         {catObj && (
-          <>
-          <div style={{ flex: 1, minWidth: 280, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-            {/* Header categoría activa */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, border: '1px solid rgba(99,102,241,0.20)' }}>
-                {catObj.icon || '📦'}
-              </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em' }}>{catObj.label}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>
-                  {campos.length === 0 ? 'Sin campos personalizados aún' : `${campos.length} campo${campos.length !== 1 ? 's' : ''} configurado${campos.length !== 1 ? 's' : ''}`}
-                </p>
-              </div>
-            </div>
+            <FormularioConfigurable
+              catObj={catObj}
+              catType={catType}
+              sections={FORM_SECTIONS[catType] || FORM_SECTIONS.generico}
+              unifiedSortedFields={unifiedSortedFields}
+              _fullOrder={_fullOrder}
+              camposOcultos={camposOcultos}
+              camposNombres={camposNombres}
+              editandoSistema={editandoSistema}
+              setEditandoSistema={setEditandoSistema}
+              onConfirmarRenombre={onConfirmarRenombre}
+              setCamposOcultos={setCamposOcultos}
+              setConfirmBorrarCampo={setConfirmBorrarCampo}
+              onEditCustomField={campo => setEditingCustomField(campo)}
+              dragInfo={dragInfo}
+              setDragInfo={setDragInfo}
+              dragOverId={dragOverId}
+              setDragOverId={setDragOverId}
+              onDrop={handleDropUnified}
+              addingSectionIdx={addingSectionIdx}
+              setAddingSectionIdx={setAddingSectionIdx}
+              onAddField={handleAddField}
+              camposIds={campos.map(c => c.id)}
+            />
 
-            {/* ── Lista unificada: sistema + personalizados ──── */}
-            {_allFields.length > 0 && (() => {
-              const nOcultos = camposOcultos.filter(id => _base.some(c => c.id === id && !c._global)).length
-
-              async function handleDropUnified(targetId) {
-                if (!dragInfo || dragInfo.id === targetId) return
-                const prevOrder = [..._fullOrder]
-                const newOrder = moverItem(prevOrder, dragInfo.id, targetId)
-                if (newOrder === prevOrder) return
-                setCamposOrden(newOrder)
-                const ok = await guardarOrden(newOrder)
-                if (!ok && catObj) await seleccionarCat(catObj)
-              }
-
-              return (
-                <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden' }}>
-                  {/* Header */}
-                  <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 18, height: 18, borderRadius: 6, background: 'linear-gradient(135deg,#64748b,#475569)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />
-                    </div>
-                    <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Campos</p>
-                    <span style={{ fontSize: 9, color: '#a5b4fc', fontWeight: 500 }}>· arrastra ⠿ para reordenar (se guarda al soltar)</span>
-                    {nOcultos > 0 && (
-                      <span style={{ background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '1px 6px', fontSize: 9, fontWeight: 700 }}>
-                        {nOcultos} oculto{nOcultos !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 5, alignItems: 'center' }}>
-                      {campos.length > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 700, background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', borderRadius: 10, padding: '2px 7px' }}>
-                          {campos.length} custom
-                        </span>
-                      )}
-                      <span style={{ fontSize: 10, color: '#94a3b8' }}>{_allFields.length} total</span>
-                      <button
-                        onClick={() => setCamposPanelAbierto(v => !v)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#94a3b8', fontSize: 14, lineHeight: 1, display: 'flex', alignItems: 'center' }}
-                        title={camposPanelAbierto ? 'Contraer campos' : 'Expandir campos'}
-                      >
-                        {camposPanelAbierto ? '▲' : '▼'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Lista */}
-                  {camposPanelAbierto && <div>
-                    {unifiedSortedFields.map((campo, idx) => {
-                      const isSistema      = campo._tipo === 'sistema'
-                      const oculto         = isSistema && !campo._global && camposOcultos.includes(campo.id)
-                      const tc             = TIPO_COLOR[campo.tipo] || '#6b7280'
-                      const ti             = TIPOS.find(t => t.value === campo.tipo)
-                      const nombreMostrado = isSistema ? (camposNombres[campo.id] || campo.nombre) : campo.nombre
-                      const estaEditandoS  = isSistema && editandoSistema?.id === campo.id
-                      const estaEditandoC  = !isSistema && editandoCampoId === campo.id
-                      const isDragOver     = dragOverId === campo.id
-
-                      function confirmarRenombre(val) {
-                        setCamposNombres(prev => {
-                          const next = { ...prev }
-                          if (val && val !== campo.nombre) next[campo.id] = val
-                          else delete next[campo.id]
-                          guardarNombres(next)
-                          return next
-                        })
-                        setEditandoSistema(null)
-                      }
-
-                      return (
-                        <div key={campo.id}
-                          onDragOver={e => {
-                            e.preventDefault()
-                            try { e.dataTransfer.dropEffect = 'move' } catch { /* noop */ }
-                            setDragOverId(campo.id)
-                          }}
-                          onDragLeave={e => {
-                            if (!e.currentTarget.contains(e.relatedTarget)) setDragOverId(null)
-                          }}
-                          onDrop={e => {
-                            e.preventDefault()
-                            void handleDropUnified(campo.id)
-                            setDragOverId(null)
-                          }}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px 9px 0',
-                            borderTop: isDragOver ? '2px solid #6366f1' : idx === 0 ? 'none' : '1px solid #f3f4f6',
-                            borderLeft: `3px solid ${oculto ? '#e2e8f0' : isSistema ? tc : '#6366f1'}`,
-                            background: dragInfo?.id === campo.id ? '#f0f4ff' : oculto ? '#fafafa' : estaEditandoC ? '#fffbeb' : '#fff',
-                            transition: 'all 0.15s' }}>
-
-                          {/* Drag handle */}
-                          <div
-                            draggable
-                            onDragStart={e => {
-                              try {
-                                e.dataTransfer.effectAllowed = 'move'
-                                e.dataTransfer.setData('text/plain', campo.id)
-                              } catch { /* noop */ }
-                              setDragInfo({ id: campo.id, tipo: campo._tipo })
-                            }}
-                            onDragEnd={() => { setDragInfo(null); setDragOverId(null) }}
-                            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 2px', cursor: 'grab', padding: '2px 8px 2px 10px', flexShrink: 0 }}>
-                            {[0,1,2,3,4,5].map(i => <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: oculto ? '#e2e8f0' : '#d1d5db' }} />)}
-                          </div>
-
-                          {/* Ícono tipo */}
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: oculto ? '#f1f5f9' : `${isSistema ? tc : '#6366f1'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-                            {ti?.icon || '📝'}
-                          </div>
-
-                          {/* Nombre + meta */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            {estaEditandoS ? (
-                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                                <input autoFocus defaultValue={nombreMostrado}
-                                  onKeyDown={e => { if (e.key === 'Enter') confirmarRenombre(e.target.value.trim()); if (e.key === 'Escape') setEditandoSistema(null) }}
-                                  onBlur={e => confirmarRenombre(e.target.value.trim())}
-                                  style={{ flex: 1, padding: '4px 8px', borderRadius: 7, border: '1.5px solid #6366f1', fontSize: 12, outline: 'none', color: '#111827', background: '#f8f9ff', boxSizing: 'border-box' }} />
-                                <button onClick={() => setEditandoSistema(null)}
-                                  style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e5e7eb', background: '#fff', fontSize: 11, color: '#6b7280', cursor: 'pointer', flexShrink: 0 }}>✕</button>
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 13, fontWeight: isSistema ? 500 : 600, color: oculto ? '#94a3b8' : '#1e293b', textDecoration: oculto ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
-                                  {nombreMostrado}
-                                </span>
-                                {isSistema && camposNombres[campo.id] && (
-                                  <span style={{ fontSize: 9, color: '#cbd5e1', fontStyle: 'italic' }}>{campo.nombre}</span>
-                                )}
-                                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: oculto ? '#f1f5f9' : `${isSistema ? tc : '#6366f1'}15`, color: oculto ? '#94a3b8' : isSistema ? tc : '#6366f1', letterSpacing: '0.02em', flexShrink: 0 }}>
-                                  {ti?.label}
-                                </span>
-                                {!isSistema && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 5, background: '#f0f9ff', color: '#0ea5e9', flexShrink: 0 }}>Custom</span>}
-                                {!isSistema && campo.requerido && <span style={{ fontSize: 9, fontWeight: 700, color: '#ef4444', background: '#fef2f2', padding: '1px 5px', borderRadius: 5, flexShrink: 0 }}>Req.</span>}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Acciones */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: isSistema ? 6 : 4, flexShrink: 0 }}>
-                            {campo._global ? (
-                              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 5, background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0', flexShrink: 0 }}>🔒 base</span>
-                            ) : isSistema ? (
-                              <>
-                                {!oculto && !estaEditandoS && (
-                                  <button onClick={e => { e.stopPropagation(); setEditandoSistema({ id: campo.id }) }} title="Renombrar"
-                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', fontSize: 12, padding: '4px', borderRadius: 6, lineHeight: 1 }}
-                                    onMouseOver={e => { e.currentTarget.style.color = '#6366f1'; e.currentTarget.style.background = '#eef2ff' }}
-                                    onMouseOut={e => { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' }}>✏️</button>
-                                )}
-                                <div onClick={e => { e.stopPropagation(); setCamposOcultos(prev => oculto ? prev.filter(id => id !== campo.id) : [...prev, campo.id]) }}
-                                  title={oculto ? 'Activar' : 'Desactivar'}
-                                  style={{ width: 40, height: 22, borderRadius: 11, background: oculto ? '#e2e8f0' : '#bbf7d0', border: `1.5px solid ${oculto ? '#cbd5e1' : '#86efac'}`, cursor: 'pointer', transition: 'all 0.2s', position: 'relative', flexShrink: 0 }}>
-                                  <div style={{ position: 'absolute', top: 2, left: oculto ? 2 : 18, width: 14, height: 14, borderRadius: '50%', background: oculto ? '#94a3b8' : '#16a34a', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <button onClick={e => { e.stopPropagation(); iniciarEditarCampo(campo) }} title="Editar campo"
-                                  style={{ background: estaEditandoC ? '#fef9c3' : 'none', border: estaEditandoC ? '1px solid #fcd34d' : 'none', cursor: 'pointer', color: estaEditandoC ? '#d97706' : '#cbd5e1', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                                  onMouseOver={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = '#fef9c3' } }}
-                                  onMouseOut={e => { if (!estaEditandoC) { e.currentTarget.style.color = '#cbd5e1'; e.currentTarget.style.background = 'none' } }}>✏️</button>
-                                <button onClick={e => { e.stopPropagation(); setConfirmBorrarCampo(campo) }} title="Eliminar campo"
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#e2e8f0', fontSize: 13, padding: '5px 7px', borderRadius: 7, lineHeight: 1 }}
-                                  onMouseOver={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = '#fef2f2' }}
-                                  onMouseOut={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none' }}>✕</button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>}
-                </div>
-              )
-            })()}
-
-            {/* Formulario agregar / editar campo */}
-            <div style={{ background: '#fff', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: `1.5px solid ${editandoCampoId ? '#fcd34d' : '#f1f1f3'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-              <div style={{ padding: '13px 18px 11px', borderBottom: `1px solid ${editandoCampoId ? '#fde68a' : '#f3f4f6'}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: editandoCampoId ? '#d97706' : '#10b981' }} />
-                <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: editandoCampoId ? '#d97706' : '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {editandoCampoId ? '✏️ Editando campo' : '+ Agregar campo'}
-                </p>
-              </div>
-              <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ flex: '2 1 160px' }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nombre del campo</label>
-                    <input value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)}
-                      placeholder="Ej: Color, N° de serie..."
-                      onKeyDown={e => e.key === 'Enter' && agregarOActualizarCampo()}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827', transition: 'border-color 0.15s' }}
-                      onFocus={e => e.target.style.borderColor = '#6366f1'}
-                      onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-                    />
-                  </div>
-                  <div style={{ flex: '1 1 130px' }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipo</label>
-                    <select value={nuevoTipo} onChange={e => setNuevoTipo(e.target.value)}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}>
-                      {TIPOS.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Info tipo seleccionado */}
-                {tipoObj && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, background: `${TIPO_COLOR[nuevoTipo]}10`, border: `1px solid ${TIPO_COLOR[nuevoTipo]}25` }}>
-                    <span style={{ fontSize: 14 }}>{tipoObj.icon}</span>
-                    <span style={{ fontSize: 11, color: TIPO_COLOR[nuevoTipo], fontWeight: 600 }}>
-                      {nuevoTipo === 'texto'    && 'Campo de texto libre'}
-                      {nuevoTipo === 'numero'   && 'Solo acepta valores numéricos'}
-                      {nuevoTipo === 'fecha'    && 'Selector de fecha con calendario'}
-                      {nuevoTipo === 'booleano' && 'Menú Sí / No'}
-                      {nuevoTipo === 'select'   && 'Lista desplegable con opciones fijas'}
-                    </span>
-                  </div>
-                )}
-
-                {nuevoTipo === 'select' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Opciones (separadas por coma)</label>
-                    <input value={nuevoOpts} onChange={e => setNuevoOpts(e.target.value)}
-                      placeholder="Ej: Rojo, Verde, Azul"
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827' }}
-                      onFocus={e => e.target.style.borderColor = '#6366f1'}
-                      onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-                    />
-                  </div>
-                )}
-
-                {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 8, border: '1px solid #fecaca' }}>⚠️ {error}</p>}
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
-                    <input type="checkbox" checked={nuevoReq} onChange={e => setNuevoReq(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#6366f1' }} />
-                    Campo requerido
-                  </label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {editandoCampoId && (
-                      <button onClick={resetForm}
-                        style={{ padding: '8px 16px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                        Cancelar
-                      </button>
-                    )}
-                    <button onClick={() => editandoCampoId ? setConfirmActualizarCampo(true) : agregarOActualizarCampo()}
-                      style={{ padding: '9px 20px', borderRadius: 9, border: 'none',
-                        background: editandoCampoId ? 'linear-gradient(135deg,#d97706,#b45309)' : 'linear-gradient(135deg,#6366f1,#4f46e5)',
-                        color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                        boxShadow: editandoCampoId ? '0 4px 12px rgba(217,119,6,0.35)' : '0 4px 12px rgba(99,102,241,0.35)' }}>
-                      {editandoCampoId ? '✓ Actualizar campo' : '+ Agregar campo'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Guardar */}
+            {/* Save button */}
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 8 }}>
               {exito && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '7px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
@@ -971,26 +1082,17 @@ export default function CamposCategoria({ usuario }) {
               </button>
             </div>
           </div>
-
-          {/* ── Vista previa ─────────────────────────────── */}
-          <div style={{ width: 252, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
-            <PreviewFormulario
-              catObj={catObj}
-              unifiedVisibleFields={unifiedVisibleFields}
-              camposNombres={camposNombres}
-            />
-          </div>
-          </>
         )}
       </div>
 
-      {/* CSS hover para botones de categoría */}
+      {/* CSS hover for category list */}
       <style>{`
         .ajustes-cat-item:hover .ajustes-cat-actions { opacity: 1 !important; }
         .ajustes-cat-item:hover { background: rgba(99,102,241,0.04) !important; }
       `}</style>
 
-      {/* ── Modal crear / editar categoría ─────────────── */}
+      {/* ── Modals ─────────────────────────────────────────── */}
+
       {modalCat && (
         <ModalCategoria
           cat={modalCat === 'nueva' ? null : modalCat}
@@ -999,7 +1101,14 @@ export default function CamposCategoria({ usuario }) {
         />
       )}
 
-      {/* ── Modal confirmar borrar campo personalizado ── */}
+      {editingCustomField && (
+        <EditFieldModal
+          campo={editingCustomField}
+          onSave={handleEditCustomField}
+          onClose={() => setEditingCustomField(null)}
+        />
+      )}
+
       {confirmBorrarCampo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
           onClick={() => setConfirmBorrarCampo(null)}>
@@ -1028,36 +1137,6 @@ export default function CamposCategoria({ usuario }) {
         </div>
       )}
 
-      {/* ── Modal confirmar actualizar campo personalizado ── */}
-      {confirmActualizarCampo && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
-          onClick={() => setConfirmActualizarCampo(false)}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: '26px 28px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', maxWidth: 360, width: '90%', display: 'flex', flexDirection: 'column', gap: 16 }}
-            onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef9c3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>✏️</div>
-              <div>
-                <p style={{ margin: '0 0 6px', fontWeight: 800, fontSize: 15, color: '#111827' }}>¿Guardar cambios en el campo?</p>
-                <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
-                  Se actualizará la configuración de este campo para todos los bienes de esta categoría.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button onClick={() => setConfirmActualizarCampo(false)}
-                style={{ padding: '9px 18px', borderRadius: 9, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                Cancelar
-              </button>
-              <button onClick={() => { agregarOActualizarCampo(); setConfirmActualizarCampo(false) }}
-                style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg,#d97706,#b45309)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(217,119,6,0.35)' }}>
-                Sí, actualizar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal confirmar borrar categoría ─────────── */}
       {confirmBorrar && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,12,55,0.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 900 }}
           onClick={() => setConfirmBorrar(null)}>
