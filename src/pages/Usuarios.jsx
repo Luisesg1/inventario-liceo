@@ -59,7 +59,6 @@ const ACCIONES = [
   { key: 'eliminar_ausencias',    label: 'Eliminar ausencias',                 labelCorto: 'Elim. aus.', desc: 'Permite eliminar registros de ausencias del sistema.' },
   { key: 'aprobar_ausencias',     label: 'Aprobar / rechazar ausencias',       labelCorto: 'Aprob. aus.', desc: 'Permite cambiar el estado de una ausencia a Aprobada o Rechazada.' },
   { key: 'exportar_ausencias',    label: 'Exportar ausencias',                 labelCorto: 'Exp. aus.',   desc: 'Permite exportar el registro de ausencias a PDF o Excel.' },
-  { key: 'gestionar_ausencias',   label: 'Gestionar ausencias (legado)',       labelCorto: 'Gest. aus.',  desc: 'Permiso heredado que equivale a crear y editar ausencias. Se conserva por compatibilidad.' },
   { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias',         labelCorto: 'Aud. Aus.',   desc: 'Permite ver el historial de cambios en el módulo de ausencias.' },
   { key: 'invitar_usuario',            label: 'Invitar usuarios',               labelCorto: 'Invitar',        desc: 'Permite enviar invitaciones para que nuevos usuarios accedan al sistema.' },
   { key: 'editar_usuario',            label: 'Editar usuarios',                labelCorto: 'Editar usr.',    desc: 'Permite modificar datos, rol y permisos de usuarios existentes.' },
@@ -120,7 +119,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'ausencia', label: 'Ausencia', paso: 7, soloPersonalizado: false,
     descripcion: 'Acceso al módulo de ausencias del personal. Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'gestionar_ausencias', 'ver_auditoria_permisos'],
+    permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'ver_auditoria_permisos'],
   },
   {
     key: 'administracion', label: 'Administración', paso: 8, soloPersonalizado: false,

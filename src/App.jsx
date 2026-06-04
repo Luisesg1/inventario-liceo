@@ -115,9 +115,8 @@ export default function App() {
   }
   const permisosAusencia = {
     ver:             rolPermiteAusencias && (esAdmin || !!p.ver_ausencias),
-    gestionar:       rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias),
-    crear:           rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias),
-    editar:          rolPermiteAusencias && (esAdmin || !!p.gestionar_ausencias || !!p.editar_ausencias),
+    crear:           rolPermiteAusencias && (esAdmin || !!p.crear_ausencias),
+    editar:          rolPermiteAusencias && (esAdmin || !!p.editar_ausencias),
     eliminar:        rolPermiteAusencias && (esAdmin || !!p.eliminar_ausencias),
     aprobar:         rolPermiteAusencias && (esAdmin || !!p.aprobar_ausencias),
     exportar:        rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias),
@@ -135,7 +134,7 @@ export default function App() {
     exportar: esAdmin || !!p.exportar_compensatorios,
   }
   const puedeVerCompensatorios  = permisosComp.ver
-  const puedeGestionarAusencias = esAdmin || !!p.gestionar_ausencias || !!p.crear_ausencias || !!p.editar_ausencias
+  const puedeGestionarAusencias = esAdmin || !!p.crear_ausencias || !!p.editar_ausencias
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
   const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes || !!p.ver_ajustes || !!p.guardar_cambios_ajustes)
