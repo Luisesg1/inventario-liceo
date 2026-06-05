@@ -802,6 +802,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
   // Saved baseline for change detection
   const [savedCampos,        setSavedCampos]        = useState([])
   const [savedCamposOcultos, setSavedCamposOcultos] = useState([])
+  const [savedCamposOrden,   setSavedCamposOrden]   = useState([])
 
   // Confirmation modals
   const [confirmGuardar,     setConfirmGuardar]     = useState(false)
@@ -840,6 +841,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
         setCamposOrden(target.campos_orden      || [])
         setSavedCampos(target.campos_personalizados || [])
         setSavedCamposOcultos(target.campos_ocultos || [])
+        setSavedCamposOrden(target.campos_orden || [])
       }
     }
     setCargando(false)
@@ -862,6 +864,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
     setCamposOrden(data?.campos_orden      || [])
     setSavedCampos(data?.campos_personalizados || [])
     setSavedCamposOcultos(data?.campos_ocultos || [])
+    setSavedCamposOrden(data?.campos_orden || [])
   }
 
   // ── Persist functions ───────────────────────────────────────────────────
@@ -883,7 +886,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
       const cn = fresh?.campos_nombres        || {}
       const or = fresh?.campos_orden          || []
       setCampos(cp); setCamposOcultos(co); setCamposNombres(cn); setCamposOrden(or)
-      setSavedCampos(cp); setSavedCamposOcultos(co)
+      setSavedCampos(cp); setSavedCamposOcultos(co); setSavedCamposOrden(or)
       setCategorias(prev => prev.map(c => c.id === catActiva
         ? { ...c, campos_personalizados: cp, campos_ocultos: co, campos_nombres: cn, campos_orden: or }
         : c))
@@ -945,13 +948,11 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
     setCampos(prev => prev.filter(c => c.id !== id))
   }
 
-  async function handleDropUnified(targetId) {
+  function handleDropUnified(targetId) {
     if (!dragInfo || dragInfo.id === targetId) return
     const newOrder = moverItem(_fullOrder, dragInfo.id, targetId)
     if (JSON.stringify(newOrder) === JSON.stringify(_fullOrder)) return
     setCamposOrden(newOrder)
-    const ok = await guardarOrden(newOrder)
-    if (!ok && catObj) await seleccionarCat(catObj)
   }
 
   function moverItem(arr, fromId, toId) {
@@ -1019,7 +1020,12 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
   const unifiedSortedFields = [..._allFields].sort((a, b) => _fullOrder.indexOf(a.id) - _fullOrder.indexOf(b.id))
 
   const hayambios = JSON.stringify(campos) !== JSON.stringify(savedCampos) ||
-    JSON.stringify([...camposOcultos].sort()) !== JSON.stringify([...savedCamposOcultos].sort())
+    JSON.stringify([...camposOcultos].sort()) !== JSON.stringify([...savedCamposOcultos].sort()) ||
+    JSON.stringify(_fullOrder) !== JSON.stringify(
+      savedCamposOrden.length
+        ? smartMergeOrder(savedCamposOrden.filter(id => _allIds.includes(id)), _allIds)
+        : _allIds
+    )
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -1156,6 +1162,9 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '7px 12px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
                     ✓ Cambios guardados
                   </div>
+                )}
+                {hayambios && !exito && (
+                  <span style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>Tienes cambios sin guardar</span>
                 )}
                 {!hayambios && !exito && (
                   <span style={{ fontSize: 12, color: '#94a3b8' }}>No hay cambios para guardar</span>
