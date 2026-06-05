@@ -365,7 +365,7 @@ function ToggleSwitch({ activo, size = 'md' }) {
   )
 }
 
-function TablaPermisos({ draft, onChange, onFinalizado }) {
+function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   const [catsBD, setCatsBD]               = useState([])
   const [paso, setPaso]                   = useState(1)
   const [nivel, setNivel]                 = useState(() => detectarNivelActual(draft?.permisos ?? {}))
@@ -448,6 +448,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     setRolBase(rolKey)
     // Resetear TODOS los permisos a la plantilla del rol (incluyendo categorías/módulos)
     onChange({ ...draft, permisos: { ...PERMISOS_VACIO, ...rolData.permisos }, categorias: [...rolData.categorias] })
+    onRolChange?.(rolKey)
   }
 
   const pasoEfectivo = paso
@@ -743,18 +744,21 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 // ══════════════════════════════════════════════════════════════════════════
 // Panel de permisos inline (para usuario existente)
 // ══════════════════════════════════════════════════════════════════════════
-function PanelPermisos({ usuario: u, onCerrar }) {
-  const [cargando, setCargando]       = useState(true)
-  const [draft, setDraft]             = useState(null)
-  const [savedDraft, setSavedDraft]   = useState(null)
-  const [guardando, setGuardando]     = useState(false)
-  const [mensaje, setMensaje]         = useState({ tipo: '', texto: '' })
-  const [confirmar, setConfirmar]     = useState(false)
+function PanelPermisos({ usuario: u, onCerrar, onRolCambiado }) {
+  const [cargando, setCargando]                     = useState(true)
+  const [draft, setDraft]                           = useState(null)
+  const [savedDraft, setSavedDraft]                 = useState(null)
+  const [guardando, setGuardando]                   = useState(false)
+  const [mensaje, setMensaje]                       = useState({ tipo: '', texto: '' })
+  const [confirmar, setConfirmar]                   = useState(false)
+  const [rolTemplateSeleccionado, setRolTemplate]   = useState(null)
+
+  const rolCambiado = rolTemplateSeleccionado && rolTemplateSeleccionado !== u.rol
 
   const hayaCambios = useMemo(() => {
     if (!draft || !savedDraft) return false
-    return JSON.stringify(draft) !== JSON.stringify(savedDraft)
-  }, [draft, savedDraft])
+    return JSON.stringify(draft) !== JSON.stringify(savedDraft) || !!(rolTemplateSeleccionado && rolTemplateSeleccionado !== u.rol)
+  }, [draft, savedDraft, rolTemplateSeleccionado, u.rol])
 
   useEffect(() => { cargar() }, [u.id]) // eslint-disable-line
 
@@ -777,18 +781,30 @@ function PanelPermisos({ usuario: u, onCerrar }) {
   async function guardar() {
     setGuardando(true)
     setMensaje({ tipo: '', texto: '' })
-    const { error } = await supabase
-      .from('permisos_usuario')
-      .upsert(
-        { usuario_id: u.id, permisos: draft.permisos, categorias: draft.categorias },
-        { onConflict: 'usuario_id' }
-      )
+
+    const ops = [
+      supabase
+        .from('permisos_usuario')
+        .upsert(
+          { usuario_id: u.id, permisos: draft.permisos, categorias: draft.categorias },
+          { onConflict: 'usuario_id' }
+        ),
+    ]
+    if (rolCambiado) {
+      ops.push(supabase.from('usuarios').update({ rol: rolTemplateSeleccionado }).eq('id', u.id))
+    }
+
+    const results = await Promise.all(ops)
+    const error   = results.find(r => r.error)?.error ?? null
+
     setGuardando(false)
     setConfirmar(false)
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error: ' + error.message })
     } else {
       setSavedDraft(draft)
+      if (rolCambiado) onRolCambiado?.(rolTemplateSeleccionado)
+      setRolTemplate(null)
       setMensaje({ tipo: 'exito', texto: '¡Permisos guardados!' })
       setTimeout(() => { setMensaje({ tipo: '', texto: '' }); onCerrar() }, 1400)
     }
@@ -803,7 +819,17 @@ function PanelPermisos({ usuario: u, onCerrar }) {
         <span style={ps.rolTag}>base: {u.rol}</span>
       </div>
 
-      {!cargando && hayaCambios && (
+      {!cargando && rolCambiado && (
+        <div style={{
+          background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8,
+          padding: '8px 13px', marginBottom: 8, fontSize: 12.5, color: '#1e40af',
+          display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
+        }}>
+          ℹ️ Se cambiará el rol a <strong>{ROL_LABEL[rolTemplateSeleccionado] ?? rolTemplateSeleccionado}</strong> al guardar.
+        </div>
+      )}
+
+      {!cargando && hayaCambios && !rolCambiado && (
         <div style={{
           background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 8,
           padding: '8px 13px', marginBottom: 12, fontSize: 12.5, color: '#92400e',
@@ -815,7 +841,7 @@ function PanelPermisos({ usuario: u, onCerrar }) {
 
       {cargando
         ? <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando permisos…</p>
-        : <TablaPermisos draft={draft} onChange={setDraft} />
+        : <TablaPermisos draft={draft} onChange={setDraft} onRolChange={setRolTemplate} />
       }
 
       {mensaje.texto && (
@@ -2016,7 +2042,11 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
               {/* Panel permisos */}
               {permisosOpen && (
-                <PanelPermisos usuario={u} onCerrar={() => setPanelActivo(null)} />
+                <PanelPermisos
+                  usuario={u}
+                  onCerrar={() => setPanelActivo(null)}
+                  onRolCambiado={(nuevoRol) => setUsuarios(prev => prev.map(x => x.id === u.id ? { ...x, rol: nuevoRol } : x))}
+                />
               )}
             </motion.div>
           )
