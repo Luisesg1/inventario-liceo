@@ -67,16 +67,35 @@ const CAMPO_LABEL_TICKETS = {
 
 const POR_PAGINA = 15
 
-const secTitle = {
-  fontSize: 11, fontWeight: 700, color: '#d4a017',
-  textTransform: 'uppercase', letterSpacing: '0.07em', margin: '0 0 14px',
-}
-
 const MODULO_LABEL = {
   inventario: 'Inventario', requerimientos: 'Requerimientos',
   permisos: 'Permisos', ausencias: 'Ausencias', tickets: 'Tickets',
   compensatorios: 'Compensatorios',
 }
+
+const MODULO_TITLE = {
+  inventario:     'Auditoría de Inventario',
+  requerimientos: 'Auditoría de Requerimientos',
+  ausencias:      'Auditoría de Ausencias',
+  compensatorios: 'Auditoría de Compensatorios',
+  permisos:       'Auditoría de Permisos',
+  tickets:        'Auditoría de Tickets',
+}
+
+const MODULO_DESC = {
+  inventario:     'Consulta y revisa todas las acciones realizadas sobre los bienes.',
+  requerimientos: 'Consulta y revisa todas las acciones realizadas sobre los requerimientos.',
+  ausencias:      'Consulta y revisa todas las acciones realizadas sobre las ausencias.',
+  compensatorios: 'Consulta y revisa todas las acciones realizadas sobre los días compensatorios.',
+  permisos:       'Consulta y revisa los cambios de permisos del personal.',
+  tickets:        'Consulta y revisa todas las acciones realizadas sobre los tickets.',
+}
+
+const RESUMEN_META = [
+  { accion: 'crear',    icono: '➕', label: 'Creados',    color: '#16a34a', bg: '#dcfce7' },
+  { accion: 'editar',   icono: '✏️', label: 'Editados',   color: '#2563eb', bg: '#dbeafe' },
+  { accion: 'eliminar', icono: '🗑️', label: 'Eliminados', color: '#dc2626', bg: '#fee2e2' },
+]
 
 const CAMPO_LABEL_COMPENSATORIOS = {
   tipo:           'Tipo',
@@ -153,6 +172,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   const [pagina, setPagina]           = useState(0)
   const [errorTabla, setErrorTabla]   = useState(false)
   const [categorias, setCategorias]   = useState([])
+  const [resumen, setResumen]         = useState({})
 
   const [buscar,       setBuscar]       = useState('')
   const [buscadorVal,  setBuscadorVal]  = useState('')
@@ -199,6 +219,22 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     supabase.from('usuarios').select('id,nombre,rol').order('nombre')
       .then(({ data }) => { if (data) setListaUsuarios(data) })
   }, [])
+
+  const cargarResumen = useCallback(async () => {
+    setResumen({})
+    const counts = {}
+    await Promise.all(['crear', 'editar', 'eliminar'].map(async accion => {
+      const { count } = await supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('modulo', activeModulo)
+        .eq('accion', accion)
+      counts[accion] = count ?? 0
+    }))
+    setResumen(counts)
+  }, [activeModulo])
+
+  useEffect(() => { cargarResumen() }, [cargarResumen])
 
   const campoLabel = (campo) => {
     if (activeModulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
@@ -491,18 +527,12 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
       {/* ── Selector de módulo (tabs) — solo visible cuando hay más de uno ── */}
       {listaModulos.length > 1 && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        <div className="audit-tabs">
           {listaModulos.map(m => (
             <button
               key={m}
               onClick={() => setActiveModulo(m)}
-              style={{
-                padding: '6px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: 13, fontWeight: activeModulo === m ? 700 : 500,
-                background: activeModulo === m ? '#1a237e' : '#e8eaf6',
-                color: activeModulo === m ? '#fff' : '#1a237e',
-                transition: 'all .15s',
-              }}
+              className={`audit-tab-btn ${activeModulo === m ? 'audit-tab-active' : ''}`}
             >
               {MODULO_LABEL[m] ?? m}
             </button>
@@ -510,13 +540,39 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
         </div>
       )}
 
+      {/* ── Cabecera moderna ── */}
+      <div className="audit-header">
+        <div className="audit-header-accent" />
+        <div className="audit-header-content">
+          <h1 className="audit-header-title">
+            {MODULO_TITLE[activeModulo] ?? `Auditoría — ${MODULO_LABEL[activeModulo] ?? activeModulo}`}
+          </h1>
+          <p className="audit-header-desc">
+            {MODULO_DESC[activeModulo] ?? 'Consulta y revisa todas las acciones del sistema.'}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Tarjetas de resumen ── */}
+      <div className="audit-resumen">
+        {RESUMEN_META.map(({ accion, icono, label, color, bg }) => (
+          <div key={accion} className="audit-resumen-card" style={{ borderTop: `3px solid ${color}` }}>
+            <div className="audit-resumen-icon" style={{ background: bg, color }}>
+              {icono}
+            </div>
+            <div className="audit-resumen-count" style={{ color }}>
+              {resumen[accion] != null ? resumen[accion].toLocaleString('es-CL') : '—'}
+            </div>
+            <div className="audit-resumen-label">{label}</div>
+          </div>
+        ))}
+      </div>
+
       {/* ── Error: tabla no configurada ── */}
       {errorTabla && (
-        <div className="audit-card" style={{ background: '#fffbeb', borderLeft: '4px solid #f59e0b', marginBottom: 20 }}>
-          <p style={{ margin: '0 0 4px', fontWeight: 700, color: '#92400e', fontSize: 14 }}>
-            ⚠️ La tabla de auditoría no está configurada
-          </p>
-          <p style={{ margin: 0, fontSize: 13, color: '#78350f', lineHeight: 1.5 }}>
+        <div className="audit-error-card">
+          <p className="audit-error-title">⚠️ La tabla de auditoría no está configurada</p>
+          <p className="audit-error-body">
             Ejecuta el archivo <strong>{activeModulo === 'inventario' ? 'supabase_auditoria.sql' : 'supabase_auditoria_modulos.sql'}</strong> en el SQL Editor de Supabase para activar el sistema de auditoría.
           </p>
         </div>
@@ -524,150 +580,159 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
       {/* ── Filtros ── */}
       <div className="audit-card audit-filtros-card">
-        <p style={secTitle}>🔎 Filtros</p>
-        <div className="audit-filtros">
 
-          <div className="audit-search-row">
+        {/* Fila de búsqueda */}
+        <div className="audit-search-row">
+          <div className="audit-search-wrapper">
+            <span className="audit-search-icon">🔍</span>
             <input
-              className="audit-input"
+              className="audit-search-input"
               placeholder={searchPlaceholder}
               value={buscadorVal}
               onChange={e => setBuscadorVal(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && aplicarBusqueda()}
             />
-            <button className="audit-btn-primary" onClick={aplicarBusqueda}>Buscar</button>
-
-            {/* ── Botón Exportar ── */}
-            <div className="audit-export-wrap" ref={menuRef}>
-              <button
-                className="audit-btn-export"
-                onClick={() => setMenuExportar(v => !v)}
-                disabled={exportando}
-                title="Exportar registros filtrados"
-              >
-                {exportando ? '⏳' : '↓'} Exportar
-              </button>
-              {menuExportar && (
-                <div className="audit-export-menu">
-                  <button className="audit-export-item" onClick={exportarExcel}>
-                    <span className="audit-export-icon">📊</span> Excel (.xlsx)
-                  </button>
-                  <button className="audit-export-item" onClick={exportarPDF}>
-                    <span className="audit-export-icon">📄</span> PDF
-                  </button>
-                  <button className="audit-export-item" onClick={exportarCSV}>
-                    <span className="audit-export-icon">📋</span> CSV
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
+          <button className="audit-btn-primary" onClick={aplicarBusqueda}>Buscar</button>
 
-          {/* ── Filtro por usuario ── */}
+          {/* Botón Exportar */}
+          <div className="audit-export-wrap" ref={menuRef}>
+            <button
+              className="audit-btn-export"
+              onClick={() => setMenuExportar(v => !v)}
+              disabled={exportando}
+              title="Exportar registros filtrados"
+            >
+              {exportando ? '⏳' : '↓'} Exportar
+            </button>
+            {menuExportar && (
+              <div className="audit-export-menu">
+                <button className="audit-export-item" onClick={exportarExcel}>
+                  <span className="audit-export-icon">📊</span> Excel (.xlsx)
+                </button>
+                <button className="audit-export-item" onClick={exportarPDF}>
+                  <span className="audit-export-icon">📄</span> PDF
+                </button>
+                <button className="audit-export-item" onClick={exportarCSV}>
+                  <span className="audit-export-icon">📋</span> CSV
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Fila de filtros */}
+        <div className="audit-filtros-grid">
+
           {listaUsuarios.length > 0 && (
-            <div className="audit-filtros-row">
-              <select
-                className={`audit-select audit-select-usuario ${filtroUsuario ? 'audit-select-active' : ''}`}
-                value={filtroUsuario}
-                onChange={e => { setFiltroUsuario(e.target.value); setPagina(0) }}
-              >
-                <option value="">👤 Todos los usuarios</option>
-                {listaUsuarios.map(u => (
-                  <option key={u.id} value={u.id}>{u.nombre}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              className={`audit-select ${filtroUsuario ? 'audit-select-active' : ''}`}
+              value={filtroUsuario}
+              onChange={e => { setFiltroUsuario(e.target.value); setPagina(0) }}
+            >
+              <option value="">👤 Todos los usuarios</option>
+              {listaUsuarios.map(u => (
+                <option key={u.id} value={u.id}>{u.nombre}</option>
+              ))}
+            </select>
           )}
 
-          <div className="audit-filtros-row">
-            <select className="audit-select" value={filtroAccion}
-              onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}>
-              <option value="">Todas las acciones</option>
-              <option value="crear">Creados</option>
-              <option value="editar">Editados</option>
-              <option value="eliminar">Eliminados</option>
+          <select className="audit-select" value={filtroAccion}
+            onChange={e => { setFiltroAccion(e.target.value); setPagina(0) }}>
+            <option value="">Todas las acciones</option>
+            <option value="crear">Creados</option>
+            <option value="editar">Editados</option>
+            <option value="eliminar">Eliminados</option>
+          </select>
+
+          <select className="audit-select" value={filtroRol}
+            onChange={e => { setFiltroRol(e.target.value); setPagina(0) }}>
+            <option value="">Todos los roles</option>
+            <option value="admin">Administrador</option>
+            <option value="editor">Editor</option>
+            <option value="encargado">Encargado</option>
+          </select>
+
+          {activeModulo === 'inventario' && (
+            <select className="audit-select" value={filtroCat}
+              onChange={e => { setFiltroCat(e.target.value); setPagina(0) }}>
+              <option value="">Todas las categorías</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+              ))}
             </select>
+          )}
 
-            <select className="audit-select" value={filtroRol}
-              onChange={e => { setFiltroRol(e.target.value); setPagina(0) }}>
-              <option value="">Todos los roles</option>
-              <option value="admin">Administrador</option>
-              <option value="editor">Editor</option>
-              <option value="encargado">Encargado</option>
+          {activeModulo === 'tickets' && (
+            <select
+              className={`audit-select ${filtroEstadoTicket ? 'audit-select-active' : ''}`}
+              value={filtroEstadoTicket}
+              onChange={e => { setFiltroEstadoTicket(e.target.value); setPagina(0) }}
+            >
+              <option value="">Todos los estados</option>
+              <option value="Abierto">Abierto</option>
+              <option value="En proceso">En proceso</option>
+              <option value="Resuelto">Resuelto</option>
             </select>
+          )}
 
-            {activeModulo === 'inventario' && (
-              <select className="audit-select" value={filtroCat}
-                onChange={e => { setFiltroCat(e.target.value); setPagina(0) }}>
-                <option value="">Todas las categorías</option>
-                {categorias.map(c => (
-                  <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-                ))}
-              </select>
-            )}
-
-            {activeModulo === 'tickets' && (
-              <select
-                className={`audit-select ${filtroEstadoTicket ? 'audit-select-active' : ''}`}
-                value={filtroEstadoTicket}
-                onChange={e => { setFiltroEstadoTicket(e.target.value); setPagina(0) }}
-              >
-                <option value="">Todos los estados</option>
-                <option value="Abierto">Abierto</option>
-                <option value="En proceso">En proceso</option>
-                <option value="Resuelto">Resuelto</option>
-              </select>
-            )}
+          <div className="audit-fecha-row">
+            <input type="date" className="audit-select audit-date"
+              value={filtroDesde}
+              onChange={e => { setFiltroDesde(e.target.value); setPagina(0) }} />
+            <span className="audit-dash">—</span>
+            <input type="date" className="audit-select audit-date"
+              value={filtroHasta}
+              onChange={e => { setFiltroHasta(e.target.value); setPagina(0) }} />
           </div>
 
-          <div className="audit-filtros-row">
-            <div className="audit-fecha-row">
-              <input type="date" className="audit-input audit-date"
-                value={filtroDesde}
-                onChange={e => { setFiltroDesde(e.target.value); setPagina(0) }} />
-              <span className="audit-dash">—</span>
-              <input type="date" className="audit-input audit-date"
-                value={filtroHasta}
-                onChange={e => { setFiltroHasta(e.target.value); setPagina(0) }} />
-            </div>
-            {hayFiltros && (
-              <button className="audit-btn-ghost" onClick={limpiarFiltros}>✕ Limpiar filtros</button>
-            )}
-          </div>
+          {hayFiltros && (
+            <button className="audit-btn-ghost" onClick={limpiarFiltros}>✕ Limpiar</button>
+          )}
         </div>
 
         {!cargando && (
           <p className="audit-total-label">
-            {total.toLocaleString('es-CL')} registro{total !== 1 ? 's' : ''} en total
+            {total.toLocaleString('es-CL')} registro{total !== 1 ? 's' : ''}
+            {hayFiltros ? ' con los filtros aplicados' : ' en total'}
           </p>
         )}
       </div>
 
-      {/* ── Lista ── */}
+      {/* ── Timeline / Lista ── */}
       {cargando ? (
-        <div className="audit-card audit-loading">
+        <div className="audit-loading-state">
           <div className="audit-spinner" />
-          Cargando auditoría…
+          <span>Cargando registros…</span>
         </div>
       ) : !logs.length ? (
-        <div className="audit-card audit-empty">
-          <div style={{ fontSize: 40, marginBottom: 10 }}>📭</div>
-          <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>
-            {hayFiltros ? 'No hay registros con los filtros aplicados.' : 'Aún no hay registros de auditoría.'}
+        <div className="audit-empty-state">
+          <div className="audit-empty-icon">📭</div>
+          <p className="audit-empty-title">
+            {hayFiltros ? 'Sin resultados' : 'Sin registros aún'}
+          </p>
+          <p className="audit-empty-desc">
+            {hayFiltros
+              ? 'No hay registros con los filtros aplicados.'
+              : 'Aún no hay registros de auditoría.'}
           </p>
           {!hayFiltros && activeModulo === 'tickets' && (
-            <p style={{ margin: '10px 0 0', fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
-              Para activar el registro automático, ejecuta <strong>supabase_auditoria_tickets.sql</strong> en el SQL Editor de Supabase.
+            <p className="audit-empty-hint">
+              Para activar el registro automático, ejecuta{' '}
+              <strong>supabase_auditoria_tickets.sql</strong> en el SQL Editor de Supabase.
             </p>
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {agrupados.map((item, idx) => {
+        <div className="audit-timeline">
+          {agrupados.map((item) => {
             if (item.esHeader) {
               return (
-                <div key={'h-' + item.fecha} className="audit-dia-header">
-                  {labelDia(item.fecha)}
+                <div key={'h-' + item.fecha} className="audit-tl-day-row">
+                  <div className="audit-tl-marker">
+                    <div className="audit-tl-day-dot" />
+                  </div>
+                  <span className="audit-tl-day-label">{labelDia(item.fecha)}</span>
                 </div>
               )
             }
@@ -679,109 +744,120 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
               .filter(c => (c.anterior ?? '') !== '' || (c.nuevo ?? '') !== '')
             const disp    = detectarDispositivo(log.dispositivo)
             const esHoy   = new Date(log.creado_en).toDateString() === new Date().toDateString()
-            const prevItem = agrupados[idx - 1]
-            const esPrimeroDelGrupo = !prevItem || prevItem.esHeader
 
             return (
-              <div key={log.id}
-                className={`audit-item ${!esPrimeroDelGrupo ? 'audit-item-border' : ''}`}
-                style={{ borderLeft: `3px solid ${meta.color}`, background: '#fff' }}>
-
-                <div
-                  className="audit-item-header"
-                  style={{ cursor: cambios.length ? 'pointer' : 'default' }}
-                  onClick={() => cambios.length && setExpandido(abierto ? null : log.id)}
-                >
-                  <div className="audit-badge-icon" style={{ background: meta.bg, color: meta.color }}>
-                    {meta.icono}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p className="audit-item-nombre">{log.bien_nombre}</p>
-                    <p className="audit-item-meta">
-                      <strong>{log.usuario_nombre}</strong>
-                      {log.usuario_rol && (
-                        <span className={`audit-rol-badge ${
-                          log.usuario_rol === 'admin'    ? 'audit-rol-admin'  :
-                          log.usuario_rol === 'editor'   ? 'audit-rol-editor' :
-                          'audit-rol-enc'
-                        }`}>
-                          {log.usuario_rol === 'admin'  ? 'Admin'    :
-                           log.usuario_rol === 'editor' ? 'Editor'   : 'Encargado'}
-                        </span>
-                      )}
-                      {log.categoria && (
-                        <span
-                          className={`audit-cat-tag ${onVerCategoria ? 'audit-cat-tag-link' : ''}`}
-                          title={onVerCategoria ? 'Ver categoría en inventario' : undefined}
-                          onClick={onVerCategoria ? e => { e.stopPropagation(); onVerCategoria(log.categoria) } : undefined}
-                        >
-                          {catLabel(log.categoria)}
-                        </span>
-                      )}
-                      <span title={formatFecha(log.creado_en)}>
-                        · {esHoy ? tiempoRelativo(log.creado_en) : formatFecha(log.creado_en)}
-                      </span>
-                      {disp && <span>{disp}</span>}
-                    </p>
-                    {cambios.length > 0 && !abierto && (
-                      <p className="audit-item-campos">
-                        {cambios.map(c => campoLabel(c.campo)).join(' · ')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    {activeModulo === 'inventario' && log.bien_id && log.accion !== 'eliminar' && onVerBien && (
-                      bienesEliminados.has(log.bien_id)
-                        ? <span className="audit-bien-noexiste" title="Este bien fue eliminado del inventario">Ya no existe</span>
-                        : <button
-                            className="audit-btn-ver"
-                            onClick={e => { e.stopPropagation(); onVerBien(log.bien_id) }}
-                            title="Ir al bien en el inventario"
-                          >
-                            Ver bien →
-                          </button>
-                    )}
-                    <span className="audit-pill" style={{ background: meta.bg, color: meta.color }}>
-                      {meta.label}
-                    </span>
-                    {cambios.length > 0 && (
-                      <span className={`audit-chevron ${abierto ? 'audit-chevron-open' : ''}`}>▼</span>
-                    )}
-                  </div>
+              <div key={log.id} className="audit-tl-item-row">
+                <div className="audit-tl-marker">
+                  <div className="audit-tl-item-dot" style={{ background: meta.color }} />
                 </div>
 
-                {abierto && cambios.length > 0 && (
-                  <div className="audit-cambios">
-                    <p style={{ ...secTitle, margin: '0 0 10px' }}>
-                      {(activeModulo === 'ausencias' || activeModulo === 'compensatorios') && log.accion === 'crear' ? 'Detalle' : 'Campos modificados'}
-                    </p>
-                    {cambios.map((c, i) => (
-                      <div key={i} className="audit-cambio-row">
-                        <span className="audit-campo-label">
-                          {campoLabel(c.campo)}
-                        </span>
-                        <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
-                          {c.anterior === true || c.anterior === 'true' ? 'Sí' : c.anterior === false || c.anterior === 'false' ? 'No' : c.anterior ?? '—'}
-                        </span>
-                        <span className="audit-arrow">→</span>
-                        <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
-                          {c.nuevo === true || c.nuevo === 'true' ? 'Sí' : c.nuevo === false || c.nuevo === 'false' ? 'No' : c.nuevo ?? '—'}
-                        </span>
-                        {activeModulo === 'inventario' && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
-                          <button
-                            className="audit-btn-restore"
-                            onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}
-                            disabled={!!restaurando}
-                          >
-                            {restaurando === log.id + c.campo ? '…' : '↩ Restaurar'}
-                          </button>
+                <div className={`audit-tl-card ${abierto ? 'audit-tl-card-open' : ''}`}>
+                  <div
+                    className="audit-item-header"
+                    style={{ cursor: cambios.length ? 'pointer' : 'default' }}
+                    onClick={() => cambios.length && setExpandido(abierto ? null : log.id)}
+                  >
+                    <div className="audit-badge-icon" style={{ background: meta.bg, color: meta.color }}>
+                      {meta.icono}
+                    </div>
+
+                    <div className="audit-item-content">
+                      <p className="audit-item-nombre">{log.bien_nombre}</p>
+                      <div className="audit-item-meta">
+                        <strong className="audit-meta-user">{log.usuario_nombre}</strong>
+                        {log.usuario_rol && (
+                          <span className={`audit-rol-badge audit-rol-${
+                            log.usuario_rol === 'admin'  ? 'admin'  :
+                            log.usuario_rol === 'editor' ? 'editor' : 'enc'
+                          }`}>
+                            {log.usuario_rol === 'admin'  ? 'Admin'     :
+                             log.usuario_rol === 'editor' ? 'Editor'    : 'Encargado'}
+                          </span>
                         )}
+                        {log.categoria && (
+                          <span
+                            className={`audit-cat-tag ${onVerCategoria ? 'audit-cat-tag-link' : ''}`}
+                            title={onVerCategoria ? 'Ver categoría en inventario' : undefined}
+                            onClick={onVerCategoria ? e => { e.stopPropagation(); onVerCategoria(log.categoria) } : undefined}
+                          >
+                            {catLabel(log.categoria)}
+                          </span>
+                        )}
+                        <span className="audit-meta-time" title={formatFecha(log.creado_en)}>
+                          {esHoy ? tiempoRelativo(log.creado_en) : formatFecha(log.creado_en)}
+                        </span>
+                        {disp && <span className="audit-meta-device">{disp}</span>}
                       </div>
-                    ))}
+                      {cambios.length > 0 && !abierto && (
+                        <div className="audit-item-chips">
+                          {cambios.slice(0, 5).map(c => (
+                            <span key={c.campo} className="audit-field-chip">{campoLabel(c.campo)}</span>
+                          ))}
+                          {cambios.length > 5 && (
+                            <span className="audit-field-chip audit-field-chip-more">
+                              +{cambios.length - 5}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="audit-item-actions">
+                      {activeModulo === 'inventario' && log.bien_id && log.accion !== 'eliminar' && onVerBien && (
+                        bienesEliminados.has(log.bien_id)
+                          ? <span className="audit-bien-noexiste" title="Este bien fue eliminado del inventario">Ya no existe</span>
+                          : <button
+                              className="audit-btn-ver"
+                              onClick={e => { e.stopPropagation(); onVerBien(log.bien_id) }}
+                              title="Ir al bien en el inventario"
+                            >
+                              Ver bien →
+                            </button>
+                      )}
+                      <span className="audit-pill" style={{ background: meta.bg, color: meta.color }}>
+                        {meta.label}
+                      </span>
+                      {cambios.length > 0 && (
+                        <span className={`audit-chevron ${abierto ? 'audit-chevron-open' : ''}`}>▼</span>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  {abierto && cambios.length > 0 && (
+                    <div className="audit-cambios">
+                      <p className="audit-cambios-title">
+                        {(activeModulo === 'ausencias' || activeModulo === 'compensatorios') && log.accion === 'crear'
+                          ? 'Detalle'
+                          : 'Campos modificados'}
+                      </p>
+                      {cambios.map((c, i) => (
+                        <div key={i} className="audit-cambio-row">
+                          <span className="audit-campo-label">{campoLabel(c.campo)}</span>
+                          <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
+                            {c.anterior === true || c.anterior === 'true' ? 'Sí'
+                              : c.anterior === false || c.anterior === 'false' ? 'No'
+                              : c.anterior ?? '—'}
+                          </span>
+                          <span className="audit-arrow">→</span>
+                          <span className="audit-valor audit-valor-new" title={c.nuevo ?? '—'}>
+                            {c.nuevo === true || c.nuevo === 'true' ? 'Sí'
+                              : c.nuevo === false || c.nuevo === 'false' ? 'No'
+                              : c.nuevo ?? '—'}
+                          </span>
+                          {activeModulo === 'inventario' && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
+                            <button
+                              className="audit-btn-restore"
+                              onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}
+                              disabled={!!restaurando}
+                            >
+                              {restaurando === log.id + c.campo ? '…' : '↩ Restaurar'}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}

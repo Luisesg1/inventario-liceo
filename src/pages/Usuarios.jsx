@@ -1,5 +1,5 @@
 // src/pages/Usuarios.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Usuarios.css'
@@ -326,6 +326,14 @@ function getIconForCat(label) {
 
 function detectarNivelActual(permisos) {
   if (!permisos) return 'lectura'
+  // Primero verificar contra plantillas de rol del sistema (en orden de precedencia)
+  for (const rolKey of ['admin', 'directivo', 'coordinador', 'docente', 'asistente', 'administrativo', 'soporte']) {
+    const rolData = PERMISOS_POR_ROL[rolKey]
+    if (!rolData) continue
+    const coincide = ACCIONES.every(a => !!permisos[a.key] === !!rolData.permisos[a.key])
+    if (coincide) return 'rol:' + rolKey
+  }
+  // Luego verificar niveles de acceso simples (inventario)
   for (const n of NIVELES_ACCESO.slice(0, 3)) {
     const keys = Object.keys(n.permisosCat)
     if (keys.every(k => !!permisos[k] === !!n.permisosCat[k])) return n.key
@@ -361,6 +369,10 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   const [catsBD, setCatsBD]               = useState([])
   const [paso, setPaso]                   = useState(1)
   const [nivel, setNivel]                 = useState(() => detectarNivelActual(draft?.permisos ?? {}))
+  const [rolBase, setRolBase]             = useState(() => {
+    const n = detectarNivelActual(draft?.permisos ?? {})
+    return n.startsWith('rol:') ? n.slice(4) : null
+  })
   const [rolesDisponibles, setRolesDisponibles] = useState(ROLES_SISTEMA)
 
   // Devuelve el paso anterior
@@ -415,13 +427,14 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
   }
 
   function toggleAccion(key) {
-    // Cualquier edición manual rompe el preset → personalizado
+    // Cualquier edición manual rompe el preset → personalizado (pero conserva rolBase para mostrar "basado en X")
     if (nivel !== 'personalizado') setNivel('personalizado')
     onChange({ ...draft, permisos: { ...draft.permisos, [key]: !draft.permisos[key] } })
   }
 
   function aplicarNivel(nivelKey) {
     setNivel(nivelKey)
+    setRolBase(null)
     if (nivelKey !== 'personalizado') {
       const n = NIVELES_ACCESO.find(n => n.key === nivelKey)
       onChange({ ...draft, permisos: { ...draft.permisos, ...n.permisosCat } })
@@ -432,7 +445,9 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
     const rolData = PERMISOS_POR_ROL[rolKey]
     if (!rolData) return
     setNivel('rol:' + rolKey)
-    onChange({ ...draft, permisos: { ...PERMISOS_VACIO, ...rolData.permisos } })
+    setRolBase(rolKey)
+    // Resetear TODOS los permisos a la plantilla del rol (incluyendo categorías/módulos)
+    onChange({ ...draft, permisos: { ...PERMISOS_VACIO, ...rolData.permisos }, categorias: [...rolData.categorias] })
   }
 
   const pasoEfectivo = paso
@@ -631,6 +646,7 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
             {(() => {
               const sel = nivel === 'personalizado'
               const n = NIVELES_ACCESO.find(x => x.key === 'personalizado')
+              const baseLabel = rolBase ? (ROL_LABEL[rolBase] ?? rolBase) : null
               return (
                 <div
                   onClick={() => aplicarNivel('personalizado')}
@@ -658,7 +674,9 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
                     {n.label}
                   </p>
                   <p style={{ margin: 0, fontSize: 11.5, color: '#6b7280', lineHeight: 1.4 }}>
-                    {n.desc}
+                    {sel && baseLabel
+                      ? `Basado en ${baseLabel} con modificaciones`
+                      : n.desc}
                   </p>
                 </div>
               )
@@ -726,11 +744,17 @@ function TablaPermisos({ draft, onChange, onFinalizado }) {
 // Panel de permisos inline (para usuario existente)
 // ══════════════════════════════════════════════════════════════════════════
 function PanelPermisos({ usuario: u, onCerrar }) {
-  const [cargando, setCargando]   = useState(true)
-  const [draft, setDraft]         = useState(null)
-  const [guardando, setGuardando] = useState(false)
-  const [mensaje, setMensaje]     = useState({ tipo: '', texto: '' })
-  const [confirmar, setConfirmar] = useState(false)
+  const [cargando, setCargando]       = useState(true)
+  const [draft, setDraft]             = useState(null)
+  const [savedDraft, setSavedDraft]   = useState(null)
+  const [guardando, setGuardando]     = useState(false)
+  const [mensaje, setMensaje]         = useState({ tipo: '', texto: '' })
+  const [confirmar, setConfirmar]     = useState(false)
+
+  const hayaCambios = useMemo(() => {
+    if (!draft || !savedDraft) return false
+    return JSON.stringify(draft) !== JSON.stringify(savedDraft)
+  }, [draft, savedDraft])
 
   useEffect(() => { cargar() }, [u.id]) // eslint-disable-line
 
@@ -742,10 +766,11 @@ function PanelPermisos({ usuario: u, onCerrar }) {
       .eq('usuario_id', u.id)
       .maybeSingle()
     const def = PERMISOS_POR_ROL[u.rol] ?? PERMISOS_POR_ROL.encargado
-    setDraft(data
+    const loaded = data
       ? { permisos: { ...data.permisos }, categorias: [...(data.categorias ?? def.categorias)] }
       : { permisos: { ...def.permisos }, categorias: [...def.categorias] }
-    )
+    setDraft(loaded)
+    setSavedDraft(loaded)
     setCargando(false)
   }
 
@@ -763,6 +788,7 @@ function PanelPermisos({ usuario: u, onCerrar }) {
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error: ' + error.message })
     } else {
+      setSavedDraft(draft)
       setMensaje({ tipo: 'exito', texto: '¡Permisos guardados!' })
       setTimeout(() => { setMensaje({ tipo: '', texto: '' }); onCerrar() }, 1400)
     }
@@ -776,6 +802,16 @@ function PanelPermisos({ usuario: u, onCerrar }) {
         </p>
         <span style={ps.rolTag}>base: {u.rol}</span>
       </div>
+
+      {!cargando && hayaCambios && (
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fbbf24', borderRadius: 8,
+          padding: '8px 13px', marginBottom: 12, fontSize: 12.5, color: '#92400e',
+          display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
+        }}>
+          ⚠️ Tienes cambios sin guardar — haz clic en «Guardar permisos» para aplicarlos.
+        </div>
+      )}
 
       {cargando
         ? <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando permisos…</p>
@@ -791,8 +827,13 @@ function PanelPermisos({ usuario: u, onCerrar }) {
       {!cargando && (
         <div className="form-acciones" style={{ marginTop: 16 }}>
           <button className="btn-secundario" onClick={onCerrar}>Cancelar</button>
-          <button className="btn-primario" onClick={() => setConfirmar(true)} disabled={guardando}>
-            Guardar permisos
+          <button
+            className="btn-primario"
+            onClick={() => setConfirmar(true)}
+            disabled={guardando || !hayaCambios}
+            style={hayaCambios ? { boxShadow: '0 0 0 3px rgba(var(--primary-rgb),0.25)' } : { opacity: 0.5 }}
+          >
+            {guardando ? 'Guardando…' : hayaCambios ? 'Guardar permisos ✓' : 'Sin cambios'}
           </button>
         </div>
       )}
@@ -1103,7 +1144,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               </div>
             )}
 
-            <TablaPermisos draft={draft} onChange={setDraft} onFinalizado={() => setPermisosListos(true)} />
+            <TablaPermisos key={rol} draft={draft} onChange={setDraft} onFinalizado={() => setPermisosListos(true)} />
 
             {mensaje.texto && (
               <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
@@ -1832,6 +1873,11 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                           <option value="administrativo">Administrativo</option>
                           <option value="soporte">Soporte técnico</option>
                         </select>
+                        {editRol !== u.rol && (
+                          <span style={{ fontSize: 11.5, color: '#92400e', marginTop: 5, display: 'block', fontWeight: 500 }}>
+                            ⚠️ Los permisos serán reemplazados por los del rol <strong>{ROL_LABEL[editRol] ?? editRol}</strong> al guardar.
+                          </span>
+                        )}
                       </label>
                     </div>
                     {/* ── Sección cambio de contraseña ── */}
