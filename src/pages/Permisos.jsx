@@ -1466,27 +1466,6 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 </span>
               </section>
 
-              {/* Recordatorio */}
-              <section>
-                <p className="mp-section-label">Recordatorio <span style={{ color: '#cbd5e1', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(opcional)</span></p>
-                <div className="mp-reminder-row">
-                  <label className="mp-checkbox-wrap">
-                    <input type="checkbox" className="mp-checkbox" checked={recordatorio} onChange={e => setRecordatorio(e.target.checked)} />
-                    <span className="mp-checkbox-label">Recordar antes del inicio de la ausencia</span>
-                  </label>
-                  <AnimatePresence>
-                    {recordatorio && (
-                      <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto', transition: { duration: 0.15 } }}
-                        exit={{ opacity: 0, width: 0, transition: { duration: 0.12 } }} style={{ overflow: 'hidden' }}>
-                        <select className="mp-select" style={{ width: 'auto', minWidth: 140 }} value={diasRecord} onChange={e => setDiasRecord(e.target.value)}>
-                          {RECORDATORIO_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </section>
-
             </div>
 
             {/* ── Columna derecha — Resumen ── */}
