@@ -312,6 +312,61 @@ function PermisoDots({ dias = 0, max = MAX_AUSENCIAS }) {
   )
 }
 
+// ── CompensatorioDots ──────────────────────────────────────────────────────
+
+const COMP_DOT_UNIT = 0.5  // cada punto representa 0.5 días
+const COMP_MAX_DOTS = 6    // máximo 6 puntos (= 3 días visibles)
+
+function CompensatorioDots({ disponible = 0, cargando = false }) {
+  if (cargando) {
+    return (
+      <div className="mp-counter" style={{ borderColor: 'rgba(99,102,241,0.22)', background: 'rgba(99,102,241,0.03)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: '#94a3b8', fontSize: 12 }}>
+          <Loader2 size={13} className="animate-spin" /> Verificando saldo…
+        </div>
+      </div>
+    )
+  }
+
+  const dotsFilled = Math.min(disponible / COMP_DOT_UNIT, COMP_MAX_DOTS)
+  const sinSaldo   = disponible === 0
+
+  return (
+    <div className="mp-counter" style={{ borderColor: 'rgba(99,102,241,0.22)', background: 'rgba(99,102,241,0.03)' }}>
+      <div className="mp-dots">
+        {Array.from({ length: COMP_MAX_DOTS }).map((_, i) => {
+          const filled = Math.min(Math.max(dotsFilled - i, 0), 1)
+          const bg = filled >= 1
+            ? '#6366f1'
+            : filled > 0
+              ? `linear-gradient(90deg, #6366f1 ${filled * 100}%, #e2e8f0 ${filled * 100}%)`
+              : '#e2e8f0'
+          return <span key={i} className="mp-dot" style={{ background: bg }} />
+        })}
+      </div>
+      {sinSaldo ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: '#fef2f2', border: '1.5px solid #fca5a5',
+          borderRadius: 9, padding: '8px 12px', marginTop: 4,
+        }}>
+          <AlertTriangle size={14} style={{ color: '#dc2626', flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 700 }}>Sin saldo disponible</span>
+        </div>
+      ) : (
+        <span className="mp-counter-label" style={{
+          color: disponible <= 0.5 ? '#dc2626' : '#6366f1',
+          fontWeight: disponible <= 1 ? 600 : 400,
+        }}>
+          {disponible <= 0.5
+            ? `⚠️ Solo queda ${fmtDias(disponible)} día compensatorio disponible`
+            : `${fmtDias(disponible)} días compensatorios disponibles`}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // ── CalendarioFeriados ─────────────────────────────────────────────────────
 
 const CAL_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -1087,13 +1142,18 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                 </div>
 
                 <AnimatePresence>
-                  {usuarioSel && !cargandoPermisos && (
-                    <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
+                  {usuarioSel && tipoPermiso !== 'dias_compensatorios' && !cargandoPermisos && (
+                    <motion.div key="dots-admin" variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
                       <PermisoDots dias={permisosUsados} />
                     </motion.div>
                   )}
-                  {cargandoPermisos && (
-                    <motion.div variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 8 }}>
+                  {usuarioSel && tipoPermiso === 'dias_compensatorios' && (
+                    <motion.div key="dots-comp" variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 10 }}>
+                      <CompensatorioDots disponible={saldoComp?.disponible ?? 0} cargando={cargandoComp} />
+                    </motion.div>
+                  )}
+                  {cargandoPermisos && tipoPermiso !== 'dias_compensatorios' && (
+                    <motion.div key="loading-permisos" variants={slideV} initial="hidden" animate="visible" exit="exit" style={{ marginTop: 8 }}>
                       <span className="mp-loading-text">Verificando ausencias…</span>
                     </motion.div>
                   )}
