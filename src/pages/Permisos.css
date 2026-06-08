@@ -585,7 +585,7 @@
   border-radius: 16px;
   padding: 18px 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  transition: box-shadow 0.2s, transform 0.18s;
+  transition: box-shadow 0.2s, transform 0.18s, border-color 0.18s;
   cursor: default;
   flex: 1 1 220px;
   max-width: 320px;
@@ -593,6 +593,16 @@
 .aus-stat-card:hover {
   box-shadow: 0 8px 32px rgba(0,0,0,0.09);
   transform: translateY(-2px);
+}
+.aus-stat-card--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.aus-stat-card--clickable:hover {
+  transform: translateY(-2px);
+}
+.aus-stat-card--activa {
+  border-width: 1.5px;
 }
 .aus-stat-icon {
   width: 34px; height: 34px; border-radius: 10px;
