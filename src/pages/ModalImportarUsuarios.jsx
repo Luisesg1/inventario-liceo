@@ -73,19 +73,75 @@ function passwordDesdeRut(rut) {
   return rut.replace(/[^0-9]/g, '').slice(0, 4)
 }
 
-// ── Descarga plantilla CSV ────────────────────────────────────────────────────
-function descargarPlantilla() {
-  const filas = [
-    ['nombres', 'apellidos', 'rut', 'email', 'rol'],
-    ['Luis', 'Soto González', '20469215-7', 'luis@correo.cl', 'administrador'],
-    ['Ana', 'Gutierrez Morales', '11753330-1', 'ana@correo.cl', 'docente'],
-    ['Jorge', 'Vera Fuentes', '17990020-3', 'jorge@correo.cl', 'soporte'],
+// ── Descarga plantilla XLSX (ExcelJS con estilos) ────────────────────────────
+async function descargarPlantilla() {
+  if (!window.ExcelJS) {
+    await new Promise((resolve, reject) => {
+      const s = document.getElementById('exceljs-script') || document.createElement('script')
+      s.id = 'exceljs-script'
+      s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js'
+      s.onload = resolve
+      s.onerror = reject
+      document.head.appendChild(s)
+    })
+  }
+
+  const headers = ['nombres', 'apellidos', 'rut', 'email', 'rol']
+  const ejemplos = [
+    ['Luis',  'Soto González',     '20469215-7', 'luis@correo.cl',  'administrador'],
+    ['Ana',   'Gutierrez Morales', '11753330-1', 'ana@correo.cl',   'docente'],
+    ['Jorge', 'Vera Fuentes',      '17990020-3', 'jorge@correo.cl', 'soporte'],
   ]
-  const csv = filas.map(r => r.join(';')).join('\r\n')
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url; a.download = 'plantilla_usuarios.csv'; a.click()
+
+  const workbook  = new window.ExcelJS.Workbook()
+  const worksheet = workbook.addWorksheet('Usuarios')
+
+  worksheet.columns = headers.map((h, i) => ({
+    width: Math.max(h.length + 4, ...ejemplos.map(r => String(r[i] ?? '').length + 4), 14),
+  }))
+
+  // Encabezados con estilo
+  const headerRow = worksheet.addRow(headers)
+  headerRow.height = 20
+  headerRow.eachCell(cell => {
+    cell.font      = { bold: true, color: { argb: 'FF1A237E' }, size: 11 }
+    cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EAF6' } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    cell.border    = {
+      top:    { style: 'medium', color: { argb: 'FF9FA8DA' } },
+      bottom: { style: 'medium', color: { argb: 'FF9FA8DA' } },
+      left:   { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+      right:  { style: 'thin',   color: { argb: 'FFC5CAE9' } },
+    }
+  })
+
+  // Filas de ejemplo con estilo
+  ejemplos.forEach(ej => {
+    const row = worksheet.addRow(ej)
+    row.height = 18
+    row.eachCell({ includeEmpty: true }, cell => {
+      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8F9FF' } }
+      cell.border    = {
+        top:    { style: 'thin', color: { argb: 'FFC5CAE9' } },
+        bottom: { style: 'thin', color: { argb: 'FFC5CAE9' } },
+        left:   { style: 'thin', color: { argb: 'FFC5CAE9' } },
+        right:  { style: 'thin', color: { argb: 'FFC5CAE9' } },
+      }
+      cell.font      = { italic: true, color: { argb: 'FF6B7280' }, size: 10 }
+      cell.alignment = { horizontal: 'left', vertical: 'middle' }
+    })
+  })
+
+  worksheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } }
+  worksheet.views = [{ state: 'frozen', ySplit: 1 }]
+
+  const buffer = await workbook.xlsx.writeBuffer()
+  const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url    = URL.createObjectURL(blob)
+  const a      = document.createElement('a')
+  a.href       = url
+  a.download   = 'plantilla_usuarios.xlsx'
+  a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -512,7 +568,7 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
             </div>
 
             <button onClick={descargarPlantilla} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1.5px solid #1a237e', background: 'transparent', color: '#1a237e', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}>
-              ⬇️ Descargar plantilla CSV
+              ⬇️ Descargar plantilla XLSX
             </button>
           </div>
         )}
