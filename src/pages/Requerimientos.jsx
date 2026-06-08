@@ -1204,6 +1204,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
     { campo: 'fondo' },
     { campo: 'solicitante' },
     { campo: 'accion' },
+    { campo: 'dimension' },
   ], [])
 
   const {
@@ -1220,6 +1221,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   const filtroFondo       = filtrosCampos.fondo       || ''
   const filtroSolicitante = filtrosCampos.solicitante || ''
   const filtroAccion      = filtrosCampos.accion      || ''
+  const filtroDimension   = filtrosCampos.dimension   || ''
 
   const filtrosKey = JSON.stringify(filtrosCampos)
   useEffect(() => { setPaginaR(1); setSeleccion(new Set()) }, [filtrosKey, filtroKpi, filtroFechaDesde, filtroFechaHasta, busqueda, filtroNumero])
@@ -1749,6 +1751,12 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
           onChange={v => handleFiltroChange('accion', v)}
           opcionesDinamicas={getOpciones('accion')}
           placeholder="Acción"
+        />
+        <FiltroSelect
+          value={filtroDimension}
+          onChange={v => handleFiltroChange('dimension', v)}
+          opcionesDinamicas={getOpciones('dimension')}
+          placeholder="Dimensión"
         />
         <DateRangePicker
           desde={filtroFechaDesde}
