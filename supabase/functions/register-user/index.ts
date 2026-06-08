@@ -79,15 +79,34 @@ serve(async (req) => {
       return json({ error: 'Error al registrar usuario: ' + upsertError.message }, 500)
     }
 
-    // 5. Permisos por defecto para docente (upsert por si el trigger ya los creó)
+    // 5. Permisos por defecto para docente — coincide con PERMISOS_POR_ROL.docente del frontend
     await admin.from('permisos_usuario').upsert({
       usuario_id: userId,
       permisos: {
+        // Inventario — sin acceso
         ver_inventario: false, agregar_bien: false, editar_bien: false,
         eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
         importar_csv: false, gestionar_usuarios: false, exportar: false,
         registrar_prestamo: false, registrar_incidencia: false,
-        ver_tickets: true, gestionar_tickets: false, crear_ticket: true,
+        // Tickets
+        ver_tickets: true, crear_ticket: true, editar_ticket: true,
+        gestionar_tickets: false, eliminar_ticket: false,
+        ver_alertas_tickets: false, exportar_tickets: true,
+        // Ausencias
+        ver_propias_ausencias: true, exportar_ausencias: true,
+        ver_ausencias: false, crear_ausencias: false, editar_ausencias: false,
+        eliminar_ausencias: false, aprobar_ausencias: false,
+        // Ajustes
+        gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+        // Sin acceso al resto
+        ver_requerimientos: false, crear_requerimiento: false, editar_requerimiento: false,
+        eliminar_requerimiento: false, importar_requerimientos: false,
+        exportar_requerimientos: false, ver_auditoria_requerimientos: false,
+        ver_compensatorios: false, ver_auditoria_permisos: false,
+        ver_auditoria_compensatorios: false, ver_auditoria_inventario: false,
+        gestionar_campos: false, ver_campos: false,
+        invitar_usuario: false, editar_usuario: false, eliminar_usuario: false,
+        editar_roles_permisos: false,
       },
       categorias: ['todos'],
     }, { onConflict: 'usuario_id' })

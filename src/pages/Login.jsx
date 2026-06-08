@@ -204,15 +204,18 @@ export default function Login({
       setCargando(false)
       return
     }
+    // Sign out si el login automático tuvo éxito, para que el usuario
+    // complete el flujo de registro antes de entrar al app
     const { error: loginError } = await supabase.auth.signInWithPassword({ email: regEmail, password: regPass })
+    if (!loginError) await supabase.auth.signOut()
     setCargando(false)
-    if (loginError) setRegExito(true)
+    setRegExito(true)
   }
 
   function volverAlLogin() {
     setVistaOlvide(false); setVistaRegistro(false)
     setEnviado(false); setRegExito(false)
-    setEmailReset(''); setRegNombre(''); setRegEmail('')
+    setEmailReset(''); setRegNombres(''); setRegApellidos(''); setRegRut(''); setRegEmail('')
     setRegPass(''); setRegPassConf(''); setRegCodigo('')
     setError('')
   }

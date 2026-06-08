@@ -294,48 +294,83 @@ function generarPassword(): string {
   return `${Array.from({length:3},()=>rand(upper)).join('')}-${Array.from({length:3},()=>rand(nums)).join('')}-${Array.from({length:3},()=>rand(lower)).join('')}`;
 }
 
-// ── Permisos por defecto ──────────────────────────────────────────────────────
+// ── Permisos por defecto — sincronizados con PERMISOS_POR_ROL del frontend ─────
 function getPermisosDefault(rol: string): Record<string, boolean> {
-  const base = {
+  const vacio: Record<string, boolean> = {
     ver_inventario: false, agregar_bien: false, editar_bien: false,
     eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
     importar_csv: false, gestionar_usuarios: false, exportar: false,
     registrar_prestamo: false, registrar_incidencia: false,
-    ver_tickets: false, gestionar_tickets: false,
+    ver_auditoria_inventario: false,
+    ver_tickets: false, crear_ticket: false, editar_ticket: false,
+    gestionar_tickets: false, eliminar_ticket: false,
+    ver_alertas_tickets: false, exportar_tickets: false,
+    ver_requerimientos: false, crear_requerimiento: false, editar_requerimiento: false,
+    eliminar_requerimiento: false, importar_requerimientos: false,
+    exportar_requerimientos: false, ver_auditoria_requerimientos: false,
+    ver_propias_ausencias: false, ver_ausencias: false, crear_ausencias: false,
+    editar_ausencias: false, eliminar_ausencias: false, aprobar_ausencias: false,
+    exportar_ausencias: false, ver_auditoria_permisos: false,
+    ver_compensatorios: false, crear_compensatorios: false, editar_compensatorios: false,
+    eliminar_compensatorios: false, exportar_compensatorios: false,
+    ver_auditoria_compensatorios: false,
+    gestionar_campos: false, ver_campos: false, agregar_campo: false,
+    editar_campo: false, ocultar_campo: false, eliminar_campo: false,
+    reordenar_campos: false, gestionar_campos_base: false,
+    gestionar_ajustes: false, ver_ajustes: false, guardar_cambios_ajustes: false,
+    invitar_usuario: false, editar_usuario: false, eliminar_usuario: false,
+    editar_roles_permisos: false,
   };
+
+  const staffBase = {
+    ...vacio,
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  };
+
   switch (rol) {
     case "admin":
-      return Object.fromEntries(Object.keys(base).map(k => [k, true]));
+      return Object.fromEntries(Object.keys(vacio).map(k => [k, true]));
     case "directivo":
-      return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
-               exportar: true, registrar_prestamo: true, registrar_incidencia: true,
-               ver_tickets: true };
+      return {
+        ...vacio,
+        ver_inventario: true, agregar_bien: true, editar_bien: true,
+        importar_csv: true, exportar: true,
+        registrar_prestamo: true, registrar_incidencia: true,
+        ver_auditoria_inventario: true,
+      };
     case "coordinador":
-      return { ...base, ver_tickets: true };
     case "docente":
-      return { ...base, ver_tickets: true };
     case "asistente":
-      return { ...base, ver_tickets: true };
     case "administrativo":
-      return { ...base };
+      return { ...staffBase };
+    case "soporte":
+      return {
+        ...staffBase,
+        gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true,
+      };
     case "encargado_inventario":
-      return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
-               exportar: true, registrar_prestamo: true, registrar_incidencia: true };
+      return {
+        ...vacio,
+        ver_inventario: true, agregar_bien: true, editar_bien: true,
+        exportar: true, registrar_prestamo: true, registrar_incidencia: true,
+      };
     case "encargado_soporte":
-      return { ...base, ver_tickets: true, gestionar_tickets: true };
+      return { ...vacio, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true };
     case "encargado_permisos":
-      return { ...base, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true };
+      return { ...vacio, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true };
+    case "visor_requerimientos":
+      return { ...vacio, ver_tickets: true };
     // Legacy
     case "editor":
-      return { ...base, ver_inventario: true, agregar_bien: true, editar_bien: true,
-               exportar: true, registrar_prestamo: true, registrar_incidencia: true,
-               ver_tickets: true };
-    case "soporte":
-      return { ...base, ver_tickets: true, gestionar_tickets: true };
-    case "visor_requerimientos":
-      return { ...base, ver_tickets: true };
-    default: // encargado / encargado_inventario fallback
-      return { ...base, ver_inventario: true, exportar: true };
+      return {
+        ...vacio,
+        ver_inventario: true, agregar_bien: true, editar_bien: true,
+        exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true,
+      };
+    default:
+      return { ...vacio, ver_inventario: true, exportar: true };
   }
 }
 

@@ -60,7 +60,7 @@ export default function Layout({
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
-  puedeAccederAusencias = true,
+  puedeAccederAusencias = false,
   puedeAccederUsuarios = false,
   puedeGestionarAjustes = false,
   puedeGestionarCampos = false,
