@@ -81,7 +81,7 @@ function descargarPlantilla() {
     ['Ana', 'Gutierrez Morales', '11753330-1', 'ana@correo.cl', 'docente'],
     ['Jorge', 'Vera Fuentes', '17990020-3', 'jorge@correo.cl', 'soporte'],
   ]
-  const csv = filas.map(r => r.join(',')).join('\r\n')
+  const csv = filas.map(r => r.join(';')).join('\r\n')
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -93,7 +93,7 @@ function descargarPlantilla() {
 function descargarCredenciales(creds) {
   const cabecera = ['nombre', 'email', 'rut', 'rol', 'password_temporal']
   const filas = creds.map(c => [c.nombre, c.email, c.rut, c.rol, c.password_temporal])
-  const csv = [cabecera, ...filas].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n')
+  const csv = [cabecera, ...filas].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n')
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
