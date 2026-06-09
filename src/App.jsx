@@ -14,6 +14,7 @@ import CamposCategoria  from './pages/CamposCategoria'
 import Requerimientos   from './pages/Requerimientos'
 import Permisos         from './pages/Permisos'
 import Compensatorios   from './pages/Compensatorios'
+import MantenedorRoles  from './pages/MantenedorRoles'
 import { aplicarTema } from './utils/tema'
 
 const RUTA_A_PAGINA = {
@@ -32,6 +33,7 @@ const RUTA_A_PAGINA = {
   '/usuarios':                 'usuarios',
   '/ajustes':                  'ajustes',
   '/ajustes/campos':           'campos',
+  '/ajustes/roles':            'mantenedor_roles',
 }
 
 const PAGINA_A_RUTA = {
@@ -49,6 +51,7 @@ const PAGINA_A_RUTA = {
   usuarios:                 '/usuarios',
   ajustes:                  '/ajustes',
   campos:                   '/ajustes/campos',
+  mantenedor_roles:         '/ajustes/roles',
 }
 
 export default function App() {
@@ -71,6 +74,7 @@ export default function App() {
   const procesandoCambio   = useRef(false)
   const modoRecovery       = useRef(esRecuperacion)
   const sesionCargada      = useRef(false)
+  const forzarHome         = useRef(true)
 
   // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
   const esAdmin      = usuario?.rol === 'admin'
@@ -139,6 +143,7 @@ export default function App() {
   const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
   const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
   const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes || !!p.ver_ajustes || !!p.guardar_cambios_ajustes)
+  const puedeGestionarRoles     = esAdmin || !!p.gestionar_roles
   const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos || !!p.ver_campos
   const permisosCampos = {
     ver:           esAdmin || !!p.ver_campos || !!p.gestionar_campos,
@@ -150,7 +155,8 @@ export default function App() {
     gestionarBase: esAdmin || !!p.gestionar_campos_base || !!p.gestionar_campos,
   }
 
-  const soloAdmin = (pagina === 'usuarios'       && !puedeAccederUsuarios)
+  const soloAdmin = (pagina === 'usuarios'         && !puedeAccederUsuarios)
+    || (pagina === 'mantenedor_roles'             && !puedeGestionarRoles)
     || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
     || (pagina === 'ajustes'                     && !puedeGestionarAjustes)
     || (pagina === 'campos'                      && !puedeGestionarCampos)
@@ -179,9 +185,14 @@ export default function App() {
   const irAReqs       = (filtro = null) => { setFiltroInicialReqs(filtro); cambiarPagina('requerimientos') }
   const irAInventario = () => cambiarPagina('inventario')
 
-  // ── Redirigir si la URL no corresponde a la página permitida ─────
+  // ── Redirigir al Home al iniciar sesión (login o F5) y luego mantener permisos ──
   useEffect(() => {
     if (!usuario || cargando) return
+    if (forzarHome.current) {
+      forzarHome.current = false
+      navigate('/', { replace: true })
+      return
+    }
     const rutaEsperada = PAGINA_A_RUTA[paginaSegura] || '/'
     if (location.pathname !== rutaEsperada) {
       navigate(rutaEsperada, { replace: true })
@@ -193,6 +204,7 @@ export default function App() {
     const params = new URLSearchParams(window.location.search)
     const id = params.get('bien')
     if (id) {
+      forzarHome.current = false
       setAbrirBienId(Number(id))
       navigate('/inventario', { replace: true })
     }
@@ -211,6 +223,7 @@ export default function App() {
       if (event === 'SIGNED_OUT' || !session) {
         if (event === 'INITIAL_SESSION' && modoRecovery.current) return
         sesionCargada.current = false
+        forzarHome.current = true
         setUsuario(null)
         setMostrarSetPassword(false)
         setCargando(false)
@@ -268,20 +281,34 @@ export default function App() {
   // ── Realtime: permisos del usuario logueado ──────────────────────
   useEffect(() => {
     if (!usuario || usuario.rol === 'admin') return
+
+    // Función compartida para recargar la fusión rol+personal
+    async function recargarPermisos() {
+      const [{ data: rp }, { data: pd }] = await Promise.all([
+        supabase.from('permisos_rol').select('permisos').eq('rol', usuario.rol).maybeSingle(),
+        supabase.from('permisos_usuario').select('permisos').eq('usuario_id', usuario.id).maybeSingle(),
+      ])
+      setPermisosUsuario({ ...(rp?.permisos ?? {}), ...(pd?.permisos ?? {}) })
+    }
+
     const canal = supabase
       .channel('permisos-propios')
+      // Cambios en permisos individuales del usuario
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
+        event: '*', schema: 'public',
         table: 'permisos_usuario',
         filter: `usuario_id=eq.${usuario.id}`,
-      }, (payload) => {
-        const nuevos = payload.new?.permisos
-        if (nuevos) setPermisosUsuario(nuevos)
-      })
+      }, recargarPermisos)
+      // Cambios en permisos del rol del usuario
+      .on('postgres_changes', {
+        event: '*', schema: 'public',
+        table: 'permisos_rol',
+        filter: `rol=eq.${usuario.rol}`,
+      }, recargarPermisos)
       .subscribe()
+
     return () => { supabase.removeChannel(canal) }
-  }, [usuario?.id])
+  }, [usuario?.id, usuario?.rol])
 
   // ── Verificación de sesión periódica ─────────────────────────────
   useEffect(() => {
@@ -320,8 +347,14 @@ export default function App() {
     sesionCargada.current = true
     setUsuario(data)
     if (data.rol !== 'admin') {
-      const { data: pd } = await supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle()
-      if (pd?.permisos) setPermisosUsuario(pd.permisos)
+      const [{ data: rp }, { data: pd }] = await Promise.all([
+        supabase.from('permisos_rol').select('permisos').eq('rol', data.rol).maybeSingle(),
+        supabase.from('permisos_usuario').select('permisos').eq('usuario_id', data.id).maybeSingle(),
+      ])
+      // Herencia: permisos del rol como base, permisos individuales del usuario como override
+      const permisosBase      = rp?.permisos ?? {}
+      const permisosPersonales = pd?.permisos ?? {}
+      setPermisosUsuario({ ...permisosBase, ...permisosPersonales })
     } else {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true, gestionar_tickets: true })
     }
@@ -377,6 +410,7 @@ export default function App() {
       puedeAccederUsuarios={puedeAccederUsuarios}
       puedeGestionarAjustes={puedeGestionarAjustes}
       puedeGestionarCampos={puedeGestionarCampos}
+      puedeGestionarRoles={puedeGestionarRoles}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -391,7 +425,8 @@ export default function App() {
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
-      {paginaSegura === 'campos'     && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
+      {paginaSegura === 'campos'          && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
+      {paginaSegura === 'mantenedor_roles' && <MantenedorRoles />}
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
