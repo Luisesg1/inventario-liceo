@@ -153,11 +153,21 @@ export default function MantenedorRoles() {
   async function cargarTodo() {
     setCargando(true)
     const [{ data: rData }, { data: uData }] = await Promise.all([
-      supabase.from('permisos_rol').select('*').order('rol'),
+      supabase.from('permisos_rol').select('*'),
       supabase.from('usuarios').select('rol'),
     ])
 
-    const listaRoles = rData ?? []
+    const dbRoles = rData ?? []
+    const dbRoleKeys = new Set(dbRoles.map(r => r.rol))
+
+    // Roles base siempre presentes, en orden definido, con datos de BD si existen
+    const baseOrdenados = ROLES_BASE.map(r =>
+      dbRoles.find(d => d.rol === r) ?? { rol: r, permisos: { ...PERMISOS_VACIO }, descripcion: '' }
+    )
+    // Roles personalizados que no son base
+    const customRoles = dbRoles.filter(r => !ROLES_BASE.includes(r.rol))
+
+    const listaRoles = [...baseOrdenados, ...customRoles]
     setRoles(listaRoles)
 
     // Conteos de usuarios por rol
