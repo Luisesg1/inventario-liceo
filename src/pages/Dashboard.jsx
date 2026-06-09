@@ -5,7 +5,7 @@ import {
   PlusCircle, Pencil, Wrench,
   Ticket, Activity, Clock,
   ArrowRight, ClipboardList, CheckCircle2, CircleDot, XCircle,
-  UserX, Bell, ChevronRight,
+  UserX, Bell, ChevronRight, ChevronDown,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Dashboard.css'
@@ -312,6 +312,19 @@ const TIPO_AUSENCIA_LABEL = {
   dias_compensatorios:    'Días compensatorios',
 }
 
+const JORNADA_LABEL = {
+  dia_completo:  'Día completo',
+  medio_dia:     'Medio día',
+  personalizado: 'Personalizado',
+  reposo:        'Desde / Hasta',
+}
+
+function fmtFecha(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return `${d}/${m}/${y}`
+}
+
 export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, onIrAInventario, onIrAAusencias, puedeVerAlertasTickets = false, puedeVerInventario = false, puedeVerRequerimientos = false, puedeVerAusencias = false, puedeGestionarTickets = false }) {
   const rm = useReducedMotion()
 
@@ -330,6 +343,8 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
   const [statsReqs,            setStatsReqs]            = useState(null)
   const [ausentesHoy,          setAusentesHoy]          = useState(null)
   const [ausentesPorTipo,      setAusentesPorTipo]      = useState({})
+  const [ausentesDetalle,      setAusentesDetalle]      = useState([])
+  const [ausentesExpandido,    setAusentesExpandido]    = useState(false)
   const [ticketPeriodo,        setTicketPeriodo]        = useState('semana')
   const [reqAño,               setReqAño]               = useState(new Date().getFullYear())
 
@@ -379,33 +394,47 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
     return () => { supabase.removeChannel(chT); supabase.removeChannel(chR) }
   }, [])
 
-  // Personas ausentes hoy (solo si el usuario puede ver ausencias)
+  // Personas ausentes hoy (solo permiso_administrativo + justificativo vigentes hoy)
   useEffect(() => {
     const cargarAusentes = async () => {
       if (!puedeVerAusencias) { setAusentesHoy(null); return }
       const hoy = new Date().toISOString().slice(0, 10)
       const normRut = r => (r ?? '').replace(/[.\-\s]/g, '').toLowerCase()
       const [{ data: us }, { data }] = await Promise.all([
-        supabase.from('usuarios').select('id, rut'),
+        supabase.from('usuarios').select('id, rut, nombre'),
         supabase.from('ausencias')
-          .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, tipo, fecha_inicio, fecha_fin, usuario:usuario_id(id, rut)')
+          .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, snapshot_nombre, tipo, jornada, periodo, hora_inicio, hora_fin, fecha_inicio, fecha_fin, notas, usuario:usuario_id(id, rut, nombre)')
+          .in('tipo', ['permiso_administrativo', 'justificativo'])
           .lte('fecha_inicio', hoy).gte('fecha_fin', hoy),
       ])
       const usuariosList = us ?? []
-      // Mismo criterio que resolveUser() en Ausencias: descarta usuarios borrados sin reemplazo
-      const tipoPorKey = new Map()
+      const tipoPorKey    = new Map()  // key → tipo
+      const detallePorKey = new Map()  // key → registro de detalle
       ;(data ?? []).forEach(p => {
-        let key = null
+        let key    = null
+        let nombre = null
+        let rut    = null
         if (p.usuario) {
-          key = p.usuario.rut ? normRut(p.usuario.rut) : p.usuario.id
+          rut    = p.usuario.rut ?? null
+          nombre = p.usuario.nombre ?? null
+          key    = rut ? normRut(rut) : p.usuario.id
         } else if (p.externo_nombre) {
-          key = p.externo_rut ? normRut(p.externo_rut) : 'ext:' + p.externo_nombre
+          nombre = p.externo_nombre
+          rut    = p.externo_rut ?? null
+          key    = rut ? normRut(rut) : 'ext:' + p.externo_nombre
         } else if (p.snapshot_rut) {
+          rut    = p.snapshot_rut
+          nombre = p.snapshot_nombre ?? null
           const found = usuariosList.find(u => normRut(u.rut ?? '') === normRut(p.snapshot_rut))
-          if (found) key = found.rut ? normRut(found.rut) : found.id
-          // si no se encuentra → no se cuenta (igual que la lista de Ausencias)
+          if (found) {
+            key    = found.rut ? normRut(found.rut) : found.id
+            nombre = nombre ?? found.nombre ?? null
+          }
         }
-        if (key && !tipoPorKey.has(key)) tipoPorKey.set(key, p.tipo)
+        if (key && !tipoPorKey.has(key)) {
+          tipoPorKey.set(key, p.tipo)
+          detallePorKey.set(key, { nombre, rut, tipo: p.tipo, jornada: p.jornada, periodo: p.periodo, hora_inicio: p.hora_inicio, hora_fin: p.hora_fin, fecha_inicio: p.fecha_inicio, fecha_fin: p.fecha_fin, notas: p.notas })
+        }
       })
       const porTipo = {}
       tipoPorKey.forEach(tipo => {
@@ -414,6 +443,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
       })
       setAusentesHoy(tipoPorKey.size)
       setAusentesPorTipo(porTipo)
+      setAusentesDetalle([...detallePorKey.values()])
     }
     cargarAusentes()
     if (!puedeVerAusencias) return
@@ -662,46 +692,126 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
             background: ausentesHoy === 0 ? '#f0fdf4' : '#fef2f2',
             border: `1px solid ${ausentesHoy === 0 ? '#bbf7d0' : '#fecaca'}`,
-            borderRadius: 10, padding: '7px 12px',
+            borderRadius: 10,
             color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
-            alignSelf: 'flex-start', maxWidth: '100%',
+            alignSelf: 'flex-start',
+            maxWidth: '100%',
+            overflow: 'hidden',
           }}
         >
-          {ausentesHoy === 0 ? <CheckCircle2 size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} /> : <UserX size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+          {/* Fila principal (siempre visible) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', flexWrap: 'wrap' }}>
             {ausentesHoy === 0
-              ? 'Hoy no hay personal ausente'
-              : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
-          </p>
-          {ausentesHoy > 0 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              {Object.entries(ausentesPorTipo).map(([tipo, n]) => (
-                <span key={tipo} style={{
-                  fontSize: 11.5, fontWeight: 600, color: '#b91c1c',
-                  background: '#fff', border: '1px solid #fecaca',
-                  borderRadius: 20, padding: '1px 9px', whiteSpace: 'nowrap',
-                }}>
-                  {n} {TIPO_AUSENCIA_LABEL[tipo] ?? 'Otro'}
-                </span>
-              ))}
+              ? <CheckCircle2 size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+              : <UserX size={16} strokeWidth={2.2} style={{ flexShrink: 0 }} />}
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+              {ausentesHoy === 0
+                ? 'Hoy no hay personal ausente'
+                : `Hoy hay ${ausentesHoy} ${ausentesHoy === 1 ? 'persona ausente' : 'personas ausentes'}`}
+            </p>
+            {ausentesHoy > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {Object.entries(ausentesPorTipo).map(([tipo, n]) => (
+                  <span key={tipo} style={{
+                    fontSize: 11.5, fontWeight: 600, color: '#b91c1c',
+                    background: '#fff', border: '1px solid #fecaca',
+                    borderRadius: 20, padding: '1px 9px', whiteSpace: 'nowrap',
+                  }}>
+                    {n} {TIPO_AUSENCIA_LABEL[tipo] ?? 'Otro'}
+                  </span>
+                ))}
+              </span>
+            )}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+              {onIrAAusencias && (
+                <button
+                  onClick={onIrAAusencias}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    fontSize: 12, fontWeight: 700, color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Ver todos <ArrowRight size={12} />
+                </button>
+              )}
+              {ausentesHoy > 0 && (
+                <button
+                  onClick={() => setAusentesExpandido(v => !v)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 3,
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    fontSize: 12, fontWeight: 700, color: '#b91c1c',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {ausentesExpandido ? 'Ocultar detalle' : 'Ver detalle'}
+                  <ChevronDown size={13} style={{ transition: 'transform 0.2s', transform: ausentesExpandido ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                </button>
+              )}
             </span>
-          )}
-          {onIrAAusencias && (
-            <button
-              onClick={onIrAAusencias}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 2,
-                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                fontSize: 12, fontWeight: 700, color: ausentesHoy === 0 ? '#15803d' : '#b91c1c',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Ver todos <ArrowRight size={12} />
-            </button>
-          )}
+          </div>
+
+          {/* Detalle expandible */}
+          <AnimatePresence initial={false}>
+            {ausentesExpandido && ausentesHoy > 0 && (
+              <motion.div
+                key="detalle"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                <div style={{
+                  borderTop: '1px solid #fecaca',
+                  padding: '8px 12px 10px',
+                  display: 'flex', flexDirection: 'column', gap: 6,
+                }}>
+                  {ausentesDetalle.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 13, color: '#b91c1c', opacity: 0.7 }}>No hay personas ausentes hoy.</p>
+                  ) : ausentesDetalle.map((a, i) => {
+                    const mismaFecha = a.fecha_inicio === a.fecha_fin
+                    const fechaStr = mismaFecha
+                      ? fmtFecha(a.fecha_inicio)
+                      : `${fmtFecha(a.fecha_inicio)} al ${fmtFecha(a.fecha_fin)}`
+                    let jornadaStr = JORNADA_LABEL[a.jornada] ?? a.jornada ?? ''
+                    if (a.jornada === 'medio_dia' && a.periodo) jornadaStr += ` (${a.periodo.toUpperCase()})`
+                    if (a.jornada === 'personalizado' && a.hora_inicio && a.hora_fin) jornadaStr += ` ${a.hora_inicio}–${a.hora_fin}`
+                    return (
+                      <div key={i} style={{
+                        background: '#fff',
+                        border: '1px solid #fecaca',
+                        borderRadius: 8,
+                        padding: '7px 10px',
+                        fontSize: 12.5,
+                      }}>
+                        <div style={{ fontWeight: 700, color: '#7f1d1d', marginBottom: 2 }}>
+                          {a.nombre ?? '(sin nombre)'}
+                          {a.rut && <span style={{ fontWeight: 400, color: '#b91c1c', marginLeft: 6 }}>{a.rut}</span>}
+                        </div>
+                        <div style={{ color: '#b91c1c', display: 'flex', flexWrap: 'wrap', gap: '2px 8px' }}>
+                          <span>{TIPO_AUSENCIA_LABEL[a.tipo] ?? a.tipo}</span>
+                          <span style={{ opacity: 0.5 }}>·</span>
+                          <span>{jornadaStr}</span>
+                          <span style={{ opacity: 0.5 }}>·</span>
+                          <span>{fechaStr}</span>
+                        </div>
+                        {a.notas && (
+                          <div style={{ marginTop: 3, color: '#7f1d1d', opacity: 0.75, fontSize: 12, fontStyle: 'italic' }}>
+                            {a.notas}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </section>
       )}
