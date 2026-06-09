@@ -64,6 +64,7 @@ export default function Layout({
   puedeAccederUsuarios = false,
   puedeGestionarAjustes = false,
   puedeGestionarCampos = false,
+  puedeGestionarRoles = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -339,7 +340,7 @@ export default function Layout({
   const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
   const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
-  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios'
+  const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios' || paginaActual === 'mantenedor_roles'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
   const [herramientasAbierto, setHerramientasAbierto] = useState(false)
 
@@ -698,7 +699,7 @@ export default function Layout({
           </>}
 
           {/* Ajustes con submenú */}
-          {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes) && (
+          {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarRoles) && (
             <>
               <motion.div
                 className={`nav-item nav-item--parent ${ajustesActivo ? 'active' : ''}`}
@@ -742,6 +743,15 @@ export default function Layout({
                       >
                         <span className="nav-subitem-dot" />
                         Usuarios
+                      </div>
+                    )}
+                    {puedeGestionarRoles && (
+                      <div
+                        className={`nav-subitem ${paginaActual === 'mantenedor_roles' ? 'active' : ''}`}
+                        onClick={() => handleNav('mantenedor_roles')}
+                      >
+                        <span className="nav-subitem-dot" />
+                        Mantenedor de Roles
                       </div>
                     )}
                   </motion.div>

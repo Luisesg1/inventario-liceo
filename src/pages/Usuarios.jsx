@@ -87,6 +87,7 @@ const ACCIONES = [
   { key: 'gestionar_usuarios',      label: 'Gestionar usuarios',          labelCorto: 'Gest. usr.',  desc: 'Permite ver y administrar la lista completa de usuarios del sistema.' },
   { key: 'editar_roles_permisos',   label: 'Editar roles/permisos',       labelCorto: 'Editar roles',desc: 'Permite modificar los roles y permisos asignados a los usuarios.' },
   { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
+  { key: 'gestionar_roles',         label: 'Gestionar roles del sistema', labelCorto: 'Roles',       desc: 'Permite administrar los permisos predeterminados de cada rol desde el Mantenedor de Roles.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -129,7 +130,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
     descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
-    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes'],
+    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles'],
   },
 ]
 
