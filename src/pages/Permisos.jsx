@@ -5,7 +5,7 @@ import {
   CalendarCheck, Plus, Loader2, X, ChevronDown, Search,
   UserPlus, Info, CalendarRange, Save, CheckCircle2,
   Eye, Pencil, Trash2, AlertCircle, AlertTriangle,
-  Users, Gift, UserX, Download,
+  Users, Gift, UserX, Download, Building2,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
@@ -48,10 +48,11 @@ const TIPOS_PERMISO = [
   { value: 'permiso_administrativo', label: 'Permiso administrativo' },
   { value: 'justificativo',          label: 'Ausencia sin justificar' },
   { value: 'dias_compensatorios',    label: 'Días compensatorios' },
+  { value: 'cometido',               label: 'Cometido' },
 ]
 
 // Tipos que NO descuentan del cupo (solo quedan registrados)
-const TIPOS_SIN_DESCUENTO = new Set(['licencia_medica', 'dias_compensatorios'])
+const TIPOS_SIN_DESCUENTO = new Set(['licencia_medica', 'dias_compensatorios', 'cometido'])
 
 const MAX_NOTAS = 400
 
@@ -59,10 +60,11 @@ const TIPO_LABEL = Object.fromEntries(TIPOS_PERMISO.map(t => [t.value, t.label])
 
 // Estilos visuales por tipo
 const TIPO_STYLE = {
-  licencia_medica:        { bg: '#eff6ff',             color: '#1d4ed8', icon: '🏥' },
-  permiso_administrativo: { bg: '#fef9c3',             color: '#854d0e', icon: '📋' },
-  justificativo:          { bg: '#ecfeff',             color: '#0e7490', icon: '📝' },
+  licencia_medica:        { bg: '#eff6ff',              color: '#1d4ed8', icon: '🏥' },
+  permiso_administrativo: { bg: '#fef9c3',              color: '#854d0e', icon: '📋' },
+  justificativo:          { bg: '#ecfeff',              color: '#0e7490', icon: '📝' },
   dias_compensatorios:    { bg: 'rgba(99,102,241,0.1)', color: '#4f46e5', icon: '🎁' },
+  cometido:               { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', icon: '🏫' },
 }
 
 const JORNADAS = [
@@ -123,15 +125,16 @@ function diasCalendario(fechaInicio, fechaFin) {
   return Math.round((e - s) / 86400000) + 1
 }
 
-// tipo: 'licencia_medica' → todos los días | resto → solo hábiles
+// tipo: 'licencia_medica' | 'cometido' → todos los días | resto → solo hábiles
 function calcDuration(fechaInicio, fechaFin, jornada, inhabilitados = new Set(), tipo = '') {
   if (!fechaInicio || !fechaFin) return null
   if (jornada === 'medio_dia') return '½ día'
-  const h = tipo === 'licencia_medica'
+  const usaCalendario = tipo === 'licencia_medica' || tipo === 'cometido'
+  const h = usaCalendario
     ? diasCalendario(fechaInicio, fechaFin)
     : diasHabiles(fechaInicio, fechaFin, inhabilitados)
   if (h === 0) return null
-  if (tipo === 'licencia_medica') return h === 1 ? '1 día' : `${h} días`
+  if (usaCalendario) return h === 1 ? '1 día' : `${h} días`
   return h === 1 ? '1 día hábil' : `${h} días hábiles`
 }
 
@@ -149,9 +152,9 @@ function calcDiasTotales(rows, soloDescuento = false, inhabilitados = new Set())
       const horas = (eh * 60 + em - (sh * 60 + sm)) / 60
       total += Math.max(0, horas / 8)
     } else if (p.fecha_inicio && p.fecha_fin) {
-      // licencia médica cuenta todos los días (Lun-Dom)
+      // licencia médica y cometido cuentan todos los días (Lun-Dom)
       // permiso administrativo solo cuenta días hábiles (Lun-Vie)
-      total += p.tipo === 'licencia_medica'
+      total += (p.tipo === 'licencia_medica' || p.tipo === 'cometido')
         ? diasCalendario(p.fecha_inicio, p.fecha_fin)
         : diasHabiles(p.fecha_inicio, p.fecha_fin, inhabilitados)
     }
@@ -1504,7 +1507,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                         ? 'Motivo de la ausencia sin justificar'
                         : tipoPermiso === 'dias_compensatorios'
                           ? 'Motivo del uso de compensatorios'
-                          : 'Motivo'}
+                          : tipoPermiso === 'cometido'
+                            ? 'Descripción del cometido institucional'
+                            : 'Motivo'}
                   {' '}<span style={{ color: '#ef4444', fontWeight: 700 }}>*</span>
                 </p>
                 <textarea className="mp-textarea"
@@ -1517,7 +1522,9 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           ? 'Ej: Justificación de inasistencia…'
                           : tipoPermiso === 'dias_compensatorios'
                             ? 'Ej: Uso de días ganados por desfile 18 sept…'
-                            : 'Escribe el motivo de la ausencia…'
+                            : tipoPermiso === 'cometido'
+                              ? 'Ej: Salida pedagógica, competencia deportiva, acto comunal…'
+                              : 'Escribe el motivo de la ausencia…'
                   }
                   maxLength={MAX_NOTAS}
                   value={notas} onChange={e => setNotas(e.target.value)} />
@@ -2684,6 +2691,17 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     return set.size
   })()
 
+  const conteoCometidos = (() => {
+    const set = new Set()
+    permisosDelAño.forEach(p => {
+      if (p.tipo !== 'cometido') return
+      const u = resolveUser(p)
+      if (!u) return
+      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
+    })
+    return set.size
+  })()
+
   // ── Stats por RUT (año seleccionado, renovación automática anual) ───────────
   const userStatsMap = (() => {
     const map = {}
@@ -2733,6 +2751,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     if (cardActiva === 'hoy'           && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr)) return false
     if (cardActiva === 'permiso_admin' && p.tipo !== 'permiso_administrativo')                  return false
     if (cardActiva === 'sin_justificar'&& p.tipo !== 'justificativo')                           return false
+    if (cardActiva === 'cometido'      && p.tipo !== 'cometido')                                return false
     return true
   })
 
@@ -2891,6 +2910,17 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               icon: <AlertCircle size={16} strokeWidth={2} />,
               iconBg: 'rgba(14,116,144,0.10)',
               iconColor: '#0e7490',
+            },
+            {
+              id: 'cometido',
+              label: 'Cometidos institucionales',
+              value: conteoCometidos,
+              sub: conteoCometidos === 0
+                ? `Sin registros en ${añoSeleccionado}`
+                : `${conteoCometidos === 1 ? '1 persona' : `${conteoCometidos} personas`} en ${añoSeleccionado}`,
+              icon: <Building2 size={16} strokeWidth={2} />,
+              iconBg: 'rgba(124,58,237,0.10)',
+              iconColor: '#7c3aed',
             },
           ].map((s, i) => {
             const activa = cardActiva === s.id

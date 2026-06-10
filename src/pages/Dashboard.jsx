@@ -310,6 +310,7 @@ const TIPO_AUSENCIA_LABEL = {
   permiso_administrativo: 'Permiso administrativo',
   justificativo:          'Ausencia sin justificar',
   dias_compensatorios:    'Días compensatorios',
+  cometido:               'Cometido',
 }
 
 const JORNADA_LABEL = {
@@ -404,7 +405,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
         supabase.from('usuarios').select('id, rut, nombre'),
         supabase.from('ausencias')
           .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, snapshot_nombre, tipo, jornada, periodo, hora_inicio, hora_fin, fecha_inicio, fecha_fin, notas, usuario:usuario_id(id, rut, nombre)')
-          .in('tipo', ['permiso_administrativo', 'justificativo'])
+          .in('tipo', ['permiso_administrativo', 'justificativo', 'cometido'])
           .lte('fecha_inicio', hoy).gte('fecha_fin', hoy),
       ])
       const usuariosList = us ?? []
