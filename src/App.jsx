@@ -240,7 +240,6 @@ export default function App() {
         return
       }
 
-      if (event === 'SIGNED_IN') forzarHome.current = true
       cargarPerfil(session.user.id)
     })
 
