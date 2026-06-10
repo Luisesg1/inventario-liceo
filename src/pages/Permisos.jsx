@@ -2703,8 +2703,9 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     return map
   })()
 
-  // ── Filtrado (sobre el año seleccionado) ─────────────────────────────────
-  const permisosFiltrados = permisosDelAño.filter(p => {
+  // ── Filtrado — año seleccionado normalmente; card activa ignora el año ───
+  const basePermisos = cardActiva ? permisos : permisosDelAño
+  const permisosFiltrados = basePermisos.filter(p => {
     const u = resolveUser(p)
     if (!u) return false // ocultar borrados sin reemplazo
     if (busqueda.trim()) {
@@ -2734,7 +2735,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       if (filtroEstado === 'activa'  && !(p.fecha_inicio <= hoy && p.fecha_fin >= hoy))    return false
       if (filtroEstado === 'pasada'  && !(p.fecha_fin < hoy))                              return false
     }
-    if (cardActiva === 'hoy' && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr)) return false
+    if (cardActiva && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr))           return false
     if (cardActiva && cardActiva !== 'hoy' && p.tipo !== cardActiva)                 return false
     return true
   })
