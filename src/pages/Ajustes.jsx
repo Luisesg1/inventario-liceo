@@ -172,7 +172,7 @@ function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSi
   }
 
   return (
-    <div className="ajustes-preview" style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', height: 340, display: 'flex', userSelect: 'none', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+    <div className="ajustes-preview" style={{ border: '1.5px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', height: 340, display: 'flex', userSelect: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
       {/* Sidebar mini — interactivo */}
       <div style={{ width: 128, background: `linear-gradient(180deg,${dk} 0%,${md} 100%)`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div onClick={() => setSeccion('login')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44`, cursor: 'pointer' }}>
@@ -319,86 +319,230 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
   const [r1, g1, b1] = hexToRgb(colorPrimario)
   const primDark = `rgb(${Math.round(r1*.45)},${Math.round(g1*.45)},${Math.round(b1*.45)})`
 
-  const card = { background: '#ffffff', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06)', border: '1px solid #e2e8f0', overflow: 'hidden' }
+  // ── Cabecera de sección ────────────────────────────────────────────────────
   const sectionHeader = (icon, title, badge) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '12px 16px 10px', borderBottom: '1px solid #e2e8f0' }}>
-      <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg,${colorPrimario},${primDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{icon}</div>
-      <p style={{ margin: 0, fontWeight: 700, fontSize: 13, color: '#e5e7eb', flex: 1 }}>{title}</p>
-      {badge && <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#22c55e', padding: '2px 8px', borderRadius: 20 }}>{badge}</span>}
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '13px 18px 12px',
+      borderBottom: '1px solid #f1f5f9',
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+        background: `linear-gradient(135deg, ${colorPrimario}, ${primDark})`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 15,
+        boxShadow: `0 2px 8px ${colorPrimario}40`,
+      }}>
+        {icon}
+      </div>
+      <p style={{ margin: 0, fontWeight: 700, fontSize: 13.5, color: '#0f172a', flex: 1, letterSpacing: '-0.1px' }}>
+        {title}
+      </p>
+      {badge && (
+        <span style={{
+          fontSize: 10.5, fontWeight: 700, color: '#fff',
+          background: '#16a34a',
+          padding: '3px 9px', borderRadius: 99,
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#bbf7d0', display: 'inline-block', animation: 'ajustesPulse 2s ease-in-out infinite' }} />
+          {badge}
+        </span>
+      )}
+      <style>{`@keyframes ajustesPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
     </div>
   )
+
+  // ── Estilo de campo de formulario ──────────────────────────────────────────
+  const fieldLabel = { display: 'block', fontSize: 11.5, fontWeight: 700, color: '#475569', marginBottom: 5, letterSpacing: '0.03em' }
+  const fieldInput = {
+    width: '100%', padding: '9px 12px', borderRadius: 9,
+    border: '1.5px solid #e2e8f0', fontSize: 13, color: '#0f172a',
+    outline: 'none', boxSizing: 'border-box',
+    transition: 'border-color 0.15s, background 0.15s',
+    background: '#f8fafc', fontFamily: 'inherit',
+  }
 
   return (
     <div className="ajustes-root">
 
-      {/* ── Cabecera ──────────────────────────────────────── */}
-      <div className="ajustes-header" style={{ background: `linear-gradient(135deg,${colorPrimario} 0%,${primDark} 100%)` }}>
-        <div className="ajustes-header-bubble ajustes-header-bubble--1" />
-        <div className="ajustes-header-bubble ajustes-header-bubble--2" />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>⚙️</div>
+      {/* ── Cabecera banner ──────────────────────────────── */}
+      <div
+        className="ajustes-header"
+        style={{ background: `linear-gradient(135deg, ${colorPrimario} 0%, ${primDark} 100%)` }}
+      >
+        {/* Decoraciones de fondo */}
+        <div className="ajustes-header-deco ajustes-header-deco--ring1" />
+        <div className="ajustes-header-deco ajustes-header-deco--ring2" />
+        <div className="ajustes-header-deco ajustes-header-deco--blob" />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative', zIndex: 1 }}>
+          <div style={{
+            width: 46, height: 46, borderRadius: 13,
+            background: 'rgba(255,255,255,0.14)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, flexShrink: 0,
+            backdropFilter: 'blur(4px)',
+          }}>
+            ⚙️
+          </div>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>Ajustes del sistema</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>Personaliza logo, nombre e identidad visual</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <h2 style={{
+                margin: 0, fontSize: 17, fontWeight: 800,
+                color: '#fff', letterSpacing: '-0.3px',
+              }}>
+                Ajustes del sistema
+              </h2>
+              <span style={{
+                fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.7)',
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                padding: '2px 8px', borderRadius: 99,
+              }}>
+                Personalización
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.62)', fontWeight: 400 }}>
+              Configura logo, nombre e identidad visual del sistema
+            </p>
           </div>
         </div>
       </div>
 
-      {/* ── Cuerpo dos columnas ───────────────────────────── */}
+      {/* ── Cuerpo dos columnas ─────────────────────────── */}
       <div className="ajustes-body">
 
-        {/* Columna izquierda: formularios */}
+        {/* Columna izquierda */}
         <div className="ajustes-col-left">
 
-          {/* ── Identidad + Logo ──────────────────────────── */}
-          <div style={card}>
+          {/* ── Tarjeta: Identidad y Logo ─────────────────── */}
+          <div className="ajustes-card">
             {sectionHeader('🏢', 'Identidad y logo', logoFile ? 'Pendiente' : null)}
-            <div style={{ padding: '14px 16px', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div style={{ padding: '18px 18px 16px', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-start' }}>
 
-              {/* Logo: columna centrada */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flexShrink: 0, minWidth: 90 }}>
+              {/* Zona del logo */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexShrink: 0, minWidth: 96 }}>
+                {/* Círculo del logo con fondo de tablero */}
                 <div style={{ position: 'relative' }}>
-                  <div style={{ width: 76, height: 76, borderRadius: '50%', border: `3px solid ${colorAcento}66`, overflow: 'hidden',
-                    backgroundImage: 'linear-gradient(45deg,#d1d5db 25%,transparent 25%),linear-gradient(-45deg,#d1d5db 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d1d5db 75%),linear-gradient(-45deg,transparent 75%,#d1d5db 75%)',
-                    backgroundSize: '12px 12px', backgroundPosition: '0 0,0 6px,6px -6px,-6px 0',
-                    boxShadow: `0 0 0 3px ${colorAcento}22, 0 4px 14px rgba(0,0,0,0.1)` }}>
-                    <img src={logoPreview} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={e => { e.target.src = '/logo-liceo.png' }} />
+                  <div style={{
+                    width: 84, height: 84, borderRadius: '50%',
+                    border: `3px solid ${colorAcento}55`,
+                    overflow: 'hidden',
+                    backgroundImage: 'linear-gradient(45deg,#e2e8f0 25%,transparent 25%),linear-gradient(-45deg,#e2e8f0 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e2e8f0 75%),linear-gradient(-45deg,transparent 75%,#e2e8f0 75%)',
+                    backgroundSize: '10px 10px',
+                    backgroundPosition: '0 0,0 5px,5px -5px,-5px 0',
+                    boxShadow: `0 0 0 4px ${colorAcento}18, 0 6px 20px rgba(0,0,0,0.1)`,
+                  }}>
+                    <img
+                      src={logoPreview}
+                      alt="logo"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      onError={e => { e.target.src = '/logo-liceo.png' }}
+                    />
                   </div>
                   {logoFile && (
-                    <div style={{ position: 'absolute', bottom: 2, right: 2, width: 18, height: 18, borderRadius: '50%', background: '#22c55e', border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9 }}>✓</div>
+                    <div style={{
+                      position: 'absolute', bottom: 2, right: 2,
+                      width: 20, height: 20, borderRadius: '50%',
+                      background: '#16a34a', border: '2.5px solid #fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 9, color: '#fff', fontWeight: 700,
+                    }}>
+                      ✓
+                    </div>
                   )}
                 </div>
-                <button onClick={() => fileRef.current.click()}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, border: `1.5px solid ${colorPrimario}`, background: `${colorPrimario}0f`, color: colorPrimario, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                  onMouseOver={e => { e.currentTarget.style.background = `${colorPrimario}1a` }}
-                  onMouseOut={e => { e.currentTarget.style.background = `${colorPrimario}0f` }}>
-                  <span style={{ fontSize: 14 }}>📁</span> Imagen
+
+                {/* Botón cargar imagen */}
+                <button
+                  onClick={() => fileRef.current.click()}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = `${colorPrimario}18`
+                    e.currentTarget.style.borderColor = colorPrimario
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = `${colorPrimario}0c`
+                    e.currentTarget.style.borderColor = `${colorPrimario}55`
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '7px 13px', borderRadius: 8,
+                    border: `1.5px solid ${colorPrimario}55`,
+                    background: `${colorPrimario}0c`,
+                    color: colorPrimario,
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    transition: 'all 0.15s', whiteSpace: 'nowrap',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>📁</span> Imagen
                 </button>
-                <p style={{ margin: 0, fontSize: 10, color: 'rgba(148,163,184,0.5)', textAlign: 'center', lineHeight: 1.4 }}>PNG · JPG · SVG<br/>máx. 2 MB</p>
-                {logoFile && <p style={{ margin: 0, fontSize: 10, color: '#059669', fontWeight: 600, textAlign: 'center', wordBreak: 'break-all', maxWidth: 90 }}>✓ {logoFile.name}</p>}
+
+                <p style={{ margin: 0, fontSize: 10.5, color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+                  PNG · JPG · SVG<br />máx. 2 MB
+                </p>
+                {logoFile && (
+                  <p style={{
+                    margin: 0, fontSize: 10.5, color: '#16a34a', fontWeight: 600,
+                    textAlign: 'center', wordBreak: 'break-all', maxWidth: 96,
+                  }}>
+                    ✓ {logoFile.name}
+                  </p>
+                )}
               </div>
 
-              {/* Identidad: campos + checkbox sin fondo */}
-              <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Campos de identidad */}
+              <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { label: 'Nombre corto', placeholder: 'Ej: Inventario', value: nombreSistema,     setter: setNombreSistema,     desc: 'Sidebar junto al logo' },
-                  { label: 'Institución',  placeholder: 'Ej: Liceo JHJ',  value: nombreInstitucion, setter: setNombreInstitucion, desc: 'Panel de login' },
+                  { label: 'Nombre corto del sistema', placeholder: 'Ej: Inventario', value: nombreSistema, setter: setNombreSistema, desc: 'Aparece en el sidebar junto al logo' },
+                  { label: 'Nombre de la institución',  placeholder: 'Ej: Liceo JHJ',  value: nombreInstitucion, setter: setNombreInstitucion, desc: 'Aparece en el panel de login' },
                 ].map(({ label, placeholder, value, setter, desc }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</label>
-                    <input value={value} onChange={e => setter(e.target.value)} placeholder={placeholder} maxLength={60}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s', background: '#ffffff' }}
-                      onFocus={e => { e.target.style.borderColor = colorPrimario; e.target.style.background = '#f5f7ff' }}
-                      onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#ffffff' }}
+                    <label style={fieldLabel}>{label}</label>
+                    <input
+                      value={value}
+                      onChange={e => setter(e.target.value)}
+                      placeholder={placeholder}
+                      maxLength={60}
+                      style={fieldInput}
+                      onFocus={e => {
+                        e.target.style.borderColor = colorPrimario
+                        e.target.style.background = '#fff'
+                        e.target.style.boxShadow = `0 0 0 3px ${colorPrimario}14`
+                      }}
+                      onBlur={e => {
+                        e.target.style.borderColor = '#e2e8f0'
+                        e.target.style.background = '#f8fafc'
+                        e.target.style.boxShadow = 'none'
+                      }}
                     />
-                    <p style={{ margin: '3px 0 0', fontSize: 10, color: 'rgba(148,163,184,0.4)' }}>{desc}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: '#94a3b8' }}>{desc}</p>
                   </div>
                 ))}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '9px 12px', borderRadius: 9, background: sinFondo ? 'rgba(34,197,94,0.08)' : '#f8fafc', border: `1.5px solid ${sinFondo ? 'rgba(34,197,94,0.3)' : '#e2e8f0'}`, transition: 'all 0.15s' }}>
-                  <input type="checkbox" checked={sinFondo} onChange={e => handleSinFondoChange(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#22c55e', cursor: 'pointer', flexShrink: 0 }} />
+
+                {/* Checkbox sin fondo */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  cursor: 'pointer', padding: '10px 13px', borderRadius: 9,
+                  background: sinFondo ? '#f0fdf4' : '#f8fafc',
+                  border: `1.5px solid ${sinFondo ? '#86efac' : '#e2e8f0'}`,
+                  transition: 'all 0.15s',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={sinFondo}
+                    onChange={e => handleSinFondoChange(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: '#16a34a', cursor: 'pointer', flexShrink: 0 }}
+                  />
                   <div>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#0f172a' }}>Remover fondo blanco/negro</p>
-                    <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Hace transparente el fondo del logo al subir</p>
+                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#0f172a' }}>
+                      Remover fondo blanco/negro
+                    </p>
+                    <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>
+                      Hace transparente el fondo del logo al subir
+                    </p>
                   </div>
                 </label>
               </div>
@@ -406,51 +550,94 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoFile} />
           </div>
 
-          {/* ── Colores ───────────────────────────────────── */}
-          <div style={card}>
+          {/* ── Tarjeta: Colores del tema ─────────────────── */}
+          <div className="ajustes-card">
             {sectionHeader('🎨', 'Colores del tema')}
-            <div style={{ padding: '14px 16px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Paletas predefinidas</p>
-              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14, justifyContent: 'center' }}>
+            <div style={{ padding: '16px 18px' }}>
+
+              {/* Paletas predefinidas */}
+              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Paletas predefinidas
+              </p>
+              <div className="ajustes-paleta-grid" style={{ marginBottom: 18 }}>
                 {PALETAS.map(p => {
                   const activa = p.primario === colorPrimario && p.acento === colorAcento && p.boton === colorBoton
                   return (
-                    <button key={p.nombre} className="ajustes-paleta-card"
+                    <button
+                      key={p.nombre}
+                      className={`ajustes-paleta-card${activa ? ' ajustes-paleta-card--activa' : ''}`}
                       onClick={() => aplicarPaleta({ primario: p.primario, acento: p.acento, boton: p.boton, pageBg: p.pageBg, sidebarBg: p.sidebarBg })}
-                      style={{ borderColor: activa ? p.primario : '#e2e8f0', background: activa ? `${p.primario}14` : '#f8fafc' }}>
+                      style={{
+                        borderColor: activa ? p.primario : '#e8ecf0',
+                        background: activa ? `${p.primario}12` : '#f8fafc',
+                        color: p.primario,
+                      }}
+                    >
+                      <div className="ajustes-paleta-check" style={{ color: p.primario }}>✓</div>
                       <div className="ajustes-paleta-strip" style={{ background: `linear-gradient(90deg,${p.primario} 0%,${p.acento} 50%,${p.boton} 100%)` }} />
                       <div className="ajustes-paleta-dots">
                         {[p.primario, p.acento, p.boton].map((c, i) => (
                           <div key={i} className="ajustes-paleta-dot" style={{ background: c }} />
                         ))}
                       </div>
-                      <span className="ajustes-paleta-label" style={{ fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#94a3b8' }}>{p.nombre}</span>
+                      <span className="ajustes-paleta-label" style={{ fontWeight: activa ? 700 : 500, color: activa ? p.primario : '#64748b' }}>
+                        {p.nombre}
+                      </span>
                     </button>
                   )
                 })}
               </div>
 
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Personalizado</p>
+              {/* Colores personalizados */}
+              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Personalizado
+              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
-                  { label: 'Primario',  desc: 'Sidebar y login',           key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
-                  { label: 'Acento',    desc: 'Elementos activos y bordes', key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
-                  { label: 'Botones',   desc: 'Acciones en inventario',    key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
+                  { label: 'Color primario', desc: 'Sidebar y pantalla de login',  key: 'color_primario', value: colorPrimario, setter: setColorPrimario },
+                  { label: 'Color de acento', desc: 'Elementos activos y bordes',  key: 'color_acento',   value: colorAcento,   setter: setColorAcento   },
+                  { label: 'Color de botones', desc: 'Acciones en el inventario', key: 'color_boton',    value: colorBoton,    setter: setColorBoton    },
                 ].map(({ label, desc, key, value, setter }) => (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 9, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                  <div key={key} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '10px 14px', borderRadius: 10,
+                    background: '#f8fafc', border: '1px solid #e8ecf0',
+                    transition: 'border-color 0.15s',
+                  }}>
+                    {/* Swatch de color clicable */}
                     <label htmlFor={key} style={{ cursor: 'pointer', position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 9, background: value, boxShadow: `0 2px 8px ${value}55, inset 0 0 0 1.5px rgba(0,0,0,0.2)` }} />
-                      <input id={key} type="color" value={value} onChange={e => handleColorChange(setter, key, e.target.value)}
-                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10,
+                        background: value,
+                        boxShadow: `0 2px 8px ${value}55, inset 0 0 0 1.5px rgba(0,0,0,0.15)`,
+                      }} />
+                      <input
+                        id={key}
+                        type="color"
+                        value={value}
+                        onChange={e => handleColorChange(setter, key, e.target.value)}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                      />
                     </label>
+
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>{label}</p>
-                      <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>{desc}</p>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{label}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>{desc}</p>
                     </div>
-                    <input type="text" value={value} maxLength={7}
+
+                    <input
+                      type="text"
+                      value={value}
+                      maxLength={7}
                       className="ajustes-hex-input"
-                      onChange={e => { const v = e.target.value; if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v) }}
-                      onBlur={e => { if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value); e.target.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                      onChange={e => {
+                        const v = e.target.value
+                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) handleColorChange(setter, key, v)
+                      }}
+                      onBlur={e => {
+                        if (!/^#[0-9a-fA-F]{6}$/.test(e.target.value)) setter(value)
+                        e.target.style.borderColor = '#e2e8f0'
+                      }}
                       onFocus={e => e.target.style.borderColor = colorPrimario}
                     />
                   </div>
@@ -461,33 +648,85 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
 
         </div>
 
-        {/* Columna derecha: vista previa sticky */}
+        {/* ── Columna derecha: vista previa sticky ─────────── */}
         <div className="ajustes-col-right">
-          <div className="ajustes-preview-sticky" style={card}>
+          <div className="ajustes-card ajustes-preview-sticky">
             {sectionHeader('👁️', 'Vista previa', 'En vivo')}
-            <div style={{ padding: '10px 12px 14px' }}>
-              <Preview
-                colorPrimario={colorPrimario}
-                colorAcento={colorAcento}
-                colorBoton={colorBoton}
-                logoPreview={logoPreview}
-                nombreSistema={nombreSistema}
-                nombreInstitucion={nombreInstitucion}
-              />
-              <p style={{ margin: '8px 0 0', fontSize: 10, color: 'rgba(148,163,184,0.45)', textAlign: 'center' }}>
-                Haz clic en el menú lateral para navegar · Refleja los cambios antes de guardar
+
+            <div style={{ padding: '14px 16px 16px' }}>
+              {/* Contenedor premium del preview */}
+              <div style={{
+                borderRadius: 12, overflow: 'hidden',
+                padding: 3,
+                background: `linear-gradient(135deg, ${colorPrimario}30, ${colorAcento}20)`,
+                boxShadow: `0 4px 24px ${colorPrimario}18`,
+              }}>
+                <Preview
+                  colorPrimario={colorPrimario}
+                  colorAcento={colorAcento}
+                  colorBoton={colorBoton}
+                  logoPreview={logoPreview}
+                  nombreSistema={nombreSistema}
+                  nombreInstitucion={nombreInstitucion}
+                />
+              </div>
+
+              <p style={{ margin: '9px 0 0', fontSize: 11, color: '#94a3b8', textAlign: 'center', lineHeight: 1.5 }}>
+                Clic en el menú lateral para navegar · Refleja cambios antes de guardar
               </p>
 
-              {/* Mini botones de acción también en la columna derecha */}
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {error && <p style={{ margin: 0, fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.25)' }}>⚠️ {error}</p>}
-                {exito && <p style={{ margin: 0, fontSize: 12, color: '#4ade80', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.25)' }}>✓ Cambios guardados</p>}
-                <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
-                  style={{ width: '100%', background: `linear-gradient(135deg,${colorPrimario},${primDark})`, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${colorPrimario}55` }}>
-                  {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
+              {/* Acciones */}
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {error && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    fontSize: 12.5, color: '#dc2626',
+                    background: '#fef2f2', padding: '9px 13px',
+                    borderRadius: 9, border: '1px solid #fca5a5',
+                  }}>
+                    <span>⚠️</span> {error}
+                  </div>
+                )}
+                {exito && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 7,
+                    fontSize: 12.5, color: '#16a34a', fontWeight: 600,
+                    background: '#f0fdf4', padding: '9px 13px',
+                    borderRadius: 9, border: '1px solid #86efac',
+                  }}>
+                    <span>✓</span> Cambios guardados correctamente
+                  </div>
+                )}
+
+                <button
+                  className="ajustes-btn-save"
+                  onClick={guardar}
+                  disabled={guardando}
+                  style={{
+                    width: '100%', justifyContent: 'center',
+                    background: `linear-gradient(135deg,${colorPrimario},${primDark})`,
+                    opacity: guardando ? 0.75 : 1,
+                    cursor: guardando ? 'wait' : 'pointer',
+                    boxShadow: `0 4px 14px ${colorPrimario}44`,
+                  }}
+                >
+                  {guardando ? (
+                    <>
+                      <span style={{ width: 13, height: 13, border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'ajustesSpin 0.7s linear infinite' }} />
+                      Guardando…
+                    </>
+                  ) : (
+                    <><span style={{ fontSize: 15 }}>💾</span> Guardar cambios</>
+                  )}
                 </button>
-                <button className="ajustes-btn-rest" onClick={restaurar} style={{ width: '100%', textAlign: 'center' }}>
-                  ↺ Restaurar por defecto
+                <style>{`@keyframes ajustesSpin{to{transform:rotate(360deg)}}`}</style>
+
+                <button
+                  className="ajustes-btn-rest"
+                  onClick={restaurar}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                >
+                  <span style={{ fontSize: 14 }}>↺</span> Restaurar por defecto
                 </button>
               </div>
             </div>
@@ -500,12 +739,23 @@ export default function Ajustes({ onLogoChange, onNombreChange }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, pointerEvents: 'none' }} className="ajustes-bar-mobile">
         <div className="ajustes-bar-wrap">
           <div className="ajustes-bar-inner">
-            {error && <p style={{ margin: 0, fontSize: 12, color: '#f87171', flex: 1 }}>⚠️ {error}</p>}
-            {exito && <p style={{ margin: 0, fontSize: 12, color: '#4ade80', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
+            {error && <p style={{ margin: 0, fontSize: 12, color: '#dc2626', flex: 1 }}>⚠️ {error}</p>}
+            {exito && <p style={{ margin: 0, fontSize: 12, color: '#16a34a', fontWeight: 600, flex: 1 }}>✓ Cambios guardados</p>}
             {!error && !exito && <p className="ajustes-bar-hint">Guarda para que los cambios sean permanentes</p>}
-            <button className="ajustes-btn-rest" onClick={restaurar}>Restaurar por defecto</button>
-            <button className="ajustes-btn-save" onClick={guardar} disabled={guardando}
-              style={{ background: `linear-gradient(135deg,${colorPrimario},${primDark})`, opacity: guardando ? 0.75 : 1, cursor: guardando ? 'wait' : 'pointer', boxShadow: `0 4px 14px ${colorPrimario}55` }}>
+            <button className="ajustes-btn-rest" onClick={restaurar}>
+              <span>↺</span> Restaurar
+            </button>
+            <button
+              className="ajustes-btn-save"
+              onClick={guardar}
+              disabled={guardando}
+              style={{
+                background: `linear-gradient(135deg,${colorPrimario},${primDark})`,
+                opacity: guardando ? 0.75 : 1,
+                cursor: guardando ? 'wait' : 'pointer',
+                boxShadow: `0 4px 14px ${colorPrimario}44`,
+              }}
+            >
               {guardando ? '⏳ Guardando…' : '💾 Guardar cambios'}
             </button>
           </div>
