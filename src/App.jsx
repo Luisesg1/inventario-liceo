@@ -74,7 +74,7 @@ export default function App() {
   const procesandoCambio   = useRef(false)
   const modoRecovery       = useRef(esRecuperacion)
   const sesionCargada      = useRef(false)
-  const forzarHome         = useRef(true)
+  const forzarHome         = useRef(false)
 
   // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
   const esAdmin      = usuario?.rol === 'admin'
@@ -240,6 +240,7 @@ export default function App() {
         return
       }
 
+      if (event === 'SIGNED_IN') forzarHome.current = true
       cargarPerfil(session.user.id)
     })
 
