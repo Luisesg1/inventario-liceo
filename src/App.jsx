@@ -227,6 +227,7 @@ export default function App() {
         setUsuario(null)
         setMostrarSetPassword(false)
         setCargando(false)
+        if (event === 'SIGNED_OUT') navigate('/', { replace: true })
         return
       }
 
