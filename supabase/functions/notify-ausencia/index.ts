@@ -20,6 +20,7 @@ const TIPO_LABEL: Record<string, string> = {
   permiso_administrativo: 'Permiso administrativo',
   justificativo:          'Ausencia sin justificar',
   dias_compensatorios:    'Días compensatorios',
+  cometido:               'Cometido',
 }
 
 const TIPO_ICON: Record<string, string> = {
@@ -27,6 +28,7 @@ const TIPO_ICON: Record<string, string> = {
   permiso_administrativo: '📋',
   justificativo:          '📝',
   dias_compensatorios:    '🎁',
+  cometido:               '🏫',
 }
 
 const JORNADA_LABEL: Record<string, string> = {
