@@ -53,8 +53,8 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const destinatarios = [{ email: ADMIN_EMAIL, name: 'Admin JHJ' }]
-    if (ADMIN_EMAIL_2) destinatarios.push({ email: ADMIN_EMAIL_2, name: 'Admin JHJ' })
+    const destinatarios = [{ email: ADMIN_EMAIL, name: 'Contacto Liceo JHJ' }]
+    if (ADMIN_EMAIL_2) destinatarios.push({ email: ADMIN_EMAIL_2, name: 'Contacto Liceo JHJ' })
 
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -63,7 +63,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'Inventario JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Contacto Liceo JHJ', email: ADMIN_EMAIL },
         to:          destinatarios,
         subject:     `🎫 Nuevo ticket: ${area}`,
         htmlContent: html,

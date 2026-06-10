@@ -130,7 +130,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'Inventario JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Contacto Liceo JHJ', email: ADMIN_EMAIL },
         to:          [{ email: correo, name: nombre ?? correo }],
         subject:     `📋 Permiso administrativo registrado — ${fmtFecha(fechaInicio)}`,
         htmlContent,

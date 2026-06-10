@@ -1,6 +1,8 @@
 // supabase/functions/crear-usuario/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "contacto.liceobjhj@gmail.com";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -154,7 +156,7 @@ async function enviarEmailBrevo({
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "Liceo JHJ", email: "luiseduardosotoguti@gmail.com" },
+        sender: { name: "Contacto Liceo JHJ", email: ADMIN_EMAIL },
         to: [{ email: para, name: nombreDestinatario }],
         subject: "Tu acceso al Sistema de Inventario Liceo",
         htmlContent: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
@@ -179,7 +181,7 @@ async function enviarEmailResend({
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Inventario Liceo <onboarding@resend.dev>",
+        from: "Contacto Liceo JHJ <onboarding@resend.dev>",
         to: [para],
         subject: "Tu acceso al Sistema de Inventario Liceo",
         html: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
@@ -204,7 +206,7 @@ async function enviarEmailSMTP({
 
     // Construir email en formato RFC 2822
     const emailContent = [
-      `From: Inventario Liceo <${smtpUser}>`,
+      `From: Contacto Liceo JHJ <${smtpUser}>`,
       `To: ${para}`,
       `Subject: Tu acceso al Sistema de Inventario Liceo`,
       `MIME-Version: 1.0`,
@@ -228,7 +230,7 @@ async function enviarEmailSMTP({
         body: JSON.stringify({
           api_key: smtp2goKey,
           to: [para],
-          sender: `Inventario Liceo <${smtpUser}>`,
+          sender: `Contacto Liceo JHJ <${smtpUser}>`,
           subject: "Tu acceso al Sistema de Inventario Liceo",
           html_body: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
         }),
