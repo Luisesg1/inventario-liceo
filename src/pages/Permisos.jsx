@@ -67,6 +67,18 @@ const TIPO_STYLE = {
   cometido:               { bg: 'rgba(124,58,237,0.08)', color: '#7c3aed', icon: '🏫' },
 }
 
+// Devuelve el ícono Lucide correspondiente a cada tipo de ausencia para las KPI cards
+function tipoCardIcon(tipo) {
+  const map = {
+    licencia_medica:        <AlertTriangle size={16} strokeWidth={2} />,
+    permiso_administrativo: <CalendarCheck size={16} strokeWidth={2} />,
+    justificativo:          <AlertCircle size={16} strokeWidth={2} />,
+    dias_compensatorios:    <Gift size={16} strokeWidth={2} />,
+    cometido:               <Building2 size={16} strokeWidth={2} />,
+  }
+  return map[tipo] ?? <CalendarRange size={16} strokeWidth={2} />
+}
+
 const JORNADAS = [
   { value: 'medio_dia',     label: 'Medio día' },
   { value: 'dia_completo',  label: 'Día completo' },
@@ -2053,7 +2065,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const [filtroTipo,      setFiltroTipo]      = useState('')
   const [filtroRol,       setFiltroRol]       = useState('')
   const [filtroEstado,    setFiltroEstado]    = useState('')
-  const [cardActiva,      setCardActiva]      = useState(null) // null | 'hoy' | 'permiso_admin' | 'sin_justificar'
+  const [cardActiva,      setCardActiva]      = useState(null) // null | 'hoy' | tipo de ausencia (valor de TIPOS_PERMISO)
   const [expandidos,      setExpandidos]      = useState(new Set()) // keys de grupos abiertos
   const [paginaP,         setPaginaP]         = useState(1)
   const [seleccionados,   setSeleccionados]   = useState(new Set()) // IDs de ausencias seleccionadas para exportar
@@ -2668,39 +2680,13 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }
   const fechaHoyCorta = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long' })
 
-  // Conteos para KPI cards (período seleccionado, personas únicas por RUT)
-  const conteoPermisoAdmin = (() => {
-    const set = new Set()
-    permisosDelAño.forEach(p => {
-      if (p.tipo !== 'permiso_administrativo') return
-      const u = resolveUser(p)
-      if (!u) return
-      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
-    })
-    return set.size
-  })()
-
-  const conteoSinJustificar = (() => {
-    const set = new Set()
-    permisosDelAño.forEach(p => {
-      if (p.tipo !== 'justificativo') return
-      const u = resolveUser(p)
-      if (!u) return
-      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
-    })
-    return set.size
-  })()
-
-  const conteoCometidos = (() => {
-    const set = new Set()
-    permisosDelAño.forEach(p => {
-      if (p.tipo !== 'cometido') return
-      const u = resolveUser(p)
-      if (!u) return
-      set.add(u.rut ? normRut(u.rut) : (u.id ?? u.nombre))
-    })
-    return set.size
-  })()
+  // Personas únicas por tipo con ausencia activa HOY (independiente del año seleccionado)
+  const conteosPorTipoHoy = Object.fromEntries(
+    TIPOS_PERMISO.map(t => [
+      t.value,
+      personasHoyDe(permisos.filter(p => p.tipo === t.value)),
+    ])
+  )
 
   // ── Stats por RUT (año seleccionado, renovación automática anual) ───────────
   const userStatsMap = (() => {
@@ -2748,10 +2734,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       if (filtroEstado === 'activa'  && !(p.fecha_inicio <= hoy && p.fecha_fin >= hoy))    return false
       if (filtroEstado === 'pasada'  && !(p.fecha_fin < hoy))                              return false
     }
-    if (cardActiva === 'hoy'           && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr)) return false
-    if (cardActiva === 'permiso_admin' && p.tipo !== 'permiso_administrativo')                  return false
-    if (cardActiva === 'sin_justificar'&& p.tipo !== 'justificativo')                           return false
-    if (cardActiva === 'cometido'      && p.tipo !== 'cometido')                                return false
+    if (cardActiva === 'hoy' && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr)) return false
+    if (cardActiva && cardActiva !== 'hoy' && p.tipo !== cardActiva)                 return false
     return true
   })
 
@@ -2875,10 +2859,11 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         </div>
       </div>
 
-      {/* ── KPI Cards — solo en Gestión de ausencias ── */}
-      {!modoMisAusencias && !cargando && permisos.length > 0 && (
+      {/* ── KPI Cards — solo en Gestión de ausencias, siempre visibles ── */}
+      {!modoMisAusencias && !cargando && (
         <div className="aus-stats-grid">
           {[
+            // Tarjeta total: personas únicas ausentes hoy (sin duplicar)
             {
               id: 'hoy',
               label: ausentesHoy === 1 ? 'Persona ausente hoy' : 'Personas ausentes hoy',
@@ -2889,39 +2874,22 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               iconColor: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
               valueColor: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
             },
-            {
-              id: 'permiso_admin',
-              label: 'Con permiso administrativo',
-              value: conteoPermisoAdmin,
-              sub: conteoPermisoAdmin === 0
-                ? `Sin registros en ${añoSeleccionado}`
-                : `${conteoPermisoAdmin === 1 ? '1 persona' : `${conteoPermisoAdmin} personas`} en ${añoSeleccionado}`,
-              icon: <CalendarCheck size={16} strokeWidth={2} />,
-              iconBg: 'rgba(133,77,14,0.10)',
-              iconColor: '#854d0e',
-            },
-            {
-              id: 'sin_justificar',
-              label: 'Sin justificar',
-              value: conteoSinJustificar,
-              sub: conteoSinJustificar === 0
-                ? `Sin registros en ${añoSeleccionado}`
-                : `${conteoSinJustificar === 1 ? '1 persona' : `${conteoSinJustificar} personas`} en ${añoSeleccionado}`,
-              icon: <AlertCircle size={16} strokeWidth={2} />,
-              iconBg: 'rgba(14,116,144,0.10)',
-              iconColor: '#0e7490',
-            },
-            {
-              id: 'cometido',
-              label: 'Cometidos institucionales',
-              value: conteoCometidos,
-              sub: conteoCometidos === 0
-                ? `Sin registros en ${añoSeleccionado}`
-                : `${conteoCometidos === 1 ? '1 persona' : `${conteoCometidos} personas`} en ${añoSeleccionado}`,
-              icon: <Building2 size={16} strokeWidth={2} />,
-              iconBg: 'rgba(124,58,237,0.10)',
-              iconColor: '#7c3aed',
-            },
+            // Tarjeta dinámica por cada tipo de ausencia configurado en el sistema
+            ...TIPOS_PERMISO.map(t => {
+              const count = conteosPorTipoHoy[t.value] ?? 0
+              const style = TIPO_STYLE[t.value] ?? { bg: 'rgba(100,116,139,0.10)', color: '#475569' }
+              return {
+                id: t.value,
+                label: t.label,
+                value: count,
+                sub: count === 0
+                  ? 'Nadie ausente hoy'
+                  : `${count === 1 ? '1 persona' : `${count} personas`} ausente${count === 1 ? '' : 's'} hoy`,
+                icon: tipoCardIcon(t.value),
+                iconBg: style.bg,
+                iconColor: style.color,
+              }
+            }),
           ].map((s, i) => {
             const activa = cardActiva === s.id
             return (
