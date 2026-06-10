@@ -2874,21 +2874,20 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               iconColor: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
               valueColor: ausentesHoy === 0 ? '#16a34a' : '#dc2626',
             },
-            // Tarjeta dinámica por cada tipo de ausencia configurado en el sistema
-            ...TIPOS_PERMISO.map(t => {
+            // Tarjeta dinámica solo para tipos con ausencias activas hoy (ocultar si count === 0)
+            ...TIPOS_PERMISO.flatMap(t => {
               const count = conteosPorTipoHoy[t.value] ?? 0
+              if (count === 0) return []
               const style = TIPO_STYLE[t.value] ?? { bg: 'rgba(100,116,139,0.10)', color: '#475569' }
-              return {
+              return [{
                 id: t.value,
                 label: t.label,
                 value: count,
-                sub: count === 0
-                  ? 'Nadie ausente hoy'
-                  : `${count === 1 ? '1 persona' : `${count} personas`} ausente${count === 1 ? '' : 's'} hoy`,
+                sub: `${count === 1 ? '1 persona' : `${count} personas`} ausente${count === 1 ? '' : 's'} hoy`,
                 icon: tipoCardIcon(t.value),
                 iconBg: style.bg,
                 iconColor: style.color,
-              }
+              }]
             }),
           ].map((s, i) => {
             const activa = cardActiva === s.id
