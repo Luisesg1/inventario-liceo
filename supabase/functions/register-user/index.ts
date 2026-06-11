@@ -42,9 +42,31 @@ serve(async (req) => {
     if (!nombre || !email || !password) return json({ ok: true })
 
     // 2. Crear usuario en Supabase Auth
+    // Antes de crear, verificar si el email ya existe en auth pero NO en usuarios
+    // (caso: usuario borrado manualmente desde la tabla usuarios sin borrar el auth entry)
     const nombreCompleto = `${nombre.trim()} ${(apellidos ?? '').trim()}`.trim()
+    const emailNorm = email.trim().toLowerCase()
+
+    const { data: { users: existentes } } = await admin.auth.admin.listUsers()
+    const authExistente = existentes?.find(u => u.email?.toLowerCase() === emailNorm)
+    if (authExistente) {
+      // Verificar si tiene fila en usuarios
+      const { data: usuarioExistente } = await admin
+        .from('usuarios')
+        .select('id')
+        .eq('id', authExistente.id)
+        .maybeSingle()
+      if (usuarioExistente) {
+        // Cuenta completamente registrada — no permitir duplicado
+        return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
+      }
+      // Auth huérfano (se borró la fila de usuarios pero quedó el auth entry) — limpiarlo
+      await admin.auth.admin.deleteUser(authExistente.id)
+      await new Promise(r => setTimeout(r, 400))
+    }
+
     const { data: authData, error: createError } = await admin.auth.admin.createUser({
-      email: email.trim(),
+      email: emailNorm,
       password: password,
       email_confirm: true,
       user_metadata: { nombre: nombreCompleto, rut: rut?.trim() ?? null, via_invitacion: 'true' },
