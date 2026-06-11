@@ -42,28 +42,8 @@ serve(async (req) => {
     if (!nombre || !email || !password) return json({ ok: true })
 
     // 2. Crear usuario en Supabase Auth
-    // Antes de crear, verificar si el email ya existe en auth pero NO en usuarios
-    // (caso: usuario borrado manualmente desde la tabla usuarios sin borrar el auth entry)
     const nombreCompleto = `${nombre.trim()} ${(apellidos ?? '').trim()}`.trim()
     const emailNorm = email.trim().toLowerCase()
-
-    const { data: { users: existentes } } = await admin.auth.admin.listUsers()
-    const authExistente = existentes?.find(u => u.email?.toLowerCase() === emailNorm)
-    if (authExistente) {
-      // Verificar si tiene fila en usuarios
-      const { data: usuarioExistente } = await admin
-        .from('usuarios')
-        .select('id')
-        .eq('id', authExistente.id)
-        .maybeSingle()
-      if (usuarioExistente) {
-        // Cuenta completamente registrada — no permitir duplicado
-        return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
-      }
-      // Auth huérfano (se borró la fila de usuarios pero quedó el auth entry) — limpiarlo
-      await admin.auth.admin.deleteUser(authExistente.id)
-      await new Promise(r => setTimeout(r, 400))
-    }
 
     const { data: authData, error: createError } = await admin.auth.admin.createUser({
       email: emailNorm,
@@ -74,10 +54,41 @@ serve(async (req) => {
 
     if (createError || !authData.user) {
       const msg = createError?.message ?? ''
-      const traducido = msg.includes('already been registered') || msg.includes('already registered')
-        ? 'Ya existe una cuenta con ese correo electrónico.'
-        : 'Error al crear la cuenta: ' + msg
-      return json({ error: traducido }, 400)
+      const esYaRegistrado = msg.includes('already been registered') || msg.includes('already registered')
+      if (!esYaRegistrado) {
+        return json({ error: 'Error al crear la cuenta: ' + msg }, 400)
+      }
+      // Email existe en auth — verificar si también existe en la tabla usuarios
+      const { data: usuarioExistente } = await admin
+        .from('usuarios')
+        .select('id')
+        .eq('email', emailNorm)
+        .maybeSingle()
+      if (usuarioExistente) {
+        // Cuenta completamente activa — no permitir duplicado
+        return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
+      }
+      // Auth huérfano: fila de usuarios fue borrada pero el auth entry quedó
+      // (ocurre si eliminar-usuario falló a mitad de camino en una versión anterior)
+      // Buscamos el auth ID por email para poder borrarlo
+      const { data: { users: pagina } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const authHuerfano = pagina?.find(u => u.email?.toLowerCase() === emailNorm)
+      if (authHuerfano) {
+        await admin.auth.admin.deleteUser(authHuerfano.id)
+        await new Promise(r => setTimeout(r, 500))
+      }
+      // Reintentar creación
+      const { data: authData2, error: createError2 } = await admin.auth.admin.createUser({
+        email: emailNorm,
+        password: password,
+        email_confirm: true,
+        user_metadata: { nombre: nombreCompleto, rut: rut?.trim() ?? null, via_invitacion: 'true' },
+      })
+      if (createError2 || !authData2.user) {
+        return json({ error: 'Error al crear la cuenta: ' + (createError2?.message ?? '') }, 400)
+      }
+      // Continuar con el auth recién creado
+      Object.assign(authData, authData2)
     }
 
     const userId = authData.user.id
