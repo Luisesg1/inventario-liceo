@@ -60,22 +60,18 @@ const PERMISOS_DEFAULT_ROL = {
   docente: {
     ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
     ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
   },
   coordinador: {
     ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
     ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
   },
   asistente: {
     ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
     ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
   },
   administrativo: {
     ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
     ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
   },
   soporte: {
     ver_tickets: true, crear_ticket: true, editar_ticket: true,

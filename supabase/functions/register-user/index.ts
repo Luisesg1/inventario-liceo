@@ -141,8 +141,8 @@ serve(async (req) => {
       ver_propias_ausencias: true, exportar_ausencias: true,
       ver_ausencias: false, crear_ausencias: false, editar_ausencias: false,
       eliminar_ausencias: false, aprobar_ausencias: false,
-      // Ajustes
-      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+      // Ajustes — sin acceso para docentes
+      gestionar_ajustes: false, ver_ajustes: false, guardar_cambios_ajustes: false,
       // Sin acceso al resto
       ver_requerimientos: false, crear_requerimiento: false, editar_requerimiento: false,
       eliminar_requerimiento: false, importar_requerimientos: false,
