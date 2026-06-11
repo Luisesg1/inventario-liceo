@@ -68,14 +68,12 @@ serve(async (req) => {
         // Cuenta completamente activa — no permitir duplicado
         return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
       }
-      // Auth huérfano: fila de usuarios fue borrada pero el auth entry quedó
-      // (ocurre si eliminar-usuario falló a mitad de camino en una versión anterior)
-      // Buscamos el auth ID por email para poder borrarlo
-      const { data: { users: pagina } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const authHuerfano = pagina?.find(u => u.email?.toLowerCase() === emailNorm)
-      if (authHuerfano) {
-        await admin.auth.admin.deleteUser(authHuerfano.id)
-        await new Promise(r => setTimeout(r, 500))
+      // Auth huérfano: fila de usuarios fue borrada pero el auth entry quedó.
+      // Buscar el ID en auth.users via función SQL (más confiable que listUsers paginado)
+      const { data: authHuerfanoId } = await admin.rpc('get_auth_user_id_by_email', { user_email: emailNorm })
+      if (authHuerfanoId) {
+        await admin.auth.admin.deleteUser(authHuerfanoId)
+        await new Promise(r => setTimeout(r, 600))
       }
       // Reintentar creación
       const { data: authData2, error: createError2 } = await admin.auth.admin.createUser({
@@ -85,7 +83,7 @@ serve(async (req) => {
         user_metadata: { nombre: nombreCompleto, rut: rut?.trim() ?? null, via_invitacion: 'true' },
       })
       if (createError2 || !authData2.user) {
-        return json({ error: 'Error al crear la cuenta: ' + (createError2?.message ?? '') }, 400)
+        return json({ error: 'Error al crear la cuenta. Si el problema persiste, contacta al administrador. (' + (createError2?.message ?? 'reintento fallido') + ')' }, 400)
       }
       // Continuar con el auth recién creado
       Object.assign(authData, authData2)
