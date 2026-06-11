@@ -158,9 +158,10 @@ export default function App() {
     aprobar:         rolPermiteAusencias && (esAdmin || !!p.aprobar_ausencias),
     exportar:        rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias),
     verAuditoria:    rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos),
-    invitarUsuario:  esAdmin || !!p.invitar_usuario,
-    editarUsuario:   esAdmin || !!p.editar_usuario,
-    eliminarUsuario: esAdmin || !!p.eliminar_usuario,
+    invitarUsuario:      esAdmin || !!p.invitar_usuario,
+    editarUsuario:       esAdmin || !!p.editar_usuario,
+    eliminarUsuario:     esAdmin || !!p.eliminar_usuario,
+    verHistorialUsuarios: esAdmin || !!p.ver_historial_usuarios,
   }
   const permisosComp = {
     ver:          esAdmin || !!p.ver_compensatorios,

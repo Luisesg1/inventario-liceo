@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Usuarios.css'
 import ModalImportarUsuarios from './ModalImportarUsuarios'
+import HistorialUsuario from './HistorialUsuario'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
 const REQUISITOS_PASS = [
@@ -88,6 +89,7 @@ const ACCIONES = [
   { key: 'editar_roles_permisos',   label: 'Editar roles/permisos',       labelCorto: 'Editar roles',desc: 'Permite modificar los roles y permisos asignados a los usuarios.' },
   { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
   { key: 'gestionar_roles',         label: 'Gestionar roles del sistema', labelCorto: 'Roles',       desc: 'Permite administrar los permisos predeterminados de cada rol desde el Mantenedor de Roles.' },
+  { key: 'ver_historial_usuarios',  label: 'Ver historial de usuarios',  labelCorto: 'Historial',   desc: 'Permite ver el historial completo de actividad, tickets, ausencias e inventario de cada usuario.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -130,7 +132,7 @@ const GRUPOS_PERMISOS = [
   {
     key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
     descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
-    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles'],
+    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles', 'ver_historial_usuarios'],
   },
 ]
 
@@ -1224,11 +1226,12 @@ const cardVariants = {
 // Componente principal
 // ══════════════════════════════════════════════════════════════════════════
 export default function Usuarios({ usuario, permisosAdmin = {} }) {
-  const shouldReduce    = useReducedMotion()
-  const esAdminReal     = usuario.rol === 'admin'
-  const puedeInvitar    = esAdminReal || !!permisosAdmin.invitarUsuario
-  const puedeEditar     = esAdminReal || !!permisosAdmin.editarUsuario
-  const puedeEliminar   = esAdminReal || !!permisosAdmin.eliminarUsuario
+  const shouldReduce      = useReducedMotion()
+  const esAdminReal       = usuario.rol === 'admin'
+  const puedeInvitar      = esAdminReal || !!permisosAdmin.invitarUsuario
+  const puedeEditar       = esAdminReal || !!permisosAdmin.editarUsuario
+  const puedeEliminar     = esAdminReal || !!permisosAdmin.eliminarUsuario
+  const puedeVerHistorial = esAdminReal || !!permisosAdmin.verHistorialUsuarios
 
   const [usuarios, setUsuarios] = useState([])
   const [estado, setEstado]     = useState('cargando')
@@ -1730,8 +1733,9 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           const colores     = ROL_COLORES[u.rol] ?? ROL_COLORES.encargado
           const eliminando  = eliminandoId === u.id
           const confirmando = confirmandoId === u.id
-          const editando    = panelActivo?.id === u.id && panelActivo?.modo === 'editar'
-          const permisosOpen= panelActivo?.id === u.id && panelActivo?.modo === 'permisos'
+          const editando      = panelActivo?.id === u.id && panelActivo?.modo === 'editar'
+          const permisosOpen  = panelActivo?.id === u.id && panelActivo?.modo === 'permisos'
+          const historialOpen = panelActivo?.id === u.id && panelActivo?.modo === 'historial'
 
           return (
             <motion.div
@@ -1742,9 +1746,9 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               transition={{ delay: shouldReduce ? 0 : _idx * 0.04 }}
               style={{
                 borderRadius: 10, overflow: 'hidden',
-                border: `1px solid ${(permisosOpen || editando) ? 'rgba(212,160,23,0.5)' : '#e5e7eb'}`,
+                border: `1px solid ${(permisosOpen || editando) ? 'rgba(212,160,23,0.5)' : historialOpen ? 'rgba(99,102,241,0.4)' : '#e5e7eb'}`,
                 background: '#fff',
-                boxShadow: (editando || permisosOpen) ? '0 4px 16px rgba(212,160,23,0.1)' : undefined,
+                boxShadow: (editando || permisosOpen) ? '0 4px 16px rgba(212,160,23,0.1)' : historialOpen ? '0 4px 16px rgba(99,102,241,0.1)' : undefined,
                 transition: 'border-color 0.2s, box-shadow 0.2s',
               }}
             >
@@ -1825,6 +1829,18 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                     )}
                     {!esYo && (
                       <>
+                        {puedeVerHistorial && (
+                          <motion.button title="Historial de usuario" onClick={() => togglePanel(u.id, 'historial')}
+                            whileHover={shouldReduce ? {} : { scale: 1.1 }}
+                            whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                            style={{
+                              background: historialOpen ? '#eff6ff' : 'none',
+                              border: `1px solid ${historialOpen ? 'rgba(99,102,241,0.5)' : '#e5e7eb'}`,
+                              color: historialOpen ? '#4338ca' : '#9ca3af',
+                              borderRadius: 6, padding: '5px 9px',
+                              fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+                            }}>📋</motion.button>
+                        )}
                         {esAdminReal && (
                           <motion.button title="Permisos" onClick={() => togglePanel(u.id, 'permisos')}
                             whileHover={shouldReduce ? {} : { scale: 1.1 }}
@@ -1861,6 +1877,14 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                   </div>
                 )}
               </div>
+
+              {/* Panel historial */}
+              {historialOpen && (
+                <HistorialUsuario
+                  usuario={u}
+                  onCerrar={() => setPanelActivo(null)}
+                />
+              )}
 
               {/* Panel editar */}
               {editando && (
