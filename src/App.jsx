@@ -54,6 +54,43 @@ const PAGINA_A_RUTA = {
   mantenedor_roles:         '/ajustes/roles',
 }
 
+// Permisos mínimos por rol — usado como fallback cuando la BD no devuelve datos
+// (usuario recién registrado antes de que el trigger/función persistan los permisos)
+const PERMISOS_DEFAULT_ROL = {
+  docente: {
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  },
+  coordinador: {
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  },
+  asistente: {
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  },
+  administrativo: {
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  },
+  soporte: {
+    ver_tickets: true, crear_ticket: true, editar_ticket: true,
+    gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
+    ver_propias_ausencias: true, exportar_ausencias: true,
+    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+  },
+  directivo: {
+    ver_inventario: true, agregar_bien: true, editar_bien: true,
+    importar_csv: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true,
+    ver_auditoria_inventario: true,
+  },
+  visor_requerimientos: { ver_tickets: true },
+}
+
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -355,7 +392,11 @@ export default function App() {
       // Herencia: permisos del rol como base, permisos individuales del usuario como override
       const permisosBase      = rp?.permisos ?? {}
       const permisosPersonales = pd?.permisos ?? {}
-      setPermisosUsuario({ ...permisosBase, ...permisosPersonales })
+      const merged = { ...permisosBase, ...permisosPersonales }
+      // Fallback: si la BD no devolvió ningún permiso (usuario recién creado o migración pendiente),
+      // usar los defaults del rol para que el menú sea funcional de inmediato
+      const tienePermisos = Object.keys(merged).length > 0
+      setPermisosUsuario(tienePermisos ? merged : (PERMISOS_DEFAULT_ROL[data.rol] ?? {}))
     } else {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true, gestionar_tickets: true })
     }
