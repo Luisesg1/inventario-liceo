@@ -22,7 +22,10 @@ serve(async (req) => {
       rut?: string; email?: string; password?: string
     }
 
-    if (!codigo?.trim()) return json({ error: 'Código requerido' }, 400)
+    if (!codigo?.trim()) {
+      console.log('[400] codigo vacío')
+      return json({ error: 'Código requerido' }, 400)
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -35,8 +38,14 @@ serve(async (req) => {
       .eq('clave', 'codigo_invitacion')
       .single()
 
-    if (cfgError || !cfg) return json({ error: 'Error de configuración' }, 500)
-    if (codigo.trim() !== cfg.valor.trim()) return json({ error: 'Código de invitación incorrecto' }, 400)
+    if (cfgError || !cfg) {
+      console.error('[500] config error:', cfgError?.message)
+      return json({ error: 'Error de configuración' }, 500)
+    }
+    if (codigo.trim() !== cfg.valor.trim()) {
+      console.log('[400] código incorrecto — recibido:', JSON.stringify(codigo.trim()), '/ esperado:', JSON.stringify(cfg.valor.trim()))
+      return json({ error: 'Código de invitación incorrecto' }, 400)
+    }
 
     // Solo validar código — si no vienen los demás datos, retornar OK (modo legacy)
     if (!nombre || !email || !password) return json({ ok: true })
@@ -44,6 +53,8 @@ serve(async (req) => {
     // 2. Crear usuario en Supabase Auth
     const nombreCompleto = `${nombre.trim()} ${(apellidos ?? '').trim()}`.trim()
     const emailNorm = email.trim().toLowerCase()
+
+    console.log('[info] creando auth user para:', emailNorm)
 
     const { data: authData, error: createError } = await admin.auth.admin.createUser({
       email: emailNorm,
@@ -54,8 +65,10 @@ serve(async (req) => {
 
     if (createError || !authData.user) {
       const msg = createError?.message ?? ''
+      console.error('[auth] createUser falló:', msg)
       const esYaRegistrado = msg.includes('already been registered') || msg.includes('already registered')
       if (!esYaRegistrado) {
+        console.error('[400] error no esperado de createUser:', msg)
         return json({ error: 'Error al crear la cuenta: ' + msg }, 400)
       }
       // Email existe en auth — verificar si también existe en la tabla usuarios
@@ -65,14 +78,16 @@ serve(async (req) => {
         .eq('email', emailNorm)
         .maybeSingle()
       if (usuarioExistente) {
-        // Cuenta completamente activa — no permitir duplicado
+        console.log('[400] cuenta activa duplicada para:', emailNorm)
         return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
       }
-      // Auth huérfano: fila de usuarios fue borrada pero el auth entry quedó.
-      // Buscar el ID en auth.users via función SQL (más confiable que listUsers paginado)
-      const { data: authHuerfanoId } = await admin.rpc('get_auth_user_id_by_email', { user_email: emailNorm })
+      // Auth huérfano: buscar ID via SQL y eliminar
+      console.log('[info] buscando auth huérfano para:', emailNorm)
+      const { data: authHuerfanoId, error: rpcErr } = await admin.rpc('get_auth_user_id_by_email', { user_email: emailNorm })
+      console.log('[info] auth huérfano ID:', authHuerfanoId, 'rpcErr:', rpcErr?.message)
       if (authHuerfanoId) {
-        await admin.auth.admin.deleteUser(authHuerfanoId)
+        const { error: delErr } = await admin.auth.admin.deleteUser(authHuerfanoId)
+        console.log('[info] delete auth huérfano:', delErr?.message ?? 'ok')
         await new Promise(r => setTimeout(r, 600))
       }
       // Reintentar creación
@@ -83,9 +98,10 @@ serve(async (req) => {
         user_metadata: { nombre: nombreCompleto, rut: rut?.trim() ?? null, via_invitacion: 'true' },
       })
       if (createError2 || !authData2.user) {
-        return json({ error: 'Error al crear la cuenta. Si el problema persiste, contacta al administrador. (' + (createError2?.message ?? 'reintento fallido') + ')' }, 400)
+        console.error('[400] reintento falló:', createError2?.message)
+        return json({ error: 'Error al crear la cuenta. (' + (createError2?.message ?? 'reintento fallido') + ')' }, 400)
       }
-      // Continuar con el auth recién creado
+      console.log('[info] reintento exitoso, nuevo userId:', authData2.user.id)
       Object.assign(authData, authData2)
     }
 
