@@ -1198,8 +1198,8 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
           onClose={() => setModalCat(null)}
           onSave={handleGuardarCat}
         />
-      )}
-
+      )} 
+ 
       {editingCustomField && (
         <EditFieldModal
           campo={editingCustomField}
