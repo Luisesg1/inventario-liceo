@@ -3033,18 +3033,26 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
             </select>
           )}
           {/* Filtro por rango de fechas */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 0,
+            border: `1px solid ${filtroFechaDesde || filtroFechaHasta ? '#6366f1' : '#e2e8f0'}`,
+            borderRadius: 8, background: '#f8fafc', overflow: 'hidden',
+            transition: 'border-color 0.15s',
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', paddingLeft: 9, color: filtroFechaDesde || filtroFechaHasta ? '#6366f1' : '#94a3b8', flexShrink: 0 }}>
+              <CalendarRange size={13} strokeWidth={2.2} />
+            </span>
             <input
               type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
               title="Desde"
-              style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: filtroFechaDesde ? '#374151' : '#94a3b8', background: '#f8fafc', cursor: 'pointer' }}
+              style={{ padding: '6px 6px 6px 6px', border: 'none', fontSize: 13, color: filtroFechaDesde ? '#374151' : '#94a3b8', background: 'transparent', cursor: 'pointer', outline: 'none', width: 130 }}
             />
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
+            <span style={{ color: '#cbd5e1', fontSize: 11, padding: '0 2px', userSelect: 'none' }}>→</span>
             <input
               type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
               min={filtroFechaDesde || undefined}
               title="Hasta"
-              style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: filtroFechaHasta ? '#374151' : '#94a3b8', background: '#f8fafc', cursor: 'pointer' }}
+              style={{ padding: '6px 8px 6px 4px', border: 'none', fontSize: 13, color: filtroFechaHasta ? '#374151' : '#94a3b8', background: 'transparent', cursor: 'pointer', outline: 'none', width: 130 }}
             />
           </div>
           {(busqueda || filtroTipo || filtroRol || filtroEstado || filtroFechaDesde || filtroFechaHasta) && (
