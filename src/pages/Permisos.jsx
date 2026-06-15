@@ -3002,62 +3002,44 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         </div>
 
         {/* ── Buscador + Filtros ── */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: '1px solid #f1f5f9', alignItems: 'center' }}>
-          {/* Búsqueda: por nombre/RUT/email en gestión, por tipo/notas en Mis ausencias */}
-          <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 180 }}>
-            <Search size={13} strokeWidth={2.5}
-              style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+        <div className="aus-filtros-bar">
+          {/* Búsqueda */}
+          <div className="aus-filtros-busqueda">
+            <Search size={13} strokeWidth={2.5} className="aus-filtros-search-icon" />
             <input type="text" value={busqueda} onChange={e => setBusqueda(e.target.value)}
-              placeholder={modoMisAusencias ? 'Buscar por nombre, RUT, tipo o motivo…' : 'Buscar por nombre, RUT o email…'}
-              style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7, border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, outline: 'none', color: '#374151', background: '#f8fafc' }} />
+              placeholder={modoMisAusencias ? 'Buscar por nombre, RUT, tipo o motivo…' : 'Buscar por nombre, RUT o email…'} />
           </div>
-          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
-            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+          {/* Tipo */}
+          <select className="aus-filtros-select" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
             <option value="">Todos los tipos</option>
             {TIPOS_PERMISO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          {/* Filtro por estado temporal (pasada / activa / futura) */}
-          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
-            style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+          {/* Estado */}
+          <select className="aus-filtros-select" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
             <option value="">Todos los estados</option>
             <option value="activa">En curso</option>
             <option value="futura">Futura</option>
             <option value="pasada">Pasada</option>
           </select>
-          {/* Filtro por rol solo en modo gestión */}
+          {/* Rol — solo en modo gestión */}
           {!modoMisAusencias && (
-            <select value={filtroRol} onChange={e => setFiltroRol(e.target.value)}
-              style={{ padding: '7px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer' }}>
+            <select className="aus-filtros-select" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
               <option value="">Todos los roles</option>
               {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
           )}
-          {/* Filtro por rango de fechas */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 0,
-            border: `1px solid ${filtroFechaDesde || filtroFechaHasta ? '#6366f1' : '#e2e8f0'}`,
-            borderRadius: 8, background: '#f8fafc', overflow: 'hidden',
-            transition: 'border-color 0.15s',
-          }}>
-            <span style={{ display: 'flex', alignItems: 'center', paddingLeft: 9, color: filtroFechaDesde || filtroFechaHasta ? '#6366f1' : '#94a3b8', flexShrink: 0 }}>
+          {/* Rango de fechas */}
+          <div className={`aus-filtros-fecha${filtroFechaDesde || filtroFechaHasta ? ' aus-filtros-fecha--activo' : ''}`}>
+            <span className="aus-filtros-fecha__icon">
               <CalendarRange size={13} strokeWidth={2.2} />
             </span>
-            <input
-              type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
-              title="Desde"
-              style={{ padding: '6px 6px 6px 6px', border: 'none', fontSize: 13, color: filtroFechaDesde ? '#374151' : '#94a3b8', background: 'transparent', cursor: 'pointer', outline: 'none', width: 130 }}
-            />
-            <span style={{ color: '#cbd5e1', fontSize: 11, padding: '0 2px', userSelect: 'none' }}>→</span>
-            <input
-              type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
-              min={filtroFechaDesde || undefined}
-              title="Hasta"
-              style={{ padding: '6px 8px 6px 4px', border: 'none', fontSize: 13, color: filtroFechaHasta ? '#374151' : '#94a3b8', background: 'transparent', cursor: 'pointer', outline: 'none', width: 130 }}
-            />
+            <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)} title="Desde" />
+            <span className="aus-filtros-fecha__sep">→</span>
+            <input type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)} min={filtroFechaDesde || undefined} title="Hasta" />
           </div>
+          {/* Limpiar */}
           {(busqueda || filtroTipo || filtroRol || filtroEstado || filtroFechaDesde || filtroFechaHasta) && (
-            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol(''); setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
-              style={{ padding: '6px 10px', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button className="aus-filtros-limpiar" onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol(''); setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}>
               <X size={12} strokeWidth={2.5} /> Limpiar
             </button>
           )}
