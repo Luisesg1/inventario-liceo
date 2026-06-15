@@ -741,7 +741,6 @@
   position: relative;
   flex: 1 1 180px;
   min-width: 140px;
-  max-width: 320px;
 }
 .aus-filtros-busqueda input {
   width: 100%;
