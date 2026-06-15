@@ -159,9 +159,10 @@ function cambiosTexto(cambios) {
     .join('; ')
 }
 
-export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario', modulos }) {
+export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario', modulos, modoGeneral = false }) {
   const listaModulos  = modulos?.length ? modulos : [modulo]
   const [activeModulo, setActiveModulo] = useState(listaModulos[0])
+  const [filtroModulo, setFiltroModulo] = useState('')   // solo en modoGeneral
 
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
@@ -197,8 +198,20 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setFiltroAccion(''); setFiltroRol(''); setFiltroCat('')
     setFiltroDesde(''); setFiltroHasta('')
     setFiltroUsuario(''); setFiltroEstadoTicket('')
-    setPagina(0)
+    if (!modoGeneral) setPagina(0)
   }, [activeModulo])
+
+  useEffect(() => {
+    if (modoGeneral) {
+      setBuscadorVal(''); setBuscar('')
+      setFiltroAccion(''); setFiltroRol(''); setFiltroCat('')
+      setFiltroDesde(''); setFiltroHasta('')
+      setFiltroUsuario(''); setFiltroEstadoTicket('')
+      setFiltroModulo('')
+      setPagina(0)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoGeneral])
 
   // Cerrar menú exportar al hacer clic fuera
   useEffect(() => {
@@ -223,25 +236,30 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   const cargarResumen = useCallback(async () => {
     setResumen({})
     const counts = {}
+    const moduloFiltrado = modoGeneral ? (filtroModulo || null) : activeModulo
     await Promise.all(['crear', 'editar', 'eliminar'].map(async accion => {
-      const { count } = await supabase
+      let q = supabase
         .from('audit_logs')
         .select('*', { count: 'exact', head: true })
-        .eq('modulo', activeModulo)
         .eq('accion', accion)
+      if (moduloFiltrado) q = q.eq('modulo', moduloFiltrado)
+      else if (modoGeneral) q = q.in('modulo', listaModulos)
+      else q = q.eq('modulo', activeModulo)
+      const { count } = await q
       counts[accion] = count ?? 0
     }))
     setResumen(counts)
-  }, [activeModulo])
+  }, [activeModulo, modoGeneral, filtroModulo])
 
   useEffect(() => { cargarResumen() }, [cargarResumen])
 
-  const campoLabel = (campo) => {
-    if (activeModulo === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
-    if (activeModulo === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
-    if (activeModulo === 'ausencias')      return CAMPO_LABEL_AUSENCIAS[campo] ?? campo
-    if (activeModulo === 'tickets')        return CAMPO_LABEL_TICKETS[campo] ?? campo
-    if (activeModulo === 'compensatorios') return CAMPO_LABEL_COMPENSATORIOS[campo] ?? campo
+  const campoLabel = (campo, moduloLog) => {
+    const m = moduloLog ?? activeModulo
+    if (m === 'requerimientos') return CAMPO_LABEL_REQ[campo] ?? campo
+    if (m === 'permisos')       return CAMPO_LABEL_PERMISOS[campo] ?? campo
+    if (m === 'ausencias')      return CAMPO_LABEL_AUSENCIAS[campo] ?? campo
+    if (m === 'tickets')        return CAMPO_LABEL_TICKETS[campo] ?? campo
+    if (m === 'compensatorios') return CAMPO_LABEL_COMPENSATORIOS[campo] ?? campo
     return CAMPO_LABEL[campo] ?? campo
   }
 
@@ -257,7 +275,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   // Devuelve los IDs de tickets que tienen el estado indicado (solo para modulo=tickets)
   const resolverTicketIdsPorEstado = async (estado) => {
-    if (!estado || activeModulo !== 'tickets') return null
+    const moduloActivo = modoGeneral ? (filtroModulo || null) : activeModulo
+    if (!estado || moduloActivo !== 'tickets') return null
     const { data } = await supabase.from('tickets').select('id').eq('estado', estado)
     return (data ?? []).map(t => String(t.id))
   }
@@ -267,7 +286,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (filtroAccion)  q = q.eq('accion', filtroAccion)
     if (filtroRol)     q = q.eq('usuario_rol', filtroRol)
     if (filtroUsuario) q = q.eq('usuario_id', filtroUsuario)
-    if (activeModulo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
+    const moduloActivo = modoGeneral ? (filtroModulo || null) : activeModulo
+    if (moduloActivo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
     if (filtroDesde)   q = q.gte('creado_en', filtroDesde + 'T00:00:00')
     if (filtroHasta)   q = q.lte('creado_en', filtroHasta + 'T23:59:59')
     if (ticketIds !== null) {
@@ -289,9 +309,14 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     let q = supabase
       .from('audit_logs')
       .select('*', { count: 'exact' })
-      .eq('modulo', activeModulo)
       .order('creado_en', { ascending: false })
       .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
+    if (modoGeneral) {
+      if (filtroModulo) q = q.eq('modulo', filtroModulo)
+      else              q = q.in('modulo', listaModulos)
+    } else {
+      q = q.eq('modulo', activeModulo)
+    }
     q = aplicarFiltros(q, userIds, ticketIds)
     const { data, count, error } = await q
     if (error) { setErrorTabla(true); setCargando(false); return }
@@ -300,7 +325,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setTotal(count ?? 0)
     setCargando(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagina, filtroAccion, filtroRol, filtroUsuario, filtroCat, filtroDesde, filtroHasta, buscar, activeModulo, filtroEstadoTicket])
+  }, [pagina, filtroAccion, filtroRol, filtroUsuario, filtroCat, filtroDesde, filtroHasta, buscar, activeModulo, filtroEstadoTicket, modoGeneral, filtroModulo])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -318,6 +343,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     setFiltroDesde(''); setFiltroHasta('')
     setFiltroUsuario('')
     setFiltroEstadoTicket('')
+    setFiltroModulo('')
     setPagina(0)
   }
 
@@ -351,7 +377,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   const nombreArchivo = (ext) => {
     const fecha = new Date().toISOString().slice(0, 10)
-    return `auditoria_${activeModulo}_${fecha}.${ext}`
+    const sufijo = modoGeneral ? (filtroModulo || 'general') : activeModulo
+    return `auditoria_${sufijo}_${fecha}.${ext}`
   }
 
   // Obtiene TODOS los registros filtrados (sin paginación) y los enriquece con RUT/correo
@@ -361,9 +388,14 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     let q = supabase
       .from('audit_logs')
       .select('*')
-      .eq('modulo', activeModulo)
       .order('creado_en', { ascending: false })
       .limit(5000)
+    if (modoGeneral) {
+      if (filtroModulo) q = q.eq('modulo', filtroModulo)
+      else              q = q.in('modulo', listaModulos)
+    } else {
+      q = q.eq('modulo', activeModulo)
+    }
     q = aplicarFiltros(q, userIds, ticketIds)
     const { data: todos, error } = await q
     if (error || !todos) return []
@@ -506,7 +538,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   // ── Paginación / UI helpers ───────────────────────────────
 
   const totalPaginas = Math.ceil(total / POR_PAGINA)
-  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroUsuario || filtroCat || filtroDesde || filtroHasta || filtroEstadoTicket
+  const hayFiltros   = buscar || filtroAccion || filtroRol || filtroUsuario || filtroCat || filtroDesde || filtroHasta || filtroEstadoTicket || filtroModulo
   const agrupados    = agruparPorDia(logs)
 
   const bienesEliminados = useMemo(
@@ -525,8 +557,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   return (
     <div className="audit-wrap">
 
-      {/* ── Selector de módulo (tabs) — solo visible cuando hay más de uno ── */}
-      {listaModulos.length > 1 && (
+      {/* ── Selector de módulo (tabs) — solo en modo normal con más de un módulo ── */}
+      {!modoGeneral && listaModulos.length > 1 && (
         <div className="audit-tabs">
           {listaModulos.map(m => (
             <button
@@ -545,10 +577,14 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
         <div className="audit-header-accent" />
         <div className="audit-header-content">
           <h1 className="audit-header-title">
-            {MODULO_TITLE[activeModulo] ?? `Auditoría — ${MODULO_LABEL[activeModulo] ?? activeModulo}`}
+            {modoGeneral
+              ? 'Auditoría General'
+              : (MODULO_TITLE[activeModulo] ?? `Auditoría — ${MODULO_LABEL[activeModulo] ?? activeModulo}`)}
           </h1>
           <p className="audit-header-desc">
-            {MODULO_DESC[activeModulo] ?? 'Consulta y revisa todas las acciones del sistema.'}
+            {modoGeneral
+              ? 'Consulta y revisa todas las acciones de todos los módulos del sistema.'
+              : (MODULO_DESC[activeModulo] ?? 'Consulta y revisa todas las acciones del sistema.')}
           </p>
         </div>
       </div>
@@ -623,6 +659,20 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
         {/* Fila de filtros */}
         <div className="audit-filtros-grid">
+
+          {/* Filtro de módulo — solo en modo general */}
+          {modoGeneral && (
+            <select
+              className={`audit-select ${filtroModulo ? 'audit-select-active' : ''}`}
+              value={filtroModulo}
+              onChange={e => { setFiltroModulo(e.target.value); setPagina(0) }}
+            >
+              <option value="">🗂️ Todos los módulos</option>
+              {listaModulos.map(m => (
+                <option key={m} value={m}>{MODULO_LABEL[m] ?? m}</option>
+              ))}
+            </select>
+          )}
 
           {listaUsuarios.length > 0 && (
             <select
@@ -774,6 +824,11 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                              log.usuario_rol === 'editor' ? 'Editor'    : 'Encargado'}
                           </span>
                         )}
+                        {modoGeneral && log.modulo && (
+                          <span className="audit-modulo-badge">
+                            {MODULO_LABEL[log.modulo] ?? log.modulo}
+                          </span>
+                        )}
                         {log.categoria && (
                           <span
                             className={`audit-cat-tag ${onVerCategoria ? 'audit-cat-tag-link' : ''}`}
@@ -791,7 +846,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                       {cambios.length > 0 && !abierto && (
                         <div className="audit-item-chips">
                           {cambios.slice(0, 5).map(c => (
-                            <span key={c.campo} className="audit-field-chip">{campoLabel(c.campo)}</span>
+                            <span key={c.campo} className="audit-field-chip">{campoLabel(c.campo, log.modulo)}</span>
                           ))}
                           {cambios.length > 5 && (
                             <span className="audit-field-chip audit-field-chip-more">
@@ -826,13 +881,13 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                   {abierto && cambios.length > 0 && (
                     <div className="audit-cambios">
                       <p className="audit-cambios-title">
-                        {(activeModulo === 'ausencias' || activeModulo === 'compensatorios') && log.accion === 'crear'
+                        {(log.modulo === 'ausencias' || log.modulo === 'compensatorios' || activeModulo === 'ausencias' || activeModulo === 'compensatorios') && log.accion === 'crear'
                           ? 'Detalle'
                           : 'Campos modificados'}
                       </p>
                       {cambios.map((c, i) => (
                         <div key={i} className="audit-cambio-row">
-                          <span className="audit-campo-label">{campoLabel(c.campo)}</span>
+                          <span className="audit-campo-label">{campoLabel(c.campo, log.modulo)}</span>
                           <span className="audit-valor audit-valor-old" title={c.anterior ?? '—'}>
                             {c.anterior === true || c.anterior === 'true' ? 'Sí'
                               : c.anterior === false || c.anterior === 'false' ? 'No'
@@ -844,7 +899,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
                               : c.nuevo === false || c.nuevo === 'false' ? 'No'
                               : c.nuevo ?? '—'}
                           </span>
-                          {activeModulo === 'inventario' && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
+                          {(log.modulo === 'inventario' || activeModulo === 'inventario') && usuario.rol === 'admin' && c.anterior != null && log.bien_id && (
                             <button
                               className="audit-btn-restore"
                               onClick={e => { e.stopPropagation(); restaurarCampo(log.id, c.campo) }}
