@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, FileText, ChevronRight, X, LogOut,
-  Menu, Loader2, ShoppingCart, ShieldCheck,
+  Menu, Loader2, ShoppingCart, ShieldCheck, History,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -57,6 +57,7 @@ export default function Layout({
   puedeVerAuditoriaInventario = false,
   puedeVerInventario = false, puedeVerTickets = true, puedeGestionarTickets = false,
   puedeVerAuditoriaTickets = false,
+  puedeVerAuditoriaGeneral = false,
   puedeVerAusencias = false, puedeVerRequerimientos = false,
   puedeVerCompensatorios = false,
   puedeGestionarAusencias = false,
@@ -356,7 +357,8 @@ export default function Layout({
     compensatorios:           'Días Compensatorios',
     requerimientos:    'Requerimientos',
     tickets:           'Tickets',
-    auditoria_tickets: 'Auditoría de Tickets',
+    auditoria_tickets:  'Auditoría de Tickets',
+    auditoria_general:  'Auditoría General',
     ajustes:    'Personalizar',
     campos:     'Campos por categoría',
   }
@@ -697,6 +699,22 @@ export default function Layout({
               )}
             </AnimatePresence>
           </>}
+
+          {/* Auditoría General */}
+          {puedeVerAuditoriaGeneral && (
+            <motion.div
+              className={`nav-item ${paginaActual === 'auditoria_general' ? 'active' : ''}`}
+              onClick={() => handleNav('auditoria_general')}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <History size={15} strokeWidth={2} />
+              </span>
+              Auditoría General
+            </motion.div>
+          )}
 
           {/* Ajustes con submenú */}
           {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarRoles) && (

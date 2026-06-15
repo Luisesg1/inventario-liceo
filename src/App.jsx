@@ -30,6 +30,7 @@ const RUTA_A_PAGINA = {
   '/ausencias/gestion':        'permisos',
   '/ausencias/compensatorios': 'compensatorios',
   '/ausencias/auditoria':      'auditoria_permisos',
+  '/auditoria-general':        'auditoria_general',
   '/usuarios':                 'usuarios',
   '/ajustes':                  'ajustes',
   '/ajustes/campos':           'campos',
@@ -48,6 +49,7 @@ const PAGINA_A_RUTA = {
   permisos:                 '/ausencias/gestion',
   compensatorios:           '/ausencias/compensatorios',
   auditoria_permisos:       '/ausencias/auditoria',
+  auditoria_general:        '/auditoria-general',
   usuarios:                 '/usuarios',
   ajustes:                  '/ajustes',
   campos:                   '/ajustes/campos',
@@ -190,6 +192,8 @@ export default function App() {
     gestionarBase: esAdmin || !!p.gestionar_campos_base || !!p.gestionar_campos,
   }
 
+  const puedeVerAuditoriaGeneral = esAdmin
+
   const soloAdmin = (pagina === 'usuarios'         && !puedeAccederUsuarios)
     || (pagina === 'mantenedor_roles'             && !puedeGestionarRoles)
     || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
@@ -200,6 +204,7 @@ export default function App() {
     || (pagina === 'auditoria_requerimientos'    && !puedeVerAuditoriaReq)
     || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos && !puedeVerAuditoriaCompensatorios)
     || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
+    || (pagina === 'auditoria_general'           && !puedeVerAuditoriaGeneral)
     || (pagina === 'tickets'                     && !puedeVerTickets)
     || (pagina === 'requerimientos'              && !permisosReqs.ver)
     || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
@@ -438,6 +443,7 @@ export default function App() {
       puedeVerAuditoriaCompensatorios={puedeVerAuditoriaCompensatorios}
       puedeVerAuditoriaTickets={puedeVerAuditoriaTickets}
       puedeVerAuditoriaInventario={puedeVerAuditoriaInventario}
+      puedeVerAuditoriaGeneral={puedeVerAuditoriaGeneral}
       puedeVerInventario={puedeVerInventario}
       puedeVerTickets={puedeVerTickets}
       puedeGestionarTickets={puedeGestionarTickets}
@@ -461,6 +467,7 @@ export default function App() {
           ...(puedeVerAuditoriaCompensatorios  ? ['compensatorios'] : []),
         ]} />}
       {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
+      {paginaSegura === 'auditoria_general'        && <Auditoria usuario={usuario} modulos={['inventario','requerimientos','tickets','ausencias','compensatorios']} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
       {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
       {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
       {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
