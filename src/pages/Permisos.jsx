@@ -2062,9 +2062,11 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   const [eliminando,      setEliminando]      = useState(false)
   const [errorEliminar,   setErrorEliminar]   = useState('')
   const [busqueda,        setBusqueda]        = useState('')
-  const [filtroTipo,      setFiltroTipo]      = useState('')
-  const [filtroRol,       setFiltroRol]       = useState('')
-  const [filtroEstado,    setFiltroEstado]    = useState('')
+  const [filtroTipo,       setFiltroTipo]       = useState('')
+  const [filtroRol,        setFiltroRol]        = useState('')
+  const [filtroEstado,     setFiltroEstado]     = useState('')
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('')
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('')
   const [cardActiva,      setCardActiva]      = useState(null) // null | 'hoy' | tipo de ausencia (valor de TIPOS_PERMISO)
   const [expandidos,      setExpandidos]      = useState(new Set()) // keys de grupos abiertos
   const [paginaP,         setPaginaP]         = useState(1)
@@ -2107,7 +2109,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }, [])
 
   // Limpia selección al cambiar filtros o página
-  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, filtroEstado, paginaP, añoSeleccionado])
+  useEffect(() => { setSeleccionados(new Set()) }, [busqueda, filtroTipo, filtroRol, filtroEstado, filtroFechaDesde, filtroFechaHasta, paginaP, añoSeleccionado])
 
   useEffect(() => { cargarDatos(); cargarDiasInhabilitados() }, [])
 
@@ -2737,6 +2739,9 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     }
     if (cardActiva && !(p.fecha_inicio <= hoyStr && p.fecha_fin >= hoyStr))           return false
     if (cardActiva && cardActiva !== 'hoy' && p.tipo !== cardActiva)                 return false
+    // Filtro por rango de fechas: muestra ausencias que se solapan con el rango seleccionado
+    if (filtroFechaDesde && p.fecha_fin   < filtroFechaDesde) return false
+    if (filtroFechaHasta && p.fecha_inicio > filtroFechaHasta) return false
     return true
   })
 
@@ -3027,8 +3032,23 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
               {ROLES_ACTIVOS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
           )}
-          {(busqueda || filtroTipo || filtroRol || filtroEstado) && (
-            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol(''); setFiltroEstado('') }}
+          {/* Filtro por rango de fechas */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <input
+              type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
+              title="Desde"
+              style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: filtroFechaDesde ? '#374151' : '#94a3b8', background: '#f8fafc', cursor: 'pointer' }}
+            />
+            <span style={{ color: '#94a3b8', fontSize: 12 }}>—</span>
+            <input
+              type="date" value={filtroFechaHasta} onChange={e => setFiltroFechaHasta(e.target.value)}
+              min={filtroFechaDesde || undefined}
+              title="Hasta"
+              style={{ padding: '6px 8px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: filtroFechaHasta ? '#374151' : '#94a3b8', background: '#f8fafc', cursor: 'pointer' }}
+            />
+          </div>
+          {(busqueda || filtroTipo || filtroRol || filtroEstado || filtroFechaDesde || filtroFechaHasta) && (
+            <button onClick={() => { setBusqueda(''); setFiltroTipo(''); setFiltroRol(''); setFiltroEstado(''); setFiltroFechaDesde(''); setFiltroFechaHasta('') }}
               style={{ padding: '6px 10px', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, color: '#dc2626', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
               <X size={12} strokeWidth={2.5} /> Limpiar
             </button>
