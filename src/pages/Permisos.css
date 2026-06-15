@@ -5,7 +5,7 @@
 /* ── Página ─────────────────────────────────────────── */
 .permisos-page {
   padding: 28px 32px;
-  max-width: 1000px;
+  max-width: 1400px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -739,8 +739,9 @@
 
 .aus-filtros-busqueda {
   position: relative;
-  flex: 0 1 220px;
+  flex: 1 1 180px;
   min-width: 140px;
+  max-width: 320px;
 }
 .aus-filtros-busqueda input {
   width: 100%;
@@ -802,8 +803,8 @@
   flex-shrink: 0;
 }
 .aus-filtros-fecha input[type="date"] {
-  width: 115px;
-  padding: 6px 6px;
+  width: 122px;
+  padding: 6px 8px;
   border: none;
   font-size: 13px;
   background: transparent;
@@ -827,14 +828,15 @@
   white-space: nowrap;
 }
 
-/* Tablet: permitir wrap */
-@media (max-width: 900px) {
+/* Tablet: permitir wrap a partir de 1100px */
+@media (max-width: 1100px) {
   .aus-filtros-bar {
     flex-wrap: wrap;
     overflow-x: visible;
   }
   .aus-filtros-busqueda {
-    flex: 1 1 180px;
+    flex: 1 1 200px;
+    max-width: none;
   }
 }
 
