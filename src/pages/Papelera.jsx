@@ -8,6 +8,19 @@ import {
 } from 'lucide-react'
 import { supabase } from '../supabase'
 
+// ── Configuración de conflictos por tabla ─────────────────────────────────
+const RESTORE_CONFIG = {
+  bienes:             { nombreField: 'nombre', uniqueFields: [] },
+  tickets:            { nombreField: 'titulo', uniqueFields: [] },
+  usuarios:           { nombreField: 'nombre', uniqueFields: [
+    { field: 'email', label: 'Correo electrónico' },
+    { field: 'rut',   label: 'RUT' },
+  ]},
+  ausencias:          { nombreField: null, uniqueFields: [] },
+  requerimientos:     { nombreField: null, uniqueFields: [] },
+  dias_compensatorios:{ nombreField: null, uniqueFields: [] },
+}
+
 // ── Configuración por módulo ──────────────────────────────────────────────
 const MODULO_CONFIG = {
   inventario:     { label: 'Inventario',    Icon: Package2,    color: '#3b82f6', bg: '#eff6ff' },
@@ -94,16 +107,86 @@ export default function Papelera({ usuario, permisos = {} }) {
   const puedeRestaurar       = esAdmin || !!permisos.restaurar
   const puedeEliminarPerm    = esAdmin || !!permisos.eliminarPermanente
 
-  const [items,        setItems]        = useState([])
-  const [cargando,     setCargando]     = useState(true)
-  const [filtroModulo, setFiltroModulo] = useState('')
-  const [confirmacion, setConfirmacion] = useState(null) // { id, tabla, modulo, nombre, accion }
-  const [procesando,   setProcesando]   = useState(false)
-  const [aviso,        setAviso]        = useState(null) // { tipo: 'ok'|'error', msg }
+  const [items,          setItems]          = useState([])
+  const [cargando,       setCargando]       = useState(true)
+  const [filtroModulo,   setFiltroModulo]   = useState('')
+  const [confirmacion,   setConfirmacion]   = useState(null)
+  const [procesando,     setProcesando]     = useState(false)
+  const [aviso,          setAviso]          = useState(null)
+  const [verificando,    setVerificando]    = useState(null) // id+tabla del item que se está verificando
+  const [conflictoNombre,setConflictoNombre]= useState(null) // { item, nombreActual, nombreNuevo }
+  const [conflictoUnico, setConflictoUnico] = useState(null) // { item, campos:[{field,label,valor}] }
 
   const mostrarAviso = (tipo, msg) => {
     setAviso({ tipo, msg })
     setTimeout(() => setAviso(null), 4000)
+  }
+
+  // ── Helpers de conflictos ──────────────────────────────────────────────
+  async function calcularNombreRestaurado(tabla, field, nombreBase) {
+    const base = nombreBase.replace(/ \(Restaurado(?: \d+)?\)$/, '')
+    const { data } = await supabase
+      .from(tabla).select(field).eq('is_deleted', false).like(field, `${base} (Restaurado%`)
+    if (!data?.length) return `${base} (Restaurado)`
+    let maxN = 1
+    for (const r of data) {
+      const m = r[field]?.match(/\(Restaurado(?: (\d+))?\)$/)
+      if (m) { const n = m[1] ? parseInt(m[1]) : 1; if (n >= maxN) maxN = n + 1 }
+    }
+    return `${base} (Restaurado${maxN > 1 ? ' ' + maxN : ''})`
+  }
+
+  async function verificarConflictos(item) {
+    const cfg = RESTORE_CONFIG[item.tabla]
+    if (!cfg) return null
+
+    // Verificar campos únicos primero
+    if (cfg.uniqueFields.length) {
+      const fields = cfg.uniqueFields.map(f => f.field).join(',')
+      const { data: reg } = await supabase
+        .from(item.tabla).select(fields).eq('id', item.id).single()
+      if (reg) {
+        const conflictivos = []
+        for (const uf of cfg.uniqueFields) {
+          const val = reg[uf.field]
+          if (!val) continue
+          const { data: ex } = await supabase
+            .from(item.tabla).select('id').eq(uf.field, val).eq('is_deleted', false).limit(1)
+          if (ex?.length) conflictivos.push({ field: uf.field, label: uf.label, valor: val })
+        }
+        if (conflictivos.length) return { tipo: 'unico', campos: conflictivos }
+      }
+    }
+
+    // Verificar conflicto de nombre/título
+    if (cfg.nombreField) {
+      const { data: reg } = await supabase
+        .from(item.tabla).select(cfg.nombreField).eq('id', item.id).single()
+      const nombreActual = reg?.[cfg.nombreField]
+      if (nombreActual) {
+        const { data: ex } = await supabase
+          .from(item.tabla).select('id').eq(cfg.nombreField, nombreActual).eq('is_deleted', false).limit(1)
+        if (ex?.length) {
+          const nombreNuevo = await calcularNombreRestaurado(item.tabla, cfg.nombreField, nombreActual)
+          return { tipo: 'nombre', nombreActual, nombreNuevo }
+        }
+      }
+    }
+
+    return null
+  }
+
+  async function iniciarRestaurar(item) {
+    setVerificando(item.id + item.tabla)
+    const resultado = await verificarConflictos(item)
+    setVerificando(null)
+    if (resultado?.tipo === 'unico') {
+      setConflictoUnico({ item, campos: resultado.campos })
+    } else if (resultado?.tipo === 'nombre') {
+      setConflictoNombre({ item, nombreActual: resultado.nombreActual, nombreNuevo: resultado.nombreNuevo })
+    } else {
+      setConfirmacion({ ...item, accion: 'restaurar' })
+    }
   }
 
   const cargar = useCallback(async () => {
@@ -131,27 +214,34 @@ export default function Papelera({ usuario, permisos = {} }) {
   }, {})
 
   // ── Restaurar ────────────────────────────────────────────────────────────
-  async function restaurar(item) {
+  async function restaurar(item, nombreNuevo = null) {
     setProcesando(true)
+    const nombreAudit = nombreNuevo ?? item.nombre
 
     let error
     if (item.tabla === 'usuarios') {
-      // Restaurar usuario: desbanea en Auth vía RPC SECURITY DEFINER
       ;({ error } = await supabase.rpc('restaurar_usuario', {
-        p_id: item.id,
-        p_usuario_id: usuario.id,
-        p_usuario_nombre: usuario.nombre,
-        p_usuario_rol: usuario.rol,
+        p_id: item.id, p_usuario_id: usuario.id,
+        p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
       }))
+      if (!error && nombreNuevo) {
+        await supabase.from('usuarios').update({ nombre: nombreNuevo }).eq('id', item.id)
+      }
     } else {
       ;({ error } = await supabase
         .from(item.tabla)
         .update({ is_deleted: false, deleted_at: null, deleted_by: null, deleted_by_nombre: null })
         .eq('id', item.id))
 
+      if (!error && nombreNuevo) {
+        const cfg = RESTORE_CONFIG[item.tabla]
+        if (cfg?.nombreField) {
+          await supabase.from(item.tabla).update({ [cfg.nombreField]: nombreNuevo }).eq('id', item.id)
+        }
+      }
       if (!error) {
         supabase.rpc('log_accion_papelera', {
-          p_registro_id: item.id, p_nombre: item.nombre, p_accion: 'restaurado',
+          p_registro_id: item.id, p_nombre: nombreAudit, p_accion: 'restaurado',
           p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
           p_usuario_rol: usuario.rol, p_modulo: item.modulo,
         }).then(null, () => {})
@@ -162,13 +252,19 @@ export default function Papelera({ usuario, permisos = {} }) {
       mostrarAviso('error', 'Error al restaurar: ' + error.message)
       setProcesando(false)
       setConfirmacion(null)
+      setConflictoNombre(null)
+      setConflictoUnico(null)
       return
     }
 
     setItems(prev => prev.filter(i => i.id !== item.id || i.tabla !== item.tabla))
-    mostrarAviso('ok', 'Registro restaurado correctamente.')
+    mostrarAviso('ok', nombreNuevo
+      ? `Restaurado como "${nombreNuevo}".`
+      : 'Registro restaurado correctamente.')
     setProcesando(false)
     setConfirmacion(null)
+    setConflictoNombre(null)
+    setConflictoUnico(null)
   }
 
   // ── Eliminar permanentemente ─────────────────────────────────────────────
@@ -403,6 +499,113 @@ export default function Papelera({ usuario, permisos = {} }) {
         </p>
       </div>
 
+      {/* Modal: conflicto de nombre */}
+      <AnimatePresence>
+        {conflictoNombre && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => !procesando && setConflictoNombre(null)}>
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }} onClick={e => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 14, padding: '28px 28px 24px',
+                width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.20)' }}>
+              <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff7ed', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={20} color="#f97316" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 6 }}>
+                    Nombre duplicado
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>
+                    Ya existe un registro activo con el mismo nombre:
+                  </p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', margin: '6px 0 10px',
+                    padding: '6px 10px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    {conflictoNombre.nombreActual}
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.55, margin: '0 0 6px' }}>
+                    Si continúas, el registro restaurado se guardará como:
+                  </p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#0891b2', margin: 0,
+                    padding: '6px 10px', background: '#ecfeff', borderRadius: 6, border: '1px solid #a5f3fc' }}>
+                    {conflictoNombre.nombreNuevo}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setConflictoNombre(null)} disabled={procesando}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button onClick={() => restaurar(conflictoNombre.item, conflictoNombre.nombreNuevo)}
+                  disabled={procesando}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#3b82f6',
+                    color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6, opacity: procesando ? 0.7 : 1 }}>
+                  {procesando && <svg style={{ animation: 'spin 0.7s linear infinite' }} width={14} height={14} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/></svg>}
+                  Restaurar de todas formas
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: conflicto de campo único */}
+      <AnimatePresence>
+        {conflictoUnico && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 9100, background: 'rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => !procesando && setConflictoUnico(null)}>
+            <motion.div initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }} onClick={e => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 14, padding: '28px 28px 24px',
+                width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.20)' }}>
+              <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fef2f2', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={20} color="#dc2626" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 6 }}>
+                    Conflicto en campo único
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.55, margin: '0 0 12px' }}>
+                    No se puede restaurar porque ya existe un registro activo con el mismo valor en:
+                  </p>
+                  {conflictoUnico.campos.map(c => (
+                    <div key={c.field} style={{ marginBottom: 10,
+                      padding: '8px 12px', background: '#fef2f2', borderRadius: 8, border: '1px solid #fca5a5' }}>
+                      <p style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 600, color: '#991b1b' }}>
+                        {c.label}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 13, color: '#374151', fontFamily: 'monospace' }}>
+                        {c.valor}
+                      </p>
+                    </div>
+                  ))}
+                  <p style={{ fontSize: 12, color: '#9ca3af', margin: '10px 0 0', lineHeight: 1.5 }}>
+                    Debes modificar el valor de {conflictoUnico.campos.length === 1 ? 'este campo' : 'estos campos'} en el registro activo o eliminarlo antes de restaurar.
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button onClick={() => setConflictoUnico(null)}
+                  style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  Entendido
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Filtros por módulo */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
         {FILTROS_MODULO.map(f => {
@@ -535,17 +738,21 @@ export default function Papelera({ usuario, permisos = {} }) {
                         <div style={{ display: 'flex', gap: 8 }}>
                           {puedeRestaurar && (
                             <button
-                              onClick={() => confirmar(item, 'restaurar')}
+                              onClick={() => iniciarRestaurar(item)}
                               title="Restaurar registro"
+                              disabled={!!verificando}
                               style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 5,
                                 padding: '5px 12px', borderRadius: 7,
                                 border: '1px solid #bfdbfe',
                                 background: '#eff6ff', color: '#2563eb',
-                                fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                                fontSize: 12, fontWeight: 500, cursor: verificando ? 'wait' : 'pointer',
+                                opacity: verificando ? 0.7 : 1,
                               }}
                             >
-                              <RotateCcw size={12} />
+                              {verificando === item.id + item.tabla
+                                ? <svg style={{ animation: 'spin 0.7s linear infinite' }} width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#93c5fd" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/></svg>
+                                : <RotateCcw size={12} />}
                               Restaurar
                             </button>
                           )}
