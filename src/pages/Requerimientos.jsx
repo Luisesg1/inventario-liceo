@@ -1401,7 +1401,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
       p_usuario_nombre: usuario.nombre,
       p_usuario_rol: usuario.rol,
       p_modulo: 'requerimientos',
-    }).catch(() => {})
+    }).then(null, () => {})
     if (verDetalle?.id === r.id) setVerDetalle(null)
     if (modal?.id === r.id) cerrar()
     cargar()
@@ -1450,7 +1450,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
             p_usuario_nombre: usuario.nombre,
             p_usuario_rol: usuario.rol,
             p_modulo: 'requerimientos',
-          }).catch(() => {})
+          }).then(null, () => {})
         }
       }
       const eliminados = ids.filter(id => !fallidos.includes(id))

@@ -1325,7 +1325,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
           p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
           p_modulo: 'inventario',
-        }).catch(() => {})
+        }).then(null, () => {})
         setAviso('El registro fue enviado a la Papelera y podrá restaurarse durante los próximos 30 días.')
       }
     )
@@ -1370,7 +1370,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
             p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
             p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
             p_modulo: 'inventario',
-          }).catch(() => {})
+          }).then(null, () => {})
           setAviso(`${eliminados.length} bien${eliminados.length !== 1 ? 'es' : ''} enviado${eliminados.length !== 1 ? 's' : ''} a la Papelera.`)
         }
         if (fallidos.length > 0) {

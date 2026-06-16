@@ -282,7 +282,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
       p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
       p_modulo: 'tickets',
-    }).catch(() => {})
+    }).then(null, () => {})
   }
 
   const toggleSeleccion = (id) => setSeleccionados(prev => {
@@ -309,7 +309,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
       p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
       p_modulo: 'tickets',
-    }).catch(() => {})
+    }).then(null, () => {})
     salirSeleccion()
   }
 

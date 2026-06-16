@@ -212,7 +212,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
       p_usuario_nombre: usuario.nombre,
       p_usuario_rol: usuario.rol,
       p_modulo: 'compensatorios',
-    }).catch(() => {})
+    }).then(null, () => {})
     setEliminando(false)
     setEliminar(null)
     await cargar()
