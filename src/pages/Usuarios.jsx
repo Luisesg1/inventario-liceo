@@ -1315,7 +1315,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   const cargarUsuarios = useCallback(async () => {
     setEstado('cargando')
     const { data, error } = await supabase
-      .from('usuarios').select('*').order('nombre')
+      .from('usuarios').select('*').eq('is_deleted', false).order('nombre')
     if (error) { setEstado('error'); setErrorMsg(error.message) }
     else { setUsuarios(data || []); setEstado('ok') }
   }, [])
@@ -1398,36 +1398,22 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
   async function eliminarUsuario(userId) {
     setEliminandoId(userId)
-
-    // 1. Eliminar de Supabase Auth via Edge Function (también borra en cascada de la tabla)
-    const { data: sessionData } = await supabase.auth.getSession()
-    const token = sessionData?.session?.access_token
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId }),
-        }
-      )
-      const json = await res.json()
-      if (!res.ok) {
-        alert('Error al eliminar: ' + (json.error ?? 'Error desconocido'))
-        setEliminandoId(null)
-        return
-      }
-    } catch {
-      alert('No se pudo conectar con el servidor.')
+      const { error } = await supabase.rpc('soft_delete_usuario', {
+        p_id: userId,
+        p_usuario_id: usuario.id,
+        p_usuario_nombre: usuario.nombre,
+        p_usuario_rol: usuario.rol,
+      })
+      if (error) throw error
+      setUsuarios(prev => prev.filter(u => u.id !== userId))
+      setConfirmandoId(null)
+      if (panelActivo?.id === userId) setPanelActivo(null)
+    } catch (e) {
+      alert('Error al mover a la Papelera: ' + (e.message ?? 'Error desconocido'))
+    } finally {
       setEliminandoId(null)
-      return
     }
-
-    // 2. Actualizar lista local
-    setUsuarios((prev) => prev.filter((u) => u.id !== userId))
-    setConfirmandoId(null)
-    if (panelActivo?.id === userId) setPanelActivo(null)
-    setEliminandoId(null)
   }
 
   function iniciarGuardarEdicion(userId) {

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trash2, RotateCcw, AlertTriangle, Package2,
   Ticket, Calendar, ShoppingCart, Gift, Clock,
-  RefreshCw, X, CheckCircle2, ChevronDown,
+  RefreshCw, X, CheckCircle2, ChevronDown, Users,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 
@@ -15,6 +15,7 @@ const MODULO_CONFIG = {
   ausencias:      { label: 'Ausencias',     Icon: Calendar,    color: '#f59e0b', bg: '#fffbeb' },
   requerimientos: { label: 'Requerimientos',Icon: ShoppingCart,color: '#10b981', bg: '#f0fdf4' },
   compensatorios: { label: 'Compensatorios',Icon: Gift,        color: '#ef4444', bg: '#fef2f2' },
+  usuarios:       { label: 'Usuarios',      Icon: Users,       color: '#0891b2', bg: '#ecfeff' },
 }
 
 const FILTROS_MODULO = [
@@ -24,6 +25,7 @@ const FILTROS_MODULO = [
   { value: 'ausencias',      label: 'Ausencias' },
   { value: 'requerimientos', label: 'Requerimientos' },
   { value: 'compensatorios', label: 'Compensatorios' },
+  { value: 'usuarios',       label: 'Usuarios' },
 ]
 
 const BUCKET_REQ_IMGS = 'requerimientos'
@@ -131,10 +133,30 @@ export default function Papelera({ usuario, permisos = {} }) {
   // ── Restaurar ────────────────────────────────────────────────────────────
   async function restaurar(item) {
     setProcesando(true)
-    const { error } = await supabase
-      .from(item.tabla)
-      .update({ is_deleted: false, deleted_at: null, deleted_by: null, deleted_by_nombre: null })
-      .eq('id', item.id)
+
+    let error
+    if (item.tabla === 'usuarios') {
+      // Restaurar usuario: desbanea en Auth vía RPC SECURITY DEFINER
+      ;({ error } = await supabase.rpc('restaurar_usuario', {
+        p_id: item.id,
+        p_usuario_id: usuario.id,
+        p_usuario_nombre: usuario.nombre,
+        p_usuario_rol: usuario.rol,
+      }))
+    } else {
+      ;({ error } = await supabase
+        .from(item.tabla)
+        .update({ is_deleted: false, deleted_at: null, deleted_by: null, deleted_by_nombre: null })
+        .eq('id', item.id))
+
+      if (!error) {
+        supabase.rpc('log_accion_papelera', {
+          p_registro_id: item.id, p_nombre: item.nombre, p_accion: 'restaurado',
+          p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
+          p_usuario_rol: usuario.rol, p_modulo: item.modulo,
+        }).then(null, () => {})
+      }
+    }
 
     if (error) {
       mostrarAviso('error', 'Error al restaurar: ' + error.message)
@@ -142,16 +164,6 @@ export default function Papelera({ usuario, permisos = {} }) {
       setConfirmacion(null)
       return
     }
-
-    await supabase.rpc('log_accion_papelera', {
-      p_registro_id:    item.id,
-      p_nombre:         item.nombre,
-      p_accion:         'restaurado',
-      p_usuario_id:     usuario.id,
-      p_usuario_nombre: usuario.nombre,
-      p_usuario_rol:    usuario.rol,
-      p_modulo:         item.modulo,
-    })
 
     setItems(prev => prev.filter(i => i.id !== item.id || i.tabla !== item.tabla))
     mostrarAviso('ok', 'Registro restaurado correctamente.')
@@ -163,22 +175,40 @@ export default function Papelera({ usuario, permisos = {} }) {
   async function eliminarPermanente(item) {
     setProcesando(true)
 
-    // Eliminar imágenes si es requerimiento
     if (item.tabla === 'requerimientos') {
       await borrarImagenesRequerimiento(item.id)
     }
 
-    await supabase.rpc('log_accion_papelera', {
-      p_registro_id:    item.id,
-      p_nombre:         item.nombre,
-      p_accion:         'eliminado_permanente_manual',
-      p_usuario_id:     usuario.id,
-      p_usuario_nombre: usuario.nombre,
-      p_usuario_rol:    usuario.rol,
-      p_modulo:         item.modulo,
-    })
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: item.id, p_nombre: item.nombre, p_accion: 'eliminado_permanente_manual',
+      p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
+      p_usuario_rol: usuario.rol, p_modulo: item.modulo,
+    }).then(null, () => {})
 
-    const { error } = await supabase.from(item.tabla).delete().eq('id', item.id)
+    let error
+    if (item.tabla === 'usuarios') {
+      // Eliminar definitivamente de Supabase Auth vía Edge Function
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData?.session?.access_token
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ userId: item.id }),
+          }
+        )
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          error = { message: json.error ?? 'Error al eliminar usuario' }
+        }
+      } catch {
+        error = { message: 'No se pudo conectar con el servidor.' }
+      }
+    } else {
+      ;({ error } = await supabase.from(item.tabla).delete().eq('id', item.id))
+    }
 
     if (error) {
       mostrarAviso('error', 'Error al eliminar: ' + error.message)
