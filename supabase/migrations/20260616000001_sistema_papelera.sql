@@ -331,3 +331,38 @@ SET permisos = permisos || jsonb_build_object(
   ),
   updated_at = NOW()
 WHERE rol != 'admin';
+
+-- ── 13. RPC: soft delete de ausencias (id BIGINT, no UUID) ──────────────
+DROP FUNCTION IF EXISTS soft_delete_ausencia(uuid, uuid, text, text);
+
+CREATE OR REPLACE FUNCTION soft_delete_ausencia(
+  p_id             BIGINT,
+  p_usuario_id     UUID,
+  p_usuario_nombre TEXT,
+  p_usuario_rol    TEXT
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE ausencias SET
+    is_deleted        = TRUE,
+    deleted_at        = NOW(),
+    deleted_by        = p_usuario_id,
+    deleted_by_nombre = p_usuario_nombre
+  WHERE id = p_id;
+
+  INSERT INTO audit_logs (
+    bien_nombre, accion, cambios,
+    usuario_id, usuario_nombre, usuario_rol, modulo, creado_en
+  )
+  SELECT
+    COALESCE(snapshot_nombre, 'Ausencia') || COALESCE(' — ' || tipo, ''),
+    'enviado_a_papelera',
+    jsonb_build_object('registro_id', p_id::TEXT, 'modulo', 'ausencias'),
+    p_usuario_id, p_usuario_nombre, p_usuario_rol,
+    'ausencias', NOW()
+  FROM ausencias WHERE id = p_id;
+END;
+$$;
