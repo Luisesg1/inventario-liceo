@@ -392,7 +392,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     return p + 1
   }
   // Último paso del wizard
-  const ULTIMO_PASO = 9
+  const ULTIMO_PASO = 10
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -470,6 +470,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     { n: 7, label: 'Ausencia' },
     { n: 8, label: 'Compensatorios' },
     { n: 9, label: 'Ajustes' },
+    { n: 10, label: 'Papelera' },
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
