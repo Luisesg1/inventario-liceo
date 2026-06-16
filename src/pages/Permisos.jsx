@@ -2145,11 +2145,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       const sel = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
       const consultas = [
         supabase.from('ausencias').select(sel)
+          .eq('is_deleted', false)
           .in('usuario_id', allIds)
           .order('fecha_inicio', { ascending: false }),
         ...(rutFormatos.length ? [
-          supabase.from('ausencias').select(sel).in('externo_rut',  rutFormatos),
-          supabase.from('ausencias').select(sel).in('snapshot_rut', rutFormatos),
+          supabase.from('ausencias').select(sel).eq('is_deleted', false).in('externo_rut',  rutFormatos),
+          supabase.from('ausencias').select(sel).eq('is_deleted', false).in('snapshot_rut', rutFormatos),
         ] : []),
       ]
       const resultados = await Promise.all(consultas)
@@ -2176,6 +2177,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     const { data: ps } = await supabase
       .from('ausencias')
       .select('*, usuario:usuario_id(id, nombre, email, rol, rut)')
+      .eq('is_deleted', false)
       .order('fecha_inicio', { ascending: false })
     setUsuarios(us ?? [])
     setPermisos(ps ?? [])
@@ -2289,11 +2291,13 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
 
     if (userIds.length) {
       const { data } = await supabase.from('ausencias').select(cols)
+        .eq('is_deleted', false)
         .in('usuario_id', userIds).gte('fecha_inicio', desde).lte('fecha_inicio', hasta)
       if (data) rows = [...rows, ...data]
     }
     if (rut) {
       const { data } = await supabase.from('ausencias').select(cols)
+        .eq('is_deleted', false)
         .eq('externo_rut', rut).gte('fecha_inicio', desde).lte('fecha_inicio', hasta)
       if (data) rows = [...rows, ...data]
     }
@@ -2457,8 +2461,22 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     setEliminando(true)
     try {
       const p = permisoEliminar
-      const { error } = await supabase.from('ausencias').delete().eq('id', p.id)
+      const ahora = new Date().toISOString()
+      const { error } = await supabase.from('ausencias').update({
+        is_deleted: true, deleted_at: ahora,
+        deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+      }).eq('id', p.id)
       if (error) throw error
+
+      supabase.rpc('log_accion_papelera', {
+        p_registro_id: String(p.id),
+        p_nombre: (p.snapshot_nombre ?? 'Ausencia') + (p.tipo ? ' — ' + p.tipo : ''),
+        p_accion: 'enviado_a_papelera',
+        p_usuario_id: usuario.id,
+        p_usuario_nombre: usuario.nombre,
+        p_usuario_rol: usuario.rol,
+        p_modulo: 'ausencias',
+      }).catch(() => {})
 
       // Si era una ausencia de compensatorios, devolver el saldo al usuario
       if (p.tipo === 'dias_compensatorios' && p.usuario_id) {
@@ -2490,7 +2508,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       setPermisoVer(null)
       await cargarDatos()
     } catch {
-      setErrorEliminar('No se pudo eliminar. Agrega la política DELETE en Supabase.')
+      setErrorEliminar('No se pudo mover a la Papelera. Verifica los permisos en Supabase.')
     } finally { setEliminando(false) }
   }
 

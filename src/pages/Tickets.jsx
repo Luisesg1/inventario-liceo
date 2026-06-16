@@ -128,7 +128,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
 
   const cargar = async () => {
     setCargando(true)
-    let q = supabase.from('tickets').select('*').order('creado_en', { ascending: false })
+    let q = supabase.from('tickets').select('*').eq('is_deleted', false).order('creado_en', { ascending: false })
     if (!esGestor) q = q.eq('creado_por', usuario.id)
     const { data } = await q
     setTickets(data ?? [])
@@ -267,11 +267,22 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
 
   const eliminarTicket = async (id) => {
     if (!puedeElim) return
-    const { error } = await supabase.from('tickets').delete().eq('id', id)
+    const ticket = tickets.find(t => t.id === id)
+    const ahora = new Date().toISOString()
+    const { error } = await supabase.from('tickets').update({
+      is_deleted: true, deleted_at: ahora,
+      deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+    }).eq('id', id)
     if (error) { console.error('Error al eliminar ticket:', error); return }
     setTickets(prev => prev.filter(t => t.id !== id))
     setConfirmarEliminar(false)
     cerrarDetalle()
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: String(id), p_nombre: ticket?.titulo ?? 'Ticket',
+      p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
+      p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
+      p_modulo: 'tickets',
+    }).catch(() => {})
   }
 
   const toggleSeleccion = (id) => setSeleccionados(prev => {
@@ -285,9 +296,20 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
   const salirSeleccion = () => { setSeleccionados(new Set()); setConfirmandoBulk(false) }
   const eliminarSeleccionados = async () => {
     if (!puedeElim) return
-    const { error } = await supabase.from('tickets').delete().in('id', [...seleccionados])
-    if (error) { console.error('Error al eliminar tickets:', error); return }
+    const ids = [...seleccionados]
+    const ahora = new Date().toISOString()
+    const { error } = await supabase.from('tickets').update({
+      is_deleted: true, deleted_at: ahora,
+      deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+    }).in('id', ids)
+    if (error) { console.error('Error al mover tickets a papelera:', error); return }
     setTickets(prev => prev.filter(t => !seleccionados.has(t.id)))
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: ids.join(','), p_nombre: `${ids.length} ticket${ids.length !== 1 ? 's' : ''} (lote)`,
+      p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
+      p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
+      p_modulo: 'tickets',
+    }).catch(() => {})
     salirSeleccion()
   }
 

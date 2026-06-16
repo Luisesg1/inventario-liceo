@@ -1169,7 +1169,7 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
       return
     }
 
-    const { data } = await supabase.from('requerimientos').select('*').order('id', { ascending: false })
+    const { data } = await supabase.from('requerimientos').select('*').eq('is_deleted', false).order('id', { ascending: false })
     const resultado = data ?? []
     cachearRequerimientos(resultado)
     // Mantener en la lista los pendientes offline que aún no sincronizaron
@@ -1387,10 +1387,21 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
   }
 
   const eliminarRegistro = async (r) => {
-    const urls = parseObsImagenes(r.observacion_imagenes)
-    await borrarImagenesStorage(urls)
-    const { error } = await supabase.from('requerimientos').delete().eq('id', r.id)
+    const ahora = new Date().toISOString()
+    const { error } = await supabase.from('requerimientos').update({
+      is_deleted: true, deleted_at: ahora,
+      deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+    }).eq('id', r.id)
     if (error) throw error
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: String(r.id),
+      p_nombre: 'Req. N° ' + (r.numero_req ?? r.id),
+      p_accion: 'enviado_a_papelera',
+      p_usuario_id: usuario.id,
+      p_usuario_nombre: usuario.nombre,
+      p_usuario_rol: usuario.rol,
+      p_modulo: 'requerimientos',
+    }).catch(() => {})
     if (verDetalle?.id === r.id) setVerDetalle(null)
     if (modal?.id === r.id) cerrar()
     cargar()
@@ -1413,28 +1424,40 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
     if (!reqAEliminar) return
 
     if (reqAEliminar._lote) {
-      // Eliminación masiva de seleccionados
+      // Soft delete masivo de seleccionados
       const ids = [...seleccion]
+      const ahora = new Date().toISOString()
       const fallidos = []
       for (const id of ids) {
-        const item = items.find(i => i.id === id)
-        if (item) {
-          const urls = parseObsImagenes(item.observacion_imagenes)
-          await borrarImagenesStorage(urls)
-        }
         // Items pendientes offline: solo quitar de la lista local
         if (String(id).startsWith('temp_')) {
           eliminarPendienteReq(id)
           continue
         }
-        const { error } = await supabase.from('requerimientos').delete().eq('id', id)
-        if (error) fallidos.push(id)
+        const item = items.find(i => i.id === id)
+        const { error } = await supabase.from('requerimientos').update({
+          is_deleted: true, deleted_at: ahora,
+          deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+        }).eq('id', id)
+        if (error) {
+          fallidos.push(id)
+        } else {
+          supabase.rpc('log_accion_papelera', {
+            p_registro_id: String(id),
+            p_nombre: 'Req. N° ' + (item?.numero_req ?? id),
+            p_accion: 'enviado_a_papelera',
+            p_usuario_id: usuario.id,
+            p_usuario_nombre: usuario.nombre,
+            p_usuario_rol: usuario.rol,
+            p_modulo: 'requerimientos',
+          }).catch(() => {})
+        }
       }
       const eliminados = ids.filter(id => !fallidos.includes(id))
       setItems(prev => prev.filter(i => !eliminados.includes(i.id)))
       setSeleccion(new Set(fallidos))
-      if (eliminados.length > 0) setAviso(`✓ ${eliminados.length} requerimiento${eliminados.length !== 1 ? 's' : ''} eliminado${eliminados.length !== 1 ? 's' : ''}`)
-      if (fallidos.length > 0) setAviso(`No se pudieron eliminar ${fallidos.length} requerimiento${fallidos.length !== 1 ? 's' : ''}`)
+      if (eliminados.length > 0) setAviso(`✓ ${eliminados.length} requerimiento${eliminados.length !== 1 ? 's' : ''} enviado${eliminados.length !== 1 ? 's' : ''} a la Papelera`)
+      if (fallidos.length > 0) setAviso(`No se pudieron mover ${fallidos.length} requerimiento${fallidos.length !== 1 ? 's' : ''} a la Papelera`)
     } else {
       // Eliminación de ítem individual
       try {

@@ -15,6 +15,7 @@ import Requerimientos   from './pages/Requerimientos'
 import Permisos         from './pages/Permisos'
 import Compensatorios   from './pages/Compensatorios'
 import MantenedorRoles  from './pages/MantenedorRoles'
+import Papelera         from './pages/Papelera'
 import { aplicarTema } from './utils/tema'
 
 const RUTA_A_PAGINA = {
@@ -31,6 +32,7 @@ const RUTA_A_PAGINA = {
   '/ausencias/compensatorios': 'compensatorios',
   '/ausencias/auditoria':      'auditoria_permisos',
   '/auditoria-general':        'auditoria_general',
+  '/papelera':                 'papelera',
   '/usuarios':                 'usuarios',
   '/ajustes':                  'ajustes',
   '/ajustes/campos':           'campos',
@@ -50,6 +52,7 @@ const PAGINA_A_RUTA = {
   compensatorios:           '/ausencias/compensatorios',
   auditoria_permisos:       '/ausencias/auditoria',
   auditoria_general:        '/auditoria-general',
+  papelera:                 '/papelera',
   usuarios:                 '/usuarios',
   ajustes:                  '/ajustes',
   campos:                   '/ajustes/campos',
@@ -194,6 +197,12 @@ export default function App() {
 
   const puedeVerAuditoriaGeneral = esAdmin
 
+  const puedeVerPapelera       = esAdmin || !!p.ver_papelera
+  const permisosPapelera = {
+    restaurar:         esAdmin || !!p.restaurar_registros,
+    eliminarPermanente: esAdmin || !!p.eliminar_permanentemente,
+  }
+
   const soloAdmin = (pagina === 'usuarios'         && !puedeAccederUsuarios)
     || (pagina === 'mantenedor_roles'             && !puedeGestionarRoles)
     || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
@@ -205,6 +214,7 @@ export default function App() {
     || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos && !puedeVerAuditoriaCompensatorios)
     || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
     || (pagina === 'auditoria_general'           && !puedeVerAuditoriaGeneral)
+    || (pagina === 'papelera'                    && !puedeVerPapelera)
     || (pagina === 'tickets'                     && !puedeVerTickets)
     || (pagina === 'requerimientos'              && !permisosReqs.ver)
     || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
@@ -444,6 +454,7 @@ export default function App() {
       puedeVerAuditoriaTickets={puedeVerAuditoriaTickets}
       puedeVerAuditoriaInventario={puedeVerAuditoriaInventario}
       puedeVerAuditoriaGeneral={puedeVerAuditoriaGeneral}
+      puedeVerPapelera={puedeVerPapelera}
       puedeVerInventario={puedeVerInventario}
       puedeVerTickets={puedeVerTickets}
       puedeGestionarTickets={puedeGestionarTickets}
@@ -474,6 +485,7 @@ export default function App() {
       {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
       {paginaSegura === 'campos'          && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
       {paginaSegura === 'mantenedor_roles' && <MantenedorRoles />}
+      {paginaSegura === 'papelera'         && <Papelera usuario={usuario} permisos={permisosPapelera} />}
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}

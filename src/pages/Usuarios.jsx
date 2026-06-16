@@ -90,6 +90,10 @@ const ACCIONES = [
   { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
   { key: 'gestionar_roles',         label: 'Gestionar roles del sistema', labelCorto: 'Roles',       desc: 'Permite administrar los permisos predeterminados de cada rol desde el Mantenedor de Roles.' },
   { key: 'ver_historial_usuarios',  label: 'Ver historial de usuarios',  labelCorto: 'Historial',   desc: 'Permite ver el historial completo de actividad, tickets, ausencias e inventario de cada usuario.' },
+  // Papelera
+  { key: 'ver_papelera',             label: 'Ver Papelera',                    labelCorto: 'Ver pap.',    desc: 'Permite acceder a la Papelera y ver los registros eliminados de todos los módulos.' },
+  { key: 'restaurar_registros',      label: 'Restaurar registros',             labelCorto: 'Restaurar',   desc: 'Permite restaurar registros desde la Papelera al módulo de origen.' },
+  { key: 'eliminar_permanentemente', label: 'Eliminar permanentemente',        labelCorto: 'Elim. perm.', desc: 'Permite eliminar registros de forma permanente e irrecuperable desde la Papelera.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -133,6 +137,11 @@ const GRUPOS_PERMISOS = [
     key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
     descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
     permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles', 'ver_historial_usuarios'],
+  },
+  {
+    key: 'papelera', label: 'Papelera', paso: 10, soloPersonalizado: false,
+    descripcion: 'Control de acceso a la Papelera de reciclaje. Los registros eliminados se conservan 30 días antes de borrarse automáticamente.',
+    permisos: ['ver_papelera', 'restaurar_registros', 'eliminar_permanentemente'],
   },
 ]
 

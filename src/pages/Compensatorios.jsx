@@ -118,6 +118,7 @@ export default function Compensatorios({ usuario, permisos = {} }) {
       supabase.from('usuarios').select('id, nombre, rut, rol').order('nombre'),
       supabase.from('dias_compensatorios')
         .select('*, usuario:usuario_id(id, nombre, rut, rol)')
+        .eq('is_deleted', false)
         .order('fecha_ganado', { ascending: false }),
     ])
     setUsuarios(us ?? [])
@@ -198,7 +199,20 @@ export default function Compensatorios({ usuario, permisos = {} }) {
   async function handleEliminar() {
     if (!eliminar || !puedeElim) return
     setEliminando(true)
-    await supabase.from('dias_compensatorios').delete().eq('id', eliminar.id)
+    const ahora = new Date().toISOString()
+    await supabase.from('dias_compensatorios').update({
+      is_deleted: true, deleted_at: ahora,
+      deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+    }).eq('id', eliminar.id)
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: String(eliminar.id),
+      p_nombre: 'Compensatorio — ' + (eliminar.fecha_ganado ?? eliminar.id),
+      p_accion: 'enviado_a_papelera',
+      p_usuario_id: usuario.id,
+      p_usuario_nombre: usuario.nombre,
+      p_usuario_rol: usuario.rol,
+      p_modulo: 'compensatorios',
+    }).catch(() => {})
     setEliminando(false)
     setEliminar(null)
     await cargar()

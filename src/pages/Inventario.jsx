@@ -343,7 +343,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     // ── Modo online: cargar desde Supabase ────────────────────────────────
     const queries = [
       supabase.from('categorias').select('*').order('creado_en'),
-      supabase.from('bienes').select('*').order('creado_en', { ascending: false }),
+      supabase.from('bienes').select('*').eq('is_deleted', false).order('creado_en', { ascending: false }),
     ]
     if (!esAdmin && usuario?.id) {
       queries.push(
@@ -1311,11 +1311,22 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     pedirConfirmacion(
       `¿Eliminar "${nombreMostrar}" del inventario?`,
       async () => {
-        const { error } = await supabase.from('bienes').delete().eq('id', id)
+        const ahora = new Date().toISOString()
+        const { error } = await supabase.from('bienes').update({
+          is_deleted: true, deleted_at: ahora,
+          deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+        }).eq('id', id)
         if (error) { setAviso('Error al eliminar: ' + error.message); return }
         setBienes(prev => prev.filter(b => b.id !== id))
         if (verDetalle?.id === id) setVerDetalle(null)
         logActividad(usuario, 'eliminar', nombreMostrar, id)
+        supabase.rpc('log_accion_papelera', {
+          p_registro_id: String(id), p_nombre: nombreMostrar,
+          p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
+          p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
+          p_modulo: 'inventario',
+        }).catch(() => {})
+        setAviso('El registro fue enviado a la Papelera y podrá restaurarse durante los próximos 30 días.')
       }
     )
   }
@@ -1340,10 +1351,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       `¿Eliminar ${seleccion.size} bien${seleccion.size !== 1 ? 'es' : ''} seleccionado${seleccion.size !== 1 ? 's' : ''}?`,
       async () => {
         const ids = [...seleccion]
-        const n = ids.length
+        const ahora = new Date().toISOString()
         const fallidos = []
         for (const id of ids) {
-          const { error } = await supabase.from('bienes').delete().eq('id', id)
+          const { error } = await supabase.from('bienes').update({
+            is_deleted: true, deleted_at: ahora,
+            deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
+          }).eq('id', id)
           if (error) fallidos.push(id)
         }
         const eliminados = ids.filter(id => !fallidos.includes(id))
@@ -1351,9 +1365,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
           setBienes(prev => prev.filter(b => !eliminados.includes(b.id)))
           setSeleccion(new Set(fallidos))
           logActividad(usuario, 'eliminar', `${eliminados.length} bien${eliminados.length !== 1 ? 'es' : ''} (lote)`, null)
+          supabase.rpc('log_accion_papelera', {
+            p_registro_id: eliminados.join(','), p_nombre: `${eliminados.length} bien${eliminados.length !== 1 ? 'es' : ''} (lote)`,
+            p_accion: 'enviado_a_papelera', p_usuario_id: usuario.id,
+            p_usuario_nombre: usuario.nombre, p_usuario_rol: usuario.rol,
+            p_modulo: 'inventario',
+          }).catch(() => {})
+          setAviso(`${eliminados.length} bien${eliminados.length !== 1 ? 'es' : ''} enviado${eliminados.length !== 1 ? 's' : ''} a la Papelera.`)
         }
         if (fallidos.length > 0) {
-          setAviso(`No se pudieron eliminar ${fallidos.length} bien${fallidos.length !== 1 ? 'es' : ''}. Intenta de nuevo.`)
+          setAviso(`No se pudieron mover ${fallidos.length} bien${fallidos.length !== 1 ? 'es' : ''} a la Papelera. Intenta de nuevo.`)
         }
       }
     )
