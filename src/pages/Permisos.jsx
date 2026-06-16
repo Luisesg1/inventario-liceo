@@ -2462,21 +2462,13 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     try {
       const p = permisoEliminar
       const ahora = new Date().toISOString()
-      const { error } = await supabase.from('ausencias').update({
-        is_deleted: true, deleted_at: ahora,
-        deleted_by: usuario.id, deleted_by_nombre: usuario.nombre,
-      }).eq('id', p.id)
-      if (error) throw error
-
-      supabase.rpc('log_accion_papelera', {
-        p_registro_id: String(p.id),
-        p_nombre: (p.snapshot_nombre ?? 'Ausencia') + (p.tipo ? ' — ' + p.tipo : ''),
-        p_accion: 'enviado_a_papelera',
+      const { error } = await supabase.rpc('soft_delete_ausencia', {
+        p_id: p.id,
         p_usuario_id: usuario.id,
         p_usuario_nombre: usuario.nombre,
         p_usuario_rol: usuario.rol,
-        p_modulo: 'ausencias',
-      }).catch(() => {})
+      })
+      if (error) throw error
 
       // Si era una ausencia de compensatorios, devolver el saldo al usuario
       if (p.tipo === 'dias_compensatorios' && p.usuario_id) {

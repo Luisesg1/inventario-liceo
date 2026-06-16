@@ -119,7 +119,7 @@ DECLARE
   v_tiene_perm BOOLEAN := FALSE;
 BEGIN
   SELECT TRUE INTO v_es_admin
-  FROM usuarios WHERE id = v_uid AND rol = 'admin';
+  FROM usuarios WHERE usuarios.id = v_uid AND rol = 'admin';
   v_es_admin := COALESCE(v_es_admin, FALSE);
 
   IF NOT v_es_admin THEN
@@ -193,7 +193,7 @@ BEGIN
   FROM dias_compensatorios dc
   WHERE dc.is_deleted = TRUE AND dc.deleted_at IS NOT NULL
 
-  ORDER BY deleted_at DESC;
+  ORDER BY 5 DESC;
 END;
 $$;
 
