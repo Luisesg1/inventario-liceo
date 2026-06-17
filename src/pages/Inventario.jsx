@@ -1857,14 +1857,16 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
     const html = buildPDFHTML(verDetalle, categorias)
 
-    // Montar fuera de la vista: position:absolute arriba del documento,
-    // NO position:fixed (que queda limitado al viewport del móvil).
+    // Wrapper de exactamente 794px (igual que el template).
+    // position:absolute + top negativo sale de la vista sin quedar
+    // limitado al viewport del móvil (diferencia clave vs position:fixed).
     const wrapper = document.createElement('div')
     wrapper.style.cssText = [
       'position:absolute',
       'left:0',
       'top:-9999px',
-      'width:710px',
+      'width:794px',
+      'min-width:794px',
       'overflow:visible',
       'background:white',
       'pointer-events:none',
@@ -1873,13 +1875,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     document.body.appendChild(wrapper)
 
     const opt = {
-      margin:      [10, 10, 10, 10],
+      margin:      [0, 0, 0, 0],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      // windowWidth grande evita que cualquier media query de la página
-      // afecte el renderizado (aunque el template no usa clases, por seguridad).
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 1200, logging: false },
-      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      // windowWidth:794 hace que html2canvas clone el documento en un iframe
+      // de 794px — mismo ancho del template — sin activar media queries mobile.
+      html2canvas: {
+        scale:           2,
+        useCORS:         true,
+        backgroundColor: '#ffffff',
+        windowWidth:     794,
+        logging:         false,
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }
     window.html2pdf().set(opt).from(wrapper.firstElementChild).save().then(() => {
       document.body.removeChild(wrapper)
