@@ -55,7 +55,7 @@ serve(async (req) => {
     const htmlContent = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
-          <h2 style="color:#f0d060;margin:0;font-size:18px">🎫 Nuevo ticket de soporte — Liceo JHJ</h2>
+          <h2 style="color:#f0d060;margin:0;font-size:18px">🎫 Nuevo ticket de soporte — Sistema de Gestión Liceo JHJ</h2>
         </div>
         <div style="padding:24px">
           <div style="background:#dbeafe;border-radius:8px;padding:10px 18px;margin-bottom:20px;display:inline-block">
@@ -102,7 +102,7 @@ serve(async (req) => {
       method: 'POST',
       headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender:      { name: 'Contacto Liceo JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
         to,
         subject:     `🎫 Nuevo ticket: ${titulo}`,
         htmlContent,

@@ -25,7 +25,7 @@ serve(async (req) => {
     const htmlContent = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
-          <h2 style="color:#f0d060;margin:0;font-size:18px">${estadoIcon} Actualización de tu ticket — Liceo JHJ</h2>
+          <h2 style="color:#f0d060;margin:0;font-size:18px">${estadoIcon} Actualización de tu ticket — Sistema de Gestión Liceo JHJ</h2>
         </div>
         <div style="padding:24px">
           <p style="margin:0 0 16px;font-size:15px;color:#374151">Hola <strong>${nombre ?? 'solicitante'}</strong>,</p>
@@ -56,7 +56,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'Contacto Liceo JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
         to:          [{ email: correo, name: nombre ?? correo }],
         subject:     `${estadoIcon} Tu ticket "${area}" está ${estado}`,
         htmlContent,

@@ -1919,7 +1919,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
     // Franja institucional
     html += `<div style="background:#1e3a8a;color:#fff;padding:8px 14px;border-radius:8px 8px 0 0;">
-      <p style="margin:0;font-size:9px;font-weight:600;opacity:.85;text-transform:uppercase;letter-spacing:.1em;">Liceo JHJ — Inventario Institucional</p>
+      <p style="margin:0;font-size:9px;font-weight:600;opacity:.85;text-transform:uppercase;letter-spacing:.1em;">Sistema de Gestión Liceo JHJ</p>
     </div>`
 
     // Header del bien

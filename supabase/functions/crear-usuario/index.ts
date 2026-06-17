@@ -156,9 +156,9 @@ async function enviarEmailBrevo({
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "Contacto Liceo JHJ", email: ADMIN_EMAIL },
+        sender: { name: "Sistema de Gestión Liceo JHJ", email: ADMIN_EMAIL },
         to: [{ email: para, name: nombreDestinatario }],
-        subject: "Tu acceso al Sistema de Inventario Liceo",
+        subject: "Tu acceso al Sistema de Gestión Liceo JHJ",
         htmlContent: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
       }),
     });
@@ -181,9 +181,9 @@ async function enviarEmailResend({
       method: "POST",
       headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Contacto Liceo JHJ <onboarding@resend.dev>",
+        from: "Sistema de Gestión Liceo JHJ <onboarding@resend.dev>",
         to: [para],
-        subject: "Tu acceso al Sistema de Inventario Liceo",
+        subject: "Tu acceso al Sistema de Gestión Liceo JHJ",
         html: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
       }),
     });
@@ -206,7 +206,7 @@ async function enviarEmailSMTP({
 
     // Construir email en formato RFC 2822
     const emailContent = [
-      `From: Contacto Liceo JHJ <${smtpUser}>`,
+      `From: Sistema de Gestión Liceo JHJ <${smtpUser}>`,
       `To: ${para}`,
       `Subject: Tu acceso al Sistema de Inventario Liceo`,
       `MIME-Version: 1.0`,
@@ -230,8 +230,8 @@ async function enviarEmailSMTP({
         body: JSON.stringify({
           api_key: smtp2goKey,
           to: [para],
-          sender: `Contacto Liceo JHJ <${smtpUser}>`,
-          subject: "Tu acceso al Sistema de Inventario Liceo",
+          sender: `Sistema de Gestión Liceo JHJ <${smtpUser}>`,
+          subject: "Tu acceso al Sistema de Gestión Liceo JHJ",
           html_body: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),
         }),
       });
@@ -260,13 +260,12 @@ function emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }: {
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #e5e7eb;">
     <div style="background:#1e40af;padding:28px 32px;text-align:center;">
       <div style="font-size:32px;margin-bottom:8px;">🏫</div>
-      <h1 style="color:#fff;margin:0;font-size:18px;font-weight:700;">Sistema de Inventario</h1>
-      <p style="color:#bfdbfe;margin:4px 0 0;font-size:13px;">Liceo JHJ</p>
+      <h1 style="color:#fff;margin:0;font-size:18px;font-weight:700;">Sistema de Gestión Liceo JHJ</h1>
     </div>
     <div style="padding:32px;">
       <p style="margin:0 0 16px;font-size:15px;color:#111827;">Hola <strong>${nombreDestinatario}</strong>,</p>
       <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-        El administrador te ha creado una cuenta en el Sistema de Inventario Escolar. Usa estas credenciales para ingresar:
+        El administrador te ha creado una cuenta en el Sistema de Gestión Liceo JHJ. Usa estas credenciales para ingresar:
       </p>
       <div style="background:#f8faff;border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin-bottom:24px;">
         <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;">Correo</p>

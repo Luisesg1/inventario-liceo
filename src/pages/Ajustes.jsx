@@ -9,7 +9,7 @@ const DEFAULTS = {
   colorBoton:       '#6366f1',
   pageBg:           '#f1f5f9',
   sidebarBg:        '#1a237e',
-  nombreSistema:    'Inventario',
+  nombreSistema:    'Sistema de Gestión Liceo JHJ',
   nombreInstitucion:'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
 }
 
@@ -178,7 +178,7 @@ function Preview({ colorPrimario, colorAcento, colorBoton, logoPreview, nombreSi
         <div onClick={() => setSeccion('login')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 8px', borderBottom: `1px solid ${colorAcento}44`, cursor: 'pointer' }}>
           <img src={logoPreview} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${colorAcento}99`, flexShrink: 0 }} onError={e => { e.target.style.display = 'none' }} />
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 7, fontWeight: 700, color: '#f5e9c0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreSistema || 'Inventario'}</div>
+            <div style={{ fontSize: 7, fontWeight: 700, color: '#f5e9c0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreSistema || 'Sistema de Gestión Liceo JHJ'}</div>
             <div style={{ fontSize: 6, color: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreInstitucion || 'Liceo JHJ'}</div>
           </div>
         </div>

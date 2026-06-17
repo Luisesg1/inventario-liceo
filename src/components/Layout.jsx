@@ -52,7 +52,7 @@ const submenuVariants = {
 export default function Layout({
   usuario, onLogout, children, paginaActual, setPagina,
   onRefreshTicketBadge, logoUrl,
-  nombreSistema = 'Inventario', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
+  nombreSistema = 'Sistema de Gestión Liceo JHJ', nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
   puedeVerAuditoriaReq = false, puedeVerAuditoriaPermisos = false, puedeVerAuditoriaCompensatorios = false,
   puedeVerAuditoriaInventario = false,
   puedeVerInventario = false, puedeVerTickets = true, puedeGestionarTickets = false,
@@ -211,7 +211,7 @@ export default function Layout({
           doc.setFillColor(245,245,250); doc.rect(0,284,W,13,'F')
           doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(0,284,W,284)
           doc.setTextColor(...GRIS); doc.setFontSize(7.5)
-          doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Sistema de Inventario', W/2, 290, { align:'center' })
+          doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Sistema de Gestión Liceo JHJ', W/2, 290, { align:'center' })
           doc.text(`${i} / ${pageCount}`, W-12, 290, { align:'right' })
         }
       }

@@ -109,7 +109,7 @@ export default function Login({
   onLogin,
   logoUrl,
   nombreInstitucion = 'Liceo Polivalente de Excelencia Juvenal Hernández Jaque',
-  nombreSistema     = 'Sistema de Inventario',
+  nombreSistema     = 'Sistema de Gestión Liceo JHJ',
 }) {
   /* ── Estado login ── */
   const [email,    setEmail]    = useState('')

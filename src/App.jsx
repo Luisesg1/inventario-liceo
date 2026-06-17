@@ -101,7 +101,7 @@ export default function App() {
   const [permisosUsuario,    setPermisosUsuario]    = useState({})
   const [cargando,           setCargando]           = useState(true)
   const [logoUrl,            setLogoUrl]            = useState(null)
-  const [nombreSistema,      setNombreSistema]      = useState('Inventario')
+  const [nombreSistema,      setNombreSistema]      = useState('Sistema de Gestión Liceo JHJ')
   const [nombreInstitucion,  setNombreInstitucion]  = useState('Liceo Polivalente de Excelencia Juvenal Hernández Jaque')
   const [mostrarSetPassword, setMostrarSetPassword] = useState(false)
   const [abrirBienId,        setAbrirBienId]        = useState(null)

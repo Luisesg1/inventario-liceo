@@ -24,7 +24,7 @@ serve(async (req) => {
     const html = `
       <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:580px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
         <div style="background:#1a237e;padding:20px 24px">
-          <h2 style="color:#f0d060;margin:0;font-size:18px">🎫 Nuevo ticket — Liceo JHJ</h2>
+          <h2 style="color:#f0d060;margin:0;font-size:18px">🎫 Nuevo ticket — Sistema de Gestión Liceo JHJ</h2>
           <p style="color:rgba(255,255,255,0.6);margin:4px 0 0;font-size:13px">${new Date(t.creado_en).toLocaleString('es-CL')}</p>
         </div>
         <div style="padding:24px">
@@ -53,8 +53,8 @@ serve(async (req) => {
         </div>
       </div>`
 
-    const destinatarios = [{ email: ADMIN_EMAIL, name: 'Contacto Liceo JHJ' }]
-    if (ADMIN_EMAIL_2) destinatarios.push({ email: ADMIN_EMAIL_2, name: 'Contacto Liceo JHJ' })
+    const destinatarios = [{ email: ADMIN_EMAIL, name: 'Sistema de Gestión Liceo JHJ' }]
+    if (ADMIN_EMAIL_2) destinatarios.push({ email: ADMIN_EMAIL_2, name: 'Sistema de Gestión Liceo JHJ' })
 
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -63,7 +63,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'Contacto Liceo JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
         to:          destinatarios,
         subject:     `🎫 Nuevo ticket: ${area}`,
         htmlContent: html,
