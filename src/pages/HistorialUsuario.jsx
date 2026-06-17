@@ -253,12 +253,28 @@ export default function HistorialUsuario({ usuario: u, onCerrar }) {
         document.head.appendChild(s)
       })
     }
-    const wb = window.XLSX.utils.book_new()
-    const ws = window.XLSX.utils.aoa_to_sheet(filas)
-    const cols = [20, 14, 10, 26, 50]
-    ws['!cols'] = cols.map(w => ({ wch: w }))
-    window.XLSX.utils.book_append_sheet(wb, ws, 'Historial')
-    window.XLSX.writeFile(wb, `historial_${(u.nombre ?? 'usuario').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`)
+    const XLSX = window.XLSX
+    const wb = XLSX.utils.book_new()
+    const ws = XLSX.utils.aoa_to_sheet(filas)
+    ws['!cols'] = [20, 14, 10, 26, 50].map(w => ({ wch: w }))
+    ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }) }
+    ws['!rows'] = [{ hpt: 22 }]
+    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: '1A237E' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } }
+    const range = XLSX.utils.decode_range(ws['!ref'])
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const h = XLSX.utils.encode_cell({ r: 0, c: C })
+      if (ws[h]) ws[h].s = headerStyle
+    }
+    for (let R = 1; R <= range.e.r; R++) {
+      const rowFill = { fgColor: { rgb: R % 2 === 0 ? 'F0F4FF' : 'FFFFFF' }, patternType: 'solid' }
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const cell = XLSX.utils.encode_cell({ r: R, c: C })
+        if (ws[cell]) ws[cell].s = { font: { sz: 9 }, fill: rowFill, alignment: { wrapText: true, vertical: 'top' } }
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, ws, 'Historial')
+    XLSX.writeFile(wb, `historial_${(u.nombre ?? 'usuario').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`, { bookType: 'xlsx', cellStyles: true })
     setExportando(false)
   }
 

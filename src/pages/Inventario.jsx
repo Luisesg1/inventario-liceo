@@ -795,14 +795,31 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const datos = Array.isArray(datosOverride) ? datosOverride : getDatosExportar()
     if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
     const cargarYExportar = () => {
+      const XLSX = window.XLSX
       const { cols, datosFlat } = getColumnasExportar(datos)
       const encabezados = cols.map(c => ETIQUETAS_COL[c] ?? c)
-      const wb = window.XLSX.utils.book_new()
+      const wb = XLSX.utils.book_new()
       const filas = [encabezados, ...datosFlat.map(b => cols.map(c => b[c] ?? ''))]
-      const ws = window.XLSX.utils.aoa_to_sheet(filas)
-      ws['!cols'] = cols.map(() => ({ wch: 20 }))
-      window.XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
-      window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
+      const ws = XLSX.utils.aoa_to_sheet(filas)
+      ws['!cols'] = cols.map(c => ({ wch: Math.max((ETIQUETAS_COL[c] ?? c).length + 4, 14) }))
+      ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: encabezados.length - 1 } }) }
+      ws['!rows'] = [{ hpt: 22 }]
+      const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: '1A237E' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } }
+      const range = XLSX.utils.decode_range(ws['!ref'])
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const h = XLSX.utils.encode_cell({ r: 0, c: C })
+        if (ws[h]) ws[h].s = headerStyle
+      }
+      for (let R = 1; R <= range.e.r; R++) {
+        const rowFill = { fgColor: { rgb: R % 2 === 0 ? 'F0F4FF' : 'FFFFFF' }, patternType: 'solid' }
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cell = XLSX.utils.encode_cell({ r: R, c: C })
+          if (ws[cell]) ws[cell].s = { font: { sz: 9 }, fill: rowFill, alignment: { wrapText: true, vertical: 'top' } }
+        }
+      }
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventario')
+      XLSX.writeFile(wb, nombreArchivo('xlsx'), { bookType: 'xlsx', cellStyles: true })
       setMenuExportar(false); setMenuExportarDetalle(false)
     }
     if (window.XLSX) { cargarYExportar(); return }
@@ -983,26 +1000,41 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       wsResumen['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 14 }]
       XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen')
 
+      const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: '1A237E' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } }
+      const applyHeaderStyle = (ws, numCols) => {
+        for (let C = 0; C < numCols; C++) {
+          const h = XLSX.utils.encode_cell({ r: 0, c: C })
+          if (ws[h]) ws[h].s = headerStyle
+        }
+      }
+
       // Una hoja por categoría
       Object.values(grupos).forEach(({ label, items }) => {
         if (!items.length) return
-        // Columnas relevantes para esta categoría (omitir columnas completamente vacías)
-        const cols = COLUMNAS_EXPORT.filter(col => items.some(b => b[col] != null && b[col] !== ''))
-        const rows = [cols, ...items.map(b => cols.map(c => b[c] ?? ''))]
+        const { cols, datosFlat } = getColumnasExportar(items)
+        const encabezados = cols.map(c => ETIQUETAS_COL[c] ?? c)
+        const rows = [encabezados, ...datosFlat.map(b => cols.map(c => b[c] ?? ''))]
         const ws = XLSX.utils.aoa_to_sheet(rows)
-        ws['!cols'] = cols.map(h => ({ wch: Math.max(h.length + 4, 14) }))
-        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }) }
-        ws['!tables'] = [{
-          name: label.replace(/\s+/g, '_').replace(/[^A-Za-z0-9_]/g, '').slice(0, 255) || 'Tabla',
-          ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length - 1, c: cols.length - 1 } }),
-          headerRow: true, totalsRow: false,
-          style: { theme: 'TableStyleMedium2', showRowStripes: true },
-          columns: cols.map(h => ({ name: h })),
-        }]
+        ws['!cols'] = cols.map(c => ({ wch: Math.max((ETIQUETAS_COL[c] ?? c).length + 4, 14) }))
+        ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: encabezados.length - 1 } }) }
+        ws['!rows'] = [{ hpt: 22 }]
+        applyHeaderStyle(ws, encabezados.length)
+        const range = XLSX.utils.decode_range(ws['!ref'])
+        for (let R = 1; R <= range.e.r; R++) {
+          const rowFill = { fgColor: { rgb: R % 2 === 0 ? 'F0F4FF' : 'FFFFFF' }, patternType: 'solid' }
+          for (let C = 0; C <= range.e.c; C++) {
+            const cell = XLSX.utils.encode_cell({ r: R, c: C })
+            if (ws[cell]) ws[cell].s = { font: { sz: 9 }, fill: rowFill, alignment: { wrapText: true, vertical: 'top' } }
+          }
+        }
         XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
       })
 
-      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`)
+      // Estilos en hoja resumen
+      applyHeaderStyle(wsResumen, 3)
+
+      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`, { bookType: 'xlsx', cellStyles: true })
       setMenuExportar(false)
     }
     if (window.XLSX) { cargarYExportar(); return }

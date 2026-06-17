@@ -384,8 +384,24 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       ])]
       const ws = window.XLSX.utils.aoa_to_sheet(filas)
       ws['!cols'] = [8,24,38,18,18,18,13,13,15,17,22,18,26,38].map(w => ({ wch: w }))
+      ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+      ws['!autofilter'] = { ref: window.XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: LABELS.length - 1 } }) }
+      ws['!rows'] = [{ hpt: 22 }]
+      const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: '1E3A8A' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } }
+      const wsr = window.XLSX.utils.decode_range(ws['!ref'])
+      for (let C = wsr.s.c; C <= wsr.e.c; C++) {
+        const h = window.XLSX.utils.encode_cell({ r: 0, c: C })
+        if (ws[h]) ws[h].s = headerStyle
+      }
+      for (let R = 1; R <= wsr.e.r; R++) {
+        const rowFill = { fgColor: { rgb: R % 2 === 0 ? 'EFF6FF' : 'FFFFFF' }, patternType: 'solid' }
+        for (let C = wsr.s.c; C <= wsr.e.c; C++) {
+          const cell = window.XLSX.utils.encode_cell({ r: R, c: C })
+          if (ws[cell]) ws[cell].s = { font: { sz: 9 }, fill: rowFill, alignment: { wrapText: true, vertical: 'top' } }
+        }
+      }
       window.XLSX.utils.book_append_sheet(wb, ws, 'Tickets')
-      window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
+      window.XLSX.writeFile(wb, nombreArchivo('xlsx'), { bookType: 'xlsx', cellStyles: true })
       setExportando(false); mostrarAviso('✅ Excel generado correctamente.')
     }
     if (window.XLSX) { cargar(); return }
