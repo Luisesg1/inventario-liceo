@@ -1854,7 +1854,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
-    // Ocultar botones y forzar layout de escritorio para captura correcta
     const btns = el.querySelectorAll('button')
     btns.forEach(b => { b.style.visibility = 'hidden' })
     const header = el.querySelector('.detalle-header-modal')
@@ -1866,17 +1865,23 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     const titleDiv = header ? header.querySelector('div') : null
     const titleOrig = titleDiv ? titleDiv.style.cssText : ''
     if (titleDiv) titleDiv.style.width = 'auto'
+    // Forzar ancho fijo equivalente a A4 para que el contenido no se corte ni rompa en móvil
+    const elOrig = el.style.cssText
+    el.style.width = '700px'
+    el.style.minWidth = '700px'
+    el.style.maxWidth = '700px'
     const opt = {
       margin:      [10, 10, 10, 10],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 700 },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }
     window.html2pdf().set(opt).from(el).save().then(() => {
       btns.forEach(b => { b.style.visibility = '' })
       if (header) header.style.cssText = headerOrig
       if (titleDiv) titleDiv.style.cssText = titleOrig
+      el.style.cssText = elOrig
     })
   }
 
