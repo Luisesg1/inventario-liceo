@@ -352,8 +352,13 @@ export default function Papelera({ usuario, permisos = {} }) {
           }
         )
         if (!res.ok) {
-          const json = await res.json().catch(() => ({}))
-          error = { message: json.error ?? 'Error al eliminar usuario' }
+          // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
+          if (res.status === 400) {
+            ;({ error } = await supabase.from('usuarios').delete().eq('id', item.id))
+          } else {
+            const json = await res.json().catch(() => ({}))
+            error = { message: json.error ?? 'Error al eliminar usuario' }
+          }
         }
       } catch {
         error = { message: 'No se pudo conectar con el servidor.' }
@@ -395,8 +400,13 @@ export default function Papelera({ usuario, permisos = {} }) {
           }
         )
         if (!res.ok) {
-          const json = await res.json().catch(() => ({}))
-          error = { message: json.error ?? 'Error al eliminar usuario' }
+          // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
+          if (res.status === 400) {
+            ;({ error } = await supabase.from('usuarios').delete().eq('id', item.id))
+          } else {
+            const json = await res.json().catch(() => ({}))
+            error = { message: json.error ?? 'Error al eliminar usuario' }
+          }
         }
       } catch {
         error = { message: 'No se pudo conectar con el servidor.' }
