@@ -11,6 +11,7 @@ import {
   obtenerPendientes, agregarPendiente, eliminarPendiente,
   obtenerPendientesEdicion, guardarPendienteEdicion, eliminarPendienteEdicion,
 } from '../offline'
+import { buildPDFHTML } from '../utils/buildPDFTemplate'
 
 // Inserta campos faltantes en su posición natural, no al final
 function smartMergeOrder(savedOrder, naturalOrder) {
@@ -1854,173 +1855,30 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const descargarPDF = () => {
     if (!verDetalle) return
 
-    // Identificar tipo de bien
-    const cat    = verDetalle.categoria
-    const catObj = categorias.find(c => c.id === cat)
-    const catLabel = catObj?.label ?? cat
-    const catIcon  = catObj?.icon  ?? '📦'
-    const _norm = s => (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-    const isComp      = cat === 'computadores'
-    const isTecno     = !isComp && _norm(catObj?.label ?? cat).includes('tecnol')
-    const isBiblioteca = _norm(catObj?.label ?? cat).includes('biblio') || _norm(catObj?.label ?? cat).includes('libro')
+    const html = buildPDFHTML(verDetalle, categorias)
 
-    // Colores de estado
-    const ESTADO_C = {
-      Bueno:   { bg: '#dcfce7', color: '#166534' },
-      Regular: { bg: '#fef9c3', color: '#854d0e' },
-      Malo:    { bg: '#fee2e2', color: '#991b1b' },
-      Baja:    { bg: '#f3f4f6', color: '#6b7280' },
-    }
-    const ec = ESTADO_C[verDetalle.estado] || { bg: '#e0e7ff', color: '#3730a3' }
-
-    // Bloques de construcción con estilos inline fijos (sin media queries)
-    const S_SEC = 'background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;'
-    const secTit = t => `<p style="margin:0 0 8px 0;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">${t}</p>`
-    const fila = (l, v) =>
-      `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid #f1f5f9;gap:8px;">
-        <span style="font-size:10px;color:#94a3b8;white-space:nowrap;">${l}</span>
-        <strong style="font-size:11px;color:#0f172a;text-align:right;word-break:normal;overflow-wrap:normal;">${v || '—'}</strong>
-      </div>`
-    const filaKey = (l, v) =>
-      `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;border-bottom:1px solid #f1f5f9;gap:8px;">
-        <span style="font-size:10px;color:#94a3b8;white-space:nowrap;">${l}</span>
-        <strong style="font-size:10px;color:#0f172a;text-align:right;word-break:break-all;overflow-wrap:anywhere;font-family:monospace;">${v || 'N/A'}</strong>
-      </div>`
-    const campo = (l, v) =>
-      `<div style="display:flex;flex-direction:column;gap:2px;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-        <span style="font-size:9px;color:#94a3b8;text-transform:uppercase;font-weight:700;">${l}</span>
-        <strong style="font-size:11px;color:#0f172a;word-break:normal;overflow-wrap:normal;">${v || '—'}</strong>
-      </div>`
-    const grid3 = pairs =>
-      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px;margin-top:6px;">${pairs.map(([l,v]) => campo(l, v)).join('')}</div>`
-    const grid3f = pairs =>
-      `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px;margin-top:6px;">${pairs.filter(([,v]) => v).map(([l,v]) => campo(l, v)).join('')}</div>`
-
-    // Campos adicionales
-    const camposCat = catObj?.campos_personalizados ?? []
-    const extra     = verDetalle.campos_extra || {}
-    const _ord      = catObj?.campos_orden ?? []
-    const _sorted   = _ord.length
-      ? [...camposCat].sort((a,b) => { const ia=_ord.indexOf(a.id),ib=_ord.indexOf(b.id); if(ia===-1&&ib===-1)return 0; if(ia===-1)return 1; if(ib===-1)return -1; return ia-ib })
-      : camposCat
-    const conValor  = _sorted.filter(c => extra[c.id] !== undefined && extra[c.id] !== '')
-
-    const adqFields = [
-      ['Fecha',      verDetalle.fecha_adquisicion],
-      ['Proveedor',  verDetalle.proveedor],
-      ['N° Factura', verDetalle.numero_factura],
-      ['N° Orden',   verDetalle.numero_orden],
-      ['Fondo',      verDetalle.fondo],
-      ['Garantía',   verDetalle.garantia],
-    ]
-
-    // Construir HTML del PDF
-    let html = `<div style="width:750px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:11px;color:#111;padding:20px 24px;">`
-
-    // Franja institucional
-    html += `<div style="background:#1e3a8a;color:#fff;padding:8px 14px;border-radius:8px 8px 0 0;">
-      <p style="margin:0;font-size:9px;font-weight:600;opacity:.85;text-transform:uppercase;letter-spacing:.1em;">Sistema de Gestión Liceo JHJ</p>
-    </div>`
-
-    // Header del bien
-    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#fff;border:1px solid #e2e8f0;border-top:none;margin-bottom:14px;gap:12px;border-radius:0 0 8px 8px;">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
-        <span style="font-size:1.6rem;flex-shrink:0;">${catIcon}</span>
-        <div>
-          <p style="margin:0;font-weight:700;font-size:14px;color:#0f172a;word-break:normal;overflow-wrap:normal;">${verDetalle.nombre}</p>
-          <p style="margin:2px 0 0 0;font-size:10px;color:#64748b;">${verDetalle.codigo} · ${catLabel}</p>
-        </div>
-      </div>
-      <span style="background:${ec.bg};color:${ec.color};padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0;">${verDetalle.estado}</span>
-    </div>`
-
-    // Identificación + Asignación
-    let asignHtml = `<div style="${S_SEC}">${secTit('Asignación')}`
-    if (isComp || isTecno) asignHtml += fila('Área', verDetalle.area || '—')
-    asignHtml += fila('Ubicación', verDetalle.ubicacion || 'N/A') + fila('Responsable', verDetalle.responsable || 'N/A') + `</div>`
-    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0;">
-      <div style="${S_SEC}">${secTit('Identificación')}
-        ${fila('Código Interno', verDetalle.codigo_interno || 'N/A')}
-        ${fila('Código', verDetalle.codigo)}
-        ${fila('Categoría', catLabel)}
-        ${!isComp ? fila('Cantidad', verDetalle.cantidad) : ''}
-      </div>
-      ${asignHtml}
-    </div>`
-
-    // Descripción / Observaciones
-    if (verDetalle.descripcion)
-      html += `<div style="${S_SEC}">${secTit('Descripción')}<p style="margin:4px 0 0;font-size:11px;color:#334155;word-break:normal;overflow-wrap:normal;">${verDetalle.descripcion}</p></div>`
-    if (verDetalle.obs)
-      html += `<div style="${S_SEC}">${secTit('Observaciones')}<p style="margin:4px 0 0;font-size:11px;color:#334155;word-break:normal;overflow-wrap:normal;">${verDetalle.obs}</p></div>`
-
-    // Campos adicionales
-    if (conValor.length)
-      html += `<div style="${S_SEC}">${secTit('✨ Campos adicionales')}
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 16px;margin-top:6px;">
-          ${conValor.map(c => campo(c.nombre, c.tipo === 'booleano' ? (extra[c.id] === 'si' ? 'Sí' : 'No') : extra[c.id])).join('')}
-        </div></div>`
-
-    // Secciones según tipo
-    if (isComp) {
-      html += `<div style="${S_SEC}">${secTit('Hardware')}${grid3f([
-        ['Tipo', verDetalle.tipo], ['Marca', verDetalle.marca], ['Modelo', verDetalle.modelo],
-        ['Pantalla', verDetalle.pantalla], ['N° Serie', verDetalle.numero_serie], ['CPU', verDetalle.cpu],
-        ['RAM', [verDetalle.ram, verDetalle.ram_tipo, verDetalle.ram_slots ? verDetalle.ram_slots+' slot(s)' : ''].filter(Boolean).join(' · ')],
-        ['Almacenamiento', verDetalle.tipo_almacenamiento ? (verDetalle.tipo_almacenamiento+' '+(verDetalle.memoria||'')).trim() : verDetalle.memoria],
-        ['Sistema operativo', verDetalle.sistema_operativo],
-      ])}</div>`
-      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-        <div style="${S_SEC}">${secTit('🪟 Licencia Windows')}
-          ${filaKey('Clave', verDetalle.licencia_windows)}
-          ${fila('Versión', verDetalle.win_version)} ${fila('Proveedor', verDetalle.win_proveedor)}
-          ${fila('N° Factura', verDetalle.win_factura)} ${fila('Fecha factura', verDetalle.win_fecha_factura)}
-          ${fila('N° Orden', verDetalle.win_orden)}
-        </div>
-        <div style="${S_SEC}">${secTit('📊 Licencia Office')}
-          ${filaKey('Clave', verDetalle.licencia_office)}
-          ${fila('Versión', verDetalle.off_version)} ${fila('Proveedor', verDetalle.off_proveedor)}
-          ${fila('N° Factura', verDetalle.off_factura)} ${fila('Fecha factura', verDetalle.off_fecha_factura)}
-          ${fila('N° Orden', verDetalle.off_orden)}
-        </div>
-      </div>`
-      html += `<div style="${S_SEC}">${secTit('Adquisición')}${grid3(adqFields)}</div>`
-
-    } else if (isTecno) {
-      html += `<div style="${S_SEC}">${secTit('🖨️ Equipo')}${grid3f([
-        ['Tipo', verDetalle.tipo], ['Marca', verDetalle.marca], ['Modelo', verDetalle.modelo],
-        ['N° Serie', verDetalle.numero_serie], ['Tecnología', verDetalle.tecnologia], ['Consumible', verDetalle.consumible],
-      ])}</div>`
-      html += `<div style="${S_SEC}">${secTit('🛒 Adquisición')}${grid3(adqFields)}</div>`
-
-    } else if (isBiblioteca) {
-      html += `<div style="${S_SEC}">${secTit('📚 Datos bibliográficos')}${grid3([['ISBN', verDetalle.isbn], ['Autor', verDetalle.autor], ['Género', verDetalle.genero]])}</div>`
-      html += `<div style="${S_SEC}">${secTit('🛒 Adquisición')}${grid3(adqFields)}</div>`
-
-    } else {
-      html += `<div style="${S_SEC}">${secTit('🧾 Detalle del bien')}${grid3([
-        ['Nombre', verDetalle.nombre], ['Código', verDetalle.codigo],
-        ['Cantidad', verDetalle.cantidad], ['Estado', verDetalle.estado],
-      ])}</div>`
-      html += `<div style="${S_SEC}">${secTit('🛒 Adquisición')}${grid3(adqFields)}</div>`
-    }
-
-    // Pie de página
-    const today = new Date().toLocaleDateString('es-CL', { year:'numeric', month:'long', day:'numeric' })
-    html += `<p style="margin:14px 0 0;font-size:9px;color:#94a3b8;text-align:right;">Generado el ${today}</p>`
-    html += `</div>`
-
-    // Montar fuera de pantalla y exportar
+    // Montar fuera de la vista: position:absolute arriba del documento,
+    // NO position:fixed (que queda limitado al viewport del móvil).
     const wrapper = document.createElement('div')
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;pointer-events:none;'
+    wrapper.style.cssText = [
+      'position:absolute',
+      'left:0',
+      'top:-9999px',
+      'width:710px',
+      'overflow:visible',
+      'background:white',
+      'pointer-events:none',
+    ].join(';')
     wrapper.innerHTML = html
     document.body.appendChild(wrapper)
 
     const opt = {
-      margin:      [8, 8, 8, 8],
+      margin:      [10, 10, 10, 10],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
+      // windowWidth grande evita que cualquier media query de la página
+      // afecte el renderizado (aunque el template no usa clases, por seguridad).
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 1200, logging: false },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }
     window.html2pdf().set(opt).from(wrapper.firstElementChild).save().then(() => {
