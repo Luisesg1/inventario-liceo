@@ -453,12 +453,41 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     const todos = await fetchParaExportar()
     if (!todos.length) { setExportando(false); mostrarAvisoExport('No hay registros para exportar.'); return }
     const cargarXLSX = () => {
-      const wb  = window.XLSX.utils.book_new()
+      const XLSX = window.XLSX
+      const wb = XLSX.utils.book_new()
+      const colWidths = [18, 14, 10, 30, 22, 12, 30, 12, 55, 28]
       const filas = [EXPORT_HEADERS, ...todos.map(rowToArray)]
-      const ws = window.XLSX.utils.aoa_to_sheet(filas)
-      ws['!cols'] = [16, 14, 11, 28, 22, 14, 26, 16, 50, 22].map(w => ({ wch: w }))
-      window.XLSX.utils.book_append_sheet(wb, ws, 'Auditoría')
-      window.XLSX.writeFile(wb, nombreArchivo('xlsx'))
+      const ws = XLSX.utils.aoa_to_sheet(filas)
+      ws['!cols'] = colWidths.map(w => ({ wch: w }))
+      // Congelar primera fila
+      ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
+      // Filtros automáticos
+      ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: EXPORT_HEADERS.length - 1 } }) }
+      // Estilo encabezados
+      const headerStyle = {
+        font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 },
+        fill: { fgColor: { rgb: '1A237E' }, patternType: 'solid' },
+        alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+        border: { bottom: { style: 'thin', color: { rgb: 'FFFFFF' } } },
+      }
+      const dataStyle = {
+        alignment: { wrapText: true, vertical: 'top' },
+        font: { sz: 9 },
+      }
+      const range = XLSX.utils.decode_range(ws['!ref'])
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const hCell = XLSX.utils.encode_cell({ r: 0, c: C })
+        if (ws[hCell]) ws[hCell].s = headerStyle
+      }
+      for (let R = 1; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cell = XLSX.utils.encode_cell({ r: R, c: C })
+          if (ws[cell]) ws[cell].s = { ...dataStyle, fill: { fgColor: { rgb: R % 2 === 0 ? 'F9FAFB' : 'FFFFFF' }, patternType: 'solid' } }
+        }
+      }
+      ws['!rows'] = [{ hpt: 22 }]
+      XLSX.utils.book_append_sheet(wb, ws, 'Auditoría')
+      XLSX.writeFile(wb, nombreArchivo('xlsx'), { bookType: 'xlsx', cellStyles: true })
       setExportando(false)
       mostrarAvisoExport('✅ Excel generado correctamente.')
     }
@@ -476,41 +505,59 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (!todos.length) { setExportando(false); mostrarAvisoExport('No hay registros para exportar.'); return }
     const fecha    = new Date().toLocaleDateString('es-CL')
     const modLabel = MODULO_LABEL[activeModulo] ?? activeModulo
+    // Columnas y anchos (%) para layout A4 horizontal fijo
+    const colDefs = [
+      { label: 'Fecha y hora',       pct: 10 },
+      { label: 'Módulo',             pct:  7 },
+      { label: 'Acción',             pct:  6 },
+      { label: 'Registro afectado',  pct: 12 },
+      { label: 'Usuario',            pct:  9 },
+      { label: 'RUT',                pct:  7 },
+      { label: 'Correo',             pct: 12 },
+      { label: 'Rol',                pct:  6 },
+      { label: 'Detalle del cambio', pct: 20 },
+      { label: 'Dispositivo',        pct: 11 },
+    ]
+    const truncar = (s, max) => { const t = String(s ?? ''); return t.length > max ? t.slice(0, max) + '…' : t }
     const htmlContent = `<html><head><meta charset="utf-8"><style>
-      body{font-family:Arial,sans-serif;font-size:9px;color:#111;margin:0;padding:18px}
-      .hdr{border-bottom:2px solid #1a237e;padding-bottom:8px;margin-bottom:10px}
-      h1{font-size:14px;margin:0 0 2px;color:#1a237e}
-      .sub{font-size:9px;color:#6b7280;margin:0}
-      table{width:100%;border-collapse:collapse}
-      th{background:#1a237e;color:white;padding:4px 5px;text-align:left;font-size:7.5px;text-transform:uppercase;letter-spacing:.03em}
-      td{padding:3px 5px;border-bottom:1px solid #e5e7eb;font-size:8px;vertical-align:top;word-break:break-word}
+      body{font-family:Arial,sans-serif;font-size:8px;color:#111;margin:0;padding:14px}
+      .hdr{border-bottom:2px solid #1a237e;padding-bottom:6px;margin-bottom:8px}
+      h1{font-size:13px;margin:0 0 2px;color:#1a237e}
+      .sub{font-size:8px;color:#6b7280;margin:0}
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      col.narrow{} col.wide{}
+      th{background:#1a237e;color:white;padding:4px 4px;text-align:left;font-size:7px;text-transform:uppercase;letter-spacing:.02em;word-break:break-word;overflow-wrap:break-word}
+      td{padding:3px 4px;border-bottom:1px solid #e5e7eb;font-size:7.5px;vertical-align:top;word-break:break-word;overflow-wrap:break-word;overflow:hidden}
       tr:nth-child(even) td{background:#f9fafb}
-      .crear{display:inline-block;padding:1px 5px;border-radius:12px;background:#dcfce7;color:#16a34a;font-weight:700;font-size:7.5px}
-      .editar{display:inline-block;padding:1px 5px;border-radius:12px;background:#dbeafe;color:#2563eb;font-weight:700;font-size:7.5px}
-      .eliminar{display:inline-block;padding:1px 5px;border-radius:12px;background:#fee2e2;color:#dc2626;font-weight:700;font-size:7.5px}
+      .crear{display:inline-block;padding:1px 4px;border-radius:10px;background:#dcfce7;color:#16a34a;font-weight:700;font-size:7px}
+      .editar{display:inline-block;padding:1px 4px;border-radius:10px;background:#dbeafe;color:#2563eb;font-weight:700;font-size:7px}
+      .eliminar{display:inline-block;padding:1px 4px;border-radius:10px;background:#fee2e2;color:#dc2626;font-weight:700;font-size:7px}
     </style></head><body>
       <div class="hdr">
         <h1>Auditoría — ${modLabel}</h1>
         <p class="sub">Generado el ${fecha} · ${todos.length} registro${todos.length !== 1 ? 's' : ''}</p>
       </div>
-      <table><thead><tr>${EXPORT_HEADERS.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${todos.map(r => {
-        const row = rowToArray(r)
-        const cls = r.accion === 'crear' ? 'crear' : r.accion === 'editar' ? 'editar' : 'eliminar'
-        const esc = (s) => String(s ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        return `<tr>
-          <td>${esc(row[0])}</td>
-          <td>${esc(row[1])}</td>
-          <td><span class="${cls}">${esc(row[2])}</span></td>
-          <td>${esc(row[3])}</td>
-          <td>${esc(row[4])}</td>
-          <td>${esc(row[5])}</td>
-          <td>${esc(row[6])}</td>
-          <td>${esc(row[7])}</td>
-          <td style="font-size:7.5px">${esc(row[8])}</td>
-          <td>${esc(row[9])}</td>
-        </tr>`
-      }).join('')}</tbody></table>
+      <table>
+        <colgroup>${colDefs.map(c => `<col style="width:${c.pct}%">`).join('')}</colgroup>
+        <thead><tr>${colDefs.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+        <tbody>${todos.map(r => {
+          const row = rowToArray(r)
+          const cls = r.accion === 'crear' ? 'crear' : r.accion === 'editar' ? 'editar' : 'eliminar'
+          const esc = (s, max = 999) => truncar(String(s ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;'), max)
+          return `<tr>
+            <td>${esc(row[0])}</td>
+            <td>${esc(row[1])}</td>
+            <td><span class="${cls}">${esc(row[2])}</span></td>
+            <td>${esc(row[3], 60)}</td>
+            <td>${esc(row[4], 40)}</td>
+            <td>${esc(row[5])}</td>
+            <td style="font-size:7px">${esc(row[6], 50)}</td>
+            <td>${esc(row[7])}</td>
+            <td style="font-size:7px">${esc(row[8], 180)}</td>
+            <td style="font-size:7px">${esc(row[9], 60)}</td>
+          </tr>`
+        }).join('')}</tbody>
+      </table>
     </body></html>`
     const cargarPDF = () => {
       const opt = {

@@ -780,7 +780,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const exportarCSV = (datosOverride) => {
-    const datos = datosOverride ?? getDatosExportar()
+    const datos = Array.isArray(datosOverride) ? datosOverride : getDatosExportar()
     if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
     const { cols, datosFlat } = getColumnasExportar(datos)
     const escapar = (v) => { if (v === null || v === undefined) return ''; const s = String(v); return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s }
@@ -792,7 +792,7 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   }
 
   const exportarExcel = (datosOverride) => {
-    const datos = datosOverride ?? getDatosExportar()
+    const datos = Array.isArray(datosOverride) ? datosOverride : getDatosExportar()
     if (!datos.length) { setAviso('No hay bienes para exportar.'); return }
     const cargarYExportar = () => {
       const { cols, datosFlat } = getColumnasExportar(datos)
@@ -1285,12 +1285,25 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       }
       if (!online || !navigator.onLine) { guardarOffline(); return }
       try {
-        const { data, error } = await supabase.from('bienes').insert(payload).select().single()
-        if (error) { setAviso('Error al guardar: ' + error.message); setGuardando(false); return }
-        supabase.rpc('set_audit_dispositivo', { p_bien_id: data.id, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
-        setBienes(prev => [data, ...prev])
+        const nuevoPayload = { ...payload }
+        let insertData = null, insertError = null
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const { data: d, error: e } = await supabase.from('bienes').insert(nuevoPayload).select().single()
+          if (!e) { insertData = d; break }
+          if (e.code === '23505' && e.message.includes('bienes_codigo_key')) {
+            const m = nuevoPayload.codigo?.match(/^INV-(\d+)$/)
+            const next = (m ? parseInt(m[1]) : 0) + 1
+            nuevoPayload.codigo = `INV-${String(next).padStart(4, '0')}`
+          } else { insertError = e; break }
+        }
+        if (!insertData) {
+          setAviso(insertError ? 'Error al guardar: ' + insertError.message : 'No se pudo generar un código único. Intenta asignarlo manualmente.')
+          setGuardando(false); return
+        }
+        supabase.rpc('set_audit_dispositivo', { p_bien_id: insertData.id, p_dispositivo: navigator.userAgent.slice(0, 300) }).then().catch(() => {})
+        setBienes(prev => [insertData, ...prev])
         setCatActual(payload.categoria)
-        logActividad(usuario, 'crear', nombreFinal, data.id)
+        logActividad(usuario, 'crear', nombreFinal, insertData.id)
       } catch (e) {
         if (esErrorRed(e)) { guardarOffline(); return }
         setAviso('Error al guardar: ' + e.message)
