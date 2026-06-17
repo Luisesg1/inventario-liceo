@@ -3,21 +3,35 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Package2, Users, ClipboardList,
   Ticket, Settings2, Layers, FileSpreadsheet,
-  HardDrive, FileText, ChevronRight, X, LogOut,
+  HardDrive, ChevronRight, X, LogOut,
   Menu, Loader2, ShoppingCart, ShieldCheck, History, Trash2,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
 
-const COLS_BACKUP = [
-  'nombre','categoria','codigo','cantidad','estado','ubicacion','responsable','obs',
-  'isbn','autor','genero',
-  'tipo','marca','modelo','numero_serie','pantalla','cpu','ram','ram_tipo','ram_slots',
-  'memoria','tipo_almacenamiento','sistema_operativo',
-  'licencia_windows','win_version','win_proveedor','win_factura','win_fecha_factura','win_orden',
-  'licencia_office','off_version','off_proveedor','off_factura','off_fecha_factura','off_orden',
-  'fecha_adquisicion','proveedor','numero_factura','numero_orden','fondo','garantia',
+const TABLAS_BACKUP = [
+  'bienes', 'categorias', 'usuarios', 'permisos_rol', 'permisos_usuario',
+  'prestamos', 'tickets', 'requerimientos', 'ausencias', 'dias_compensatorios',
+  'audit_logs', 'actividades', 'configuracion', 'incidencias', 'dias_inhabilitados',
 ]
+
+const NOMBRE_HOJA = {
+  bienes:              'Bienes',
+  categorias:          'Categorías',
+  usuarios:            'Usuarios',
+  permisos_rol:        'Permisos por Rol',
+  permisos_usuario:    'Permisos Usuario',
+  prestamos:           'Préstamos',
+  tickets:             'Tickets',
+  requerimientos:      'Requerimientos',
+  ausencias:           'Ausencias',
+  dias_compensatorios: 'Compensatorios',
+  audit_logs:          'Auditoría',
+  actividades:         'Actividades',
+  configuracion:       'Configuración',
+  incidencias:         'Incidencias',
+  dias_inhabilitados:  'Días Inhabilitados',
+}
 
 const ROL_LABEL = {
   admin:                 'Administrador',
@@ -94,240 +108,122 @@ export default function Layout({
     return () => supabase.removeChannel(sub)
   }, [puedeGestionarTickets])
 
-  // ── Backup / Export ───────────────────────────────────
-  const fetchBackupData = async () => {
-    const [{ data: bienes }, { data: cats }] = await Promise.all([
-      supabase.from('bienes').select('*').order('categoria').order('nombre'),
-      supabase.from('categorias').select('*'),
-    ])
-    return { bienes: bienes ?? [], cats: cats ?? [] }
+  // ── Backup completo ──────────────────────────────────────
+  const fetchFullBackupData = async () => {
+    const resultados = await Promise.allSettled(
+      TABLAS_BACKUP.map(t => supabase.from(t).select('*'))
+    )
+    const data = {}
+    TABLAS_BACKUP.forEach((tabla, i) => {
+      const r = resultados[i]
+      data[tabla] = r.status === 'fulfilled' ? (r.value.data ?? []) : []
+    })
+    return data
   }
 
-  const exportarBackupExcel = async () => {
-    setExportando(true)
-    const { bienes, cats } = await fetchBackupData()
-    if (!bienes.length) { setExportando(false); return }
-    const fecha = new Date().toISOString().slice(0, 10)
-
-    const cargar = () => {
-      const XLSX = window.XLSX
-      const wb = XLSX.utils.book_new()
-      const grupos = {}
-      bienes.forEach(b => {
-        const cat = cats.find(c => c.id === b.categoria)
-        const key = b.categoria || 'sin_categoria'
-        if (!grupos[key]) grupos[key] = { label: cat?.label ?? b.categoria ?? 'Sin categoría', icon: cat?.icon ?? '📦', items: [] }
-        grupos[key].items.push(b)
+  const registrarAuditoriaBackup = async (tipo) => {
+    try {
+      await supabase.from('audit_logs').insert({
+        bien_nombre: `Backup ${tipo} del sistema`,
+        accion: 'crear',
+        cambios: { tipo_backup: tipo, tablas: TABLAS_BACKUP },
+        usuario_id: usuario.id,
+        usuario_nombre: usuario.nombre,
+        usuario_rol: usuario.rol,
+        modulo: 'backup',
+        creado_en: new Date().toISOString(),
       })
-      const COLS_LISTA = ['categoria_nombre','codigo','nombre','estado','cantidad','ubicacion','responsable','tipo','marca','modelo','numero_serie','obs']
-      const HDRS_LISTA = ['Categoría','Código','Nombre','Estado','Cantidad','Ubicación','Responsable','Tipo','Marca','Modelo','N° Serie','Observaciones']
-      const resumenRows = [
-        ['Categoría','Ícono','Total bienes'],
-        ...Object.values(grupos).map(g => [g.label, g.icon, g.items.length]),
-        [], ['TOTAL','',bienes.length], [],
-        ['Datos completos (' + bienes.length + ' bienes)'],
-        HDRS_LISTA,
-        ...bienes.map(b => {
-          const cat = cats.find(c => c.id === b.categoria)
-          return COLS_LISTA.map(c => c === 'categoria_nombre' ? (cat?.label ?? b.categoria ?? '') : (b[c] ?? ''))
-        }),
-      ]
-      const wsRes = XLSX.utils.aoa_to_sheet(resumenRows)
-      wsRes['!cols'] = HDRS_LISTA.map((h, i) => ({ wch: Math.max(h.length + 2, i === 0 ? 20 : i === 2 ? 28 : 14) }))
-      XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen')
-      Object.values(grupos).forEach(({ label, items }) => {
-        if (!items.length) return
-        const cols = COLS_BACKUP.filter(c => items.some(b => b[c] != null && b[c] !== ''))
-        const rows = [cols, ...items.map(b => cols.map(c => b[c] ?? ''))]
-        const ws = XLSX.utils.aoa_to_sheet(rows)
-        ws['!cols'] = cols.map(h => ({ wch: Math.max(h.length + 4, 14) }))
-        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:0,c:cols.length-1} }) }
-        ws['!tables'] = [{
-          name: label.replace(/\s+/g,'_').replace(/[^A-Za-z0-9_]/g,'').slice(0,255) || 'Tabla',
-          ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:rows.length-1,c:cols.length-1} }),
-          headerRow: true, totalsRow: false,
-          style: { theme: 'TableStyleMedium2', showRowStripes: true },
-          columns: cols.map(h => ({ name: h })),
-        }]
-        XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
-      })
-      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`)
-      setExportando(false)
-    }
-    if (window.XLSX) { cargar(); return }
-    const s = document.getElementById('sheetjs-script') || document.createElement('script')
-    s.id = 'sheetjs-script'
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    s.onload = cargar; s.onerror = () => setExportando(false)
-    document.head.appendChild(s)
+    } catch { /* silenciar si el constraint rechaza el valor */ }
   }
 
   const exportarBackupJSON = async () => {
     setExportando(true)
-    const { bienes, cats } = await fetchBackupData()
-    if (!bienes.length) { setExportando(false); return }
-    const backup = {
-      version: 1,
-      fecha_exportacion: new Date().toISOString(),
-      total: bienes.length,
-      categorias: cats.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
-      bienes,
-    }
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `backup_inventario_${new Date().toISOString().slice(0,10)}.json`
-    a.click(); URL.revokeObjectURL(url)
-    setExportando(false)
-  }
-
-  const exportarInformePDF = async () => {
-    setExportando(true)
-    const { bienes, cats } = await fetchBackupData()
-    if (!bienes.length) { setExportando(false); return }
-    const cargarPDF = () => {
-      const { jsPDF } = window.jspdf
-      const fecha = new Date()
-      const fechaStr = fecha.toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' })
-      const fechaArchivo = fecha.toISOString().slice(0, 10)
-      const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' })
-      const W = doc.internal.pageSize.getWidth()
-      const AZUL = [26,35,126]; const DORADO = [212,160,23]; const GRIS = [107,114,128]
-      const addHeader = (pageNum) => {
-        doc.setFillColor(...AZUL); doc.rect(0,0,W,22,'F')
-        doc.setFillColor(...DORADO); doc.rect(0,22,W,1.5,'F')
-        doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(13)
-        doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque', W/2, 9, { align:'center' })
-        doc.setFont('helvetica','normal'); doc.setFontSize(8.5)
-        doc.text('Inventario de Bienes — Informe Oficial', W/2, 15.5, { align:'center' })
-        doc.setTextColor(...GRIS); doc.setFontSize(7.5)
-        doc.text(fechaStr, W-12, 28, { align:'right' })
-        if (pageNum > 1) doc.text(`Página ${pageNum}`, 12, 28)
+    try {
+      const tablesData = await fetchFullBackupData()
+      const ahora = new Date().toISOString()
+      const backup = {
+        version: '1.0',
+        schema_version: '2026.06',
+        generated_at: ahora,
+        generated_by: { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol },
+        app: 'Sistema de Gestión Liceo JHJ',
+        warning: 'Este archivo contiene información sensible del sistema. Guárdelo en un lugar seguro.',
+        tables: tablesData,
       }
-      const addFooter = () => {
-        const pageCount = doc.internal.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i)
-          doc.setFillColor(245,245,250); doc.rect(0,284,W,13,'F')
-          doc.setDrawColor(220,220,235); doc.setLineWidth(0.3); doc.line(0,284,W,284)
-          doc.setTextColor(...GRIS); doc.setFontSize(7.5)
-          doc.text('Liceo Polivalente de Excelencia Juvenal Hernández Jaque — Sistema de Gestión Liceo JHJ', W/2, 290, { align:'center' })
-          doc.text(`${i} / ${pageCount}`, W-12, 290, { align:'right' })
-        }
-      }
-      addHeader(1)
-      doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(18)
-      doc.text('Informe de Inventario', W/2, 45, { align:'center' })
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...GRIS)
-      doc.text(`Generado el ${fechaStr}`, W/2, 53, { align:'center' })
-      doc.setDrawColor(...DORADO); doc.setLineWidth(0.8); doc.line(14,58,W-14,58)
-      const estados = { bueno:0, regular:0, malo:0, dado_de_baja:0 }
-      bienes.forEach(b => { if (b.estado && estados[b.estado] !== undefined) estados[b.estado]++ })
-      const kpis = [
-        { label:'Total Bienes', value:bienes.length, color:AZUL },
-        { label:'En Buen Estado', value:estados.bueno, color:[22,163,74] },
-        { label:'Estado Regular', value:estados.regular, color:[217,119,6] },
-        { label:'Mal Estado', value:estados.malo, color:[220,38,38] },
-        { label:'Categorías', value:cats.length, color:[109,40,217] },
-      ]
-      const boxW = (W-28-8*4)/5
-      kpis.forEach((k,i) => {
-        const x = 14+i*(boxW+8)
-        doc.setFillColor(248,249,255); doc.setDrawColor(...k.color); doc.setLineWidth(0.4)
-        doc.roundedRect(x,63,boxW,22,3,3,'FD')
-        doc.setTextColor(...k.color); doc.setFont('helvetica','bold'); doc.setFontSize(16)
-        doc.text(String(k.value), x+boxW/2, 75, { align:'center' })
-        doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(...GRIS)
-        doc.text(k.label, x+boxW/2, 80.5, { align:'center' })
-      })
-      doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(11)
-      doc.text('Resumen por Categoría', 14, 95)
-      const grupos = {}
-      bienes.forEach(b => {
-        const cat = cats.find(c => c.id === b.categoria)
-        const key = b.categoria || 'sin_categoria'
-        if (!grupos[key]) grupos[key] = { label: cat?.label ?? 'Sin categoría', icon: cat?.icon ?? '📦', items:[] }
-        grupos[key].items.push(b)
-      })
-      const resumenBody = Object.values(grupos).map(g => {
-        const bs = g.items.filter(b => b.estado === 'bueno').length
-        const rs = g.items.filter(b => b.estado === 'regular').length
-        const ms = g.items.filter(b => b.estado === 'malo').length
-        return [g.label, g.items.length, bs, rs, ms]
-      })
-      resumenBody.push(['TOTAL', bienes.length, estados.bueno, estados.regular, estados.malo])
-      doc.autoTable({
-        startY:99,
-        head:[['Categoría','Total','Bueno','Regular','Malo']],
-        body:resumenBody,
-        styles:{ fontSize:9, cellPadding:3.5 },
-        headStyles:{ fillColor:AZUL, textColor:255, fontStyle:'bold', halign:'center' },
-        columnStyles:{
-          0:{ halign:'left', cellWidth:80 }, 1:{ halign:'center', fontStyle:'bold' },
-          2:{ halign:'center', textColor:[22,163,74] }, 3:{ halign:'center', textColor:[217,119,6] },
-          4:{ halign:'center', textColor:[220,38,38] },
-        },
-        alternateRowStyles:{ fillColor:[248,249,255] },
-        footStyles:{ fillColor:[230,232,245], fontStyle:'bold', textColor:AZUL },
-        didParseCell:(data) => {
-          if (data.row.index === resumenBody.length-1) {
-            data.cell.styles.fontStyle = 'bold'; data.cell.styles.fillColor = [230,232,245]
-          }
-        },
-        margin:{ left:14, right:14 },
-      })
-      let pageNum = 2
-      Object.values(grupos).forEach(({ label, items }) => {
-        if (!items.length) return
-        doc.addPage(); addHeader(pageNum++)
-        doc.setTextColor(...AZUL); doc.setFont('helvetica','bold'); doc.setFontSize(12)
-        doc.text(label, 14, 35)
-        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...GRIS)
-        doc.text(`${items.length} bien${items.length !== 1 ? 'es' : ''}`, 14, 41)
-        const extras = ['tipo','marca','modelo','numero_serie','isbn','autor'].filter(c =>
-          items.some(b => b[c] != null && b[c] !== ''))
-        const cols = ['nombre','codigo','estado','cantidad','ubicacion',...extras]
-        const hdrs = {
-          nombre:'Nombre', codigo:'Código', estado:'Estado', cantidad:'Cant.',
-          ubicacion:'Ubicación', responsable:'Responsable', tipo:'Tipo',
-          marca:'Marca', modelo:'Modelo', numero_serie:'N° Serie', isbn:'ISBN', autor:'Autor',
-        }
-        const ESTADO_COLOR = { bueno:[22,163,74], regular:[217,119,6], malo:[220,38,38], dado_de_baja:[107,114,128] }
-        doc.autoTable({
-          startY:45,
-          head:[cols.map(c => hdrs[c] ?? c)],
-          body:items.map(b => cols.map(c => b[c] ?? '')),
-          styles:{ fontSize:8, cellPadding:2.8, overflow:'ellipsize' },
-          headStyles:{ fillColor:AZUL, textColor:255, fontStyle:'bold' },
-          alternateRowStyles:{ fillColor:[248,249,255] },
-          didParseCell:(data) => {
-            if (data.section === 'body') {
-              const estadoIdx = cols.indexOf('estado')
-              if (data.column.index === estadoIdx) {
-                const color = ESTADO_COLOR[data.cell.raw]
-                if (color) data.cell.styles.textColor = color
-                data.cell.styles.fontStyle = 'bold'
-              }
-            }
-          },
-          margin:{ left:14, right:14 },
-        })
-      })
-      addFooter()
-      doc.save(`informe_inventario_${fechaArchivo}.pdf`)
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `backup_sistema_${ahora.slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      await registrarAuditoriaBackup('JSON')
+    } finally {
       setExportando(false)
     }
-    const loadScript = (src, id) => new Promise((resolve, reject) => {
-      if (document.getElementById(id)) { resolve(); return }
-      const s = document.createElement('script')
-      s.id = id; s.src = src; s.onload = resolve; s.onerror = reject
-      document.head.appendChild(s)
-    })
+  }
+
+  const exportarBackupExcel = async () => {
+    setExportando(true)
     try {
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', 'jspdf-script')
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', 'jspdf-autotable-script')
-      cargarPDF()
-    } catch { setExportando(false) }
+      const tablesData = await fetchFullBackupData()
+      const fecha = new Date().toISOString().slice(0, 10)
+
+      const generar = () => {
+        const XLSX = window.XLSX
+        const wb = XLSX.utils.book_new()
+
+        // Hoja de metadatos
+        const totalRegistros = Object.values(tablesData).reduce((acc, r) => acc + r.length, 0)
+        const metaRows = [
+          ['Campo', 'Valor'],
+          ['Sistema', 'Sistema de Gestión Liceo JHJ'],
+          ['Fecha de backup', new Date().toISOString()],
+          ['Generado por', `${usuario.nombre} (${usuario.rol})`],
+          ['Versión', '1.0'],
+          ['Total registros', totalRegistros],
+          ['Advertencia', 'Este archivo contiene información sensible del sistema. Guárdelo en un lugar seguro.'],
+          [],
+          ['Tabla', 'Registros'],
+          ...TABLAS_BACKUP.map(t => [NOMBRE_HOJA[t] ?? t, tablesData[t]?.length ?? 0]),
+        ]
+        const wsMeta = XLSX.utils.aoa_to_sheet(metaRows)
+        wsMeta['!cols'] = [{ wch: 22 }, { wch: 70 }]
+        XLSX.utils.book_append_sheet(wb, wsMeta, 'Metadata')
+
+        // Una hoja por tabla
+        for (const tabla of TABLAS_BACKUP) {
+          const rows = tablesData[tabla] ?? []
+          const nombreHoja = (NOMBRE_HOJA[tabla] ?? tabla).slice(0, 31)
+          if (!rows.length) {
+            const wsVacia = XLSX.utils.aoa_to_sheet([['Sin registros en esta tabla']])
+            XLSX.utils.book_append_sheet(wb, wsVacia, nombreHoja)
+            continue
+          }
+          const ws = XLSX.utils.json_to_sheet(rows)
+          const cols = Object.keys(rows[0])
+          ws['!cols'] = cols.map(c => ({ wch: Math.max(c.length + 4, 14) }))
+          ws['!autofilter'] = {
+            ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: cols.length - 1 } }),
+          }
+          XLSX.utils.book_append_sheet(wb, ws, nombreHoja)
+        }
+
+        XLSX.writeFile(wb, `backup_sistema_${fecha}.xlsx`)
+        registrarAuditoriaBackup('Excel').catch(() => {})
+        setExportando(false)
+      }
+
+      if (window.XLSX) { generar(); return }
+      const s = document.getElementById('sheetjs-script') || document.createElement('script')
+      s.id = 'sheetjs-script'
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      s.onload = generar
+      s.onerror = () => setExportando(false)
+      document.head.appendChild(s)
+    } catch {
+      setExportando(false)
+    }
   }
 
   // ── Nav items ─────────────────────────────────────────
@@ -375,9 +271,18 @@ export default function Layout({
   }, [sidebarOpen])
 
   const toolButtons = [
-    { Icon: FileSpreadsheet, label: 'Backup Excel', fn: exportarBackupExcel },
-    { Icon: HardDrive,       label: 'Backup JSON',  fn: exportarBackupJSON  },
-    { Icon: FileText,        label: 'Informe PDF',   fn: exportarInformePDF  },
+    {
+      Icon: FileSpreadsheet,
+      label: 'Backup Excel',
+      desc: 'Descarga un respaldo revisable en hojas de cálculo.',
+      fn: exportarBackupExcel,
+    },
+    {
+      Icon: HardDrive,
+      label: 'Backup JSON',
+      desc: 'Descarga un respaldo completo para restauración de base de datos.',
+      fn: exportarBackupJSON,
+    },
   ]
 
   return (
@@ -819,12 +724,19 @@ export default function Layout({
                   exit="closed"
                   style={{ overflow: 'hidden' }}
                 >
-                  {toolButtons.map(({ Icon, label, fn }) => (
+                  {toolButtons.map(({ Icon, label, desc, fn }) => (
                     <button key={label} className="tool-btn" onClick={fn} disabled={exportando}>
                       <span className="tool-btn-icon">
                         {exportando ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
                       </span>
-                      {exportando ? 'Generando…' : label}
+                      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span>{exportando ? 'Generando…' : label}</span>
+                        {!exportando && (
+                          <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 400, lineHeight: 1.3 }}>
+                            {desc}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   ))}
                 </motion.div>
