@@ -1,10 +1,11 @@
 // src/pages/Papelera.jsx
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Trash2, RotateCcw, AlertTriangle, Package2,
   Ticket, Calendar, ShoppingCart, Gift, Clock,
-  RefreshCw, X, CheckCircle2, ChevronDown, Users,
+  RefreshCw, CheckCircle2, Users, Square, CheckSquare,
+  Minus,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 
@@ -42,6 +43,7 @@ const FILTROS_MODULO = [
 ]
 
 const BUCKET_REQ_IMGS = 'requerimientos'
+const TEXTO_VACIAR    = 'VACIA PAPELERA'
 
 // ── Helpers de imagen para requerimientos ────────────────────────────────
 function pathDesdeUrlPublica(url) {
@@ -75,19 +77,11 @@ function fmtFecha(iso) {
 }
 
 function ExpiresChip({ diasRestantes }) {
-  const urgente  = diasRestantes <= 3
+  const urgente    = diasRestantes <= 3
   const muyUrgente = diasRestantes <= 1
-
-  const color = muyUrgente ? '#dc2626'
-    : urgente ? '#f97316'
-    : '#64748b'
-  const bg    = muyUrgente ? '#fef2f2'
-    : urgente ? '#fff7ed'
-    : '#f1f5f9'
-  const border = muyUrgente ? '#fca5a5'
-    : urgente ? '#fed7aa'
-    : '#e2e8f0'
-
+  const color  = muyUrgente ? '#dc2626' : urgente ? '#f97316' : '#64748b'
+  const bg     = muyUrgente ? '#fef2f2' : urgente ? '#fff7ed' : '#f1f5f9'
+  const border = muyUrgente ? '#fca5a5' : urgente ? '#fed7aa' : '#e2e8f0'
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -101,26 +95,95 @@ function ExpiresChip({ diasRestantes }) {
   )
 }
 
+// ── Spinner inline ────────────────────────────────────────────────────────
+function Spinner({ size = 14, color = '#fff' }) {
+  return (
+    <svg style={{ animation: 'spin 0.7s linear infinite' }} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke={`${color}40`} strokeWidth="3"/>
+      <path d="M12 2a10 10 0 0 1 10 10" stroke={color} strokeWidth="3" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────
 export default function Papelera({ usuario, permisos = {} }) {
-  const esAdmin              = usuario?.rol === 'admin'
-  const puedeRestaurar       = esAdmin || !!permisos.restaurar
-  const puedeEliminarPerm    = esAdmin || !!permisos.eliminarPermanente
+  const esAdmin           = usuario?.rol === 'admin'
+  const puedeRestaurar    = esAdmin || !!permisos.restaurar
+  const puedeEliminarPerm = esAdmin || !!permisos.eliminarPermanente
 
-  const [items,          setItems]          = useState([])
-  const [cargando,       setCargando]       = useState(true)
-  const [filtroModulo,   setFiltroModulo]   = useState('')
-  const [confirmacion,   setConfirmacion]   = useState(null)
-  const [procesando,     setProcesando]     = useState(false)
-  const [aviso,          setAviso]          = useState(null)
-  const [verificando,    setVerificando]    = useState(null) // id+tabla del item que se está verificando
-  const [conflictoNombre,setConflictoNombre]= useState(null) // { item, nombreActual, nombreNuevo }
-  const [conflictoUnico, setConflictoUnico] = useState(null) // { item, campos:[{field,label,valor}] }
+  // ── Estado base ──────────────────────────────────────────────────────────
+  const [items,           setItems]           = useState([])
+  const [cargando,        setCargando]        = useState(true)
+  const [filtroModulo,    setFiltroModulo]    = useState('')
+  const [confirmacion,    setConfirmacion]    = useState(null)
+  const [procesando,      setProcesando]      = useState(false)
+  const [aviso,           setAviso]           = useState(null)
+  const [verificando,     setVerificando]     = useState(null)
+  const [conflictoNombre, setConflictoNombre] = useState(null)
+  const [conflictoUnico,  setConflictoUnico]  = useState(null)
+
+  // ── Estado de selección y modales masivos ────────────────────────────────
+  const [seleccionados,      setSeleccionados]      = useState(new Set())
+  const [modalElimMasiva,    setModalElimMasiva]    = useState(false)
+  const [modalVaciar,        setModalVaciar]        = useState(false)
+  const [textVaciar,         setTextVaciar]         = useState('')
+  const inputVaciarRef = useRef(null)
 
   const mostrarAviso = (tipo, msg) => {
     setAviso({ tipo, msg })
-    setTimeout(() => setAviso(null), 4000)
+    setTimeout(() => setAviso(null), 5000)
   }
+
+  // ── Helpers de selección ──────────────────────────────────────────────
+  const itemKey = item => `${item.tabla}-${item.id}`
+
+  const filtrados = filtroModulo
+    ? items.filter(i => i.modulo === filtroModulo)
+    : items
+
+  const todosSeleccionados = filtrados.length > 0 &&
+    filtrados.every(i => seleccionados.has(itemKey(i)))
+  const algunoSeleccionado = filtrados.some(i => seleccionados.has(itemKey(i)))
+
+  // Items actualmente seleccionados (de todos los items, no solo filtrados)
+  const itemsSeleccionados = items.filter(i => seleccionados.has(itemKey(i)))
+
+  function toggleSeleccion(item) {
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      const key = itemKey(item)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function toggleTodos() {
+    if (todosSeleccionados) {
+      setSeleccionados(prev => {
+        const next = new Set(prev)
+        filtrados.forEach(i => next.delete(itemKey(i)))
+        return next
+      })
+    } else {
+      setSeleccionados(prev => {
+        const next = new Set(prev)
+        filtrados.forEach(i => next.add(itemKey(i)))
+        return next
+      })
+    }
+  }
+
+  // Limpiar selección al cambiar filtro
+  useEffect(() => { setSeleccionados(new Set()) }, [filtroModulo])
+
+  // Focus input al abrir modal vaciar
+  useEffect(() => {
+    if (modalVaciar) {
+      setTextVaciar('')
+      setTimeout(() => inputVaciarRef.current?.focus(), 100)
+    }
+  }, [modalVaciar])
 
   // ── Helpers de conflictos ──────────────────────────────────────────────
   async function calcularNombreRestaurado(tabla, field, nombreBase) {
@@ -140,7 +203,6 @@ export default function Papelera({ usuario, permisos = {} }) {
     const cfg = RESTORE_CONFIG[item.tabla]
     if (!cfg) return null
 
-    // Verificar campos únicos primero
     if (cfg.uniqueFields.length) {
       const fields = cfg.uniqueFields.map(f => f.field).join(',')
       const { data: reg } = await supabase
@@ -158,7 +220,6 @@ export default function Papelera({ usuario, permisos = {} }) {
       }
     }
 
-    // Verificar conflicto de nombre/título
     if (cfg.nombreField) {
       const { data: reg } = await supabase
         .from(item.tabla).select(cfg.nombreField).eq('id', item.id).single()
@@ -203,17 +264,13 @@ export default function Papelera({ usuario, permisos = {} }) {
 
   useEffect(() => { cargar() }, [cargar])
 
-  const filtrados = filtroModulo
-    ? items.filter(i => i.modulo === filtroModulo)
-    : items
-
   // Conteo por módulo
   const conteos = items.reduce((acc, i) => {
     acc[i.modulo] = (acc[i.modulo] ?? 0) + 1
     return acc
   }, {})
 
-  // ── Restaurar ────────────────────────────────────────────────────────────
+  // ── Restaurar (sin cambios) ───────────────────────────────────────────────
   async function restaurar(item, nombreNuevo = null) {
     setProcesando(true)
     const nombreAudit = nombreNuevo ?? item.nombre
@@ -267,7 +324,7 @@ export default function Papelera({ usuario, permisos = {} }) {
     setConflictoUnico(null)
   }
 
-  // ── Eliminar permanentemente ─────────────────────────────────────────────
+  // ── Eliminar permanentemente (individual, sin cambios) ───────────────────
   async function eliminarPermanente(item) {
     setProcesando(true)
 
@@ -283,7 +340,6 @@ export default function Papelera({ usuario, permisos = {} }) {
 
     let error
     if (item.tabla === 'usuarios') {
-      // Eliminar definitivamente de Supabase Auth vía Edge Function
       try {
         const { data: sessionData } = await supabase.auth.getSession()
         const token = sessionData?.session?.access_token
@@ -319,6 +375,100 @@ export default function Papelera({ usuario, permisos = {} }) {
     setConfirmacion(null)
   }
 
+  // ── Eliminar un item individualmente (helper usado en masiva) ─────────────
+  async function eliminarUnItem(item, accionAudit) {
+    if (item.tabla === 'requerimientos') {
+      await borrarImagenesRequerimiento(item.id)
+    }
+
+    let error
+    if (item.tabla === 'usuarios') {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData?.session?.access_token
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ userId: item.id }),
+          }
+        )
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          error = { message: json.error ?? 'Error al eliminar usuario' }
+        }
+      } catch {
+        error = { message: 'No se pudo conectar con el servidor.' }
+      }
+    } else {
+      ;({ error } = await supabase.from(item.tabla).delete().eq('id', item.id))
+    }
+
+    if (!error) {
+      supabase.rpc('log_accion_papelera', {
+        p_registro_id: item.id, p_nombre: item.nombre, p_accion: accionAudit,
+        p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
+        p_usuario_rol: usuario.rol, p_modulo: item.modulo,
+      }).then(null, () => {})
+    }
+
+    return error
+  }
+
+  // ── Eliminar seleccionados (masiva) ──────────────────────────────────────
+  async function ejecutarEliminarSeleccionados() {
+    if (!itemsSeleccionados.length) return
+    setProcesando(true)
+
+    const eliminadosOk = []
+    const errores = []
+
+    for (const item of itemsSeleccionados) {
+      const err = await eliminarUnItem(item, 'eliminacion_multiple')
+      if (err) errores.push(item.nombre)
+      else eliminadosOk.push(itemKey(item))
+    }
+
+    setItems(prev => prev.filter(i => !eliminadosOk.includes(itemKey(i))))
+    setSeleccionados(new Set())
+    setModalElimMasiva(false)
+    setProcesando(false)
+
+    if (errores.length === 0) {
+      mostrarAviso('ok', `${eliminadosOk.length} elemento${eliminadosOk.length !== 1 ? 's' : ''} eliminado${eliminadosOk.length !== 1 ? 's' : ''} permanentemente.`)
+    } else {
+      mostrarAviso('error', `${eliminadosOk.length} eliminados, ${errores.length} con error.`)
+    }
+  }
+
+  // ── Vaciar papelera (todos los items) ────────────────────────────────────
+  async function ejecutarVaciarPapelera() {
+    if (!items.length) return
+    setProcesando(true)
+
+    const eliminadosOk = []
+    const errores = []
+
+    for (const item of items) {
+      const err = await eliminarUnItem(item, 'vaciado_papelera')
+      if (err) errores.push(item.nombre)
+      else eliminadosOk.push(itemKey(item))
+    }
+
+    setItems(prev => prev.filter(i => !eliminadosOk.includes(itemKey(i))))
+    setSeleccionados(new Set())
+    setModalVaciar(false)
+    setTextVaciar('')
+    setProcesando(false)
+
+    if (errores.length === 0) {
+      mostrarAviso('ok', 'Papelera vaciada correctamente.')
+    } else {
+      mostrarAviso('error', `${eliminadosOk.length} eliminados, ${errores.length} con error.`)
+    }
+  }
+
   function confirmar(item, accion) {
     setConfirmacion({ ...item, accion })
   }
@@ -330,6 +480,8 @@ export default function Papelera({ usuario, permisos = {} }) {
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
+  const haySeleccion = itemsSeleccionados.length > 0
+
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
 
@@ -359,13 +511,11 @@ export default function Papelera({ usuario, permisos = {} }) {
         )}
       </AnimatePresence>
 
-      {/* Modal de confirmación */}
+      {/* Modal: eliminar individual / restaurar */}
       <AnimatePresence>
         {confirmacion && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{
               position: 'fixed', inset: 0, zIndex: 9000,
               background: 'rgba(0,0,0,0.45)',
@@ -429,12 +579,7 @@ export default function Papelera({ usuario, permisos = {} }) {
                     display: 'flex', alignItems: 'center', gap: 6,
                   }}
                 >
-                  {procesando && (
-                    <svg style={{ animation: 'spin 0.7s linear infinite' }} width={14} height={14} viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
-                    </svg>
-                  )}
+                  {procesando && <Spinner />}
                   {confirmacion.accion === 'restaurar' ? 'Restaurar' : 'Eliminar definitivamente'}
                 </button>
               </div>
@@ -443,61 +588,184 @@ export default function Papelera({ usuario, permisos = {} }) {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Trash2 size={18} color="#64748b" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: 0 }}>
-              Papelera
-              {items.length > 0 && (
-                <span style={{
-                  marginLeft: 10, fontSize: 13, fontWeight: 600,
-                  background: '#f1f5f9', color: '#64748b',
-                  padding: '2px 10px', borderRadius: 999,
+      {/* Modal: eliminar seleccionados */}
+      <AnimatePresence>
+        {modalElimMasiva && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9200,
+              background: 'rgba(0,0,0,0.45)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            onClick={() => !procesando && setModalElimMasiva(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: 14,
+                padding: '28px 28px 24px',
+                width: '100%', maxWidth: 460,
+                boxShadow: '0 20px 60px rgba(0,0,0,0.20)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 10, background: '#fef2f2', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {items.length}
-                </span>
-              )}
-            </h1>
-            <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0' }}>
-              Los registros se eliminan automáticamente después de 30 días
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={cargar}
-          disabled={cargando}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 14px', borderRadius: 8,
-            border: '1px solid #e5e7eb', background: '#fff',
-            color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          }}
-        >
-          <RefreshCw size={13} style={{ animation: cargando ? 'spin 0.7s linear infinite' : 'none' }} />
-          Actualizar
-        </button>
-      </div>
+                  <Trash2 size={20} color="#dc2626" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 6 }}>
+                    Eliminar permanentemente
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>
+                    Los elementos seleccionados serán eliminados permanentemente y no podrán recuperarse.
+                  </p>
+                  <div style={{
+                    marginTop: 12, padding: '8px 12px', borderRadius: 8,
+                    background: '#fef2f2', border: '1px solid #fca5a5',
+                    fontSize: 13, fontWeight: 600, color: '#991b1b',
+                  }}>
+                    {itemsSeleccionados.length} elemento{itemsSeleccionados.length !== 1 ? 's' : ''} seleccionado{itemsSeleccionados.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setModalElimMasiva(false)}
+                  disabled={procesando}
+                  style={{
+                    padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={ejecutarEliminarSeleccionados}
+                  disabled={procesando}
+                  style={{
+                    padding: '8px 18px', borderRadius: 8, border: 'none',
+                    background: '#dc2626', color: '#fff',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    opacity: procesando ? 0.7 : 1,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {procesando && <Spinner />}
+                  Eliminar definitivamente
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Banner informativo */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 12,
-        padding: '12px 16px', borderRadius: 10,
-        background: '#fefce8', border: '1px solid #fde68a',
-        marginBottom: 20,
-      }}>
-        <Clock size={16} color="#d97706" style={{ marginTop: 1, flexShrink: 0 }} />
-        <p style={{ margin: 0, fontSize: 13, color: '#92400e', lineHeight: 1.5 }}>
-          <strong>Política de retención:</strong> Los registros enviados a la Papelera permanecen disponibles durante <strong>30 días</strong>.
-          Pasado ese tiempo, se eliminan permanentemente de forma automática sin posibilidad de recuperación.
-        </p>
-      </div>
+      {/* Modal: vaciar papelera */}
+      <AnimatePresence>
+        {modalVaciar && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9300,
+              background: 'rgba(0,0,0,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            onClick={() => !procesando && setModalVaciar(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff', borderRadius: 14,
+                padding: '28px 28px 24px',
+                width: '100%', maxWidth: 480,
+                boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, background: '#fef2f2', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Trash2 size={22} color="#dc2626" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 16, color: '#111827', marginBottom: 8 }}>
+                    Vaciar papelera
+                  </p>
+                  <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: '0 0 16px' }}>
+                    Se eliminarán permanentemente <strong>todos los {items.length} elemento{items.length !== 1 ? 's' : ''}</strong> almacenados en la papelera. Esta acción no se puede deshacer.
+                  </p>
+                  <p style={{ fontSize: 12, color: '#374151', fontWeight: 600, marginBottom: 8 }}>
+                    Para confirmar, escribe:
+                    <span style={{
+                      display: 'inline-block', marginLeft: 6,
+                      fontFamily: 'monospace', background: '#f1f5f9',
+                      padding: '1px 8px', borderRadius: 4, color: '#dc2626',
+                      border: '1px solid #e2e8f0', letterSpacing: '0.05em',
+                    }}>
+                      {TEXTO_VACIAR}
+                    </span>
+                  </p>
+                  <input
+                    ref={inputVaciarRef}
+                    type="text"
+                    value={textVaciar}
+                    onChange={e => setTextVaciar(e.target.value)}
+                    placeholder={TEXTO_VACIAR}
+                    disabled={procesando}
+                    style={{
+                      width: '100%', padding: '9px 12px',
+                      border: `1.5px solid ${textVaciar === TEXTO_VACIAR ? '#fca5a5' : '#e5e7eb'}`,
+                      borderRadius: 8, fontSize: 13,
+                      fontFamily: 'monospace', letterSpacing: '0.05em',
+                      outline: 'none', boxSizing: 'border-box',
+                      background: textVaciar === TEXTO_VACIAR ? '#fef2f2' : '#fff',
+                      color: '#111827',
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setModalVaciar(false)}
+                  disabled={procesando}
+                  style={{
+                    padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    background: '#fff', color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={ejecutarVaciarPapelera}
+                  disabled={procesando || textVaciar !== TEXTO_VACIAR}
+                  style={{
+                    padding: '8px 20px', borderRadius: 8, border: 'none',
+                    background: '#dc2626', color: '#fff',
+                    fontSize: 13, fontWeight: 600,
+                    cursor: (procesando || textVaciar !== TEXTO_VACIAR) ? 'not-allowed' : 'pointer',
+                    opacity: (procesando || textVaciar !== TEXTO_VACIAR) ? 0.4 : 1,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  {procesando && <Spinner />}
+                  Vaciar papelera
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal: conflicto de nombre */}
       <AnimatePresence>
@@ -546,7 +814,7 @@ export default function Papelera({ usuario, permisos = {} }) {
                   style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#3b82f6',
                     color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 6, opacity: procesando ? 0.7 : 1 }}>
-                  {procesando && <svg style={{ animation: 'spin 0.7s linear infinite' }} width={14} height={14} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/></svg>}
+                  {procesando && <Spinner />}
                   Restaurar de todas formas
                 </button>
               </div>
@@ -606,8 +874,80 @@ export default function Papelera({ usuario, permisos = {} }) {
         )}
       </AnimatePresence>
 
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10,
+            background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Trash2 size={18} color="#64748b" />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#111827', margin: 0 }}>
+              Papelera
+              {items.length > 0 && (
+                <span style={{
+                  marginLeft: 10, fontSize: 13, fontWeight: 600,
+                  background: '#f1f5f9', color: '#64748b',
+                  padding: '2px 10px', borderRadius: 999,
+                }}>
+                  {items.length}
+                </span>
+              )}
+            </h1>
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: '2px 0 0' }}>
+              Los registros se eliminan automáticamente después de 30 días
+            </p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {puedeEliminarPerm && items.length > 0 && (
+            <button
+              onClick={() => setModalVaciar(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 8,
+                border: '1px solid #fca5a5', background: '#fef2f2',
+                color: '#dc2626', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              }}
+            >
+              <Trash2 size={13} />
+              Vaciar papelera
+            </button>
+          )}
+          <button
+            onClick={cargar}
+            disabled={cargando}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 14px', borderRadius: 8,
+              border: '1px solid #e5e7eb', background: '#fff',
+              color: '#374151', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            }}
+          >
+            <RefreshCw size={13} style={{ animation: cargando ? 'spin 0.7s linear infinite' : 'none' }} />
+            Actualizar
+          </button>
+        </div>
+      </div>
+
+      {/* Banner informativo */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+        padding: '12px 16px', borderRadius: 10,
+        background: '#fefce8', border: '1px solid #fde68a',
+        marginBottom: 20,
+      }}>
+        <Clock size={16} color="#d97706" style={{ marginTop: 1, flexShrink: 0 }} />
+        <p style={{ margin: 0, fontSize: 13, color: '#92400e', lineHeight: 1.5 }}>
+          <strong>Política de retención:</strong> Los registros enviados a la Papelera permanecen disponibles durante <strong>30 días</strong>.
+          Pasado ese tiempo, se eliminan permanentemente de forma automática sin posibilidad de recuperación.
+        </p>
+      </div>
+
       {/* Filtros por módulo */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         {FILTROS_MODULO.map(f => {
           const count = f.value ? (conteos[f.value] ?? 0) : items.length
           const activo = filtroModulo === f.value
@@ -642,6 +982,50 @@ export default function Papelera({ usuario, permisos = {} }) {
         })}
       </div>
 
+      {/* Barra de acciones (solo cuando hay selección) */}
+      <AnimatePresence>
+        {haySeleccion && puedeEliminarPerm && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            style={{ overflow: 'hidden', marginBottom: 12 }}
+          >
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 16px', borderRadius: 10,
+              background: '#fef2f2', border: '1px solid #fca5a5',
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#991b1b' }}>
+                {itemsSeleccionados.length} elemento{itemsSeleccionados.length !== 1 ? 's' : ''} seleccionado{itemsSeleccionados.length !== 1 ? 's' : ''}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSeleccionados(new Set())}
+                  style={{
+                    padding: '6px 12px', borderRadius: 7, border: '1px solid #e5e7eb',
+                    background: '#fff', color: '#64748b', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}
+                >
+                  Deseleccionar
+                </button>
+                <button
+                  onClick={() => setModalElimMasiva(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 14px', borderRadius: 7, border: 'none',
+                    background: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  <Trash2 size={13} />
+                  Eliminar seleccionados permanentemente
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Tabla */}
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
         {cargando ? (
@@ -675,6 +1059,29 @@ export default function Papelera({ usuario, permisos = {} }) {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  {/* Checkbox "seleccionar todos" */}
+                  {puedeEliminarPerm && (
+                    <th style={{
+                      padding: '11px 14px 11px 16px', textAlign: 'center',
+                      background: '#fafafa', width: 40,
+                    }}>
+                      <button
+                        onClick={toggleTodos}
+                        title={todosSeleccionados ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                        style={{
+                          background: 'none', border: 'none', padding: 0,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: algunoSeleccionado ? '#dc2626' : '#cbd5e1',
+                        }}
+                      >
+                        {todosSeleccionados
+                          ? <CheckSquare size={16} color="#dc2626" />
+                          : algunoSeleccionado
+                          ? <Minus size={16} color="#dc2626" />
+                          : <Square size={16} color="#cbd5e1" />}
+                      </button>
+                    </th>
+                  )}
                   {['Tipo', 'Nombre', 'Eliminado por', 'Fecha eliminación', 'Expira en', 'Acciones'].map(h => (
                     <th key={h} style={{
                       padding: '11px 16px', textAlign: 'left',
@@ -689,16 +1096,34 @@ export default function Papelera({ usuario, permisos = {} }) {
                 {filtrados.map((item, idx) => {
                   const cfg = MODULO_CONFIG[item.modulo] ?? { label: item.modulo, color: '#64748b', bg: '#f1f5f9' }
                   const { Icon } = cfg
+                  const estaSeleccionado = seleccionados.has(itemKey(item))
                   return (
                     <tr
                       key={`${item.tabla}-${item.id}`}
                       style={{
                         borderBottom: idx < filtrados.length - 1 ? '1px solid #f1f5f9' : 'none',
                         transition: 'background 0.1s',
+                        background: estaSeleccionado ? '#fff5f5' : undefined,
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                      onMouseEnter={e => { if (!estaSeleccionado) e.currentTarget.style.background = '#fafafa' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = estaSeleccionado ? '#fff5f5' : '' }}
                     >
+                      {/* Checkbox individual */}
+                      {puedeEliminarPerm && (
+                        <td style={{ padding: '12px 14px 12px 16px', textAlign: 'center' }}>
+                          <button
+                            onClick={() => toggleSeleccion(item)}
+                            style={{
+                              background: 'none', border: 'none', padding: 0,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}
+                          >
+                            {estaSeleccionado
+                              ? <CheckSquare size={16} color="#dc2626" />
+                              : <Square size={16} color="#cbd5e1" />}
+                          </button>
+                        </td>
+                      )}
                       {/* Tipo */}
                       <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                         <span style={{
@@ -751,7 +1176,7 @@ export default function Papelera({ usuario, permisos = {} }) {
                               }}
                             >
                               {verificando === item.id + item.tabla
-                                ? <svg style={{ animation: 'spin 0.7s linear infinite' }} width={12} height={12} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#93c5fd" strokeWidth="3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="#2563eb" strokeWidth="3" strokeLinecap="round"/></svg>
+                                ? <Spinner size={12} color="#2563eb" />
                                 : <RotateCcw size={12} />}
                               Restaurar
                             </button>
