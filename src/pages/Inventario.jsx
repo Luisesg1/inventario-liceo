@@ -1854,37 +1854,32 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
-
-    // Clonar el elemento y renderizarlo fuera de pantalla con ancho fijo
-    const clone = el.cloneNode(true)
-    clone.style.position = 'fixed'
-    clone.style.top = '-9999px'
-    clone.style.left = '-9999px'
-    clone.style.width = '750px'
-    clone.style.minWidth = '750px'
-    clone.style.maxWidth = '750px'
-    clone.style.background = '#ffffff'
-    // Ocultar botones en el clon
-    clone.querySelectorAll('button').forEach(b => { b.style.display = 'none' })
-    // Forzar header horizontal
-    const cloneHeader = clone.querySelector('.detalle-header-modal')
-    if (cloneHeader) {
-      cloneHeader.style.flexDirection = 'row'
-      cloneHeader.style.alignItems = 'center'
+    // Ocultar botones
+    const btns = el.querySelectorAll('button')
+    btns.forEach(b => { b.style.visibility = 'hidden' })
+    // Forzar header horizontal con inline style (sobreescribe media query mobile)
+    const header = el.querySelector('.detalle-header-modal')
+    const headerOrig = header ? header.style.cssText : ''
+    if (header) {
+      header.style.setProperty('flex-direction', 'row', 'important')
+      header.style.setProperty('align-items', 'center', 'important')
+      header.style.setProperty('flex-wrap', 'nowrap', 'important')
     }
-    const cloneTitleDiv = cloneHeader ? cloneHeader.querySelector('div') : null
-    if (cloneTitleDiv) cloneTitleDiv.style.width = 'auto'
-    document.body.appendChild(clone)
-
+    const titleDiv = header ? header.querySelector('div') : null
+    const titleOrig = titleDiv ? titleDiv.style.cssText : ''
+    if (titleDiv) titleDiv.style.setProperty('width', 'auto', 'important')
     const opt = {
       margin:      [10, 10, 10, 10],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
+      // windowWidth < 768 activa CSS de una sola columna (no se corta) y el inline style corrige el header
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 750 },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }
-    window.html2pdf().set(opt).from(clone).save().then(() => {
-      document.body.removeChild(clone)
+    window.html2pdf().set(opt).from(el).save().then(() => {
+      btns.forEach(b => { b.style.visibility = '' })
+      if (header) header.style.cssText = headerOrig
+      if (titleDiv) titleDiv.style.cssText = titleOrig
     })
   }
 
