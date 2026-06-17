@@ -1854,34 +1854,37 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
   const descargarPDF = () => {
     const el = document.getElementById('detalle-pdf-content')
     if (!el || !verDetalle) return
-    const btns = el.querySelectorAll('button')
-    btns.forEach(b => { b.style.visibility = 'hidden' })
-    const header = el.querySelector('.detalle-header-modal')
-    const headerOrig = header ? header.style.cssText : ''
-    if (header) {
-      header.style.flexDirection = 'row'
-      header.style.alignItems = 'center'
+
+    // Clonar el elemento y renderizarlo fuera de pantalla con ancho fijo
+    const clone = el.cloneNode(true)
+    clone.style.position = 'fixed'
+    clone.style.top = '-9999px'
+    clone.style.left = '-9999px'
+    clone.style.width = '750px'
+    clone.style.minWidth = '750px'
+    clone.style.maxWidth = '750px'
+    clone.style.background = '#ffffff'
+    // Ocultar botones en el clon
+    clone.querySelectorAll('button').forEach(b => { b.style.display = 'none' })
+    // Forzar header horizontal
+    const cloneHeader = clone.querySelector('.detalle-header-modal')
+    if (cloneHeader) {
+      cloneHeader.style.flexDirection = 'row'
+      cloneHeader.style.alignItems = 'center'
     }
-    const titleDiv = header ? header.querySelector('div') : null
-    const titleOrig = titleDiv ? titleDiv.style.cssText : ''
-    if (titleDiv) titleDiv.style.width = 'auto'
-    // Forzar ancho fijo equivalente a A4 para que el contenido no se corte ni rompa en móvil
-    const elOrig = el.style.cssText
-    el.style.width = '700px'
-    el.style.minWidth = '700px'
-    el.style.maxWidth = '700px'
+    const cloneTitleDiv = cloneHeader ? cloneHeader.querySelector('div') : null
+    if (cloneTitleDiv) cloneTitleDiv.style.width = 'auto'
+    document.body.appendChild(clone)
+
     const opt = {
       margin:      [10, 10, 10, 10],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 700 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 750 },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }
-    window.html2pdf().set(opt).from(el).save().then(() => {
-      btns.forEach(b => { b.style.visibility = '' })
-      if (header) header.style.cssText = headerOrig
-      if (titleDiv) titleDiv.style.cssText = titleOrig
-      el.style.cssText = elOrig
+    window.html2pdf().set(opt).from(clone).save().then(() => {
+      document.body.removeChild(clone)
     })
   }
 
