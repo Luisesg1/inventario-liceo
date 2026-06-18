@@ -1,14 +1,18 @@
 // src/pages/Personal.jsx
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Users, FileText, UserCheck, UserX, Clock, AlertTriangle,
   Plus, Search, X, Pencil, Trash2, Eye, Download, Upload,
-  ChevronDown, Loader2, CheckCircle2, Building2, Briefcase,
+  ChevronDown, ChevronUp, Loader2, CheckCircle2, Building2, Briefcase,
   Phone, Mail, Hash, Calendar, RefreshCw, Shield, FileCheck,
   Activity, ClipboardList, CalendarRange, UserCog, Info,
-  CalendarCheck, AlertCircle, FilePlus,
+  CalendarCheck, AlertCircle, FilePlus, Filter, FileDown,
+  Square, CheckSquare,
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
 import './Personal.css'
 
@@ -174,6 +178,302 @@ function EstadoBadge({ estado }) {
       {s.label}
     </span>
   )
+}
+
+// ─── Export column definitions ───────────────────────────────
+const COLS_CONTRATOS = [
+  { header: 'Nombre completo', key: 'nombre_completo' },
+  { header: 'RUT', key: 'rut' },
+  { header: 'Correo', key: 'correo' },
+  { header: 'Teléfono', key: 'telefono' },
+  { header: 'Cargo', key: 'cargo' },
+  { header: 'Estamento', key: 'estamento' },
+  { header: 'Tipo de contrato', key: 'tipo_contrato' },
+  { header: 'Fecha inicio', key: 'fecha_inicio' },
+  { header: 'Fecha término', key: 'fecha_termino' },
+  { header: 'Horas', key: 'horas' },
+  { header: 'Estado', key: 'estado' },
+  { header: 'Observaciones', key: 'observaciones' },
+]
+const COLS_REEMPLAZOS = [
+  { header: 'Funcionario', key: 'funcionario_nombre' },
+  { header: 'Motivo', key: 'motivo' },
+  { header: 'Reemplazante', key: 'reemplazante_nombre' },
+  { header: 'Cargo', key: 'cargo' },
+  { header: 'Asignatura', key: 'asignatura' },
+  { header: 'Curso', key: 'curso' },
+  { header: 'Fecha inicio', key: 'fecha_inicio' },
+  { header: 'Fecha término', key: 'fecha_termino' },
+  { header: 'Horas', key: 'horas' },
+  { header: 'Estado', key: 'estado' },
+  { header: 'Observaciones', key: 'observaciones' },
+]
+const COLS_DOCS = [
+  { header: 'Nombre', key: 'nombre' },
+  { header: 'Tipo', key: 'tipo_doc' },
+  { header: 'Tamaño', key: 'tamanio' },
+  { header: 'Contratación', key: 'contratacion' },
+  { header: 'Reemplazo', key: 'reemplazo' },
+  { header: 'Fecha subida', key: 'subido_en' },
+]
+const COLS_AUDITORIA = [
+  { header: 'Fecha y hora', key: 'creado_en' },
+  { header: 'Acción', key: 'accion' },
+  { header: 'Módulo', key: 'tabla_afectada' },
+  { header: 'Registro', key: 'registro_nombre' },
+  { header: 'Usuario', key: 'usuario_nombre' },
+  { header: 'Rol', key: 'usuario_rol' },
+]
+
+function prepContrato(c) {
+  return {
+    nombre_completo: c.nombre_completo ?? '',
+    rut: formatRut(c.rut ?? ''),
+    correo: c.correo ?? '',
+    telefono: c.telefono ?? '',
+    cargo: c.cargo ?? '',
+    estamento: ESTAMENTO_MAP[c.estamento] ?? c.estamento ?? '',
+    tipo_contrato: CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato ?? '',
+    fecha_inicio: c.fecha_inicio ?? '',
+    fecha_termino: c.fecha_termino ?? '',
+    horas: c.horas != null ? String(c.horas) : '',
+    estado: calcularEstado(c),
+    observaciones: c.observaciones ?? '',
+  }
+}
+function prepReemplazo(r) {
+  return {
+    funcionario_nombre: r.funcionario_nombre ?? '',
+    motivo: MOTIVO_MAP[r.motivo] ?? r.motivo ?? '',
+    reemplazante_nombre: r.reemplazante_nombre ?? '',
+    cargo: r.cargo ?? '',
+    asignatura: r.asignatura ?? '',
+    curso: r.curso ?? '',
+    fecha_inicio: r.fecha_inicio ?? '',
+    fecha_termino: r.fecha_termino ?? '',
+    horas: r.horas != null ? String(r.horas) : '',
+    estado: ESTADO_REEMPL[r.estado]?.label ?? r.estado ?? '',
+    observaciones: r.observaciones ?? '',
+  }
+}
+function prepDoc(d, contratos, reemplazos) {
+  const c = contratos?.find(x => x.id === d.contratacion_id)
+  const r = reemplazos?.find(x => x.id === d.reemplazo_id)
+  return {
+    nombre: d.nombre ?? '',
+    tipo_doc: TIPOS_DOC_MAP[d.tipo_doc] ?? d.tipo_doc ?? '',
+    tamanio: formatBytes(d.tamanio),
+    contratacion: c?.nombre_completo ?? '',
+    reemplazo: r?.funcionario_nombre ?? '',
+    subido_en: d.subido_en ? new Date(d.subido_en).toLocaleString('es-CL') : '',
+  }
+}
+function prepAuditoria(l) {
+  const TABLA_LABEL = { contrataciones: 'Contrataciones', reemplazos: 'Reemplazos', personal_documentos: 'Documentos' }
+  return {
+    creado_en: l.creado_en ? new Date(l.creado_en).toLocaleString('es-CL') : '',
+    accion: l.accion ?? '',
+    tabla_afectada: TABLA_LABEL[l.tabla_afectada] ?? l.tabla_afectada ?? '',
+    registro_nombre: l.registro_nombre ?? '',
+    usuario_nombre: l.usuario_nombre ?? '',
+    usuario_rol: l.usuario_rol ?? '',
+  }
+}
+
+// ─── Export utilities ─────────────────────────────────────────
+function doCSV(rows, cols, filename) {
+  const header = cols.map(c => `"${c.header}"`).join(',')
+  const lines = rows.map(r =>
+    cols.map(c => {
+      const v = String(r[c.key] ?? '')
+      return `"${v.replace(/"/g, '""')}"`
+    }).join(',')
+  )
+  const csv = '﻿' + [header, ...lines].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click()
+  URL.revokeObjectURL(url)
+}
+
+function doExcel(rows, cols, sheetName, filename) {
+  const data = rows.map(r => Object.fromEntries(cols.map(c => [c.header, r[c.key] ?? ''])))
+  const ws = XLSX.utils.json_to_sheet(data)
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1')
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c: C })
+    if (!ws[addr]) continue
+    ws[addr].s = { font: { bold: true }, fill: { fgColor: { rgb: '1A237E' } }, fontColor: { rgb: 'FFFFFF' } }
+  }
+  ws['!cols'] = cols.map(() => ({ wch: 20 }))
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31))
+  XLSX.writeFile(wb, filename + '.xlsx')
+}
+
+async function fetchImageAsBase64(url) {
+  return new Promise((resolve) => {
+    const img = new Image(); img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        resolve(canvas.toDataURL('image/png'))
+      } catch { resolve(null) }
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+async function doPDF(rows, cols, titulo, descripcion, filename, usuarioNombre) {
+  let logoDataUrl = null
+  let instNombre = 'Liceo JHJ'
+  try {
+    const [{ data: logoD }, { data: instD }] = await Promise.all([
+      supabase.from('configuracion').select('valor').eq('clave', 'logo_url').maybeSingle(),
+      supabase.from('configuracion').select('valor').eq('clave', 'nombre_establecimiento').maybeSingle(),
+    ])
+    if (logoD?.valor) logoDataUrl = await fetchImageAsBase64(logoD.valor)
+    if (instD?.valor) instNombre = instD.valor
+  } catch { /* continúa sin logo */ }
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  let y = 14
+
+  if (logoDataUrl) {
+    try { doc.addImage(logoDataUrl, 'PNG', 12, y, 16, 16) } catch { logoDataUrl = null }
+  }
+  const textX = logoDataUrl ? 32 : 12
+
+  doc.setFontSize(10).setTextColor(100, 100, 100).setFont('helvetica', 'normal')
+  doc.text(instNombre, textX, y + 3)
+  doc.setFontSize(16).setTextColor(26, 35, 126).setFont('helvetica', 'bold')
+  doc.text(titulo, textX, y + 11)
+  doc.setFontSize(8).setTextColor(100, 100, 100).setFont('helvetica', 'normal')
+  const meta = [
+    descripcion,
+    `Exportado: ${new Date().toLocaleString('es-CL')}`,
+    usuarioNombre ? `Usuario: ${usuarioNombre}` : '',
+    `Total registros: ${rows.length}`,
+  ].filter(Boolean).join('   |   ')
+  doc.text(meta, textX, y + 17)
+  y = Math.max(y + 22, 38)
+
+  autoTable(doc, {
+    startY: y,
+    head: [cols.map(c => c.header)],
+    body: rows.map(r => cols.map(c => String(r[c.key] ?? ''))),
+    styles: { fontSize: 7.5, cellPadding: 2.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [26, 35, 126], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 12, right: 12 },
+    columnStyles: Object.fromEntries(cols.map((_, i) => [i, { cellWidth: 'auto' }])),
+  })
+
+  const pageCount = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFontSize(7).setTextColor(160).setFont('helvetica', 'normal')
+    doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.getWidth() - 12, doc.internal.pageSize.getHeight() - 6, { align: 'right' })
+  }
+  doc.save(filename + '.pdf')
+}
+
+// ─── ExportMenu ───────────────────────────────────────────────
+function ExportMenu({ todos, filtrados, seleccionados, colsDef, prepFn, nombreArchivo, titulo, usuarioNombre }) {
+  const [abierto, setAbierto] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function h(e) { if (ref.current && !ref.current.contains(e.target)) setAbierto(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  async function exportar(scope, fmt) {
+    setAbierto(false)
+    setExportando(true)
+    const data = scope === 'todo' ? todos : scope === 'filtrado' ? filtrados : seleccionados
+    if (!data.length) { setExportando(false); return }
+    const rows = data.map(r => prepFn(r))
+    const fecha = new Date().toISOString().slice(0, 10)
+    const fname = `${nombreArchivo}_${fecha}`
+    const desc = scope === 'filtrado' ? `Filtrados: ${data.length}` : scope === 'sel' ? `Seleccionados: ${data.length}` : ''
+    try {
+      if (fmt === 'csv') doCSV(rows, colsDef, fname)
+      else if (fmt === 'excel') doExcel(rows, colsDef, titulo, fname)
+      else await doPDF(rows, colsDef, titulo, desc, fname, usuarioNombre)
+    } catch (e) { console.error('Export error:', e) }
+    setExportando(false)
+  }
+
+  const scopes = [
+    { key: 'todo', label: 'Todo', n: todos.length },
+    { key: 'filtrado', label: 'Filtrados', n: filtrados.length },
+    { key: 'sel', label: 'Seleccionados', n: seleccionados.length, disabled: seleccionados.length === 0 },
+  ]
+  const fmts = [
+    { key: 'excel', label: 'Excel (.xlsx)', ico: '📊' },
+    { key: 'pdf',   label: 'PDF',           ico: '📄' },
+    { key: 'csv',   label: 'CSV',           ico: '📋' },
+  ]
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button className="btn-export" onClick={() => setAbierto(a => !a)} disabled={exportando}>
+        {exportando ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+        Exportar <ChevronDown size={11} />
+      </button>
+      {abierto && (
+        <div className="personal-export-dropdown">
+          {scopes.map(s => (
+            <div key={s.key}>
+              <p className="personal-export-group-label">
+                {s.label} <span className="personal-export-badge">{s.n}</span>
+              </p>
+              {fmts.map(f => (
+                <button key={f.key} className="personal-export-item" disabled={s.disabled}
+                  onClick={() => exportar(s.key, f.key)}>
+                  {f.ico} {f.label}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── BulkBar ──────────────────────────────────────────────────
+function BulkBar({ count, onExportar, onEliminar, onLimpiar, puedeEliminar }) {
+  if (count === 0) return null
+  return (
+    <div className="personal-bulk-bar">
+      <span className="personal-bulk-count">{count} seleccionado{count !== 1 ? 's' : ''}</span>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {onExportar && <button className="personal-bulk-btn" onClick={onExportar}><FileDown size={13} /> Exportar</button>}
+        {puedeEliminar && <button className="personal-bulk-btn danger" onClick={onEliminar}><Trash2 size={13} /> Eliminar</button>}
+        <button className="personal-bulk-btn" onClick={onLimpiar}><X size={13} /> Limpiar selección</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Advanced filter defaults ─────────────────────────────────
+const DEFAULT_FILTROS_CONTRATOS = {
+  busq: '', estado: '', estamento: '', tipo_contrato: '',
+  fecha_inicio_desde: '', fecha_inicio_hasta: '',
+  fecha_termino_desde: '', fecha_termino_hasta: '',
+  vencer_dias: '', horas_min: '', horas_max: '',
+}
+const DEFAULT_FILTROS_REEMPLAZOS = {
+  busq: '', estado: '', motivo: '', cargo: '', asignatura: '', curso: '',
+  fecha_inicio_desde: '', fecha_inicio_hasta: '',
+  fecha_termino_desde: '', fecha_termino_hasta: '',
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -362,23 +662,26 @@ function DashboardTab({ usuario, onIrA }) {
 // CONTRATACIONES TAB
 // ═══════════════════════════════════════════════════════════════
 function ContratacionesTab({ usuario, permisos }) {
-  const [registros,  setRegistros]  = useState([])
-  const [cargando,   setCargando]   = useState(true)
-  const [busq,       setBusq]       = useState('')
-  const [filtEstado, setFiltEstado] = useState('')
-  const [pagina,     setPagina]     = useState(1)
-  const [modal,      setModal]      = useState(null) // null | 'crear' | { ...datos }
-  const [detalle,    setDetalle]    = useState(null)
-  const [eliminar,   setEliminar]   = useState(null)
-  const [eliminando, setEliminando] = useState(false)
+  const [registros,       setRegistros]       = useState([])
+  const [cargando,        setCargando]        = useState(true)
+  const [errorCarga,      setErrorCarga]      = useState('')
+  const [filtros,         setFiltros]         = useState(DEFAULT_FILTROS_CONTRATOS)
+  const [mostrarFiltros,  setMostrarFiltros]  = useState(false)
+  const [pagina,          setPagina]          = useState(1)
+  const [modal,           setModal]           = useState(null)
+  const [detalle,         setDetalle]         = useState(null)
+  const [eliminar,        setEliminar]        = useState(null)
+  const [eliminando,      setEliminando]      = useState(false)
+  const [seleccionados,   setSeleccionados]   = useState(new Set())
+  const [confirmarMasivo, setConfirmarMasivo] = useState(false)
+  const [eliminandoMas,   setEliminandoMas]   = useState(false)
 
   useEffect(() => { cargar() }, [])
 
   async function cargar() {
-    setCargando(true)
-    const { data } = await supabase.from('contrataciones')
-      .select('*')
-      .order('creado_en', { ascending: false })
+    setCargando(true); setErrorCarga('')
+    const { data, error } = await supabase.from('contrataciones').select('*').order('creado_en', { ascending: false })
+    if (error) setErrorCarga('No se pudieron cargar las contrataciones: ' + error.message)
     setRegistros(data ?? [])
     setCargando(false)
   }
@@ -399,20 +702,17 @@ function ContratacionesTab({ usuario, permisos }) {
       observaciones:   datos.observaciones?.trim() || null,
       actualizado_en:  new Date().toISOString(),
     }
-
     if (esEdicion) {
       const { error } = await supabase.from('contrataciones').update(payload).eq('id', datos.id)
-      if (error) return error.message
+      if (error) return 'No se pudo guardar la contratación: ' + error.message
       await auditLog({ accion: 'editar', tabla: 'contrataciones', id: datos.id, nombre: datos.nombre_completo, usuario, cambios: payload })
     } else {
       payload.creado_por = usuario.id
       const { error } = await supabase.from('contrataciones').insert(payload)
-      if (error) return error.message
+      if (error) return 'No se pudo crear la contratación: ' + error.message
       await auditLog({ accion: 'crear', tabla: 'contrataciones', nombre: datos.nombre_completo, usuario, cambios: payload })
     }
-    await cargar()
-    setModal(null)
-    return null
+    await cargar(); setModal(null); return null
   }
 
   async function handleEliminar() {
@@ -420,72 +720,206 @@ function ContratacionesTab({ usuario, permisos }) {
     const { error } = await supabase.from('contrataciones').delete().eq('id', eliminar.id)
     if (!error) {
       await auditLog({ accion: 'eliminar', tabla: 'contrataciones', id: eliminar.id, nombre: eliminar.nombre_completo, usuario })
-      await cargar()
-      setEliminar(null)
+      await cargar(); setEliminar(null)
     }
     setEliminando(false)
   }
 
-  const filtrados = registros.filter(r => {
-    const estado = calcularEstado(r)
-    if (filtEstado && estado !== filtEstado) return false
-    const q = busq.toLowerCase()
-    if (!q) return true
-    return r.nombre_completo?.toLowerCase().includes(q)
-      || r.rut?.includes(q)
-      || r.cargo?.toLowerCase().includes(q)
-  })
+  async function handleEliminarMasivo() {
+    setEliminandoMas(true)
+    const ids = [...seleccionados]
+    const { error } = await supabase.from('contrataciones').delete().in('id', ids)
+    if (!error) {
+      await Promise.all(ids.map(id => {
+        const r = registros.find(x => x.id === id)
+        return auditLog({ accion: 'eliminar', tabla: 'contrataciones', id, nombre: r?.nombre_completo, usuario })
+      }))
+      setSeleccionados(new Set()); setConfirmarMasivo(false); await cargar()
+    }
+    setEliminandoMas(false)
+  }
+
+  const filtrados = useMemo(() => {
+    const f = filtros
+    return registros.filter(r => {
+      const estado = calcularEstado(r)
+      if (f.estado && estado !== f.estado) return false
+      if (f.estamento && r.estamento !== f.estamento) return false
+      if (f.tipo_contrato && r.tipo_contrato !== f.tipo_contrato) return false
+      if (f.fecha_inicio_desde && (!r.fecha_inicio || r.fecha_inicio < f.fecha_inicio_desde)) return false
+      if (f.fecha_inicio_hasta && (!r.fecha_inicio || r.fecha_inicio > f.fecha_inicio_hasta)) return false
+      if (f.fecha_termino_desde && (!r.fecha_termino || r.fecha_termino < f.fecha_termino_desde)) return false
+      if (f.fecha_termino_hasta && (!r.fecha_termino || r.fecha_termino > f.fecha_termino_hasta)) return false
+      if (f.vencer_dias) {
+        const d = diasHasta(r.fecha_termino)
+        if (d === null || d < 0 || d > parseInt(f.vencer_dias)) return false
+      }
+      if (f.horas_min && (r.horas == null || r.horas < parseInt(f.horas_min))) return false
+      if (f.horas_max && (r.horas == null || r.horas > parseInt(f.horas_max))) return false
+      if (!f.busq) return true
+      const q = f.busq.toLowerCase()
+      return r.nombre_completo?.toLowerCase().includes(q)
+        || r.rut?.includes(q)
+        || r.correo?.toLowerCase().includes(q)
+        || r.cargo?.toLowerCase().includes(q)
+        || ESTAMENTO_MAP[r.estamento]?.toLowerCase().includes(q)
+        || CONTRATO_MAP[r.tipo_contrato]?.toLowerCase().includes(q)
+        || estado.includes(q)
+    })
+  }, [registros, filtros])
 
   const total   = filtrados.length
   const inicio  = (pagina - 1) * POR_PAGINA
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
   const vista   = filtrados.slice(inicio, inicio + POR_PAGINA)
 
+  const todosIds = filtrados.map(r => r.id)
+  const todosSelec = todosIds.length > 0 && todosIds.every(id => seleccionados.has(id))
+  const algunoSelec = todosIds.some(id => seleccionados.has(id))
+
+  function toggleTodo() {
+    if (todosSelec) setSeleccionados(new Set())
+    else setSeleccionados(new Set(todosIds))
+  }
+  function toggleUno(id) {
+    setSeleccionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  const selData = registros.filter(r => seleccionados.has(r.id))
+  const filtrosActivos = Object.entries(filtros).filter(([k, v]) => k !== 'busq' && v !== '').length
+  function setF(k, v) { setFiltros(f => ({ ...f, [k]: v })); setPagina(1) }
+  function resetFiltros() { setFiltros(DEFAULT_FILTROS_CONTRATOS); setPagina(1) }
+
   return (
     <div>
+      <BulkBar
+        count={seleccionados.size}
+        onExportar={null}
+        onEliminar={() => setConfirmarMasivo(true)}
+        onLimpiar={() => setSeleccionados(new Set())}
+        puedeEliminar={permisos.eliminarContrat}
+      />
+
       {/* Toolbar */}
       <div className="personal-toolbar">
         <div className="personal-search">
           <Search size={14} className="personal-search-icon" />
-          <input
-            value={busq}
-            onChange={e => { setBusq(e.target.value); setPagina(1) }}
-            placeholder="Buscar por nombre, RUT, cargo…"
-          />
+          <input value={filtros.busq} onChange={e => setF('busq', e.target.value)}
+            placeholder="Buscar nombre, RUT, correo, cargo…" />
+          {filtros.busq && <button onClick={() => setF('busq', '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
         </div>
-        <select
-          className="personal-filter-select"
-          value={filtEstado}
-          onChange={e => { setFiltEstado(e.target.value); setPagina(1) }}
-        >
-          <option value="">Todos los estados</option>
-          <option value="vigente">Vigente</option>
-          <option value="por_vencer">Por vencer</option>
-          <option value="finalizado">Finalizado</option>
-        </select>
+        <button className="btn-toggle-filtros" onClick={() => setMostrarFiltros(m => !m)}>
+          <Filter size={13} />
+          Filtros
+          {filtrosActivos > 0 && <span className="personal-filter-badge">{filtrosActivos}</span>}
+          {mostrarFiltros ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+        <ExportMenu
+          todos={registros} filtrados={filtrados} seleccionados={selData}
+          colsDef={COLS_CONTRATOS} prepFn={prepContrato}
+          nombreArchivo="contrataciones" titulo="Contrataciones" usuarioNombre={usuario?.nombre}
+        />
         {permisos.crearContrat && (
-          <button className="btn-primary" onClick={() => setModal('crear')}>
-            <Plus size={15} /> Nueva contratación
-          </button>
+          <button className="btn-primary" onClick={() => setModal('crear')}><Plus size={15} /> Nueva contratación</button>
         )}
       </div>
 
+      {/* Panel filtros avanzados */}
+      {mostrarFiltros && (
+        <div className="personal-filtros-panel">
+          <div className="personal-filtros-grid">
+            <div className="personal-form-field">
+              <label>Estado</label>
+              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)}>
+                <option value="">Todos</option>
+                <option value="vigente">Vigente</option>
+                <option value="por_vencer">Por vencer</option>
+                <option value="finalizado">Finalizado</option>
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Estamento</label>
+              <select value={filtros.estamento} onChange={e => setF('estamento', e.target.value)}>
+                <option value="">Todos</option>
+                {ESTAMENTOS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Tipo de contrato</label>
+              <select value={filtros.tipo_contrato} onChange={e => setF('tipo_contrato', e.target.value)}>
+                <option value="">Todos</option>
+                {TIPOS_CONTRATO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Por vencer en</label>
+              <select value={filtros.vencer_dias} onChange={e => setF('vencer_dias', e.target.value)}>
+                <option value="">Sin filtro</option>
+                <option value="7">7 días</option>
+                <option value="15">15 días</option>
+                <option value="30">30 días</option>
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Inicio desde</label>
+              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Inicio hasta</label>
+              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Término desde</label>
+              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Término hasta</label>
+              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Horas mín.</label>
+              <input type="number" min="0" value={filtros.horas_min} onChange={e => setF('horas_min', e.target.value)} placeholder="0" />
+            </div>
+            <div className="personal-form-field">
+              <label>Horas máx.</label>
+              <input type="number" min="0" value={filtros.horas_max} onChange={e => setF('horas_max', e.target.value)} placeholder="44" />
+            </div>
+          </div>
+          {filtrosActivos > 0 && (
+            <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar filtros</button>
+          )}
+        </div>
+      )}
+
+      {/* Error */}
+      {errorCarga && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#b91c1c', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertCircle size={16} />{errorCarga}
+          <button onClick={cargar} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fca5a5', borderRadius: 6, padding: '3px 10px', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Reintentar</button>
+        </div>
+      )}
+
       {/* Tabla */}
       {cargando ? (
-        <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando...</div>
+        <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando contrataciones…</div>
       ) : (
         <div className="personal-table-wrap">
-          {vista.length === 0 ? (
+          {filtrados.length === 0 ? (
             <div className="personal-empty">
               <div className="personal-empty-icon"><FileText size={24} /></div>
               <p>No hay contrataciones que mostrar</p>
-              <span>{busq || filtEstado ? 'Ajusta los filtros de búsqueda' : 'Crea la primera contratación'}</span>
+              <span>{filtros.busq || filtrosActivos > 0 ? 'Ajusta los filtros de búsqueda' : 'Crea la primera contratación'}</span>
             </div>
           ) : (
             <>
               <table className="personal-table">
                 <thead>
                   <tr>
+                    <th className="col-check">
+                      <button onClick={toggleTodo} style={{ background: 'none', border: 'none', cursor: 'pointer', color: algunoSelec ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8', display: 'flex', padding: 0 }}>
+                        {todosSelec ? <CheckSquare size={16} /> : algunoSelec ? <CheckSquare size={16} style={{ opacity: 0.5 }} /> : <Square size={16} />}
+                      </button>
+                    </th>
                     <th>Nombre</th>
                     <th>RUT</th>
                     <th>Cargo / Estamento</th>
@@ -499,44 +933,40 @@ function ContratacionesTab({ usuario, permisos }) {
                   {vista.map(c => {
                     const estado = calcularEstado(c)
                     const dias   = diasHasta(c.fecha_termino)
+                    const sel    = seleccionados.has(c.id)
                     return (
-                      <tr key={c.id}>
-                        <td>
+                      <tr key={c.id} className={sel ? 'selected' : ''} onClick={() => toggleUno(c.id)} style={{ cursor: 'pointer' }}>
+                        <td className="col-check" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => toggleUno(c.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: sel ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8', display: 'flex', padding: 0 }}>
+                            {sel ? <CheckSquare size={16} /> : <Square size={16} />}
+                          </button>
+                        </td>
+                        <td onClick={e => e.stopPropagation()}>
                           <p className="personal-table-name">{c.nombre_completo}</p>
                           <p className="personal-table-sub">{c.correo || '—'}</p>
                         </td>
-                        <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{formatRut(c.rut)}</td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()} style={{ fontFamily: 'monospace', fontSize: 13 }}>{formatRut(c.rut)}</td>
+                        <td onClick={e => e.stopPropagation()}>
                           <p style={{ margin: 0, fontSize: 13.5 }}>{c.cargo}</p>
                           <p className="personal-table-sub">{ESTAMENTO_MAP[c.estamento] ?? c.estamento}</p>
                         </td>
-                        <td>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato}</td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()}>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato}</td>
+                        <td onClick={e => e.stopPropagation()}>
                           <p style={{ margin: 0, fontSize: 13 }}>{formatFecha(c.fecha_inicio)}</p>
-                          {c.fecha_termino && (
-                            <p className="personal-table-sub">hasta {formatFecha(c.fecha_termino)}</p>
-                          )}
+                          {c.fecha_termino && <p className="personal-table-sub">hasta {formatFecha(c.fecha_termino)}</p>}
                           {estado === 'por_vencer' && dias !== null && dias >= 0 && (
-                            <span className="personal-vencer-alert">
-                              <AlertTriangle size={11} /> {dias}d
-                            </span>
+                            <span className="personal-vencer-alert"><AlertTriangle size={11} /> {dias}d</span>
                           )}
                         </td>
-                        <td><EstadoBadge estado={estado} /></td>
-                        <td>
+                        <td onClick={e => e.stopPropagation()}><EstadoBadge estado={estado} /></td>
+                        <td onClick={e => e.stopPropagation()}>
                           <div className="personal-actions">
-                            <button className="personal-action-btn" title="Ver detalle" onClick={() => setDetalle(c)}>
-                              <Eye size={14} />
-                            </button>
+                            <button className="personal-action-btn" title="Ver detalle" onClick={() => setDetalle(c)}><Eye size={14} /></button>
                             {permisos.editarContrat && (
-                              <button className="personal-action-btn" title="Editar" onClick={() => setModal(c)}>
-                                <Pencil size={14} />
-                              </button>
+                              <button className="personal-action-btn" title="Editar" onClick={() => setModal(c)}><Pencil size={14} /></button>
                             )}
                             {permisos.eliminarContrat && (
-                              <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(c)}>
-                                <Trash2 size={14} />
-                              </button>
+                              <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(c)}><Trash2 size={14} /></button>
                             )}
                           </div>
                         </td>
@@ -546,27 +976,16 @@ function ContratacionesTab({ usuario, permisos }) {
                 </tbody>
               </table>
 
-              {/* Paginación */}
               {total > POR_PAGINA && (
                 <div className="personal-pagination">
-                  <span className="personal-pagination-info">
-                    {inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}
-                  </span>
+                  <span className="personal-pagination-info">{inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}</span>
                   <div className="personal-pagination-btns">
-                    <button className="personal-pagination-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>
-                      ‹ Anterior
-                    </button>
+                    <button className="personal-pagination-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>‹ Anterior</button>
                     {Array.from({ length: Math.min(5, paginas) }, (_, i) => {
                       const p = i + 1
-                      return (
-                        <button key={p} className={`personal-pagination-btn ${pagina === p ? 'active' : ''}`} onClick={() => setPagina(p)}>
-                          {p}
-                        </button>
-                      )
+                      return <button key={p} className={`personal-pagination-btn ${pagina === p ? 'active' : ''}`} onClick={() => setPagina(p)}>{p}</button>
                     })}
-                    <button className="personal-pagination-btn" disabled={pagina === paginas} onClick={() => setPagina(p => p + 1)}>
-                      Siguiente ›
-                    </button>
+                    <button className="personal-pagination-btn" disabled={pagina === paginas} onClick={() => setPagina(p => p + 1)}>Siguiente ›</button>
                   </div>
                 </div>
               )}
@@ -575,49 +994,58 @@ function ContratacionesTab({ usuario, permisos }) {
         </div>
       )}
 
-      {/* Modal Crear/Editar */}
       <AnimatePresence>
         {modal && (
-          <ModalContratacion
-            datos={modal === 'crear' ? null : modal}
-            onGuardar={handleGuardar}
-            onClose={() => setModal(null)}
-          />
+          <ModalContratacion datos={modal === 'crear' ? null : modal} onGuardar={handleGuardar} onClose={() => setModal(null)} />
         )}
       </AnimatePresence>
-
-      {/* Modal Detalle */}
       <AnimatePresence>
         {detalle && (
-          <ModalDetalleContratacion
-            datos={detalle}
-            onClose={() => setDetalle(null)}
-            onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null}
-          />
+          <ModalDetalleContratacion datos={detalle} onClose={() => setDetalle(null)}
+            onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null} />
         )}
       </AnimatePresence>
 
-      {/* Modal Confirmar Eliminar */}
+      {/* Confirmar eliminar individual */}
       <AnimatePresence>
         {eliminar && (
           <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
-            onClick={() => !eliminando && setEliminar(null)}
-          >
+            onClick={() => !eliminando && setEliminar(null)}>
             <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}>
-                <Trash2 size={22} style={{ color: '#dc2626' }} />
-              </div>
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}><Trash2 size={22} style={{ color: '#dc2626' }} /></div>
               <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>¿Eliminar contratación?</h3>
               <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
-                Se eliminará el registro de <strong>{eliminar.nombre_completo}</strong> y todos sus documentos asociados.
+                Se eliminará el registro de <strong>{eliminar.nombre_completo}</strong> y todos sus documentos.
               </p>
               <p style={{ margin: '0 0 24px', fontSize: 12.5, color: '#94a3b8' }}>Esta acción no se puede deshacer.</p>
               <div className="personal-form-actions">
                 <button className="btn-secondary" onClick={() => setEliminar(null)} disabled={eliminando}>Cancelar</button>
                 <button className="btn-danger" onClick={handleEliminar} disabled={eliminando}>
                   {eliminando ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : 'Sí, eliminar'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmar eliminar masivo */}
+      <AnimatePresence>
+        {confirmarMasivo && (
+          <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+            onClick={() => !eliminandoMas && setConfirmarMasivo(false)}>
+            <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}><Trash2 size={22} style={{ color: '#dc2626' }} /></div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>¿Eliminar {seleccionados.size} contratación{seleccionados.size !== 1 ? 'es' : ''}?</h3>
+              <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+                Se eliminarán todos los registros seleccionados y sus documentos asociados. Esta acción no se puede deshacer.
+              </p>
+              <div className="personal-form-actions">
+                <button className="btn-secondary" onClick={() => setConfirmarMasivo(false)} disabled={eliminandoMas}>Cancelar</button>
+                <button className="btn-danger" onClick={handleEliminarMasivo} disabled={eliminandoMas}>
+                  {eliminandoMas ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : `Sí, eliminar ${seleccionados.size}`}
                 </button>
               </div>
             </motion.div>
@@ -918,31 +1346,33 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
 // REEMPLAZOS TAB
 // ═══════════════════════════════════════════════════════════════
 function ReemplazosTab({ usuario, permisos }) {
-  const [registros,   setRegistros]   = useState([])
-  const [usuariosBD,  setUsuariosBD]  = useState([])
-  const [ausencias,   setAusencias]   = useState([])
-  const [cargando,    setCargando]    = useState(true)
-  const [busq,        setBusq]        = useState('')
-  const [filtEstado,  setFiltEstado]  = useState('')
-  const [modal,       setModal]       = useState(null) // null | 'crear' | datos
-  const [eliminar,    setEliminar]    = useState(null)
-  const [eliminando,  setEliminando]  = useState(false)
+  const [registros,       setRegistros]       = useState([])
+  const [usuariosBD,      setUsuariosBD]      = useState([])
+  const [ausencias,       setAusencias]       = useState([])
+  const [cargando,        setCargando]        = useState(true)
+  const [errorCarga,      setErrorCarga]      = useState('')
+  const [filtros,         setFiltros]         = useState(DEFAULT_FILTROS_REEMPLAZOS)
+  const [mostrarFiltros,  setMostrarFiltros]  = useState(false)
+  const [modal,           setModal]           = useState(null)
+  const [eliminar,        setEliminar]        = useState(null)
+  const [eliminando,      setEliminando]      = useState(false)
+  const [seleccionados,   setSeleccionados]   = useState(new Set())
+  const [confirmarMasivo, setConfirmarMasivo] = useState(false)
+  const [eliminandoMas,   setEliminandoMas]   = useState(false)
 
   useEffect(() => { cargar() }, [])
 
   async function cargar() {
-    setCargando(true)
-    const [{ data: rs }, { data: us }, { data: aus }] = await Promise.all([
+    setCargando(true); setErrorCarga('')
+    const [{ data: rs, error: e1 }, { data: us }, { data: aus }] = await Promise.all([
       supabase.from('reemplazos').select('*').order('creado_en', { ascending: false }),
       supabase.from('usuarios').select('id, nombre, rol').order('nombre'),
       supabase.from('ausencias').select('id, tipo, usuario_id, usuario:usuario_id(nombre), fecha_inicio, fecha_fin')
         .in('tipo', ['licencia_medica','cometido','permiso_administrativo'])
-        .gte('fecha_fin', todayStr())
-        .order('fecha_inicio', { ascending: false }).limit(50),
+        .gte('fecha_fin', todayStr()).order('fecha_inicio', { ascending: false }).limit(50),
     ])
-    setRegistros(rs ?? [])
-    setUsuariosBD(us ?? [])
-    setAusencias(aus ?? [])
+    if (e1) setErrorCarga('No se pudieron cargar los reemplazos: ' + e1.message)
+    setRegistros(rs ?? []); setUsuariosBD(us ?? []); setAusencias(aus ?? [])
     setCargando(false)
   }
 
@@ -967,17 +1397,15 @@ function ReemplazosTab({ usuario, permisos }) {
     }
     if (esEdicion) {
       const { error } = await supabase.from('reemplazos').update(payload).eq('id', datos.id)
-      if (error) return error.message
+      if (error) return 'No se pudo actualizar el reemplazo: ' + error.message
       await auditLog({ accion: 'editar', tabla: 'reemplazos', id: datos.id, nombre: datos.funcionario_nombre, usuario, cambios: payload })
     } else {
       payload.creado_por = usuario.id
       const { error } = await supabase.from('reemplazos').insert(payload)
-      if (error) return error.message
+      if (error) return 'No se pudo crear el reemplazo: ' + error.message
       await auditLog({ accion: 'crear', tabla: 'reemplazos', nombre: datos.funcionario_nombre, usuario, cambios: payload })
     }
-    await cargar()
-    setModal(null)
-    return null
+    await cargar(); setModal(null); return null
   }
 
   async function handleEliminar() {
@@ -985,96 +1413,198 @@ function ReemplazosTab({ usuario, permisos }) {
     const { error } = await supabase.from('reemplazos').delete().eq('id', eliminar.id)
     if (!error) {
       await auditLog({ accion: 'eliminar', tabla: 'reemplazos', id: eliminar.id, nombre: eliminar.funcionario_nombre, usuario })
-      await cargar()
-      setEliminar(null)
+      await cargar(); setEliminar(null)
     }
     setEliminando(false)
   }
 
-  const filtrados = registros.filter(r => {
-    if (filtEstado && r.estado !== filtEstado) return false
-    const q = busq.toLowerCase()
-    if (!q) return true
-    return r.funcionario_nombre?.toLowerCase().includes(q)
-      || r.reemplazante_nombre?.toLowerCase().includes(q)
-      || r.cargo?.toLowerCase().includes(q)
-      || r.asignatura?.toLowerCase().includes(q)
-  })
+  async function handleEliminarMasivo() {
+    setEliminandoMas(true)
+    const ids = [...seleccionados]
+    const { error } = await supabase.from('reemplazos').delete().in('id', ids)
+    if (!error) {
+      await Promise.all(ids.map(id => {
+        const r = registros.find(x => x.id === id)
+        return auditLog({ accion: 'eliminar', tabla: 'reemplazos', id, nombre: r?.funcionario_nombre, usuario })
+      }))
+      setSeleccionados(new Set()); setConfirmarMasivo(false); await cargar()
+    }
+    setEliminandoMas(false)
+  }
 
-  // Ausencias sin reemplazo asignado
+  const filtrados = useMemo(() => {
+    const f = filtros
+    return registros.filter(r => {
+      if (f.estado && r.estado !== f.estado) return false
+      if (f.motivo && r.motivo !== f.motivo) return false
+      if (f.cargo && !r.cargo?.toLowerCase().includes(f.cargo.toLowerCase())) return false
+      if (f.asignatura && !r.asignatura?.toLowerCase().includes(f.asignatura.toLowerCase())) return false
+      if (f.curso && !r.curso?.toLowerCase().includes(f.curso.toLowerCase())) return false
+      if (f.fecha_inicio_desde && r.fecha_inicio < f.fecha_inicio_desde) return false
+      if (f.fecha_inicio_hasta && r.fecha_inicio > f.fecha_inicio_hasta) return false
+      if (f.fecha_termino_desde && (!r.fecha_termino || r.fecha_termino < f.fecha_termino_desde)) return false
+      if (f.fecha_termino_hasta && (!r.fecha_termino || r.fecha_termino > f.fecha_termino_hasta)) return false
+      if (!f.busq) return true
+      const q = f.busq.toLowerCase()
+      return r.funcionario_nombre?.toLowerCase().includes(q)
+        || r.reemplazante_nombre?.toLowerCase().includes(q)
+        || r.cargo?.toLowerCase().includes(q)
+        || r.asignatura?.toLowerCase().includes(q)
+        || r.curso?.toLowerCase().includes(q)
+        || MOTIVO_MAP[r.motivo]?.toLowerCase().includes(q)
+        || ESTADO_REEMPL[r.estado]?.label?.toLowerCase().includes(q)
+    })
+  }, [registros, filtros])
+
   const reemplazoAusIds = new Set(registros.filter(r => r.ausencia_id).map(r => r.ausencia_id))
   const ausSinReemplazo = ausencias.filter(a => !reemplazoAusIds.has(a.id))
+  const todosIds = filtrados.map(r => r.id)
+  const todosSelec = todosIds.length > 0 && todosIds.every(id => seleccionados.has(id))
+  const algunoSelec = todosIds.some(id => seleccionados.has(id))
+
+  function toggleUno(id) {
+    setSeleccionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  const selData = registros.filter(r => seleccionados.has(r.id))
+  const filtrosActivos = Object.entries(filtros).filter(([k, v]) => k !== 'busq' && v !== '').length
+  function setF(k, v) { setFiltros(f => ({ ...f, [k]: v })) }
+  function resetFiltros() { setFiltros(DEFAULT_FILTROS_REEMPLAZOS) }
 
   return (
     <div>
-      {/* Alerta ausencias sin reemplazo */}
+      <BulkBar
+        count={seleccionados.size}
+        onExportar={null}
+        onEliminar={() => setConfirmarMasivo(true)}
+        onLimpiar={() => setSeleccionados(new Set())}
+        puedeEliminar={permisos.eliminarReempl}
+      />
+
       {ausSinReemplazo.length > 0 && (
         <div className="personal-alert-banner">
           <AlertTriangle size={18} style={{ flexShrink: 0 }} />
-          <span>
-            <strong>{ausSinReemplazo.length} ausencia{ausSinReemplazo.length !== 1 ? 's' : ''}</strong> activa{ausSinReemplazo.length !== 1 ? 's' : ''} sin reemplazo asignado.
-          </span>
-          {permisos.crearReempl && (
-            <button onClick={() => setModal({ _ausencia: ausSinReemplazo[0] })}>Crear reemplazo</button>
+          <span><strong>{ausSinReemplazo.length} ausencia{ausSinReemplazo.length !== 1 ? 's' : ''}</strong> activa{ausSinReemplazo.length !== 1 ? 's' : ''} sin reemplazo asignado.</span>
+          {permisos.crearReempl && <button onClick={() => setModal({ _ausencia: ausSinReemplazo[0] })}>Crear reemplazo</button>}
+        </div>
+      )}
+
+      <div className="personal-toolbar">
+        <div className="personal-search">
+          <Search size={14} className="personal-search-icon" />
+          <input value={filtros.busq} onChange={e => setF('busq', e.target.value)}
+            placeholder="Buscar funcionario, reemplazante, cargo, asignatura…" />
+          {filtros.busq && <button onClick={() => setF('busq', '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
+        </div>
+        <button className="btn-toggle-filtros" onClick={() => setMostrarFiltros(m => !m)}>
+          <Filter size={13} /> Filtros
+          {filtrosActivos > 0 && <span className="personal-filter-badge">{filtrosActivos}</span>}
+          {mostrarFiltros ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
+        <ExportMenu
+          todos={registros} filtrados={filtrados} seleccionados={selData}
+          colsDef={COLS_REEMPLAZOS} prepFn={prepReemplazo}
+          nombreArchivo="reemplazos" titulo="Reemplazos" usuarioNombre={usuario?.nombre}
+        />
+        {permisos.crearReempl && (
+          <button className="btn-primary" onClick={() => setModal('crear')}><Plus size={15} /> Nuevo reemplazo</button>
+        )}
+      </div>
+
+      {mostrarFiltros && (
+        <div className="personal-filtros-panel">
+          <div className="personal-filtros-grid">
+            <div className="personal-form-field">
+              <label>Estado</label>
+              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)}>
+                <option value="">Todos</option>
+                {ESTADOS_REEMPLAZO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Motivo</label>
+              <select value={filtros.motivo} onChange={e => setF('motivo', e.target.value)}>
+                <option value="">Todos</option>
+                {MOTIVOS_REEMPLAZO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="personal-form-field">
+              <label>Cargo</label>
+              <input value={filtros.cargo} onChange={e => setF('cargo', e.target.value)} placeholder="Filtrar por cargo…" />
+            </div>
+            <div className="personal-form-field">
+              <label>Asignatura</label>
+              <input value={filtros.asignatura} onChange={e => setF('asignatura', e.target.value)} placeholder="Filtrar por asignatura…" />
+            </div>
+            <div className="personal-form-field">
+              <label>Curso</label>
+              <input value={filtros.curso} onChange={e => setF('curso', e.target.value)} placeholder="Filtrar por curso…" />
+            </div>
+            <div className="personal-form-field">
+              <label>Inicio desde</label>
+              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Inicio hasta</label>
+              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Término desde</label>
+              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} />
+            </div>
+            <div className="personal-form-field">
+              <label>Término hasta</label>
+              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} />
+            </div>
+          </div>
+          {filtrosActivos > 0 && (
+            <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar filtros</button>
           )}
         </div>
       )}
 
-      {/* Toolbar */}
-      <div className="personal-toolbar">
-        <div className="personal-search">
-          <Search size={14} className="personal-search-icon" />
-          <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar por funcionario, reemplazante, cargo…" />
+      {errorCarga && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#b91c1c', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <AlertCircle size={16} />{errorCarga}
+          <button onClick={cargar} style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fca5a5', borderRadius: 6, padding: '3px 10px', color: '#b91c1c', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}>Reintentar</button>
         </div>
-        <select className="personal-filter-select" value={filtEstado} onChange={e => setFiltEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {ESTADOS_REEMPLAZO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-        {permisos.crearReempl && (
-          <button className="btn-primary" onClick={() => setModal('crear')}>
-            <Plus size={15} /> Nuevo reemplazo
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Cards */}
       {cargando ? (
-        <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando...</div>
+        <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando reemplazos…</div>
       ) : filtrados.length === 0 ? (
         <div className="personal-empty" style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0' }}>
           <div className="personal-empty-icon"><Users size={24} /></div>
           <p>No hay reemplazos que mostrar</p>
-          <span>{busq || filtEstado ? 'Ajusta los filtros' : 'Registra el primer reemplazo'}</span>
+          <span>{filtros.busq || filtrosActivos > 0 ? 'Ajusta los filtros' : 'Registra el primer reemplazo'}</span>
         </div>
       ) : (
         <div className="personal-cards-grid">
           {filtrados.map(r => {
-            const es     = ESTADO_REEMPL[r.estado] ?? { color: '#64748b', bg: '#f8fafc', label: r.estado }
-            const dias   = diasHasta(r.fecha_termino)
-            const color  = avatarColor(r.reemplazante_nombre ?? r.funcionario_nombre)
+            const dias  = diasHasta(r.fecha_termino)
+            const color = avatarColor(r.reemplazante_nombre ?? r.funcionario_nombre)
+            const sel   = seleccionados.has(r.id)
             return (
-              <div key={r.id} className="personal-card">
+              <div key={r.id} className={`personal-card ${sel ? 'selected' : ''}`}>
                 <div className="personal-card-header">
-                  <span className="personal-card-motivo">{MOTIVO_MAP[r.motivo] ?? r.motivo}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => toggleUno(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: sel ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8', display: 'flex', padding: 0 }}>
+                      {sel ? <CheckSquare size={15} /> : <Square size={15} />}
+                    </button>
+                    <span className="personal-card-motivo">{MOTIVO_MAP[r.motivo] ?? r.motivo}</span>
+                  </div>
                   <div style={{ display: 'flex', gap: 4 }}>
                     {permisos.editarReempl && (
-                      <button className="personal-action-btn" title="Editar" onClick={() => setModal(r)}>
-                        <Pencil size={13} />
-                      </button>
+                      <button className="personal-action-btn" title="Editar" onClick={() => setModal(r)}><Pencil size={13} /></button>
                     )}
                     {permisos.eliminarReempl && (
-                      <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(r)}>
-                        <Trash2 size={13} />
-                      </button>
+                      <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(r)}><Trash2 size={13} /></button>
                     )}
                   </div>
                 </div>
-
                 <div>
                   <p className="personal-card-name">{r.funcionario_nombre}</p>
                   <p className="personal-card-cargo">{r.cargo ?? '—'}{r.asignatura ? ` · ${r.asignatura}` : ''}{r.curso ? ` · ${r.curso}` : ''}</p>
                 </div>
-
                 <div className="personal-card-dates">
                   <div className="personal-card-date-item">
                     <span className="personal-card-date-label">Desde</span>
@@ -1085,7 +1615,6 @@ function ReemplazosTab({ usuario, permisos }) {
                     <span className="personal-card-date-val">{r.fecha_termino ? formatFecha(r.fecha_termino) : '—'}</span>
                   </div>
                 </div>
-
                 {r.reemplazante_nombre ? (
                   <div className="personal-card-reemplazante">
                     <div className="personal-card-avatar" style={{ background: color }}>{initials(r.reemplazante_nombre)}</div>
@@ -1099,7 +1628,6 @@ function ReemplazosTab({ usuario, permisos }) {
                     Sin reemplazante asignado
                   </div>
                 )}
-
                 <div className="personal-card-footer">
                   <EstadoBadge estado={r.estado} />
                   {r.estado === 'activo' && dias !== null && dias >= 0 && dias <= 7 && (
@@ -1113,32 +1641,24 @@ function ReemplazosTab({ usuario, permisos }) {
         </div>
       )}
 
-      {/* Modal Crear/Editar */}
       <AnimatePresence>
         {modal && (
           <ModalReemplazo
             datos={modal === 'crear' ? null : (modal._ausencia ? null : modal)}
             ausenciaInicial={modal._ausencia ?? null}
-            usuarios={usuariosBD}
-            ausencias={ausencias}
-            onGuardar={handleGuardar}
-            onClose={() => setModal(null)}
+            usuarios={usuariosBD} ausencias={ausencias}
+            onGuardar={handleGuardar} onClose={() => setModal(null)}
           />
         )}
       </AnimatePresence>
 
-      {/* Confirmar eliminar */}
       <AnimatePresence>
         {eliminar && (
           <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
-            onClick={() => !eliminando && setEliminar(null)}
-          >
+            onClick={() => !eliminando && setEliminar(null)}>
             <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}>
-                <Trash2 size={22} style={{ color: '#dc2626' }} />
-              </div>
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}><Trash2 size={22} style={{ color: '#dc2626' }} /></div>
               <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700 }}>¿Eliminar reemplazo?</h3>
               <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
                 Se eliminará el reemplazo de <strong>{eliminar.funcionario_nombre}</strong>.
@@ -1147,6 +1667,26 @@ function ReemplazosTab({ usuario, permisos }) {
                 <button className="btn-secondary" onClick={() => setEliminar(null)} disabled={eliminando}>Cancelar</button>
                 <button className="btn-danger" onClick={handleEliminar} disabled={eliminando}>
                   {eliminando ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : 'Sí, eliminar'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmarMasivo && (
+          <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+            onClick={() => !eliminandoMas && setConfirmarMasivo(false)}>
+            <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}><Trash2 size={22} style={{ color: '#dc2626' }} /></div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700 }}>¿Eliminar {seleccionados.size} reemplazo{seleccionados.size !== 1 ? 's' : ''}?</h3>
+              <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>Esta acción no se puede deshacer.</p>
+              <div className="personal-form-actions">
+                <button className="btn-secondary" onClick={() => setConfirmarMasivo(false)} disabled={eliminandoMas}>Cancelar</button>
+                <button className="btn-danger" onClick={handleEliminarMasivo} disabled={eliminandoMas}>
+                  {eliminandoMas ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : `Sí, eliminar ${seleccionados.size}`}
                 </button>
               </div>
             </motion.div>
@@ -1379,30 +1919,32 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
 // DOCUMENTOS TAB
 // ═══════════════════════════════════════════════════════════════
 function DocumentosTab({ usuario, permisos }) {
-  const [docs,       setDocs]       = useState([])
-  const [contratos,  setContratos]  = useState([])
-  const [reemplazos, setReemplazos] = useState([])
-  const [cargando,   setCargando]   = useState(true)
-  const [busq,       setBusq]       = useState('')
-  const [filtTipo,   setFiltTipo]   = useState('')
-  const [subiendo,   setSubiendo]   = useState(false)
-  const [modalSubir, setModalSubir] = useState(false)
-  const [eliminar,   setEliminar]   = useState(null)
-  const [eliminando, setEliminando] = useState(false)
+  const [docs,         setDocs]         = useState([])
+  const [contratos,    setContratos]    = useState([])
+  const [reemplazos,   setReemplazos]   = useState([])
+  const [cargando,     setCargando]     = useState(true)
+  const [errorCarga,   setErrorCarga]   = useState('')
+  const [busq,         setBusq]         = useState('')
+  const [filtTipo,     setFiltTipo]     = useState('')
+  const [subiendo,     setSubiendo]     = useState(false)
+  const [modalSubir,   setModalSubir]   = useState(false)
+  const [eliminar,     setEliminar]     = useState(null)
+  const [eliminando,   setEliminando]   = useState(false)
+  const [seleccionados, setSeleccionados] = useState(new Set())
+  const [descargandoMas, setDescargandoMas] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => { cargar() }, [])
 
   async function cargar() {
-    setCargando(true)
-    const [{ data: ds }, { data: cs }, { data: rs }] = await Promise.all([
+    setCargando(true); setErrorCarga('')
+    const [{ data: ds, error: e1 }, { data: cs }, { data: rs }] = await Promise.all([
       supabase.from('personal_documentos').select('*').order('subido_en', { ascending: false }),
       supabase.from('contrataciones').select('id, nombre_completo').order('nombre_completo'),
       supabase.from('reemplazos').select('id, funcionario_nombre').order('funcionario_nombre'),
     ])
-    setDocs(ds ?? [])
-    setContratos(cs ?? [])
-    setReemplazos(rs ?? [])
+    if (e1) setErrorCarga('No se pudieron cargar los documentos: ' + e1.message)
+    setDocs(ds ?? []); setContratos(cs ?? []); setReemplazos(rs ?? [])
     setCargando(false)
   }
 
@@ -1411,38 +1953,26 @@ function DocumentosTab({ usuario, permisos }) {
     const ext  = archivo.name.split('.').pop()
     const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`
     const { error: upErr } = await supabase.storage.from('personal-docs').upload(path, archivo)
-    if (upErr) { setSubiendo(false); return upErr.message }
-
+    if (upErr) { setSubiendo(false); return 'No se pudo subir el archivo: ' + upErr.message }
     const { data: urlData } = supabase.storage.from('personal-docs').getPublicUrl(path)
     const { error: dbErr } = await supabase.from('personal_documentos').insert({
-      nombre,
-      tipo_doc,
-      url:            urlData.publicUrl,
-      storage_path:   path,
-      tamanio:        archivo.size,
-      mime_type:      archivo.type,
+      nombre, tipo_doc, url: urlData.publicUrl, storage_path: path,
+      tamanio: archivo.size, mime_type: archivo.type,
       contratacion_id: contratacion_id || null,
-      reemplazo_id:   reemplazo_id || null,
-      subido_por:     usuario.id,
+      reemplazo_id:    reemplazo_id || null,
+      subido_por:      usuario.id,
     })
-    if (dbErr) { setSubiendo(false); return dbErr.message }
+    if (dbErr) { setSubiendo(false); return 'No se pudo registrar el documento: ' + dbErr.message }
     await auditLog({ accion: 'crear', tabla: 'personal_documentos', nombre, usuario })
-    await cargar()
-    setSubiendo(false)
-    setModalSubir(false)
-    return null
+    await cargar(); setSubiendo(false); setModalSubir(false); return null
   }
 
   async function handleEliminar() {
     setEliminando(true)
-    if (eliminar.storage_path) {
-      await supabase.storage.from('personal-docs').remove([eliminar.storage_path])
-    }
+    if (eliminar.storage_path) await supabase.storage.from('personal-docs').remove([eliminar.storage_path])
     await supabase.from('personal_documentos').delete().eq('id', eliminar.id)
     await auditLog({ accion: 'eliminar', tabla: 'personal_documentos', nombre: eliminar.nombre, usuario })
-    await cargar()
-    setEliminar(null)
-    setEliminando(false)
+    await cargar(); setEliminar(null); setEliminando(false)
   }
 
   async function handleDescargar(doc) {
@@ -1450,32 +1980,69 @@ function DocumentosTab({ usuario, permisos }) {
       const { data, error } = await supabase.storage.from('personal-docs').download(doc.storage_path)
       if (!error && data) {
         const url = URL.createObjectURL(data)
-        const a = document.createElement('a')
-        a.href = url; a.download = doc.nombre; a.click()
-        URL.revokeObjectURL(url)
-        return
+        const a = document.createElement('a'); a.href = url; a.download = doc.nombre; a.click()
+        URL.revokeObjectURL(url); return
       }
     }
     window.open(doc.url, '_blank')
   }
 
+  async function handleDescargarSeleccionados() {
+    setDescargandoMas(true)
+    const selDocs = docs.filter(d => seleccionados.has(d.id))
+    for (const doc of selDocs) {
+      await handleDescargar(doc)
+      await new Promise(r => setTimeout(r, 300))
+    }
+    setDescargandoMas(false)
+  }
+
   const filtrados = docs.filter(d => {
     if (filtTipo && d.tipo_doc !== filtTipo) return false
     if (!busq) return true
-    return d.nombre?.toLowerCase().includes(busq.toLowerCase())
+    const q = busq.toLowerCase()
+    const c = contratos.find(x => x.id === d.contratacion_id)
+    const r = reemplazos.find(x => x.id === d.reemplazo_id)
+    return d.nombre?.toLowerCase().includes(q)
+      || TIPOS_DOC_MAP[d.tipo_doc]?.toLowerCase().includes(q)
+      || c?.nombre_completo?.toLowerCase().includes(q)
+      || r?.funcionario_nombre?.toLowerCase().includes(q)
   })
+
+  function toggleUno(id) {
+    setSeleccionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  const selData = docs.filter(d => seleccionados.has(d.id))
+  const prepDocBound = d => prepDoc(d, contratos, reemplazos)
 
   return (
     <div>
+      {seleccionados.size > 0 && (
+        <div className="personal-bulk-bar">
+          <span className="personal-bulk-count">{seleccionados.size} seleccionado{seleccionados.size !== 1 ? 's' : ''}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="personal-bulk-btn" onClick={handleDescargarSeleccionados} disabled={descargandoMas}>
+              {descargandoMas ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} Descargar
+            </button>
+            <button className="personal-bulk-btn" onClick={() => setSeleccionados(new Set())}><X size={13} /> Limpiar</button>
+          </div>
+        </div>
+      )}
       <div className="personal-toolbar">
         <div className="personal-search">
           <Search size={14} className="personal-search-icon" />
           <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar documentos…" />
+          {busq && <button onClick={() => setBusq('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
         </div>
         <select className="personal-filter-select" value={filtTipo} onChange={e => setFiltTipo(e.target.value)}>
           <option value="">Todos los tipos</option>
           {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
+        <ExportMenu
+          todos={docs} filtrados={filtrados} seleccionados={selData}
+          colsDef={COLS_DOCS} prepFn={prepDocBound}
+          nombreArchivo="documentos_personal" titulo="Documentos Personal" usuarioNombre={usuario?.nombre}
+        />
         {permisos.subirDocs && (
           <button className="btn-primary" onClick={() => setModalSubir(true)}>
             <Upload size={15} /> Subir documento
@@ -1497,11 +2064,13 @@ function DocumentosTab({ usuario, permisos }) {
             {filtrados.map(d => {
               const contrato  = contratos.find(c => c.id === d.contratacion_id)
               const reemplazo = reemplazos.find(r => r.id === d.reemplazo_id)
+              const sel = seleccionados.has(d.id)
               return (
-                <div key={d.id} className="personal-doc-item">
-                  <div className="personal-doc-icon">
-                    <FileText size={16} />
-                  </div>
+                <div key={d.id} className={`personal-doc-item ${sel ? 'selected' : ''}`}>
+                  <button onClick={() => toggleUno(d.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: sel ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8', display: 'flex', padding: '0 6px 0 0', flexShrink: 0 }}>
+                    {sel ? <CheckSquare size={15} /> : <Square size={15} />}
+                  </button>
+                  <div className="personal-doc-icon"><FileText size={16} /></div>
                   <div className="personal-doc-info">
                     <p className="personal-doc-name">{d.nombre}</p>
                     <p className="personal-doc-meta">
@@ -1512,13 +2081,9 @@ function DocumentosTab({ usuario, permisos }) {
                     </p>
                   </div>
                   <div className="personal-doc-actions">
-                    <button className="personal-action-btn" title="Descargar" onClick={() => handleDescargar(d)}>
-                      <Download size={14} />
-                    </button>
+                    <button className="personal-action-btn" title="Descargar" onClick={() => handleDescargar(d)}><Download size={14} /></button>
                     {permisos.eliminarDocs && (
-                      <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(d)}>
-                        <Trash2 size={14} />
-                      </button>
+                      <button className="personal-action-btn danger" title="Eliminar" onClick={() => setEliminar(d)}><Trash2 size={14} /></button>
                     )}
                   </div>
                 </div>
@@ -1694,39 +2259,32 @@ function ModalSubirDocumento({ contratos, reemplazos, subiendo, onSubir, onClose
 // AUDITORÍA TAB
 // ═══════════════════════════════════════════════════════════════
 function AuditoriaTab({ usuario }) {
-  const [logs,     setLogs]     = useState([])
-  const [cargando, setCargando] = useState(true)
-  const [busq,     setBusq]     = useState('')
-  const [filtTabla, setFiltTabla] = useState('')
+  const [logs,       setLogs]       = useState([])
+  const [cargando,   setCargando]   = useState(true)
+  const [busq,       setBusq]       = useState('')
+  const [filtTabla,  setFiltTabla]  = useState('')
   const [filtAccion, setFiltAccion] = useState('')
-  const [pagina,   setPagina]   = useState(1)
+  const [pagina,     setPagina]     = useState(1)
 
   useEffect(() => { cargar() }, [])
 
   async function cargar() {
     setCargando(true)
     const { data } = await supabase.from('personal_audit_logs')
-      .select('*')
-      .order('creado_en', { ascending: false })
-      .limit(500)
+      .select('*').order('creado_en', { ascending: false }).limit(500)
     setLogs(data ?? [])
     setCargando(false)
   }
 
   const ACCION_LABEL = { crear: 'Crear', editar: 'Editar', eliminar: 'Eliminar' }
-  const TABLA_LABEL  = {
-    contrataciones: 'Contrataciones',
-    reemplazos: 'Reemplazos',
-    personal_documentos: 'Documentos',
-  }
+  const TABLA_LABEL  = { contrataciones: 'Contrataciones', reemplazos: 'Reemplazos', personal_documentos: 'Documentos' }
 
   const filtrados = logs.filter(l => {
     if (filtTabla && l.tabla_afectada !== filtTabla) return false
     if (filtAccion && l.accion !== filtAccion) return false
     if (!busq) return true
     const q = busq.toLowerCase()
-    return l.registro_nombre?.toLowerCase().includes(q)
-      || l.usuario_nombre?.toLowerCase().includes(q)
+    return l.registro_nombre?.toLowerCase().includes(q) || l.usuario_nombre?.toLowerCase().includes(q)
   })
 
   const total  = filtrados.length
@@ -1745,6 +2303,7 @@ function AuditoriaTab({ usuario }) {
         <div className="personal-search">
           <Search size={14} className="personal-search-icon" />
           <input value={busq} onChange={e => { setBusq(e.target.value); setPagina(1) }} placeholder="Buscar registro, usuario…" />
+          {busq && <button onClick={() => { setBusq(''); setPagina(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
         </div>
         <select className="personal-filter-select" value={filtTabla} onChange={e => { setFiltTabla(e.target.value); setPagina(1) }}>
           <option value="">Todos los módulos</option>
@@ -1758,6 +2317,11 @@ function AuditoriaTab({ usuario }) {
           <option value="editar">Editar</option>
           <option value="eliminar">Eliminar</option>
         </select>
+        <ExportMenu
+          todos={logs} filtrados={filtrados} seleccionados={[]}
+          colsDef={COLS_AUDITORIA} prepFn={prepAuditoria}
+          nombreArchivo="auditoria_personal" titulo="Auditoría Personal" usuarioNombre={usuario?.nombre}
+        />
         <button className="personal-action-btn" title="Actualizar" onClick={cargar} style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, width: 38, height: 38 }}>
           <RefreshCw size={14} />
         </button>
