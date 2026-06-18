@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.reemplazos (
   horas               integer     CHECK (horas IS NULL OR horas >= 0),
   observaciones       text,
   estado              text        NOT NULL DEFAULT 'pendiente',
-  ausencia_id         uuid        REFERENCES public.ausencias(id) ON DELETE SET NULL,
+  ausencia_id         bigint      REFERENCES public.ausencias(id) ON DELETE SET NULL,
   contratacion_id     uuid        REFERENCES public.contrataciones(id) ON DELETE SET NULL,
   creado_por          uuid        REFERENCES public.usuarios(id) ON DELETE SET NULL,
   creado_en           timestamptz NOT NULL DEFAULT now(),
