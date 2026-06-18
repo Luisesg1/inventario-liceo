@@ -102,6 +102,7 @@ export default function Layout({
   const [textoConfirm,     setTextoConfirm]     = useState('')
   const [progresoRest,     setProgresoRest]     = useState([])     // [{ texto, estado:'pending'|'active'|'done'|'error' }]
   const [confirmEliminar,  setConfirmEliminar]  = useState(null)   // nombre del backup a eliminar
+  const [verTodosBackups,  setVerTodosBackups]  = useState(false)
 
   useEffect(() => {
     if (!puedeGestionarTickets) return
@@ -955,63 +956,73 @@ export default function Layout({
                   {cargandoBackups ? (
                     <p style={{ margin: '4px 20px', fontSize: 10.5, opacity: 0.45 }}>Cargando…</p>
                   ) : backupsGuardados.length === 0 ? (
-                    <p style={{ margin: '4px 20px', fontSize: 10.5, opacity: 0.4, lineHeight: 1.4 }}>
+                    <p style={{ margin: '4px 20px 6px', fontSize: 10.5, opacity: 0.4, lineHeight: 1.4 }}>
                       Sin backups guardados aún. El sistema genera uno automáticamente cada mes.
                     </p>
-                  ) : (
-                    <div style={{ margin: '2px 0 6px' }}>
-                      {backupsGuardados.slice(0, 8).map(f => {
-                        const esAuto      = f.name.includes('_auto_')
-                        const esSeguridad = f.name.includes('_seguridad_')
-                        const fecha       = f.name.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? ''
-                        const etiqueta    = esSeguridad ? '🛡️ Seguridad' : esAuto ? '🤖 Auto' : '👤 Manual'
-                        const confirmando = confirmEliminar === f.name
-                        const iconStyle   = { background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }
-                        return (
-                          <div key={f.name} style={{ display: 'flex', alignItems: 'center', padding: '5px 20px 5px 14px', gap: 2 }}>
-                            {/* Info — clic descarga */}
-                            <button
-                              onClick={() => descargarBackupGuardado(f.name)}
-                              style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: '2px 6px', borderRadius: 6 }}
-                              title="Descargar backup"
-                            >
-                              <p style={{ margin: 0, fontSize: 11.5, color: 'rgba(255,255,255,0.82)', fontWeight: 500, lineHeight: 1.3 }}>{fecha}</p>
-                              <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.42)', fontWeight: 400, lineHeight: 1.3 }}>{etiqueta}</p>
-                            </button>
+                  ) : (() => {
+                    const lista = verTodosBackups ? backupsGuardados : backupsGuardados.slice(0, 1)
+                    const iconStyle = { background: 'none', border: 'none', cursor: 'pointer', padding: '3px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }
+                    return (
+                      <div style={{ margin: '2px 0 4px' }}>
+                        {lista.map(f => {
+                          const esAuto      = f.name.includes('_auto_')
+                          const esSeguridad = f.name.includes('_seguridad_')
+                          const fecha       = f.name.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? ''
+                          const etiqueta    = esSeguridad ? '🛡️ Seguridad' : esAuto ? '🤖 Auto' : '👤 Manual'
+                          const confirmando = confirmEliminar === f.name
+                          return (
+                            <div key={f.name} style={{ display: 'flex', alignItems: 'center', padding: '4px 16px 4px 14px', gap: 1 }}>
+                              {/* Info */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.78)', fontWeight: 500, lineHeight: 1.2 }}>{fecha}</p>
+                                <p style={{ margin: 0, fontSize: 9.5, color: 'rgba(255,255,255,0.38)', fontWeight: 400, lineHeight: 1.2 }}>{etiqueta}</p>
+                              </div>
 
-                            {confirmando ? (
-                              <div style={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', marginRight: 2 }}>¿Eliminar?</span>
-                                <button onClick={() => eliminarBackupGuardado(f.name)} style={{ ...iconStyle, color: '#f87171' }} title="Confirmar eliminación">
-                                  <CheckCircle2 size={13} />
-                                </button>
-                                <button onClick={() => setConfirmEliminar(null)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.4)' }} title="Cancelar">
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', gap: 0, alignItems: 'center' }}>
-                                <button onClick={() => descargarBackupGuardado(f.name)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.48)' }} title="Descargar">
-                                  <Download size={12} />
-                                </button>
-                                <button
-                                  onClick={() => abrirRestaurar(f.name)}
-                                  disabled={modalRestaurar?.fase === 3}
-                                  style={{ ...iconStyle, color: 'rgba(255,255,255,0.48)', opacity: modalRestaurar?.fase === 3 ? 0.3 : 1 }}
-                                  title="Restaurar desde este backup"
-                                >
-                                  <RotateCcw size={12} />
-                                </button>
-                                <button onClick={() => setConfirmEliminar(f.name)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.3)' }} title="Eliminar backup">
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                              {confirmando ? (
+                                <div style={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', marginRight: 1 }}>¿Eliminar?</span>
+                                  <button onClick={() => eliminarBackupGuardado(f.name)} style={{ ...iconStyle, color: '#f87171' }} title="Confirmar">
+                                    <CheckCircle2 size={12} />
+                                  </button>
+                                  <button onClick={() => setConfirmEliminar(null)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.35)' }} title="Cancelar">
+                                    <X size={11} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                  <button onClick={() => descargarBackupGuardado(f.name)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.45)' }} title="Descargar">
+                                    <Download size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => abrirRestaurar(f.name)}
+                                    disabled={modalRestaurar?.fase === 3}
+                                    style={{ ...iconStyle, color: 'rgba(255,255,255,0.45)', opacity: modalRestaurar?.fase === 3 ? 0.3 : 1 }}
+                                    title="Restaurar"
+                                  >
+                                    <RotateCcw size={12} />
+                                  </button>
+                                  <button onClick={() => setConfirmEliminar(f.name)} style={{ ...iconStyle, color: 'rgba(255,255,255,0.28)' }} title="Eliminar">
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+
+                        {/* Toggle ver todos / ver menos */}
+                        {backupsGuardados.length > 1 && (
+                          <button
+                            onClick={() => setVerTodosBackups(v => !v)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.38)', fontSize: 10, padding: '3px 14px 6px', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit' }}
+                          >
+                            <ChevronRight size={10} style={{ transform: verTodosBackups ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                            {verTodosBackups ? 'Ver menos' : `Ver todos (${backupsGuardados.length})`}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </motion.div>
               )}
             </AnimatePresence>
