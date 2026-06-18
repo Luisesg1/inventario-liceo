@@ -5,6 +5,7 @@ import {
   Ticket, Settings2, Layers, FileSpreadsheet,
   HardDrive, ChevronRight, X, LogOut,
   Menu, Loader2, ShoppingCart, ShieldCheck, History, Trash2,
+  CloudUpload, Download, RefreshCw,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -88,10 +89,14 @@ export default function Layout({
   const muestraInventario = puedeVerInventario
   const muestraRequerimientos = esVisorReq || puedeVerRequerimientos
 
-  const [sidebarOpen,   setSidebarOpen]   = useState(false)
-  const [confirmLogout, setConfirmLogout] = useState(false)
-  const [exportando,    setExportando]    = useState(false)
-  const [ticketsAbiertos, setTicketsAbiertos] = useState(0)
+  const [sidebarOpen,      setSidebarOpen]      = useState(false)
+  const [confirmLogout,    setConfirmLogout]    = useState(false)
+  const [exportando,       setExportando]       = useState(false)
+  const [ticketsAbiertos,  setTicketsAbiertos]  = useState(0)
+  const [backupsGuardados, setBackupsGuardados] = useState([])
+  const [cargandoBackups,  setCargandoBackups]  = useState(false)
+  const [guardando,        setGuardando]        = useState(false)
+  const [msgBackup,        setMsgBackup]        = useState(null)   // { tipo:'ok'|'error', texto }
 
   useEffect(() => {
     if (!puedeGestionarTickets) return
@@ -108,7 +113,60 @@ export default function Layout({
     return () => supabase.removeChannel(sub)
   }, [puedeGestionarTickets])
 
-  // ── Backup completo ──────────────────────────────────────
+  // ── Backups guardados en Storage ─────────────────────────
+  const cargarBackupsGuardados = async () => {
+    setCargandoBackups(true)
+    const { data } = await supabase.storage.from('backups').list('', {
+      limit: 50, offset: 0,
+      sortBy: { column: 'created_at', order: 'desc' },
+    })
+    setBackupsGuardados(data ?? [])
+    setCargandoBackups(false)
+  }
+
+  // Auto-trigger mensual: si no existe backup en el mes actual, generarlo silenciosamente
+  useEffect(() => {
+    if (!esAdmin) return
+    const verificarBackupMensual = async () => {
+      const ahora = new Date()
+      const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString()
+      const { data } = await supabase.storage.from('backups').list('', { limit: 50 })
+      const tieneEesteMes = (data ?? []).some(f => {
+        const match = f.name.match(/backup_auto_(\d{4}-\d{2}-\d{2})/)
+        if (!match) return false
+        return match[1] >= inicioMes.slice(0, 10).slice(0, 7)
+      })
+      if (!tieneEesteMes) {
+        // Lanzar backup automático en background (sin bloquear UI)
+        supabase.functions.invoke('backup-mensual').catch(() => {})
+      }
+    }
+    verificarBackupMensual()
+  }, [esAdmin])
+
+  const guardarBackupEnServidor = async () => {
+    setGuardando(true)
+    setMsgBackup(null)
+    const { data, error } = await supabase.functions.invoke('backup-mensual')
+    if (error || !data?.ok) {
+      setMsgBackup({ tipo: 'error', texto: 'Error al guardar el backup en el servidor.' })
+    } else {
+      setMsgBackup({ tipo: 'ok', texto: `Backup guardado: ${data.archivo}` })
+      cargarBackupsGuardados()
+    }
+    setGuardando(false)
+  }
+
+  const descargarBackupGuardado = async (nombre) => {
+    const { data, error } = await supabase.storage.from('backups').download(nombre)
+    if (error || !data) return
+    const url = URL.createObjectURL(data)
+    const a = document.createElement('a')
+    a.href = url; a.download = nombre; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Backup completo (descarga directa) ───────────────────
   const fetchFullBackupData = async () => {
     const resultados = await Promise.allSettled(
       TABLAS_BACKUP.map(t => supabase.from(t).select('*'))
@@ -241,6 +299,10 @@ export default function Layout({
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios' || paginaActual === 'mantenedor_roles'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
   const [herramientasAbierto, setHerramientasAbierto] = useState(false)
+
+  useEffect(() => {
+    if (herramientasAbierto && esAdmin) cargarBackupsGuardados()
+  }, [herramientasAbierto])
 
   const titulos = {
     dashboard:  'Inicio',
@@ -724,8 +786,9 @@ export default function Layout({
                   exit="closed"
                   style={{ overflow: 'hidden' }}
                 >
+                  {/* ── Descarga directa ── */}
                   {toolButtons.map(({ Icon, label, desc, fn }) => (
-                    <button key={label} className="tool-btn" onClick={fn} disabled={exportando}>
+                    <button key={label} className="tool-btn" onClick={fn} disabled={exportando || guardando}>
                       <span className="tool-btn-icon">
                         {exportando ? <Loader2 size={14} className="animate-spin" /> : <Icon size={14} />}
                       </span>
@@ -739,6 +802,86 @@ export default function Layout({
                       </span>
                     </button>
                   ))}
+
+                  {/* ── Divider ── */}
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '8px 20px 4px' }} />
+
+                  {/* ── Guardar en servidor ── */}
+                  <button
+                    className="tool-btn"
+                    onClick={() => { guardarBackupEnServidor(); cargarBackupsGuardados() }}
+                    disabled={exportando || guardando}
+                  >
+                    <span className="tool-btn-icon">
+                      {guardando ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
+                    </span>
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span>{guardando ? 'Guardando…' : 'Guardar en servidor'}</span>
+                      {!guardando && (
+                        <span style={{ fontSize: 10, opacity: 0.6, fontWeight: 400, lineHeight: 1.3 }}>
+                          Almacena un backup JSON en la nube.
+                        </span>
+                      )}
+                    </span>
+                  </button>
+
+                  {/* Mensaje resultado */}
+                  {msgBackup && (
+                    <p style={{
+                      margin: '4px 20px 2px',
+                      fontSize: 10.5,
+                      color: msgBackup.tipo === 'ok' ? '#86efac' : '#fca5a5',
+                      lineHeight: 1.4,
+                    }}>
+                      {msgBackup.texto}
+                    </p>
+                  )}
+
+                  {/* ── Lista de backups guardados ── */}
+                  <div style={{ margin: '8px 20px 2px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, opacity: 0.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Backups en servidor
+                    </span>
+                    <button
+                      onClick={cargarBackupsGuardados}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.5, padding: 2 }}
+                      title="Actualizar lista"
+                    >
+                      <RefreshCw size={11} />
+                    </button>
+                  </div>
+
+                  {cargandoBackups ? (
+                    <p style={{ margin: '4px 20px', fontSize: 10.5, opacity: 0.45 }}>Cargando…</p>
+                  ) : backupsGuardados.length === 0 ? (
+                    <p style={{ margin: '4px 20px', fontSize: 10.5, opacity: 0.4, lineHeight: 1.4 }}>
+                      Sin backups guardados aún. El sistema genera uno automáticamente cada mes.
+                    </p>
+                  ) : (
+                    <div style={{ margin: '2px 0 6px' }}>
+                      {backupsGuardados.slice(0, 8).map(f => {
+                        const esAuto  = f.name.includes('_auto_')
+                        const fecha   = f.name.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? ''
+                        const etiqueta = esAuto ? '🤖 Auto' : '👤 Manual'
+                        return (
+                          <button
+                            key={f.name}
+                            className="tool-btn"
+                            style={{ paddingTop: 6, paddingBottom: 6 }}
+                            onClick={() => descargarBackupGuardado(f.name)}
+                          >
+                            <span className="tool-btn-icon" style={{ width: 24, height: 24 }}>
+                              <Download size={12} />
+                            </span>
+                            <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              <span style={{ fontSize: 11.5 }}>{fecha}</span>
+                              <span style={{ fontSize: 10, opacity: 0.55, fontWeight: 400 }}>{etiqueta}</span>
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
