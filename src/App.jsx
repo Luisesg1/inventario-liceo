@@ -16,6 +16,7 @@ import Permisos         from './pages/Permisos'
 import Compensatorios   from './pages/Compensatorios'
 import MantenedorRoles  from './pages/MantenedorRoles'
 import Papelera         from './pages/Papelera'
+import Personal        from './pages/Personal'
 import { aplicarTema } from './utils/tema'
 
 const RUTA_A_PAGINA = {
@@ -37,6 +38,11 @@ const RUTA_A_PAGINA = {
   '/ajustes':                  'ajustes',
   '/ajustes/campos':           'campos',
   '/ajustes/roles':            'mantenedor_roles',
+  '/personal':                      'personal',
+  '/personal/contrataciones':        'personal_contrataciones',
+  '/personal/reemplazos':            'personal_reemplazos',
+  '/personal/documentos':            'personal_documentos',
+  '/personal/auditoria':             'personal_auditoria',
 }
 
 const PAGINA_A_RUTA = {
@@ -57,6 +63,11 @@ const PAGINA_A_RUTA = {
   ajustes:                  '/ajustes',
   campos:                   '/ajustes/campos',
   mantenedor_roles:         '/ajustes/roles',
+  personal:                      '/personal',
+  personal_contrataciones:        '/personal/contrataciones',
+  personal_reemplazos:            '/personal/reemplazos',
+  personal_documentos:            '/personal/documentos',
+  personal_auditoria:             '/personal/auditoria',
 }
 
 // Permisos mínimos por rol — usado como fallback cuando la BD no devuelve datos
@@ -197,6 +208,27 @@ export default function App() {
 
   const puedeVerAuditoriaGeneral = esAdmin
 
+  // ── Permisos Personal ────────────────────────────────────────
+  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'])
+  const permisosPersonal = {
+    ver_contrataciones:      esAdmin || !!p.ver_contrataciones,
+    crear_contrataciones:    esAdmin || !!p.crear_contrataciones,
+    editar_contrataciones:   esAdmin || !!p.editar_contrataciones,
+    eliminar_contrataciones: esAdmin || !!p.eliminar_contrataciones,
+    ver_reemplazos:          esAdmin || !!p.ver_reemplazos,
+    crear_reemplazos:        esAdmin || !!p.crear_reemplazos,
+    editar_reemplazos:       esAdmin || !!p.editar_reemplazos,
+    eliminar_reemplazos:     esAdmin || !!p.eliminar_reemplazos,
+    ver_documentos_personal:    esAdmin || !!p.ver_documentos_personal,
+    subir_documentos_personal:  esAdmin || !!p.subir_documentos_personal,
+    eliminar_documentos_personal: esAdmin || !!p.eliminar_documentos_personal,
+    ver_auditoria_personal:  esAdmin || !!p.ver_auditoria_personal,
+  }
+  const puedeVerPersonal = esAdmin
+    || permisosPersonal.ver_contrataciones
+    || permisosPersonal.ver_reemplazos
+    || permisosPersonal.ver_documentos_personal
+
   const puedeVerPapelera       = esAdmin || !!p.ver_papelera
   const permisosPapelera = {
     restaurar:         esAdmin || !!p.restaurar_registros,
@@ -218,6 +250,7 @@ export default function App() {
     || (pagina === 'tickets'                     && !puedeVerTickets)
     || (pagina === 'requerimientos'              && !permisosReqs.ver)
     || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
+    || (PAGINAS_PERSONAL.has(pagina)             && !puedeVerPersonal)
   const soloStaff = pagina === 'inventario'
     || (pagina === 'requerimientos' && !permisosReqs.ver)
 
@@ -468,6 +501,7 @@ export default function App() {
       puedeGestionarAjustes={puedeGestionarAjustes}
       puedeGestionarCampos={puedeGestionarCampos}
       puedeGestionarRoles={puedeGestionarRoles}
+      puedeVerPersonal={puedeVerPersonal}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -489,6 +523,24 @@ export default function App() {
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
+      {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
+        usuario={usuario}
+        permisos={permisosPersonal}
+        vista={paginaSegura === 'personal' ? 'dashboard'
+          : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
+          : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
+          : paginaSegura === 'personal_documentos'     ? 'documentos'
+          : paginaSegura === 'personal_auditoria'      ? 'auditoria'
+          : 'dashboard'}
+        onIrAVista={(v) => cambiarPagina(
+          v === 'dashboard'      ? 'personal'
+          : v === 'contrataciones' ? 'personal_contrataciones'
+          : v === 'reemplazos'     ? 'personal_reemplazos'
+          : v === 'documentos'     ? 'personal_documentos'
+          : v === 'auditoria'      ? 'personal_auditoria'
+          : 'personal'
+        )}
+      />}
     </Layout>
   )
 }

@@ -7,6 +7,7 @@ import {
   Menu, Loader2, ShoppingCart, ShieldCheck, History, Trash2,
   CloudUpload, Download, RefreshCw,
   AlertTriangle, RotateCcw, CheckCircle2, XCircle,
+  UserCog,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -83,6 +84,7 @@ export default function Layout({
   puedeGestionarAjustes = false,
   puedeGestionarCampos = false,
   puedeGestionarRoles = false,
+  puedeVerPersonal = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -398,6 +400,9 @@ export default function Layout({
   const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
   const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
+  const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'].includes(paginaActual)
+  const [personalAbierto, setPersonalAbierto] = useState(personalActivo)
+
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios' || paginaActual === 'mantenedor_roles'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
   const [herramientasAbierto, setHerramientasAbierto] = useState(false)
@@ -423,6 +428,11 @@ export default function Layout({
     papelera:           'Papelera',
     ajustes:    'Personalizar',
     campos:     'Campos por categoría',
+    personal:                  'Personal',
+    personal_contrataciones:   'Contrataciones',
+    personal_reemplazos:       'Reemplazos',
+    personal_documentos:       'Documentos',
+    personal_auditoria:        'Auditoría Personal',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -766,6 +776,73 @@ export default function Layout({
                       Auditoría
                     </div>
                   )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>}
+
+          {/* Personal con submenú */}
+          {puedeVerPersonal && <>
+            <motion.div
+              className={`nav-item nav-item--parent ${personalActivo ? 'active' : ''}`}
+              onClick={() => setPersonalAbierto(o => !o)}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <UserCog size={15} strokeWidth={2} />
+              </span>
+              Personal
+              <span className={`nav-chevron ${personalAbierto ? 'nav-chevron--open' : ''}`}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
+            </motion.div>
+            <AnimatePresence initial={false}>
+              {personalAbierto && (
+                <motion.div
+                  className="nav-submenu"
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Inicio
+                  </div>
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal_contrataciones' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal_contrataciones')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Contrataciones
+                  </div>
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal_reemplazos' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal_reemplazos')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Reemplazos
+                  </div>
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal_documentos' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal_documentos')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Documentos
+                  </div>
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal_auditoria' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal_auditoria')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Auditoría
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
