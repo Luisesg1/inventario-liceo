@@ -43,7 +43,7 @@ const RUTA_A_PAGINA = {
   '/personal/contrataciones':        'personal_contrataciones',
   '/personal/reemplazos':            'personal_reemplazos',
   '/personal/documentos':            'personal_documentos',
-  '/personal/auditoria':             'personal_auditoria',
+
   '/reglamentos':                    'reglamentos',
   '/reglamentos/auditoria':          'reglamentos_auditoria',
   '/papelera/auditoria':             'papelera_auditoria',
@@ -71,7 +71,7 @@ const PAGINA_A_RUTA = {
   personal_contrataciones:        '/personal/contrataciones',
   personal_reemplazos:            '/personal/reemplazos',
   personal_documentos:            '/personal/documentos',
-  personal_auditoria:             '/personal/auditoria',
+
   reglamentos:                    '/reglamentos',
   reglamentos_auditoria:          '/reglamentos/auditoria',
   papelera_auditoria:             '/papelera/auditoria',
