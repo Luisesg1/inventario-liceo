@@ -1,5 +1,5 @@
 // src/pages/Reglamentos.jsx
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BookOpen, FileText, FolderOpen, Plus, Search, X, Eye, Download,
@@ -117,6 +117,10 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   const [fEtiquetas,   setFEtiquetas]   = useState('')
   const [fArchivo,     setFArchivo]     = useState(null)
 
+  // ── Refs para inputs de archivo ─────────────────────────────────────────
+  const fileInputRef  = useRef(null)
+  const vFileInputRef = useRef(null)
+
   // ── Form nueva versión ──────────────────────────────────────────────────
   const [vArchivo, setVArchivo] = useState(null)
   const [vNotas,   setVNotas]   = useState('')
@@ -206,6 +210,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
     setDocEditar(null)
     setFNombre(''); setFDescripcion(''); setFCategoria('Reglamentos')
     setFEstado('Vigente'); setFFechaPubl(''); setFEtiquetas(''); setFArchivo(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setModalForm(true)
   }
 
@@ -215,6 +220,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
     setFCategoria(doc.categoria ?? 'Reglamentos'); setFEstado(doc.estado ?? 'Vigente')
     setFFechaPubl(doc.fecha_publicacion ?? ''); setFEtiquetas((doc.etiquetas ?? []).join(', '))
     setFArchivo(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
     setModalForm(true)
   }
 
@@ -354,6 +360,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
       await auditoria('nueva_version', doc, [{ campo: 'version', anterior: doc.version_actual, nuevo: nuevaV }])
       mostrarAviso('ok', `Versión ${nuevaV} subida correctamente`)
       setModalVersion(null); setVArchivo(null); setVNotas('')
+      if (vFileInputRef.current) vFileInputRef.current.value = ''
       await cargarDocs()
     } catch (e) {
       mostrarAviso('error', e.message ?? 'Error al subir versión')
@@ -654,17 +661,72 @@ export default function Reglamentos({ usuario, permisos = {} }) {
                     Archivo {docEditar ? '(vacío = conservar actual)' : '*'}
                   </label>
                   {docEditar?.nombre_archivo && !fArchivo && (
-                    <p style={{ margin: '0 0 6px', fontSize: 12.5, color: '#64748b', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 12.5, color: '#64748b', display: 'flex', alignItems: 'center', gap: 5 }}>
                       <FileText size={13} />
                       Actual: <strong>{docEditar.nombre_archivo}</strong> ({fmtBytes(docEditar.tamano_bytes)})
                     </p>
                   )}
-                  <input type="file" accept=".pdf,.docx,.xlsx,.doc,.xls"
+                  {/* Input real oculto */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.xlsx"
                     onChange={e => setFArchivo(e.target.files?.[0] ?? null)}
-                    style={{ width: '100%', fontSize: 13, color: '#374151' }} />
-                  <p style={{ margin: '4px 0 0', fontSize: 11.5, color: '#94a3b8' }}>
-                    PDF, DOCX, XLSX · Máx. 50 MB
-                  </p>
+                    style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+                    tabIndex={-1}
+                  />
+                  {/* Zona clickeable estilizada */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && fileInputRef.current?.click()}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '12px 14px', borderRadius: 10,
+                      border: `1.5px dashed ${fArchivo ? '#1d4ed8' : '#cbd5e1'}`,
+                      background: fArchivo ? '#eff6ff' : '#f8fafc',
+                      cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
+                      outline: 'none',
+                    }}
+                  >
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: fArchivo ? '#dbeafe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {fArchivo
+                        ? <FileText size={18} color="#1d4ed8" />
+                        : <Upload size={18} color="#94a3b8" />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {fArchivo ? (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {fArchivo.name}
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#64748b' }}>
+                            {fmtBytes(fArchivo.size)} · {fArchivo.name.split('.').pop().toUpperCase()}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                            Seleccionar archivo
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#94a3b8' }}>
+                            PDF, DOCX, XLSX · Máx. 50 MB
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    {fArchivo && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setFArchivo(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', flexShrink: 0 }}
+                        title="Quitar archivo"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {subiendoArchivo && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#1d4ed8', fontSize: 13 }}>
@@ -679,8 +741,17 @@ export default function Reglamentos({ usuario, permisos = {} }) {
                   style={{ flex: 1, padding: '11px 0', borderRadius: 11, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#475569', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Cancelar
                 </button>
-                <button onClick={handleGuardar} disabled={guardando || subiendoArchivo}
-                  style={{ flex: 1, padding: '11px 0', borderRadius: 11, border: 'none', background: (guardando || subiendoArchivo) ? '#e2e8f0' : 'linear-gradient(135deg, rgb(var(--primary-rgb)), #2563eb)', color: (guardando || subiendoArchivo) ? '#94a3b8' : '#fff', fontSize: 14, fontWeight: 700, cursor: (guardando || subiendoArchivo) ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: (guardando || subiendoArchivo) ? 'none' : '0 4px 14px rgba(26,35,126,0.26)' }}>
+                <button onClick={handleGuardar}
+                  disabled={guardando || subiendoArchivo || (!docEditar && !fArchivo)}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 11, border: 'none',
+                    background: (guardando || subiendoArchivo || (!docEditar && !fArchivo)) ? '#e2e8f0' : 'linear-gradient(135deg, rgb(var(--primary-rgb)), #2563eb)',
+                    color: (guardando || subiendoArchivo || (!docEditar && !fArchivo)) ? '#94a3b8' : '#fff',
+                    fontSize: 14, fontWeight: 700,
+                    cursor: (guardando || subiendoArchivo || (!docEditar && !fArchivo)) ? 'not-allowed' : 'pointer',
+                    fontFamily: 'inherit',
+                    boxShadow: (guardando || subiendoArchivo || (!docEditar && !fArchivo)) ? 'none' : '0 4px 14px rgba(26,35,126,0.26)',
+                  }}>
                   {guardando ? 'Guardando...' : docEditar ? 'Guardar cambios' : 'Crear documento'}
                 </button>
               </div>
@@ -862,9 +933,66 @@ export default function Reglamentos({ usuario, permisos = {} }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
                   <label style={labelSt}>Nuevo archivo *</label>
-                  <input type="file" accept=".pdf,.docx,.xlsx,.doc,.xls"
+                  {/* Input real oculto */}
+                  <input
+                    ref={vFileInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.xlsx"
                     onChange={e => setVArchivo(e.target.files?.[0] ?? null)}
-                    style={{ width: '100%', fontSize: 13, color: '#374151' }} />
+                    style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+                    tabIndex={-1}
+                  />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => vFileInputRef.current?.click()}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && vFileInputRef.current?.click()}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '12px 14px', borderRadius: 10,
+                      border: `1.5px dashed ${vArchivo ? '#7e22ce' : '#cbd5e1'}`,
+                      background: vArchivo ? '#faf5ff' : '#f8fafc',
+                      cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
+                      outline: 'none',
+                    }}
+                  >
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: vArchivo ? '#ede9fe' : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {vArchivo
+                        ? <FileText size={18} color="#7e22ce" />
+                        : <Upload size={18} color="#94a3b8" />}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {vArchivo ? (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {vArchivo.name}
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#64748b' }}>
+                            {fmtBytes(vArchivo.size)} · {vArchivo.name.split('.').pop().toUpperCase()}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#374151' }}>
+                            Seleccionar archivo
+                          </p>
+                          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#94a3b8' }}>
+                            PDF, DOCX, XLSX · Máx. 50 MB
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    {vArchivo && (
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setVArchivo(null); if (vFileInputRef.current) vFileInputRef.current.value = '' }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4, display: 'flex', flexShrink: 0 }}
+                        title="Quitar archivo"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label style={labelSt}>Notas de esta versión</label>
