@@ -108,6 +108,24 @@ function Spinner({ size = 14, color = '#fff' }) {
   )
 }
 
+// ── Auditoría módulo Papelera ─────────────────────────────────────────────
+async function logAuditPapelera({ accion, nombre, id, usuario, detalles = {} }) {
+  try {
+    await supabase.from('audit_logs').insert({
+      bien_nombre:    nombre ?? String(id ?? '?'),
+      accion,
+      cambios:        Object.keys(detalles).length
+        ? Object.entries(detalles).map(([campo, nuevo]) => ({ campo, nuevo: String(nuevo) }))
+        : [],
+      usuario_id:     usuario?.id,
+      usuario_nombre: usuario?.nombre ?? 'Sistema',
+      usuario_rol:    usuario?.rol,
+      modulo:         'papelera',
+      creado_en:      new Date().toISOString(),
+    })
+  } catch { /* silencioso */ }
+}
+
 // ── Componente principal ──────────────────────────────────────────────────
 export default function Papelera({ usuario, permisos = {} }) {
   const esAdmin           = usuario?.rol === 'admin'
@@ -305,6 +323,10 @@ export default function Papelera({ usuario, permisos = {} }) {
           p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
           p_usuario_rol: usuario.rol, p_modulo: item.modulo,
         }).then(null, () => {})
+        logAuditPapelera({
+          accion: 'restaurado', nombre: nombreAudit, id: item.id, usuario,
+          detalles: { modulo: item.modulo },
+        })
       }
     }
 
@@ -340,6 +362,10 @@ export default function Papelera({ usuario, permisos = {} }) {
       p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
       p_usuario_rol: usuario.rol, p_modulo: item.modulo,
     }).then(null, () => {})
+    logAuditPapelera({
+      accion: 'eliminado_permanente_manual', nombre: item.nombre, id: item.id, usuario,
+      detalles: { modulo: item.modulo },
+    })
 
     let error
     if (item.tabla === 'usuarios') {
@@ -448,6 +474,15 @@ export default function Papelera({ usuario, permisos = {} }) {
     setModalElimMasiva(false)
     setProcesando(false)
 
+    if (eliminadosOk.length > 0) {
+      logAuditPapelera({
+        accion: 'eliminacion_multiple',
+        nombre: `${eliminadosOk.length} elemento${eliminadosOk.length !== 1 ? 's' : ''}`,
+        id: null, usuario,
+        detalles: { cantidad: eliminadosOk.length },
+      })
+    }
+
     if (errores.length === 0) {
       mostrarAviso('ok', `${eliminadosOk.length} elemento${eliminadosOk.length !== 1 ? 's' : ''} eliminado${eliminadosOk.length !== 1 ? 's' : ''} permanentemente.`)
     } else {
@@ -474,6 +509,15 @@ export default function Papelera({ usuario, permisos = {} }) {
     setModalVaciar(false)
     setTextVaciar('')
     setProcesando(false)
+
+    if (eliminadosOk.length > 0) {
+      logAuditPapelera({
+        accion: 'vaciado_papelera',
+        nombre: `${eliminadosOk.length} elemento${eliminadosOk.length !== 1 ? 's' : ''}`,
+        id: null, usuario,
+        detalles: { cantidad: eliminadosOk.length },
+      })
+    }
 
     if (errores.length === 0) {
       mostrarAviso('ok', 'Papelera vaciada correctamente.')

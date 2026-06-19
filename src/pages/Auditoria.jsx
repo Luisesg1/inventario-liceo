@@ -6,6 +6,16 @@ const ACCION_META = {
   crear:    { color: '#16a34a', bg: '#dcfce7', label: 'Creado',    icono: '➕' },
   editar:   { color: '#2563eb', bg: '#dbeafe', label: 'Editado',   icono: '✏️' },
   eliminar: { color: '#dc2626', bg: '#fee2e2', label: 'Eliminado', icono: '🗑️' },
+  ver:                         { color: '#0891b2', bg: '#ecfeff',   label: 'Visualizado',         icono: '👁️' },
+  descargar:                   { color: '#7c3aed', bg: '#ede9fe',   label: 'Descargado',          icono: '⬇️' },
+  nueva_version:               { color: '#0369a1', bg: '#e0f2fe',   label: 'Nueva versión',       icono: '🔄' },
+  enviado_a_papelera:          { color: '#9a3412', bg: '#ffedd5',   label: 'Enviado a papelera',  icono: '🗑️' },
+  restaurado:                  { color: '#15803d', bg: '#dcfce7',   label: 'Restaurado',          icono: '↩️' },
+  eliminado_permanente_manual: { color: '#dc2626', bg: '#fee2e2',   label: 'Eliminado permanente',icono: '💀' },
+  eliminado_permanente_auto:   { color: '#9ca3af', bg: '#f3f4f6',   label: 'Eliminado (auto)',    icono: '🤖' },
+  eliminacion_multiple:        { color: '#dc2626', bg: '#fee2e2',   label: 'Eliminación masiva',  icono: '🗑️' },
+  restauracion_masiva:         { color: '#15803d', bg: '#dcfce7',   label: 'Restauración masiva', icono: '↩️' },
+  vaciado_papelera:            { color: '#7f1d1d', bg: '#fef2f2',   label: 'Papelera vaciada',    icono: '🗑️' },
 }
 
 const CAMPO_LABEL = {
@@ -68,9 +78,15 @@ const CAMPO_LABEL_TICKETS = {
 const POR_PAGINA = 15
 
 const MODULO_LABEL = {
-  inventario: 'Inventario', requerimientos: 'Requerimientos',
-  permisos: 'Permisos', ausencias: 'Ausencias', tickets: 'Tickets',
+  inventario:     'Inventario',
+  requerimientos: 'Requerimientos',
+  permisos:       'Permisos',
+  ausencias:      'Ausencias',
+  tickets:        'Tickets',
   compensatorios: 'Compensatorios',
+  reglamentos:    'Reglamentos',
+  papelera:       'Papelera',
+  personal:       'Personal',
 }
 
 const MODULO_TITLE = {
@@ -80,6 +96,9 @@ const MODULO_TITLE = {
   compensatorios: 'Auditoría de Compensatorios',
   permisos:       'Auditoría de Permisos',
   tickets:        'Auditoría de Tickets',
+  reglamentos:    'Auditoría de Reglamentos',
+  papelera:       'Auditoría de Papelera',
+  personal:       'Auditoría de Personal',
 }
 
 const MODULO_DESC = {
@@ -89,6 +108,9 @@ const MODULO_DESC = {
   compensatorios: 'Consulta y revisa todas las acciones realizadas sobre los días compensatorios.',
   permisos:       'Consulta y revisa los cambios de permisos del personal.',
   tickets:        'Consulta y revisa todas las acciones realizadas sobre los tickets.',
+  reglamentos:    'Consulta y revisa todas las acciones realizadas sobre los documentos reglamentarios.',
+  papelera:       'Consulta y revisa todas las acciones de la papelera del sistema.',
+  personal:       'Consulta y revisa todas las acciones realizadas sobre el personal del establecimiento.',
 }
 
 const RESUMEN_META = [
@@ -106,6 +128,32 @@ const CAMPO_LABEL_COMPENSATORIOS = {
   motivo:         'Motivo',
   observaciones:  'Observaciones',
   estado:         'Estado',
+}
+
+const CAMPO_LABEL_REGLAMENTOS = {
+  nombre:            'Nombre',
+  descripcion:       'Descripción',
+  categoria:         'Categoría',
+  estado:            'Estado',
+  fecha_publicacion: 'Fecha publicación',
+  archivo:           'Archivo',
+  version:           'Versión',
+  etiquetas:         'Etiquetas',
+}
+
+const CAMPO_LABEL_PERSONAL = {
+  nombre_completo: 'Nombre completo',
+  cargo:           'Cargo',
+  estamento:       'Estamento',
+  tipo_contrato:   'Tipo contrato',
+  fecha_inicio:    'Fecha inicio',
+  fecha_termino:   'Fecha término',
+  estado:          'Estado',
+  horas:           'Horas',
+  correo:          'Correo',
+  rut:             'RUT',
+  telefono:        'Teléfono',
+  nombre:          'Nombre',
 }
 
 const EXPORT_HEADERS = [
@@ -260,6 +308,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (m === 'ausencias')      return CAMPO_LABEL_AUSENCIAS[campo] ?? campo
     if (m === 'tickets')        return CAMPO_LABEL_TICKETS[campo] ?? campo
     if (m === 'compensatorios') return CAMPO_LABEL_COMPENSATORIOS[campo] ?? campo
+    if (m === 'reglamentos')    return CAMPO_LABEL_REGLAMENTOS[campo] ?? campo
+    if (m === 'personal')       return CAMPO_LABEL_PERSONAL[campo] ?? campo
     return CAMPO_LABEL[campo] ?? campo
   }
 

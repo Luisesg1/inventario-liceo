@@ -154,6 +154,25 @@ async function auditLog({ accion, tabla, id, nombre, usuario, cambios = {} }) {
       cambios,
     })
   } catch { /* silenciar */ }
+  try {
+    const cambiosArr = Array.isArray(cambios)
+      ? cambios
+      : Object.entries(cambios).map(([campo, val]) =>
+          val !== null && typeof val === 'object' && ('anterior' in val || 'nuevo' in val)
+            ? { campo, anterior: val.anterior, nuevo: val.nuevo }
+            : { campo, nuevo: String(val ?? '') }
+        )
+    await supabase.from('audit_logs').insert({
+      bien_nombre:    nombre ?? `${tabla} #${id ?? '?'}`,
+      accion,
+      cambios:        cambiosArr,
+      usuario_id:     usuario?.id,
+      usuario_nombre: usuario?.nombre ?? 'Sistema',
+      usuario_rol:    usuario?.rol,
+      modulo:         'personal',
+      creado_en:      new Date().toISOString(),
+    })
+  } catch { /* silenciar */ }
 }
 
 // ─── EstadoBadge ──────────────────────────────────────────────

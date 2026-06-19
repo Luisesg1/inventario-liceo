@@ -258,6 +258,8 @@ export default function Reglamentos({ usuario, permisos = {} }) {
         if (error) throw error
         const cambios = []
         if (fNombre.trim() !== docEditar.nombre) cambios.push({ campo: 'nombre', anterior: docEditar.nombre, nuevo: fNombre.trim() })
+        if (fDescripcion.trim() !== (docEditar.descripcion ?? '')) cambios.push({ campo: 'descripcion', anterior: docEditar.descripcion ?? '', nuevo: fDescripcion.trim() })
+        if (fCategoria !== docEditar.categoria) cambios.push({ campo: 'categoria', anterior: docEditar.categoria, nuevo: fCategoria })
         if (fEstado !== docEditar.estado) cambios.push({ campo: 'estado', anterior: docEditar.estado, nuevo: fEstado })
         if (fArchivo) cambios.push({ campo: 'archivo', anterior: docEditar.nombre_archivo, nuevo: fArchivo.name })
         await auditoria('editar', docEditar, cambios)
@@ -306,6 +308,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
     setDocVer(doc)
     await supabase.from('reglamentos').update({ visitas: (doc.visitas ?? 0) + 1 }).eq('id', doc.id)
     setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, visitas: (d.visitas ?? 0) + 1 } : d))
+    await auditoria('ver', doc)
     setCargandoVersiones(true)
     const { data } = await supabase.from('reglamentos_versiones')
       .select('*').eq('reglamento_id', doc.id).order('creado_en', { ascending: false })
