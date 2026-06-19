@@ -9,8 +9,8 @@ import {
 import { supabase } from '../supabase'
 
 // ── Constantes ────────────────────────────────────────────────────────────
-const CATEGORIAS = ['Reglamentos', 'Protocolos', 'Manuales', 'Formularios', 'Circulares', 'Otros']
-const ESTADOS    = ['Vigente', 'En revisión', 'Obsoleto']
+const CATEGORIAS = ['Reglamentos', 'Protocolos', 'Manuales', 'Formularios', 'Circulares', 'Leyes', 'Otros']
+const ESTADOS    = ['Vigente', 'En revisión', 'Derogado']
 const BUCKET     = 'reglamentos'
 const POR_PAGINA = 15
 
@@ -20,13 +20,14 @@ const CAT_COLOR = {
   Manuales:    { color: '#1b5e20', bg: '#e8f5e9' },
   Formularios: { color: '#e65100', bg: '#fff3e0' },
   Circulares:  { color: '#4a148c', bg: '#f3e5f5' },
+  Leyes:       { color: '#0c4a6e', bg: '#e0f2fe' },
   Otros:       { color: '#37474f', bg: '#eceff1' },
 }
 
 const EST_COLOR = {
   'Vigente':      { color: '#14532d', bg: '#dcfce7', border: '#86efac' },
   'En revisión':  { color: '#92400e', bg: '#fef3c7', border: '#fcd34d' },
-  'Obsoleto':     { color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
+  'Derogado':     { color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
 }
 
 const overlayV = {
@@ -114,7 +115,6 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   const [fCategoria,   setFCategoria]   = useState('Reglamentos')
   const [fEstado,      setFEstado]      = useState('Vigente')
   const [fFechaPubl,   setFFechaPubl]   = useState('')
-  const [fEtiquetas,   setFEtiquetas]   = useState('')
   const [fArchivo,     setFArchivo]     = useState(null)
 
   // ── Refs para inputs de archivo ─────────────────────────────────────────
@@ -218,7 +218,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
     setDocEditar(doc)
     setFNombre(doc.nombre ?? ''); setFDescripcion(doc.descripcion ?? '')
     setFCategoria(doc.categoria ?? 'Reglamentos'); setFEstado(doc.estado ?? 'Vigente')
-    setFFechaPubl(doc.fecha_publicacion ?? ''); setFEtiquetas((doc.etiquetas ?? []).join(', '))
+    setFFechaPubl(doc.fecha_publicacion ?? '')
     setFArchivo(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setModalForm(true)
@@ -231,13 +231,11 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
     setGuardando(true)
     try {
-      const etiquetas = fEtiquetas.split(',').map(t => t.trim()).filter(Boolean)
-
       if (docEditar) {
         const updates = {
           nombre: fNombre.trim(), descripcion: fDescripcion.trim() || null,
           categoria: fCategoria, estado: fEstado,
-          fecha_publicacion: fFechaPubl || null, etiquetas,
+          fecha_publicacion: fFechaPubl || null,
           actualizado_en: new Date().toISOString(),
         }
         if (fArchivo) {
@@ -277,7 +275,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
         const { data: ins, error } = await supabase.from('reglamentos').insert({
           nombre: fNombre.trim(), descripcion: fDescripcion.trim() || null,
           categoria: fCategoria, estado: fEstado,
-          fecha_publicacion: fFechaPubl || null, etiquetas,
+          fecha_publicacion: fFechaPubl || null,
           storage_path: path, url, nombre_archivo: nombre, tamano_bytes: bytes,
           version_actual: '1.0', creado_por: usuario.id, creado_por_nombre: usuario.nombre,
         }).select().single()
@@ -653,10 +651,6 @@ export default function Reglamentos({ usuario, permisos = {} }) {
                   <input type="date" value={fFechaPubl} onChange={e => setFFechaPubl(e.target.value)} style={inputSt} />
                 </div>
                 <div>
-                  <label style={labelSt}>Etiquetas (separadas por coma)</label>
-                  <input value={fEtiquetas} onChange={e => setFEtiquetas(e.target.value)} placeholder="Ej: DAEM, urgente, 2026" style={inputSt} />
-                </div>
-                <div>
                   <label style={labelSt}>
                     Archivo {docEditar ? '(vacío = conservar actual)' : '*'}
                   </label>
@@ -803,17 +797,6 @@ export default function Reglamentos({ usuario, permisos = {} }) {
                     )}
                   </div>
                 ))}
-
-                {(docVer.etiquetas ?? []).length > 0 && (
-                  <div style={{ marginBottom: 14 }}>
-                    <p style={{ margin: '0 0 5px', fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Etiquetas</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                      {docVer.etiquetas.map(t => (
-                        <span key={t} style={{ padding: '2px 8px', borderRadius: 999, background: '#f1f5f9', color: '#475569', fontSize: 11.5, fontWeight: 500 }}>{t}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Historial versiones */}
                 <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 14, marginTop: 4 }}>

@@ -138,7 +138,6 @@ const CAMPO_LABEL_REGLAMENTOS = {
   fecha_publicacion: 'Fecha publicación',
   archivo:           'Archivo',
   version:           'Versión',
-  etiquetas:         'Etiquetas',
 }
 
 const CAMPO_LABEL_PERSONAL = {

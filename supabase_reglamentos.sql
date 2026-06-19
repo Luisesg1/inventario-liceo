@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS reglamentos (
   categoria          TEXT         NOT NULL DEFAULT 'Otros',
   estado             TEXT         NOT NULL DEFAULT 'Vigente',
   fecha_publicacion  DATE,
-  etiquetas          TEXT[]       DEFAULT '{}',
   storage_path       TEXT,
   url                TEXT,
   tamano_bytes       BIGINT,
