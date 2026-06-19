@@ -17,6 +17,7 @@ import Compensatorios   from './pages/Compensatorios'
 import MantenedorRoles  from './pages/MantenedorRoles'
 import Papelera         from './pages/Papelera'
 import Personal        from './pages/Personal'
+import Reglamentos     from './pages/Reglamentos'
 import { aplicarTema } from './utils/tema'
 
 const RUTA_A_PAGINA = {
@@ -43,6 +44,7 @@ const RUTA_A_PAGINA = {
   '/personal/reemplazos':            'personal_reemplazos',
   '/personal/documentos':            'personal_documentos',
   '/personal/auditoria':             'personal_auditoria',
+  '/reglamentos':                    'reglamentos',
 }
 
 const PAGINA_A_RUTA = {
@@ -68,6 +70,7 @@ const PAGINA_A_RUTA = {
   personal_reemplazos:            '/personal/reemplazos',
   personal_documentos:            '/personal/documentos',
   personal_auditoria:             '/personal/auditoria',
+  reglamentos:                    '/reglamentos',
 }
 
 // Permisos mínimos por rol — usado como fallback cuando la BD no devuelve datos
@@ -235,7 +238,20 @@ export default function App() {
     eliminarPermanente: esAdmin || !!p.eliminar_permanentemente,
   }
 
-  const soloAdmin = (pagina === 'usuarios'         && !puedeAccederUsuarios)
+  // ── Permisos Reglamentos ─────────────────────────────────────────────
+  const permisosReglamentos = {
+    ver:       esAdmin || !!p.ver_reglamentos,
+    crear:     esAdmin || !!p.crear_reglamentos,
+    editar:    esAdmin || !!p.editar_reglamentos,
+    eliminar:  esAdmin || !!p.eliminar_reglamentos,
+    descargar: esAdmin || !!p.descargar_reglamentos,
+    versiones: esAdmin || !!p.gestionar_versiones_reglamentos,
+    verAuditoria: esAdmin || !!p.ver_auditoria_reglamentos,
+  }
+  const puedeVerReglamentos = esAdmin || !!p.ver_reglamentos
+
+  const soloAdmin = (pagina === 'reglamentos'       && !puedeVerReglamentos)
+    || (pagina === 'usuarios'         && !puedeAccederUsuarios)
     || (pagina === 'mantenedor_roles'             && !puedeGestionarRoles)
     || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
     || (pagina === 'ajustes'                     && !puedeGestionarAjustes)
@@ -502,6 +518,7 @@ export default function App() {
       puedeGestionarCampos={puedeGestionarCampos}
       puedeGestionarRoles={puedeGestionarRoles}
       puedeVerPersonal={puedeVerPersonal}
+      puedeVerReglamentos={puedeVerReglamentos}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -523,6 +540,7 @@ export default function App() {
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
+      {paginaSegura === 'reglamentos' && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
       {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
         usuario={usuario}
         permisos={permisosPersonal}

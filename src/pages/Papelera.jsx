@@ -5,7 +5,7 @@ import {
   Trash2, RotateCcw, AlertTriangle, Package2,
   Ticket, Calendar, ShoppingCart, Gift, Clock,
   RefreshCw, CheckCircle2, Users, Square, CheckSquare,
-  Minus,
+  Minus, BookOpen,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 
@@ -20,6 +20,7 @@ const RESTORE_CONFIG = {
   ausencias:          { nombreField: null, uniqueFields: [] },
   requerimientos:     { nombreField: null, uniqueFields: [] },
   dias_compensatorios:{ nombreField: null, uniqueFields: [] },
+  reglamentos:        { nombreField: 'nombre', uniqueFields: [] },
 }
 
 // ── Configuración por módulo ──────────────────────────────────────────────
@@ -30,6 +31,7 @@ const MODULO_CONFIG = {
   requerimientos: { label: 'Requerimientos',Icon: ShoppingCart,color: '#10b981', bg: '#f0fdf4' },
   compensatorios: { label: 'Compensatorios',Icon: Gift,        color: '#ef4444', bg: '#fef2f2' },
   usuarios:       { label: 'Usuarios',      Icon: Users,       color: '#0891b2', bg: '#ecfeff' },
+  reglamentos:    { label: 'Reglamentos',   Icon: BookOpen,    color: '#1a237e', bg: '#e8eaf6' },
 }
 
 const FILTROS_MODULO = [
@@ -40,6 +42,7 @@ const FILTROS_MODULO = [
   { value: 'requerimientos', label: 'Requerimientos' },
   { value: 'compensatorios', label: 'Compensatorios' },
   { value: 'usuarios',       label: 'Usuarios' },
+  { value: 'reglamentos',   label: 'Reglamentos' },
 ]
 
 const BUCKET_REQ_IMGS = 'requerimientos'

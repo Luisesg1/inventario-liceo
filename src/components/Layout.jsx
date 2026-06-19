@@ -7,7 +7,7 @@ import {
   Menu, Loader2, ShoppingCart, ShieldCheck, History, Trash2,
   CloudUpload, Download, RefreshCw,
   AlertTriangle, RotateCcw, CheckCircle2, XCircle,
-  UserCog,
+  UserCog, BookOpen,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -85,6 +85,7 @@ export default function Layout({
   puedeGestionarCampos = false,
   puedeGestionarRoles = false,
   puedeVerPersonal = false,
+  puedeVerReglamentos = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -433,6 +434,7 @@ export default function Layout({
     personal_reemplazos:       'Reemplazos',
     personal_documentos:       'Documentos',
     personal_auditoria:        'Auditoría Personal',
+    reglamentos:               'Reglamentos',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -847,6 +849,22 @@ export default function Layout({
               )}
             </AnimatePresence>
           </>}
+
+          {/* Reglamentos */}
+          {puedeVerReglamentos && (
+            <motion.div
+              className={`nav-item ${paginaActual === 'reglamentos' ? 'active' : ''}`}
+              onClick={() => handleNav('reglamentos')}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <BookOpen size={15} strokeWidth={paginaActual === 'reglamentos' ? 2.5 : 2} />
+              </span>
+              Reglamentos
+            </motion.div>
+          )}
 
           {/* Auditoría General */}
           {puedeVerAuditoriaGeneral && (
