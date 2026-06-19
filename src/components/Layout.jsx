@@ -403,7 +403,7 @@ export default function Layout({
   const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
   const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
-  const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos'].includes(paginaActual)
+  const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'].includes(paginaActual)
   const [personalAbierto, setPersonalAbierto] = useState(personalActivo)
 
   const reglamentosActivo = paginaActual === 'reglamentos' || paginaActual === 'reglamentos_auditoria'
@@ -847,6 +847,13 @@ export default function Layout({
                   >
                     <span className="nav-subitem-dot" />
                     Documentos
+                  </div>
+                  <div
+                    className={`nav-subitem ${paginaActual === 'personal_auditoria' ? 'active' : ''}`}
+                    onClick={() => handleNav('personal_auditoria')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Auditoría
                   </div>
 
                 </motion.div>

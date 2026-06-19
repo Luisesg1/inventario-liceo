@@ -43,6 +43,7 @@ const RUTA_A_PAGINA = {
   '/personal/contrataciones':        'personal_contrataciones',
   '/personal/reemplazos':            'personal_reemplazos',
   '/personal/documentos':            'personal_documentos',
+  '/personal/auditoria':             'personal_auditoria',
 
   '/reglamentos':                    'reglamentos',
   '/reglamentos/auditoria':          'reglamentos_auditoria',
@@ -71,6 +72,7 @@ const PAGINA_A_RUTA = {
   personal_contrataciones:        '/personal/contrataciones',
   personal_reemplazos:            '/personal/reemplazos',
   personal_documentos:            '/personal/documentos',
+  personal_auditoria:             '/personal/auditoria',
 
   reglamentos:                    '/reglamentos',
   reglamentos_auditoria:          '/reglamentos/auditoria',
@@ -216,7 +218,7 @@ export default function App() {
   const puedeVerAuditoriaGeneral = esAdmin
 
   // ── Permisos Personal ────────────────────────────────────────
-  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
+  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'])
   const permisosPersonal = {
     ver_contrataciones:      esAdmin || !!p.ver_contrataciones,
     crear_contrataciones:    esAdmin || !!p.crear_contrataciones,
@@ -229,6 +231,7 @@ export default function App() {
     ver_documentos_personal:    esAdmin || !!p.ver_documentos_personal,
     subir_documentos_personal:  esAdmin || !!p.subir_documentos_personal,
     eliminar_documentos_personal: esAdmin || !!p.eliminar_documentos_personal,
+    ver_auditoria_personal:     esAdmin || !!p.ver_auditoria_personal,
   }
   const puedeVerPersonal = esAdmin
     || permisosPersonal.ver_contrataciones
@@ -559,12 +562,14 @@ export default function App() {
           : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
           : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
           : paginaSegura === 'personal_documentos'     ? 'documentos'
+          : paginaSegura === 'personal_auditoria'      ? 'auditoria'
           : 'dashboard'}
         onIrAVista={(v) => cambiarPagina(
           v === 'dashboard'      ? 'personal'
           : v === 'contrataciones' ? 'personal_contrataciones'
           : v === 'reemplazos'     ? 'personal_reemplazos'
           : v === 'documentos'     ? 'personal_documentos'
+          : v === 'auditoria'      ? 'personal_auditoria'
           : 'personal'
         )}
       />}
