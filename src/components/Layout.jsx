@@ -86,6 +86,8 @@ export default function Layout({
   puedeGestionarRoles = false,
   puedeVerPersonal = false,
   puedeVerReglamentos = false,
+  puedeVerAuditoriaReglamentos = false,
+  puedeVerAuditoriaPapelera = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -404,6 +406,12 @@ export default function Layout({
   const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'].includes(paginaActual)
   const [personalAbierto, setPersonalAbierto] = useState(personalActivo)
 
+  const reglamentosActivo = paginaActual === 'reglamentos' || paginaActual === 'reglamentos_auditoria'
+  const [reglamentosAbierto, setReglamentosAbierto] = useState(reglamentosActivo)
+
+  const papeleraActivo = paginaActual === 'papelera' || paginaActual === 'papelera_auditoria'
+  const [papeleraAbierto, setPapeleraAbierto] = useState(papeleraActivo)
+
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios' || paginaActual === 'mantenedor_roles'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
   const [herramientasAbierto, setHerramientasAbierto] = useState(false)
@@ -435,6 +443,8 @@ export default function Layout({
     personal_documentos:       'Documentos',
     personal_auditoria:        'Auditoría Personal',
     reglamentos:               'Reglamentos',
+    reglamentos_auditoria:     'Auditoría de Reglamentos',
+    papelera_auditoria:        'Auditoría de Papelera',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -850,21 +860,53 @@ export default function Layout({
             </AnimatePresence>
           </>}
 
-          {/* Reglamentos */}
-          {puedeVerReglamentos && (
+          {/* Reglamentos con submenú */}
+          {puedeVerReglamentos && <>
             <motion.div
-              className={`nav-item ${paginaActual === 'reglamentos' ? 'active' : ''}`}
-              onClick={() => handleNav('reglamentos')}
+              className={`nav-item nav-item--parent ${reglamentosActivo ? 'active' : ''}`}
+              onClick={() => setReglamentosAbierto(o => !o)}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               <span className="nav-icon">
-                <BookOpen size={15} strokeWidth={paginaActual === 'reglamentos' ? 2.5 : 2} />
+                <BookOpen size={15} strokeWidth={2} />
               </span>
               Reglamentos
+              <span className={`nav-chevron ${reglamentosAbierto ? 'nav-chevron--open' : ''}`}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
             </motion.div>
-          )}
+            <AnimatePresence initial={false}>
+              {reglamentosAbierto && (
+                <motion.div
+                  className="nav-submenu"
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className={`nav-subitem ${paginaActual === 'reglamentos' ? 'active' : ''}`}
+                    onClick={() => handleNav('reglamentos')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Documentos
+                  </div>
+                  {puedeVerAuditoriaReglamentos && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'reglamentos_auditoria' ? 'active' : ''}`}
+                      onClick={() => handleNav('reglamentos_auditoria')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>}
 
           {/* Auditoría General */}
           {puedeVerAuditoriaGeneral && (
@@ -882,21 +924,53 @@ export default function Layout({
             </motion.div>
           )}
 
-          {/* Papelera */}
-          {puedeVerPapelera && (
+          {/* Papelera con submenú */}
+          {puedeVerPapelera && <>
             <motion.div
-              className={`nav-item ${paginaActual === 'papelera' ? 'active' : ''}`}
-              onClick={() => handleNav('papelera')}
+              className={`nav-item nav-item--parent ${papeleraActivo ? 'active' : ''}`}
+              onClick={() => setPapeleraAbierto(o => !o)}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 30 }}
             >
               <span className="nav-icon">
-                <Trash2 size={15} strokeWidth={paginaActual === 'papelera' ? 2.5 : 2} />
+                <Trash2 size={15} strokeWidth={2} />
               </span>
               Papelera
+              <span className={`nav-chevron ${papeleraAbierto ? 'nav-chevron--open' : ''}`}>
+                <ChevronRight size={13} strokeWidth={2.5} />
+              </span>
             </motion.div>
-          )}
+            <AnimatePresence initial={false}>
+              {papeleraAbierto && (
+                <motion.div
+                  className="nav-submenu"
+                  variants={submenuVariants}
+                  initial="closed"
+                  animate="open"
+                  exit="closed"
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    className={`nav-subitem ${paginaActual === 'papelera' ? 'active' : ''}`}
+                    onClick={() => handleNav('papelera')}
+                  >
+                    <span className="nav-subitem-dot" />
+                    Elementos eliminados
+                  </div>
+                  {puedeVerAuditoriaPapelera && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'papelera_auditoria' ? 'active' : ''}`}
+                      onClick={() => handleNav('papelera_auditoria')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>}
 
           {/* Ajustes con submenú */}
           {(esAdmin || puedeAccederUsuarios || puedeGestionarAjustes || puedeGestionarRoles) && (

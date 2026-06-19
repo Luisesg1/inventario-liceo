@@ -90,10 +90,19 @@ const ACCIONES = [
   { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
   { key: 'gestionar_roles',         label: 'Gestionar roles del sistema', labelCorto: 'Roles',       desc: 'Permite administrar los permisos predeterminados de cada rol desde el Mantenedor de Roles.' },
   { key: 'ver_historial_usuarios',  label: 'Ver historial de usuarios',  labelCorto: 'Historial',   desc: 'Permite ver el historial completo de actividad, tickets, ausencias e inventario de cada usuario.' },
+  // Reglamentos
+  { key: 'ver_reglamentos',                  label: 'Ver reglamentos',              labelCorto: 'Ver regl.',   desc: 'Permite consultar el listado de documentos institucionales.' },
+  { key: 'crear_reglamentos',               label: 'Crear reglamentos',            labelCorto: 'Crear regl.', desc: 'Permite subir nuevos documentos institucionales.' },
+  { key: 'editar_reglamentos',              label: 'Editar reglamentos',           labelCorto: 'Editar regl.',desc: 'Permite modificar datos de documentos existentes.' },
+  { key: 'eliminar_reglamentos',            label: 'Eliminar reglamentos',         labelCorto: 'Elim. regl.', desc: 'Permite enviar documentos a la papelera.' },
+  { key: 'descargar_reglamentos',           label: 'Descargar reglamentos',        labelCorto: 'Desc. regl.', desc: 'Permite descargar archivos de documentos.' },
+  { key: 'gestionar_versiones_reglamentos', label: 'Gestionar versiones',          labelCorto: 'Versiones',   desc: 'Permite subir nuevas versiones de documentos.' },
+  { key: 'ver_auditoria_reglamentos',       label: 'Ver auditoría de reglamentos', labelCorto: 'Aud. Regl.',  desc: 'Permite ver el historial de cambios en el módulo de reglamentos.' },
   // Papelera
   { key: 'ver_papelera',             label: 'Ver Papelera',                    labelCorto: 'Ver pap.',    desc: 'Permite acceder a la Papelera y ver los registros eliminados de todos los módulos.' },
   { key: 'restaurar_registros',      label: 'Restaurar registros',             labelCorto: 'Restaurar',   desc: 'Permite restaurar registros desde la Papelera al módulo de origen.' },
   { key: 'eliminar_permanentemente', label: 'Eliminar permanentemente',        labelCorto: 'Elim. perm.', desc: 'Permite eliminar registros de forma permanente e irrecuperable desde la Papelera.' },
+  { key: 'ver_auditoria_papelera',   label: 'Ver auditoría de papelera',       labelCorto: 'Aud. Pap.',   desc: 'Permite ver el historial de acciones realizadas en la Papelera.' },
 ]
 
 // Grupos de permisos por módulo (para el wizard de asignación)
@@ -139,9 +148,14 @@ const GRUPOS_PERMISOS = [
     permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles', 'ver_historial_usuarios'],
   },
   {
-    key: 'papelera', label: 'Papelera', paso: 10, soloPersonalizado: false,
+    key: 'reglamentos', label: 'Reglamentos', paso: 10, soloPersonalizado: false,
+    descripcion: 'Acceso al módulo de documentos institucionales: reglamentos, protocolos, manuales y circulares.',
+    permisos: ['ver_reglamentos','crear_reglamentos','editar_reglamentos','eliminar_reglamentos','descargar_reglamentos','gestionar_versiones_reglamentos','ver_auditoria_reglamentos'],
+  },
+  {
+    key: 'papelera', label: 'Papelera', paso: 11, soloPersonalizado: false,
     descripcion: 'Control de acceso a la Papelera de reciclaje. Los registros eliminados se conservan 30 días antes de borrarse automáticamente.',
-    permisos: ['ver_papelera', 'restaurar_registros', 'eliminar_permanentemente'],
+    permisos: ['ver_papelera', 'restaurar_registros', 'eliminar_permanentemente', 'ver_auditoria_papelera'],
   },
 ]
 

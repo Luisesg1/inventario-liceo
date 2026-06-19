@@ -45,6 +45,8 @@ const RUTA_A_PAGINA = {
   '/personal/documentos':            'personal_documentos',
   '/personal/auditoria':             'personal_auditoria',
   '/reglamentos':                    'reglamentos',
+  '/reglamentos/auditoria':          'reglamentos_auditoria',
+  '/papelera/auditoria':             'papelera_auditoria',
 }
 
 const PAGINA_A_RUTA = {
@@ -71,6 +73,8 @@ const PAGINA_A_RUTA = {
   personal_documentos:            '/personal/documentos',
   personal_auditoria:             '/personal/auditoria',
   reglamentos:                    '/reglamentos',
+  reglamentos_auditoria:          '/reglamentos/auditoria',
+  papelera_auditoria:             '/papelera/auditoria',
 }
 
 // Permisos mínimos por rol — usado como fallback cuando la BD no devuelve datos
@@ -232,10 +236,12 @@ export default function App() {
     || permisosPersonal.ver_reemplazos
     || permisosPersonal.ver_documentos_personal
 
-  const puedeVerPapelera       = esAdmin || !!p.ver_papelera
+  const puedeVerPapelera          = esAdmin || !!p.ver_papelera
+  const puedeVerAuditoriaPapelera = esAdmin || !!p.ver_auditoria_papelera
   const permisosPapelera = {
     restaurar:         esAdmin || !!p.restaurar_registros,
     eliminarPermanente: esAdmin || !!p.eliminar_permanentemente,
+    verAuditoria:      esAdmin || !!p.ver_auditoria_papelera,
   }
 
   // ── Permisos Reglamentos ─────────────────────────────────────────────
@@ -263,6 +269,8 @@ export default function App() {
     || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
     || (pagina === 'auditoria_general'           && !puedeVerAuditoriaGeneral)
     || (pagina === 'papelera'                    && !puedeVerPapelera)
+    || (pagina === 'reglamentos_auditoria'       && !permisosReglamentos.verAuditoria)
+    || (pagina === 'papelera_auditoria'          && !puedeVerAuditoriaPapelera)
     || (pagina === 'tickets'                     && !puedeVerTickets)
     || (pagina === 'requerimientos'              && !permisosReqs.ver)
     || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
@@ -519,6 +527,8 @@ export default function App() {
       puedeGestionarRoles={puedeGestionarRoles}
       puedeVerPersonal={puedeVerPersonal}
       puedeVerReglamentos={puedeVerReglamentos}
+      puedeVerAuditoriaReglamentos={permisosReglamentos.verAuditoria}
+      puedeVerAuditoriaPapelera={puedeVerAuditoriaPapelera}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -540,7 +550,9 @@ export default function App() {
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
-      {paginaSegura === 'reglamentos' && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
+      {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
+      {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
+      {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
       {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
         usuario={usuario}
         permisos={permisosPersonal}
