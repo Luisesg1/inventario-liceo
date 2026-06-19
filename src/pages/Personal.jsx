@@ -220,7 +220,6 @@ const COLS_REEMPLAZOS = [
   { header: 'Reemplazante', key: 'reemplazante_nombre' },
   { header: 'Cargo', key: 'cargo' },
   { header: 'Asignatura', key: 'asignatura' },
-  { header: 'Curso', key: 'curso' },
   { header: 'Fecha inicio', key: 'fecha_inicio' },
   { header: 'Fecha término', key: 'fecha_termino' },
   { header: 'Horas', key: 'horas' },
@@ -259,7 +258,6 @@ function prepReemplazo(r) {
     reemplazante_nombre: r.reemplazante_nombre ?? '',
     cargo: r.cargo ?? '',
     asignatura: r.asignatura ?? '',
-    curso: r.curso ?? '',
     fecha_inicio: r.fecha_inicio ?? '',
     fecha_termino: r.fecha_termino ?? '',
     horas: r.horas != null ? String(r.horas) : '',
@@ -492,7 +490,7 @@ const DEFAULT_FILTROS_CONTRATOS = {
   vencer_dias: '', horas_min: '', horas_max: '',
 }
 const DEFAULT_FILTROS_REEMPLAZOS = {
-  busq: '', estado: '', motivo: '', cargo: '', asignatura: '', curso: '',
+  busq: '', estado: '', motivo: '', cargo: '', asignatura: '',
   fecha_inicio_desde: '', fecha_inicio_hasta: '',
   fecha_termino_desde: '', fecha_termino_hasta: '',
 }
@@ -1372,6 +1370,7 @@ function ReemplazosTab({ usuario, permisos }) {
   const [registros,       setRegistros]       = useState([])
   const [usuariosBD,      setUsuariosBD]      = useState([])
   const [ausencias,       setAusencias]       = useState([])
+  const [contratos,       setContratos]       = useState([])
   const [cargando,        setCargando]        = useState(true)
   const [errorCarga,      setErrorCarga]      = useState('')
   const [filtros,         setFiltros]         = useState(DEFAULT_FILTROS_REEMPLAZOS)
@@ -1387,15 +1386,16 @@ function ReemplazosTab({ usuario, permisos }) {
 
   async function cargar() {
     setCargando(true); setErrorCarga('')
-    const [{ data: rs, error: e1 }, { data: us }, { data: aus }] = await Promise.all([
+    const [{ data: rs, error: e1 }, { data: us }, { data: aus }, { data: cnts }] = await Promise.all([
       supabase.from('reemplazos').select('*').order('creado_en', { ascending: false }),
-      supabase.from('usuarios').select('id, nombre, rol').order('nombre'),
-      supabase.from('ausencias').select('id, tipo, usuario_id, usuario:usuario_id(nombre), fecha_inicio, fecha_fin')
+      supabase.from('usuarios').select('id, nombre, rut, email, rol').order('nombre'),
+      supabase.from('ausencias').select('id, tipo, usuario_id, usuario:usuario_id(id, nombre, rut, email), fecha_inicio, fecha_fin')
         .in('tipo', ['licencia_medica','cometido','permiso_administrativo'])
         .gte('fecha_fin', todayStr()).order('fecha_inicio', { ascending: false }).limit(50),
+      supabase.from('contrataciones').select('rut, nombre_completo, cargo, correo, estamento'),
     ])
     if (e1) setErrorCarga('No se pudieron cargar los reemplazos: ' + e1.message)
-    setRegistros(rs ?? []); setUsuariosBD(us ?? []); setAusencias(aus ?? [])
+    setRegistros(rs ?? []); setUsuariosBD(us ?? []); setAusencias(aus ?? []); setContratos(cnts ?? [])
     setCargando(false)
   }
 
@@ -1409,7 +1409,6 @@ function ReemplazosTab({ usuario, permisos }) {
       reemplazante_id:     datos.reemplazante_id || null,
       cargo:               datos.cargo?.trim() || null,
       asignatura:          datos.asignatura?.trim() || null,
-      curso:               datos.curso?.trim() || null,
       fecha_inicio:        datos.fecha_inicio,
       fecha_termino:       datos.fecha_termino || null,
       horas:               datos.horas ? parseInt(datos.horas) : null,
@@ -1462,7 +1461,6 @@ function ReemplazosTab({ usuario, permisos }) {
       if (f.motivo && r.motivo !== f.motivo) return false
       if (f.cargo && !r.cargo?.toLowerCase().includes(f.cargo.toLowerCase())) return false
       if (f.asignatura && !r.asignatura?.toLowerCase().includes(f.asignatura.toLowerCase())) return false
-      if (f.curso && !r.curso?.toLowerCase().includes(f.curso.toLowerCase())) return false
       if (f.fecha_inicio_desde && r.fecha_inicio < f.fecha_inicio_desde) return false
       if (f.fecha_inicio_hasta && r.fecha_inicio > f.fecha_inicio_hasta) return false
       if (f.fecha_termino_desde && (!r.fecha_termino || r.fecha_termino < f.fecha_termino_desde)) return false
@@ -1473,7 +1471,6 @@ function ReemplazosTab({ usuario, permisos }) {
         || r.reemplazante_nombre?.toLowerCase().includes(q)
         || r.cargo?.toLowerCase().includes(q)
         || r.asignatura?.toLowerCase().includes(q)
-        || r.curso?.toLowerCase().includes(q)
         || MOTIVO_MAP[r.motivo]?.toLowerCase().includes(q)
         || ESTADO_REEMPL[r.estado]?.label?.toLowerCase().includes(q)
     })
@@ -1559,10 +1556,6 @@ function ReemplazosTab({ usuario, permisos }) {
               <input type="text" value={filtros.asignatura} onChange={e => setF('asignatura', e.target.value)} placeholder="Filtrar por asignatura…" className={filtros.asignatura ? 'activo' : ''} />
             </div>
             <div className="personal-filtros-field">
-              <label>Curso</label>
-              <input type="text" value={filtros.curso} onChange={e => setF('curso', e.target.value)} placeholder="Filtrar por curso…" className={filtros.curso ? 'activo' : ''} />
-            </div>
-            <div className="personal-filtros-field">
               <label>Inicio desde</label>
               <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} className={filtros.fecha_inicio_desde ? 'activo' : ''} />
             </div>
@@ -1628,7 +1621,7 @@ function ReemplazosTab({ usuario, permisos }) {
                 </div>
                 <div>
                   <p className="personal-card-name">{r.funcionario_nombre}</p>
-                  <p className="personal-card-cargo">{r.cargo ?? '—'}{r.asignatura ? ` · ${r.asignatura}` : ''}{r.curso ? ` · ${r.curso}` : ''}</p>
+                  <p className="personal-card-cargo">{r.cargo ?? '—'}{r.asignatura ? ` · ${r.asignatura}` : ''}</p>
                 </div>
                 <div className="personal-card-dates">
                   <div className="personal-card-date-item">
@@ -1671,7 +1664,7 @@ function ReemplazosTab({ usuario, permisos }) {
           <ModalReemplazo
             datos={modal === 'crear' ? null : (modal._ausencia ? null : modal)}
             ausenciaInicial={modal._ausencia ?? null}
-            usuarios={usuariosBD} ausencias={ausencias}
+            usuarios={usuariosBD} ausencias={ausencias} contratos={contratos}
             onGuardar={handleGuardar} onClose={() => setModal(null)}
           />
         )}
@@ -1723,17 +1716,35 @@ function ReemplazosTab({ usuario, permisos }) {
 }
 
 // ─── Modal Crear/Editar Reemplazo ─────────────────────────────
-function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar, onClose }) {
+function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos, onGuardar, onClose }) {
   const esEdicion = !!datos
+
+  function mapMotivo(tipo) {
+    if (tipo === 'licencia_medica') return 'licencia_medica'
+    if (tipo === 'cometido') return 'cometido'
+    if (tipo === 'permiso_administrativo') return 'permiso_administrativo'
+    return 'otro'
+  }
+
+  // Buscar contrato del funcionario ausente para mostrar cargo/estamento/correo
+  const contratoFuncionario = useMemo(() => {
+    if (!ausenciaInicial || !contratos?.length) return null
+    const rutU = (ausenciaInicial.usuario?.rut ?? '').replace(/[^0-9kK]/gi, '').toUpperCase()
+    if (rutU) {
+      const porRut = contratos.find(c => (c.rut ?? '').replace(/[^0-9kK]/gi, '').toUpperCase() === rutU)
+      if (porRut) return porRut
+    }
+    return contratos.find(c => c.nombre_completo === ausenciaInicial.usuario?.nombre) ?? null
+  }, [ausenciaInicial, contratos])
+
   const [form, setForm] = useState({
     funcionario_id:      datos?.funcionario_id ?? ausenciaInicial?.usuario_id ?? '',
     funcionario_nombre:  datos?.funcionario_nombre ?? ausenciaInicial?.usuario?.nombre ?? '',
     motivo:              datos?.motivo ?? (ausenciaInicial ? mapMotivo(ausenciaInicial.tipo) : 'licencia_medica'),
     reemplazante_id:     datos?.reemplazante_id ?? '',
     reemplazante_nombre: datos?.reemplazante_nombre ?? '',
-    cargo:               datos?.cargo ?? '',
+    cargo:               datos?.cargo ?? contratoFuncionario?.cargo ?? '',
     asignatura:          datos?.asignatura ?? '',
-    curso:               datos?.curso ?? '',
     fecha_inicio:        datos?.fecha_inicio ?? ausenciaInicial?.fecha_inicio ?? '',
     fecha_termino:       datos?.fecha_termino ?? ausenciaInicial?.fecha_fin ?? '',
     horas:               datos?.horas ?? '',
@@ -1745,13 +1756,6 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
   const [guardando, setGuardando] = useState(false)
   const [errGlobal, setErrGlobal] = useState('')
 
-  function mapMotivo(tipo) {
-    if (tipo === 'licencia_medica') return 'licencia_medica'
-    if (tipo === 'cometido') return 'cometido'
-    if (tipo === 'permiso_administrativo') return 'permiso_administrativo'
-    return 'otro'
-  }
-
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
   function onFuncionarioChange(e) {
@@ -1760,13 +1764,31 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
     setForm(f => ({ ...f, funcionario_id: id, funcionario_nombre: u?.nombre ?? '' }))
   }
 
+  function onAusenciaChange(e) {
+    const id  = e.target.value
+    const aus = ausencias.find(a => a.id === id)
+    if (aus) {
+      setForm(f => ({
+        ...f,
+        ausencia_id:         id,
+        funcionario_id:      aus.usuario_id ?? '',
+        funcionario_nombre:  aus.usuario?.nombre ?? '',
+        motivo:              mapMotivo(aus.tipo),
+        fecha_inicio:        aus.fecha_inicio ?? f.fecha_inicio,
+        fecha_termino:       aus.fecha_fin ?? f.fecha_termino,
+      }))
+    } else {
+      set('ausencia_id', '')
+    }
+  }
+
   function onReemplazanteChange(e) {
     const id = e.target.value
     if (id === '__manual__') {
       setForm(f => ({ ...f, reemplazante_id: '', reemplazante_nombre: '' }))
       return
     }
-    const u  = usuarios.find(u => u.id === id)
+    const u = usuarios.find(u => u.id === id)
     setForm(f => ({ ...f, reemplazante_id: id, reemplazante_nombre: u?.nombre ?? '' }))
   }
 
@@ -1789,6 +1811,8 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
     if (err) { setErrGlobal(err); setGuardando(false) }
   }
 
+  const bloqueadoPorAusencia = !!ausenciaInicial
+
   return (
     <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
       onClick={() => !guardando && onClose()}
@@ -1801,52 +1825,110 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
           <button className="personal-modal-close" style={{ position: 'static' }} onClick={onClose} disabled={guardando}><X size={18} /></button>
         </div>
 
+        {/* Tarjeta del funcionario ausente (bloqueada) */}
         {ausenciaInicial && (
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#1d4ed8', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Info size={16} style={{ flexShrink: 0 }} />
-            Creando reemplazo vinculado a ausencia de <strong>{ausenciaInicial.usuario?.nombre}</strong>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: '14px 16px', marginBottom: 20, fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#15803d', fontWeight: 600, marginBottom: 10 }}>
+              <Info size={15} style={{ flexShrink: 0 }} />
+              Funcionario reemplazado — datos cargados automáticamente
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px 16px', color: '#1e293b' }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>{ausenciaInicial.usuario?.nombre ?? '—'}</p>
+              </div>
+              {ausenciaInicial.usuario?.rut && (
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RUT</p>
+                  <p style={{ margin: 0, fontFamily: 'monospace' }}>{ausenciaInicial.usuario.rut}</p>
+                </div>
+              )}
+              {ausenciaInicial.usuario?.email && (
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Correo</p>
+                  <p style={{ margin: 0 }}>{ausenciaInicial.usuario.email}</p>
+                </div>
+              )}
+              {contratoFuncionario?.cargo && (
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cargo</p>
+                  <p style={{ margin: 0 }}>{contratoFuncionario.cargo}</p>
+                </div>
+              )}
+              {contratoFuncionario?.estamento && (
+                <div>
+                  <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Estamento</p>
+                  <p style={{ margin: 0 }}>{ESTAMENTO_MAP[contratoFuncionario.estamento] ?? contratoFuncionario.estamento}</p>
+                </div>
+              )}
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipo de ausencia</p>
+                <p style={{ margin: 0 }}>{MOTIVO_MAP[ausenciaInicial.tipo] ?? ausenciaInicial.tipo}</p>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Período ausencia</p>
+                <p style={{ margin: 0 }}>{formatFecha(ausenciaInicial.fecha_inicio)}{ausenciaInicial.fecha_fin ? ` → ${formatFecha(ausenciaInicial.fecha_fin)}` : ''}</p>
+              </div>
+            </div>
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Funcionario reemplazado */}
-          <div className="personal-form-section">
-            <p className="personal-form-section-title">Funcionario reemplazado</p>
-            <div className="personal-form-grid">
-              <div className="personal-form-field">
-                <label>Seleccionar del sistema</label>
-                <select value={form.funcionario_id} onChange={onFuncionarioChange}>
-                  <option value="">— Ingresar manualmente —</option>
-                  {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                </select>
-              </div>
-              <div className="personal-form-field">
-                <label>Nombre *</label>
-                <input value={form.funcionario_nombre} onChange={e => set('funcionario_nombre', e.target.value)}
-                  placeholder="Nombre del funcionario" className={errors.funcionario_nombre ? 'error' : ''} />
-                {errors.funcionario_nombre && <span className="personal-form-error">{errors.funcionario_nombre}</span>}
-              </div>
-              <div className="personal-form-field">
-                <label>Motivo</label>
-                <select value={form.motivo} onChange={e => set('motivo', e.target.value)}>
-                  {MOTIVOS_REEMPLAZO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
-              {ausencias.length > 0 && (
+          {/* Funcionario reemplazado — solo visible si NO viene de ausencia */}
+          {!bloqueadoPorAusencia && (
+            <div className="personal-form-section">
+              <p className="personal-form-section-title">Funcionario reemplazado</p>
+              <div className="personal-form-grid">
                 <div className="personal-form-field">
-                  <label>Vincular ausencia</label>
-                  <select value={form.ausencia_id} onChange={e => set('ausencia_id', e.target.value)}>
-                    <option value="">Sin ausencia vinculada</option>
-                    {ausencias.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.usuario?.nombre} — {MOTIVO_MAP[a.tipo] ?? a.tipo} ({formatFecha(a.fecha_inicio)})
-                      </option>
-                    ))}
+                  <label>Seleccionar del sistema</label>
+                  <select value={form.funcionario_id} onChange={onFuncionarioChange}>
+                    <option value="">— Ingresar manualmente —</option>
+                    {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
                   </select>
                 </div>
-              )}
+                <div className="personal-form-field">
+                  <label>Nombre *</label>
+                  <input value={form.funcionario_nombre} onChange={e => set('funcionario_nombre', e.target.value)}
+                    placeholder="Nombre del funcionario" className={errors.funcionario_nombre ? 'error' : ''} />
+                  {errors.funcionario_nombre && <span className="personal-form-error">{errors.funcionario_nombre}</span>}
+                </div>
+                <div className="personal-form-field">
+                  <label>Motivo</label>
+                  <select value={form.motivo} onChange={e => set('motivo', e.target.value)}>
+                    {MOTIVOS_REEMPLAZO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+                {ausencias.length > 0 && (
+                  <div className="personal-form-field">
+                    <label>Vincular ausencia</label>
+                    <select value={form.ausencia_id} onChange={onAusenciaChange}>
+                      <option value="">Sin ausencia vinculada</option>
+                      {ausencias.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.usuario?.nombre} — {MOTIVO_MAP[a.tipo] ?? a.tipo} ({formatFecha(a.fecha_inicio)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Motivo — solo visible si viene de ausencia (como campo bloqueado informativo) */}
+          {bloqueadoPorAusencia && (
+            <div className="personal-form-section">
+              <p className="personal-form-section-title">Motivo del reemplazo</p>
+              <div className="personal-form-grid">
+                <div className="personal-form-field">
+                  <label>Motivo</label>
+                  <select value={form.motivo} onChange={e => set('motivo', e.target.value)} disabled>
+                    {MOTIVOS_REEMPLAZO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Reemplazante */}
           <div className="personal-form-section">
@@ -1873,11 +1955,6 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, onGuardar
                 <label>Asignatura</label>
                 <input value={form.asignatura} onChange={e => set('asignatura', e.target.value)}
                   placeholder="Ej: Matemática" />
-              </div>
-              <div className="personal-form-field">
-                <label>Curso</label>
-                <input value={form.curso} onChange={e => set('curso', e.target.value)}
-                  placeholder="Ej: 2° Medio A" />
               </div>
             </div>
           </div>
