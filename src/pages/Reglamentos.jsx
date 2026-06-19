@@ -209,7 +209,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   function abrirCrear() {
     setDocEditar(null)
     setFNombre(''); setFDescripcion(''); setFCategoria('Reglamentos')
-    setFEstado('Vigente'); setFFechaPubl(''); setFEtiquetas(''); setFArchivo(null)
+    setFEstado('Vigente'); setFFechaPubl(''); setFArchivo(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     setModalForm(true)
   }
