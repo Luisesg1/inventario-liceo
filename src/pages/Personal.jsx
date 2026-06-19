@@ -2451,7 +2451,6 @@ export default function Personal({ usuario, permisos = {}, vista = 'dashboard', 
           { key: 'contrataciones', label: 'Contrataciones', show: p.verContrat },
           { key: 'reemplazos', label: 'Reemplazos', show: p.verReempl },
           { key: 'documentos', label: 'Documentos', show: p.verDocs },
-          { key: 'auditoria', label: 'Auditoría', show: p.verAuditoria },
         ].filter(t => t.show).map(t => (
           <button key={t.key}
             onClick={() => onIrAVista?.(t.key)}
