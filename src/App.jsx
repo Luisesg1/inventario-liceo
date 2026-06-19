@@ -571,7 +571,7 @@ export default function App() {
           : v === 'documentos'     ? 'personal_documentos'
           : 'personal'
         )}
-      />
+      />}
     </Layout>
   )
 }
