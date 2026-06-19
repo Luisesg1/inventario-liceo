@@ -648,6 +648,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     activeModulo === 'ausencias'       ? 'Buscar por funcionario, RUT o correo…' :
     activeModulo === 'compensatorios'  ? 'Buscar por funcionario, RUT o correo…' :
     activeModulo === 'tickets'         ? 'Buscar por ticket, usuario, RUT o correo…' :
+    activeModulo === 'personal'        ? 'Buscar por funcionario, usuario, RUT o correo…' :
     'Buscar por bien, usuario, RUT o correo…'
 
   return (

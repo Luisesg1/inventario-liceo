@@ -218,7 +218,7 @@ export default function App() {
   const puedeVerAuditoriaGeneral = esAdmin
 
   // ── Permisos Personal ────────────────────────────────────────
-  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'])
+  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
   const permisosPersonal = {
     ver_contrataciones:      esAdmin || !!p.ver_contrataciones,
     crear_contrataciones:    esAdmin || !!p.crear_contrataciones,
@@ -555,6 +555,7 @@ export default function App() {
       {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
       {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
       {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
+      {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" />}
       {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
         usuario={usuario}
         permisos={permisosPersonal}
@@ -562,17 +563,15 @@ export default function App() {
           : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
           : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
           : paginaSegura === 'personal_documentos'     ? 'documentos'
-          : paginaSegura === 'personal_auditoria'      ? 'auditoria'
           : 'dashboard'}
         onIrAVista={(v) => cambiarPagina(
           v === 'dashboard'      ? 'personal'
           : v === 'contrataciones' ? 'personal_contrataciones'
           : v === 'reemplazos'     ? 'personal_reemplazos'
           : v === 'documentos'     ? 'personal_documentos'
-          : v === 'auditoria'      ? 'personal_auditoria'
           : 'personal'
         )}
-      />}
+      />
     </Layout>
   )
 }
