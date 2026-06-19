@@ -235,14 +235,6 @@ const COLS_DOCS = [
   { header: 'Reemplazo', key: 'reemplazo' },
   { header: 'Fecha subida', key: 'subido_en' },
 ]
-const COLS_AUDITORIA = [
-  { header: 'Fecha y hora', key: 'creado_en' },
-  { header: 'Acción', key: 'accion' },
-  { header: 'Módulo', key: 'tabla_afectada' },
-  { header: 'Registro', key: 'registro_nombre' },
-  { header: 'Usuario', key: 'usuario_nombre' },
-  { header: 'Rol', key: 'usuario_rol' },
-]
 
 function prepContrato(c) {
   return {
@@ -285,17 +277,6 @@ function prepDoc(d, contratos, reemplazos) {
     contratacion: c?.nombre_completo ?? '',
     reemplazo: r?.funcionario_nombre ?? '',
     subido_en: d.subido_en ? new Date(d.subido_en).toLocaleString('es-CL') : '',
-  }
-}
-function prepAuditoria(l) {
-  const TABLA_LABEL = { contrataciones: 'Contrataciones', reemplazos: 'Reemplazos', personal_documentos: 'Documentos' }
-  return {
-    creado_en: l.creado_en ? new Date(l.creado_en).toLocaleString('es-CL') : '',
-    accion: l.accion ?? '',
-    tabla_afectada: TABLA_LABEL[l.tabla_afectada] ?? l.tabla_afectada ?? '',
-    registro_nombre: l.registro_nombre ?? '',
-    usuario_nombre: l.usuario_nombre ?? '',
-    usuario_rol: l.usuario_rol ?? '',
   }
 }
 
@@ -2274,136 +2255,6 @@ function ModalSubirDocumento({ contratos, reemplazos, subiendo, onSubir, onClose
   )
 }
 
-// ═══════════════════════════════════════════════════════════════
-// AUDITORÍA TAB
-// ═══════════════════════════════════════════════════════════════
-function AuditoriaTab({ usuario }) {
-  const [logs,       setLogs]       = useState([])
-  const [cargando,   setCargando]   = useState(true)
-  const [busq,       setBusq]       = useState('')
-  const [filtTabla,  setFiltTabla]  = useState('')
-  const [filtAccion, setFiltAccion] = useState('')
-  const [pagina,     setPagina]     = useState(1)
-
-  useEffect(() => { cargar() }, [])
-
-  async function cargar() {
-    setCargando(true)
-    const { data } = await supabase.from('personal_audit_logs')
-      .select('*').order('creado_en', { ascending: false }).limit(500)
-    setLogs(data ?? [])
-    setCargando(false)
-  }
-
-  const ACCION_LABEL = { crear: 'Crear', editar: 'Editar', eliminar: 'Eliminar' }
-  const TABLA_LABEL  = { contrataciones: 'Contrataciones', reemplazos: 'Reemplazos', personal_documentos: 'Documentos' }
-
-  const filtrados = logs.filter(l => {
-    if (filtTabla && l.tabla_afectada !== filtTabla) return false
-    if (filtAccion && l.accion !== filtAccion) return false
-    if (!busq) return true
-    const q = busq.toLowerCase()
-    return l.registro_nombre?.toLowerCase().includes(q) || l.usuario_nombre?.toLowerCase().includes(q)
-  })
-
-  const total  = filtrados.length
-  const inicio = (pagina - 1) * POR_PAGINA
-  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
-  const vista  = filtrados.slice(inicio, inicio + POR_PAGINA)
-
-  function formatTs(ts) {
-    if (!ts) return '—'
-    return new Date(ts).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  }
-
-  return (
-    <div>
-      <div className="personal-toolbar">
-        <div className="personal-search">
-          <Search size={14} className="personal-search-icon" />
-          <input value={busq} onChange={e => { setBusq(e.target.value); setPagina(1) }} placeholder="Buscar registro, usuario…" />
-          {busq && <button onClick={() => { setBusq(''); setPagina(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
-        </div>
-        <select className="personal-filter-select" value={filtTabla} onChange={e => { setFiltTabla(e.target.value); setPagina(1) }}>
-          <option value="">Todos los módulos</option>
-          <option value="contrataciones">Contrataciones</option>
-          <option value="reemplazos">Reemplazos</option>
-          <option value="personal_documentos">Documentos</option>
-        </select>
-        <select className="personal-filter-select" value={filtAccion} onChange={e => { setFiltAccion(e.target.value); setPagina(1) }}>
-          <option value="">Todas las acciones</option>
-          <option value="crear">Crear</option>
-          <option value="editar">Editar</option>
-          <option value="eliminar">Eliminar</option>
-        </select>
-        <ExportMenu
-          todos={logs} filtrados={filtrados} seleccionados={[]}
-          colsDef={COLS_AUDITORIA} prepFn={prepAuditoria}
-          nombreArchivo="auditoria_personal" titulo="Auditoría Personal" usuarioNombre={usuario?.nombre}
-        />
-        <button className="personal-action-btn" title="Actualizar" onClick={cargar} style={{ border: '1.5px solid #e2e8f0', borderRadius: 10, width: 38, height: 38 }}>
-          <RefreshCw size={14} />
-        </button>
-      </div>
-
-      {cargando ? (
-        <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando...</div>
-      ) : (
-        <div className="personal-table-wrap">
-          {vista.length === 0 ? (
-            <div className="personal-empty">
-              <div className="personal-empty-icon"><Activity size={24} /></div>
-              <p>Sin registros de auditoría</p>
-            </div>
-          ) : (
-            <>
-              <table className="personal-table">
-                <thead>
-                  <tr>
-                    <th>Fecha y hora</th>
-                    <th>Acción</th>
-                    <th>Módulo</th>
-                    <th>Registro</th>
-                    <th>Usuario</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vista.map(l => (
-                    <tr key={l.id}>
-                      <td style={{ fontSize: 12.5, color: '#64748b', whiteSpace: 'nowrap' }}>{formatTs(l.creado_en)}</td>
-                      <td>
-                        <span className={`personal-audit-badge ${l.accion}`}>
-                          {ACCION_LABEL[l.accion] ?? l.accion}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 13 }}>{TABLA_LABEL[l.tabla_afectada] ?? l.tabla_afectada}</td>
-                      <td>
-                        <p className="personal-table-name" style={{ fontSize: 13.5 }}>{l.registro_nombre ?? '—'}</p>
-                      </td>
-                      <td>
-                        <p style={{ margin: 0, fontSize: 13 }}>{l.usuario_nombre ?? '—'}</p>
-                        <p className="personal-table-sub">{l.usuario_rol ?? ''}</p>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {total > POR_PAGINA && (
-                <div className="personal-pagination">
-                  <span className="personal-pagination-info">{inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}</span>
-                  <div className="personal-pagination-btns">
-                    <button className="personal-pagination-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>‹ Anterior</button>
-                    <button className="personal-pagination-btn" disabled={pagina === paginas} onClick={() => setPagina(p => p + 1)}>Siguiente ›</button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -2423,7 +2274,6 @@ export default function Personal({ usuario, permisos = {}, vista = 'dashboard', 
     verDocs:       esAdmin || !!permisos.ver_documentos_personal,
     subirDocs:     esAdmin || !!permisos.subir_documentos_personal,
     eliminarDocs:  esAdmin || !!permisos.eliminar_documentos_personal,
-    verAuditoria:  esAdmin || !!permisos.ver_auditoria_personal,
   }
 
   const titulos = {
@@ -2431,7 +2281,6 @@ export default function Personal({ usuario, permisos = {}, vista = 'dashboard', 
     contrataciones:  'Contrataciones',
     reemplazos:      'Reemplazos',
     documentos:      'Documentos',
-    auditoria:       'Auditoría Personal',
   }
 
   return (
@@ -2448,7 +2297,6 @@ export default function Personal({ usuario, permisos = {}, vista = 'dashboard', 
           { key: 'contrataciones', label: 'Contrataciones', show: p.verContrat },
           { key: 'reemplazos', label: 'Reemplazos', show: p.verReempl },
           { key: 'documentos', label: 'Documentos', show: p.verDocs },
-          { key: 'auditoria', label: 'Auditoría', show: p.verAuditoria },
         ].filter(t => t.show).map(t => (
           <button key={t.key}
             onClick={() => onIrAVista?.(t.key)}
@@ -2479,7 +2327,7 @@ export default function Personal({ usuario, permisos = {}, vista = 'dashboard', 
           {vista === 'contrataciones' && <ContratacionesTab usuario={usuario} permisos={p} />}
           {vista === 'reemplazos'     && <ReemplazosTab usuario={usuario} permisos={p} />}
           {vista === 'documentos'     && <DocumentosTab usuario={usuario} permisos={p} />}
-          {vista === 'auditoria'      && <AuditoriaTab usuario={usuario} />}
+
         </motion.div>
       </AnimatePresence>
     </div>

@@ -848,13 +848,7 @@ export default function Layout({
                     <span className="nav-subitem-dot" />
                     Documentos
                   </div>
-                  <div
-                    className={`nav-subitem ${paginaActual === 'personal_auditoria' ? 'active' : ''}`}
-                    onClick={() => handleNav('personal_auditoria')}
-                  >
-                    <span className="nav-subitem-dot" />
-                    Auditoría
-                  </div>
+
                 </motion.div>
               )}
             </AnimatePresence>

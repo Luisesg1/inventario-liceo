@@ -216,7 +216,7 @@ export default function App() {
   const puedeVerAuditoriaGeneral = esAdmin
 
   // ── Permisos Personal ────────────────────────────────────────
-  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'])
+  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
   const permisosPersonal = {
     ver_contrataciones:      esAdmin || !!p.ver_contrataciones,
     crear_contrataciones:    esAdmin || !!p.crear_contrataciones,
@@ -229,7 +229,6 @@ export default function App() {
     ver_documentos_personal:    esAdmin || !!p.ver_documentos_personal,
     subir_documentos_personal:  esAdmin || !!p.subir_documentos_personal,
     eliminar_documentos_personal: esAdmin || !!p.eliminar_documentos_personal,
-    ver_auditoria_personal:  esAdmin || !!p.ver_auditoria_personal,
   }
   const puedeVerPersonal = esAdmin
     || permisosPersonal.ver_contrataciones
@@ -560,14 +559,12 @@ export default function App() {
           : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
           : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
           : paginaSegura === 'personal_documentos'     ? 'documentos'
-          : paginaSegura === 'personal_auditoria'      ? 'auditoria'
           : 'dashboard'}
         onIrAVista={(v) => cambiarPagina(
           v === 'dashboard'      ? 'personal'
           : v === 'contrataciones' ? 'personal_contrataciones'
           : v === 'reemplazos'     ? 'personal_reemplazos'
           : v === 'documentos'     ? 'personal_documentos'
-          : v === 'auditoria'      ? 'personal_auditoria'
           : 'personal'
         )}
       />}
