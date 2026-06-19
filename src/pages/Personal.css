@@ -990,22 +990,19 @@
 
 /* ── Advanced filters panel ───────────────────── */
 .personal-filtros-panel {
-  background: #f8fafc;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 16px;
+  padding: 14px;
   margin-bottom: 14px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-  gap: 12px;
-  animation: fadeIn 0.15s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  animation: pf-in 0.15s ease;
 }
-@keyframes fadeIn {
+@keyframes pf-in {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .personal-filtros-reset {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1128,18 +1125,14 @@
 }
 
 @media (max-width: 768px) {
-  .personal-filtros-panel {
-    grid-template-columns: 1fr 1fr;
-  }
+  .personal-filtros-field { min-width: calc(50% - 5px); flex: none; }
   .personal-export-dropdown {
     right: auto;
     left: 0;
   }
 }
 @media (max-width: 480px) {
-  .personal-filtros-panel {
-    grid-template-columns: 1fr;
-  }
+  .personal-filtros-field { min-width: 100%; flex: none; }
 }
 
 /* ─── Filter badge (active count on Filtros button) ─────────── */
@@ -1160,10 +1153,61 @@
 
 /* ─── Filtros grid (advanced filter panel inner grid) ────────── */
 .personal-filtros-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.personal-filtros-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  flex: 1;
+}
+.personal-filtros-field label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.personal-filtros-field select,
+.personal-filtros-field input[type="date"],
+.personal-filtros-field input[type="number"],
+.personal-filtros-field input[type="text"] {
+  height: 36px;
+  border-radius: 9px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13px;
+  padding: 0 10px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.personal-filtros-field select:focus,
+.personal-filtros-field input:focus {
+  border-color: rgb(var(--primary-rgb, 26,35,126));
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 26,35,126), 0.10);
+}
+.personal-filtros-field select.activo,
+.personal-filtros-field input.activo {
+  border-color: rgb(var(--primary-rgb, 26,35,126));
+  background: rgba(var(--primary-rgb, 26,35,126), 0.06);
+  color: rgb(var(--primary-rgb, 26,35,126));
+  font-weight: 600;
+}
+.personal-filtros-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: 1px;
 }
 
 /* ─── Table row selected highlight ──────────────────────────── */

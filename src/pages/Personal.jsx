@@ -849,66 +849,68 @@ function ContratacionesTab({ usuario, permisos }) {
       {mostrarFiltros && (
         <div className="personal-filtros-panel">
           <div className="personal-filtros-grid">
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Estado</label>
-              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)}>
+              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)} className={filtros.estado ? 'activo' : ''}>
                 <option value="">Todos</option>
                 <option value="vigente">Vigente</option>
                 <option value="por_vencer">Por vencer</option>
                 <option value="finalizado">Finalizado</option>
               </select>
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Estamento</label>
-              <select value={filtros.estamento} onChange={e => setF('estamento', e.target.value)}>
+              <select value={filtros.estamento} onChange={e => setF('estamento', e.target.value)} className={filtros.estamento ? 'activo' : ''}>
                 <option value="">Todos</option>
                 {ESTAMENTOS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
-            <div className="personal-form-field">
-              <label>Tipo de contrato</label>
-              <select value={filtros.tipo_contrato} onChange={e => setF('tipo_contrato', e.target.value)}>
+            <div className="personal-filtros-field">
+              <label>Tipo contrato</label>
+              <select value={filtros.tipo_contrato} onChange={e => setF('tipo_contrato', e.target.value)} className={filtros.tipo_contrato ? 'activo' : ''}>
                 <option value="">Todos</option>
                 {TIPOS_CONTRATO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
-            <div className="personal-form-field">
-              <label>Por vencer en</label>
-              <select value={filtros.vencer_dias} onChange={e => setF('vencer_dias', e.target.value)}>
+            <div className="personal-filtros-field">
+              <label>Vence en</label>
+              <select value={filtros.vencer_dias} onChange={e => setF('vencer_dias', e.target.value)} className={filtros.vencer_dias ? 'activo' : ''}>
                 <option value="">Sin filtro</option>
                 <option value="7">7 días</option>
                 <option value="15">15 días</option>
                 <option value="30">30 días</option>
               </select>
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Inicio desde</label>
-              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} />
+              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} className={filtros.fecha_inicio_desde ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Inicio hasta</label>
-              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} />
+              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} className={filtros.fecha_inicio_hasta ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Término desde</label>
-              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} />
+              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} className={filtros.fecha_termino_desde ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Término hasta</label>
-              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} />
+              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} className={filtros.fecha_termino_hasta ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Horas mín.</label>
-              <input type="number" min="0" value={filtros.horas_min} onChange={e => setF('horas_min', e.target.value)} placeholder="0" />
+              <input type="number" min="0" value={filtros.horas_min} onChange={e => setF('horas_min', e.target.value)} placeholder="0" className={filtros.horas_min ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Horas máx.</label>
-              <input type="number" min="0" value={filtros.horas_max} onChange={e => setF('horas_max', e.target.value)} placeholder="44" />
+              <input type="number" min="0" value={filtros.horas_max} onChange={e => setF('horas_max', e.target.value)} placeholder="44" className={filtros.horas_max ? 'activo' : ''} />
             </div>
+            {filtrosActivos > 0 && (
+              <div className="personal-filtros-actions">
+                <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar</button>
+              </div>
+            )}
           </div>
-          {filtrosActivos > 0 && (
-            <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar filtros</button>
-          )}
         </div>
       )}
 
@@ -1534,52 +1536,54 @@ function ReemplazosTab({ usuario, permisos }) {
       {mostrarFiltros && (
         <div className="personal-filtros-panel">
           <div className="personal-filtros-grid">
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Estado</label>
-              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)}>
+              <select value={filtros.estado} onChange={e => setF('estado', e.target.value)} className={filtros.estado ? 'activo' : ''}>
                 <option value="">Todos</option>
                 {ESTADOS_REEMPLAZO.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Motivo</label>
-              <select value={filtros.motivo} onChange={e => setF('motivo', e.target.value)}>
+              <select value={filtros.motivo} onChange={e => setF('motivo', e.target.value)} className={filtros.motivo ? 'activo' : ''}>
                 <option value="">Todos</option>
                 {MOTIVOS_REEMPLAZO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Cargo</label>
-              <input value={filtros.cargo} onChange={e => setF('cargo', e.target.value)} placeholder="Filtrar por cargo…" />
+              <input type="text" value={filtros.cargo} onChange={e => setF('cargo', e.target.value)} placeholder="Filtrar por cargo…" className={filtros.cargo ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Asignatura</label>
-              <input value={filtros.asignatura} onChange={e => setF('asignatura', e.target.value)} placeholder="Filtrar por asignatura…" />
+              <input type="text" value={filtros.asignatura} onChange={e => setF('asignatura', e.target.value)} placeholder="Filtrar por asignatura…" className={filtros.asignatura ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Curso</label>
-              <input value={filtros.curso} onChange={e => setF('curso', e.target.value)} placeholder="Filtrar por curso…" />
+              <input type="text" value={filtros.curso} onChange={e => setF('curso', e.target.value)} placeholder="Filtrar por curso…" className={filtros.curso ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Inicio desde</label>
-              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} />
+              <input type="date" value={filtros.fecha_inicio_desde} onChange={e => setF('fecha_inicio_desde', e.target.value)} className={filtros.fecha_inicio_desde ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Inicio hasta</label>
-              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} />
+              <input type="date" value={filtros.fecha_inicio_hasta} onChange={e => setF('fecha_inicio_hasta', e.target.value)} className={filtros.fecha_inicio_hasta ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Término desde</label>
-              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} />
+              <input type="date" value={filtros.fecha_termino_desde} onChange={e => setF('fecha_termino_desde', e.target.value)} className={filtros.fecha_termino_desde ? 'activo' : ''} />
             </div>
-            <div className="personal-form-field">
+            <div className="personal-filtros-field">
               <label>Término hasta</label>
-              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} />
+              <input type="date" value={filtros.fecha_termino_hasta} onChange={e => setF('fecha_termino_hasta', e.target.value)} className={filtros.fecha_termino_hasta ? 'activo' : ''} />
             </div>
+            {filtrosActivos > 0 && (
+              <div className="personal-filtros-actions">
+                <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar</button>
+              </div>
+            )}
           </div>
-          {filtrosActivos > 0 && (
-            <button className="btn-filtros-reset" onClick={resetFiltros}><X size={13} /> Limpiar filtros</button>
-          )}
         </div>
       )}
 
@@ -1953,6 +1957,7 @@ function DocumentosTab({ usuario, permisos }) {
   const [eliminando,   setEliminando]   = useState(false)
   const [seleccionados, setSeleccionados] = useState(new Set())
   const [descargandoMas, setDescargandoMas] = useState(false)
+  const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const fileRef = useRef(null)
 
   useEffect(() => { cargar() }, [])
@@ -2055,10 +2060,11 @@ function DocumentosTab({ usuario, permisos }) {
           <input value={busq} onChange={e => setBusq(e.target.value)} placeholder="Buscar documentos…" />
           {busq && <button onClick={() => setBusq('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
         </div>
-        <select className="personal-filter-select" value={filtTipo} onChange={e => setFiltTipo(e.target.value)}>
-          <option value="">Todos los tipos</option>
-          {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
+        <button className="btn-toggle-filtros" onClick={() => setMostrarFiltros(m => !m)}>
+          <Filter size={13} /> Filtros
+          {filtTipo && <span className="personal-filter-badge">1</span>}
+          {mostrarFiltros ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
         <ExportMenu
           todos={docs} filtrados={filtrados} seleccionados={selData}
           colsDef={COLS_DOCS} prepFn={prepDocBound}
@@ -2070,6 +2076,25 @@ function DocumentosTab({ usuario, permisos }) {
           </button>
         )}
       </div>
+
+      {mostrarFiltros && (
+        <div className="personal-filtros-panel">
+          <div className="personal-filtros-grid">
+            <div className="personal-filtros-field">
+              <label>Tipo de documento</label>
+              <select value={filtTipo} onChange={e => setFiltTipo(e.target.value)} className={filtTipo ? 'activo' : ''}>
+                <option value="">Todos</option>
+                {TIPOS_DOC.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+            {filtTipo && (
+              <div className="personal-filtros-actions">
+                <button className="btn-filtros-reset" onClick={() => setFiltTipo('')}><X size={13} /> Limpiar</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {cargando ? (
         <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando...</div>
@@ -2281,12 +2306,13 @@ function ModalSubirDocumento({ contratos, reemplazos, subiendo, onSubir, onClose
 // AUDITORÍA TAB
 // ═══════════════════════════════════════════════════════════════
 function AuditoriaTab({ usuario }) {
-  const [logs,       setLogs]       = useState([])
-  const [cargando,   setCargando]   = useState(true)
-  const [busq,       setBusq]       = useState('')
-  const [filtTabla,  setFiltTabla]  = useState('')
-  const [filtAccion, setFiltAccion] = useState('')
-  const [pagina,     setPagina]     = useState(1)
+  const [logs,          setLogs]          = useState([])
+  const [cargando,      setCargando]      = useState(true)
+  const [busq,          setBusq]          = useState('')
+  const [filtTabla,     setFiltTabla]     = useState('')
+  const [filtAccion,    setFiltAccion]    = useState('')
+  const [pagina,        setPagina]        = useState(1)
+  const [mostrarFiltros, setMostrarFiltros] = useState(false)
 
   useEffect(() => { cargar() }, [])
 
@@ -2327,18 +2353,11 @@ function AuditoriaTab({ usuario }) {
           <input value={busq} onChange={e => { setBusq(e.target.value); setPagina(1) }} placeholder="Buscar registro, usuario…" />
           {busq && <button onClick={() => { setBusq(''); setPagina(1) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 0 }}><X size={13} /></button>}
         </div>
-        <select className="personal-filter-select" value={filtTabla} onChange={e => { setFiltTabla(e.target.value); setPagina(1) }}>
-          <option value="">Todos los módulos</option>
-          <option value="contrataciones">Contrataciones</option>
-          <option value="reemplazos">Reemplazos</option>
-          <option value="personal_documentos">Documentos</option>
-        </select>
-        <select className="personal-filter-select" value={filtAccion} onChange={e => { setFiltAccion(e.target.value); setPagina(1) }}>
-          <option value="">Todas las acciones</option>
-          <option value="crear">Crear</option>
-          <option value="editar">Editar</option>
-          <option value="eliminar">Eliminar</option>
-        </select>
+        <button className="btn-toggle-filtros" onClick={() => setMostrarFiltros(m => !m)}>
+          <Filter size={13} /> Filtros
+          {(filtTabla || filtAccion) && <span className="personal-filter-badge">{[filtTabla, filtAccion].filter(Boolean).length}</span>}
+          {mostrarFiltros ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        </button>
         <ExportMenu
           todos={logs} filtrados={filtrados} seleccionados={[]}
           colsDef={COLS_AUDITORIA} prepFn={prepAuditoria}
@@ -2348,6 +2367,36 @@ function AuditoriaTab({ usuario }) {
           <RefreshCw size={14} />
         </button>
       </div>
+
+      {mostrarFiltros && (
+        <div className="personal-filtros-panel">
+          <div className="personal-filtros-grid">
+            <div className="personal-filtros-field">
+              <label>Módulo</label>
+              <select value={filtTabla} onChange={e => { setFiltTabla(e.target.value); setPagina(1) }} className={filtTabla ? 'activo' : ''}>
+                <option value="">Todos</option>
+                <option value="contrataciones">Contrataciones</option>
+                <option value="reemplazos">Reemplazos</option>
+                <option value="personal_documentos">Documentos</option>
+              </select>
+            </div>
+            <div className="personal-filtros-field">
+              <label>Acción</label>
+              <select value={filtAccion} onChange={e => { setFiltAccion(e.target.value); setPagina(1) }} className={filtAccion ? 'activo' : ''}>
+                <option value="">Todas</option>
+                <option value="crear">Crear</option>
+                <option value="editar">Editar</option>
+                <option value="eliminar">Eliminar</option>
+              </select>
+            </div>
+            {(filtTabla || filtAccion) && (
+              <div className="personal-filtros-actions">
+                <button className="btn-filtros-reset" onClick={() => { setFiltTabla(''); setFiltAccion(''); setPagina(1) }}><X size={13} /> Limpiar</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {cargando ? (
         <div className="personal-loading"><Loader2 size={18} className="animate-spin" /> Cargando...</div>
