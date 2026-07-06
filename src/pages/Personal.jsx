@@ -400,8 +400,74 @@ async function doPDF(rows, cols, titulo, descripcion, filename, usuarioNombre) {
   doc.save(filename + '.pdf')
 }
 
+// ─── doWord ──────────────────────────────────────────────────
+function doWord(rows, cols, titulo, filename) {
+  const headers = cols.map(c => `<th>${c.header}</th>`).join('')
+  const body = rows.map((r, i) => {
+    const bg = i % 2 === 0 ? '#ffffff' : '#f0f4ff'
+    return `<tr style="background:${bg}">${cols.map(c => `<td>${r[c.key] ?? ''}</td>`).join('')}</tr>`
+  }).join('')
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+    <head><meta charset="utf-8"><style>
+      body{font-family:Calibri,sans-serif;font-size:10pt}
+      h1{font-size:14pt;color:#1a237e}
+      table{border-collapse:collapse;width:100%}
+      th{background:#1a237e;color:#fff;padding:5px 8px;font-size:9pt;border:1px solid #ccc}
+      td{padding:4px 8px;font-size:9pt;border:1px solid #ddd}
+    </style></head><body>
+      <h1>${titulo}</h1>
+      <p style="color:#6b7280;font-size:9pt">Generado el ${new Date().toLocaleDateString('es-CL')} · ${rows.length} registros</p>
+      <table><thead><tr>${headers}</tr></thead><tbody>${body}</tbody></table>
+    </body></html>`
+  const blob = new Blob(['﻿', html], { type: 'application/msword' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = filename + '.doc'; a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ─── doImagen ─────────────────────────────────────────────────
+function doImagen(rows, cols, titulo, filename) {
+  const FILA_H = 28, HEAD_H = 70, PAD = 20
+  const colW = cols.map(() => Math.max(80, Math.floor(680 / cols.length)))
+  const totalW = colW.reduce((a, b) => a + b, 0) + PAD * 2
+  const totalH = HEAD_H + 32 + FILA_H * rows.length + PAD * 2
+  const canvas = document.createElement('canvas')
+  canvas.width = totalW; canvas.height = totalH
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#f8fafc'; ctx.fillRect(0, 0, totalW, totalH)
+  ctx.fillStyle = '#1a237e'; ctx.fillRect(0, 0, totalW, 56)
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Arial'
+  ctx.fillText(titulo, PAD, 32)
+  ctx.font = '11px Arial'; ctx.fillStyle = '#bfdbfe'
+  ctx.fillText(`${new Date().toLocaleDateString('es-CL')}  ·  ${rows.length} registros`, PAD, 48)
+  let x = PAD, y = HEAD_H
+  ctx.fillStyle = '#1e40af'; ctx.fillRect(0, y, totalW, 32)
+  cols.forEach((c, i) => {
+    ctx.fillStyle = '#e0e7ff'; ctx.font = 'bold 10px Arial'
+    ctx.fillText(c.header.slice(0, 14), x + 5, y + 20); x += colW[i]
+  })
+  rows.forEach((r, ri) => {
+    y = HEAD_H + 32 + ri * FILA_H
+    ctx.fillStyle = ri % 2 === 0 ? '#ffffff' : '#f0f4ff'
+    ctx.fillRect(0, y, totalW, FILA_H)
+    x = PAD
+    cols.forEach((c, i) => {
+      ctx.fillStyle = '#111827'; ctx.font = '9px Arial'
+      ctx.fillText(String(r[c.key] ?? '').slice(0, 18), x + 5, y + 17)
+      x += colW[i]
+    })
+    ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 0.5
+    ctx.beginPath(); ctx.moveTo(0, y + FILA_H); ctx.lineTo(totalW, y + FILA_H); ctx.stroke()
+  })
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = filename + '.png'; a.click()
+    URL.revokeObjectURL(url)
+  })
+}
+
 // ─── ExportMenu ───────────────────────────────────────────────
-function ExportMenu({ todos, filtrados, seleccionados, colsDef, prepFn, nombreArchivo, titulo, usuarioNombre }) {
+function ExportMenu({ todos, filtrados, seleccionados, hayFiltros, colsDef, prepFn, nombreArchivo, titulo, usuarioNombre }) {
   const [abierto, setAbierto] = useState(false)
   const [exportando, setExportando] = useState(false)
   const ref = useRef(null)
@@ -412,32 +478,42 @@ function ExportMenu({ todos, filtrados, seleccionados, colsDef, prepFn, nombreAr
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  async function exportar(scope, fmt) {
+  function getDatos() {
+    if (seleccionados.length > 0) return seleccionados
+    if (hayFiltros) return filtrados
+    return todos
+  }
+
+  function getLabel() {
+    if (seleccionados.length > 0) return `Exportar ${seleccionados.length} seleccionado${seleccionados.length !== 1 ? 's' : ''}`
+    if (hayFiltros) return `Exportar ${filtrados.length} filtrado${filtrados.length !== 1 ? 's' : ''}`
+    return `Exportar ${todos.length} registro${todos.length !== 1 ? 's' : ''}`
+  }
+
+  async function handleExport(fmt) {
     setAbierto(false)
     setExportando(true)
-    const data = scope === 'todo' ? todos : scope === 'filtrado' ? filtrados : seleccionados
+    const data = getDatos()
     if (!data.length) { setExportando(false); return }
     const rows = data.map(r => prepFn(r))
     const fecha = new Date().toISOString().slice(0, 10)
     const fname = `${nombreArchivo}_${fecha}`
-    const desc = scope === 'filtrado' ? `Filtrados: ${data.length}` : scope === 'sel' ? `Seleccionados: ${data.length}` : ''
     try {
       if (fmt === 'csv') doCSV(rows, colsDef, fname)
       else if (fmt === 'excel') doExcel(rows, colsDef, titulo, fname)
-      else await doPDF(rows, colsDef, titulo, desc, fname, usuarioNombre)
+      else if (fmt === 'pdf') await doPDF(rows, colsDef, titulo, getLabel(), fname, usuarioNombre)
+      else if (fmt === 'word') doWord(rows, colsDef, titulo, fname)
+      else if (fmt === 'imagen') doImagen(rows, colsDef, titulo, fname)
     } catch (e) { console.error('Export error:', e) }
     setExportando(false)
   }
 
-  const scopes = [
-    { key: 'todo', label: 'Todo', n: todos.length },
-    { key: 'filtrado', label: 'Filtrados', n: filtrados.length },
-    { key: 'sel', label: 'Seleccionados', n: seleccionados.length, disabled: seleccionados.length === 0 },
-  ]
   const fmts = [
-    { key: 'excel', label: 'Excel (.xlsx)', ico: '📊' },
-    { key: 'pdf',   label: 'PDF',           ico: '📄' },
-    { key: 'csv',   label: 'CSV',           ico: '📋' },
+    { key: 'csv',    icon: '📄', label: 'CSV',    desc: 'Texto separado por comas' },
+    { key: 'excel',  icon: '📊', label: 'Excel',   desc: 'Hoja de cálculo .xlsx' },
+    { key: 'pdf',    icon: '📕', label: 'PDF',     desc: 'Tabla en PDF A4' },
+    { key: 'word',   icon: '📝', label: 'Word',    desc: 'Documento .doc' },
+    { key: 'imagen', icon: '🖼️', label: 'Imagen',  desc: 'Captura PNG' },
   ]
 
   return (
@@ -447,21 +523,34 @@ function ExportMenu({ todos, filtrados, seleccionados, colsDef, prepFn, nombreAr
         Exportar <ChevronDown size={11} />
       </button>
       {abierto && (
-        <div className="personal-export-dropdown">
-          {scopes.map(s => (
-            <div key={s.key}>
-              <p className="personal-export-group-label">
-                {s.label} <span className="personal-export-badge">{s.n}</span>
-              </p>
-              {fmts.map(f => (
-                <button key={f.key} className="personal-export-item" disabled={s.disabled}
-                  onClick={() => exportar(s.key, f.key)}>
-                  {f.ico} {f.label}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setAbierto(false)} />
+          <div style={{
+            position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 100,
+            background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '200px', overflow: 'hidden',
+          }}>
+            <p style={{ margin: 0, padding: '8px 14px 6px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+              {getLabel()}
+            </p>
+            {fmts.map(({ key, icon, label, desc }) => (
+              <button key={key} onClick={() => handleExport(key)} style={{
+                display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                textAlign: 'left', transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
@@ -775,10 +864,13 @@ function ContratacionesTab({ usuario, permisos }) {
       }
       if (f.horas_min && (r.horas == null || r.horas < parseInt(f.horas_min))) return false
       if (f.horas_max && (r.horas == null || r.horas > parseInt(f.horas_max))) return false
-      if (!f.busq) return true
-      const q = f.busq.toLowerCase()
+      if (!f.busq.trim()) return true
+      const q = f.busq.trim().toLowerCase()
+      // El RUT se guarda sin puntos ni guion (solo dígitos y K en mayúscula):
+      // normalizamos también la búsqueda para que "12.345.678-9" o "…k" coincidan.
+      const rutQ = q.replace(/[^0-9k]/g, '')
       return r.nombre_completo?.toLowerCase().includes(q)
-        || r.rut?.includes(q)
+        || (!!rutQ && r.rut?.toLowerCase().includes(rutQ))
         || r.correo?.toLowerCase().includes(q)
         || r.cargo?.toLowerCase().includes(q)
         || ESTAMENTO_MAP[r.estamento]?.toLowerCase().includes(q)
@@ -788,8 +880,10 @@ function ContratacionesTab({ usuario, permisos }) {
   }, [registros, filtros])
 
   const total   = filtrados.length
-  const inicio  = (pagina - 1) * POR_PAGINA
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
+  // Página efectiva: si al filtrar/eliminar la actual queda fuera de rango, se ajusta al máximo válido.
+  const paginaActual = Math.min(pagina, paginas)
+  const inicio  = (paginaActual - 1) * POR_PAGINA
   const vista   = filtrados.slice(inicio, inicio + POR_PAGINA)
 
   const todosIds = filtrados.map(r => r.id)
@@ -835,6 +929,7 @@ function ContratacionesTab({ usuario, permisos }) {
         </button>
         <ExportMenu
           todos={registros} filtrados={filtrados} seleccionados={selData}
+          hayFiltros={filtrosActivos > 0}
           colsDef={COLS_CONTRATOS} prepFn={prepContrato}
           nombreArchivo="contrataciones" titulo="Contrataciones" usuarioNombre={usuario?.nombre}
         />
@@ -1001,12 +1096,12 @@ function ContratacionesTab({ usuario, permisos }) {
                 <div className="personal-pagination">
                   <span className="personal-pagination-info">{inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}</span>
                   <div className="personal-pagination-btns">
-                    <button className="personal-pagination-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>‹ Anterior</button>
+                    <button className="personal-pagination-btn" disabled={paginaActual === 1} onClick={() => setPagina(paginaActual - 1)}>‹ Anterior</button>
                     {Array.from({ length: Math.min(5, paginas) }, (_, i) => {
                       const p = i + 1
-                      return <button key={p} className={`personal-pagination-btn ${pagina === p ? 'active' : ''}`} onClick={() => setPagina(p)}>{p}</button>
+                      return <button key={p} className={`personal-pagination-btn ${paginaActual === p ? 'active' : ''}`} onClick={() => setPagina(p)}>{p}</button>
                     })}
-                    <button className="personal-pagination-btn" disabled={pagina === paginas} onClick={() => setPagina(p => p + 1)}>Siguiente ›</button>
+                    <button className="personal-pagination-btn" disabled={paginaActual === paginas} onClick={() => setPagina(paginaActual + 1)}>Siguiente ›</button>
                   </div>
                 </div>
               )}
@@ -1375,6 +1470,7 @@ function ReemplazosTab({ usuario, permisos }) {
   const [errorCarga,      setErrorCarga]      = useState('')
   const [filtros,         setFiltros]         = useState(DEFAULT_FILTROS_REEMPLAZOS)
   const [mostrarFiltros,  setMostrarFiltros]  = useState(false)
+  const [pagina,          setPagina]          = useState(1)
   const [modal,           setModal]           = useState(null)
   const [eliminar,        setEliminar]        = useState(null)
   const [eliminando,      setEliminando]      = useState(false)
@@ -1465,8 +1561,8 @@ function ReemplazosTab({ usuario, permisos }) {
       if (f.fecha_inicio_hasta && r.fecha_inicio > f.fecha_inicio_hasta) return false
       if (f.fecha_termino_desde && (!r.fecha_termino || r.fecha_termino < f.fecha_termino_desde)) return false
       if (f.fecha_termino_hasta && (!r.fecha_termino || r.fecha_termino > f.fecha_termino_hasta)) return false
-      if (!f.busq) return true
-      const q = f.busq.toLowerCase()
+      if (!f.busq.trim()) return true
+      const q = f.busq.trim().toLowerCase()
       return r.funcionario_nombre?.toLowerCase().includes(q)
         || r.reemplazante_nombre?.toLowerCase().includes(q)
         || r.cargo?.toLowerCase().includes(q)
@@ -1482,13 +1578,19 @@ function ReemplazosTab({ usuario, permisos }) {
   const todosSelec = todosIds.length > 0 && todosIds.every(id => seleccionados.has(id))
   const algunoSelec = todosIds.some(id => seleccionados.has(id))
 
+  const total   = filtrados.length
+  const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
+  const paginaActual = Math.min(pagina, paginas)
+  const inicio  = (paginaActual - 1) * POR_PAGINA
+  const vista   = filtrados.slice(inicio, inicio + POR_PAGINA)
+
   function toggleUno(id) {
     setSeleccionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
   const selData = registros.filter(r => seleccionados.has(r.id))
   const filtrosActivos = Object.entries(filtros).filter(([k, v]) => k !== 'busq' && v !== '').length
-  function setF(k, v) { setFiltros(f => ({ ...f, [k]: v })) }
-  function resetFiltros() { setFiltros(DEFAULT_FILTROS_REEMPLAZOS) }
+  function setF(k, v) { setFiltros(f => ({ ...f, [k]: v })); setPagina(1) }
+  function resetFiltros() { setFiltros(DEFAULT_FILTROS_REEMPLAZOS); setPagina(1) }
 
   return (
     <div>
@@ -1522,6 +1624,7 @@ function ReemplazosTab({ usuario, permisos }) {
         </button>
         <ExportMenu
           todos={registros} filtrados={filtrados} seleccionados={selData}
+          hayFiltros={filtrosActivos > 0}
           colsDef={COLS_REEMPLAZOS} prepFn={prepReemplazo}
           nombreArchivo="reemplazos" titulo="Reemplazos" usuarioNombre={usuario?.nombre}
         />
@@ -1596,8 +1699,9 @@ function ReemplazosTab({ usuario, permisos }) {
           <span>{filtros.busq || filtrosActivos > 0 ? 'Ajusta los filtros' : 'Registra el primer reemplazo'}</span>
         </div>
       ) : (
+        <>
         <div className="personal-cards-grid">
-          {filtrados.map(r => {
+          {vista.map(r => {
             const dias  = diasHasta(r.fecha_termino)
             const color = avatarColor(r.reemplazante_nombre ?? r.funcionario_nombre)
             const sel   = seleccionados.has(r.id)
@@ -1657,6 +1761,20 @@ function ReemplazosTab({ usuario, permisos }) {
             )
           })}
         </div>
+        {total > POR_PAGINA && (
+          <div className="personal-pagination">
+            <span className="personal-pagination-info">{inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}</span>
+            <div className="personal-pagination-btns">
+              <button className="personal-pagination-btn" disabled={paginaActual === 1} onClick={() => setPagina(paginaActual - 1)}>‹ Anterior</button>
+              {Array.from({ length: Math.min(5, paginas) }, (_, i) => {
+                const p = i + 1
+                return <button key={p} className={`personal-pagination-btn ${paginaActual === p ? 'active' : ''}`} onClick={() => setPagina(p)}>{p}</button>
+              })}
+              <button className="personal-pagination-btn" disabled={paginaActual === paginas} onClick={() => setPagina(paginaActual + 1)}>Siguiente ›</button>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       <AnimatePresence>
@@ -2100,17 +2218,22 @@ function DocumentosTab({ usuario, permisos }) {
     setDescargandoMas(false)
   }
 
-  const filtrados = docs.filter(d => {
-    if (filtTipo && d.tipo_doc !== filtTipo) return false
-    if (!busq) return true
-    const q = busq.toLowerCase()
-    const c = contratos.find(x => x.id === d.contratacion_id)
-    const r = reemplazos.find(x => x.id === d.reemplazo_id)
-    return d.nombre?.toLowerCase().includes(q)
-      || TIPOS_DOC_MAP[d.tipo_doc]?.toLowerCase().includes(q)
-      || c?.nombre_completo?.toLowerCase().includes(q)
-      || r?.funcionario_nombre?.toLowerCase().includes(q)
-  })
+  const contratoPorId  = useMemo(() => new Map(contratos.map(c => [c.id, c])), [contratos])
+  const reemplazoPorId = useMemo(() => new Map(reemplazos.map(r => [r.id, r])), [reemplazos])
+
+  const filtrados = useMemo(() => {
+    const q = busq.trim().toLowerCase()
+    return docs.filter(d => {
+      if (filtTipo && d.tipo_doc !== filtTipo) return false
+      if (!q) return true
+      const c = contratoPorId.get(d.contratacion_id)
+      const r = reemplazoPorId.get(d.reemplazo_id)
+      return d.nombre?.toLowerCase().includes(q)
+        || TIPOS_DOC_MAP[d.tipo_doc]?.toLowerCase().includes(q)
+        || c?.nombre_completo?.toLowerCase().includes(q)
+        || r?.funcionario_nombre?.toLowerCase().includes(q)
+    })
+  }, [docs, busq, filtTipo, contratoPorId, reemplazoPorId])
 
   function toggleUno(id) {
     setSeleccionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2185,8 +2308,8 @@ function DocumentosTab({ usuario, permisos }) {
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
           <div className="personal-doc-list" style={{ padding: 16 }}>
             {filtrados.map(d => {
-              const contrato  = contratos.find(c => c.id === d.contratacion_id)
-              const reemplazo = reemplazos.find(r => r.id === d.reemplazo_id)
+              const contrato  = contratoPorId.get(d.contratacion_id)
+              const reemplazo = reemplazoPorId.get(d.reemplazo_id)
               const sel = seleccionados.has(d.id)
               return (
                 <div key={d.id} className={`personal-doc-item ${sel ? 'selected' : ''}`}>
@@ -2404,17 +2527,20 @@ function AuditoriaTab({ usuario }) {
   const ACCION_LABEL = { crear: 'Crear', editar: 'Editar', eliminar: 'Eliminar' }
   const TABLA_LABEL  = { contrataciones: 'Contrataciones', reemplazos: 'Reemplazos', personal_documentos: 'Documentos' }
 
-  const filtrados = logs.filter(l => {
-    if (filtTabla && l.tabla_afectada !== filtTabla) return false
-    if (filtAccion && l.accion !== filtAccion) return false
-    if (!busq) return true
-    const q = busq.toLowerCase()
-    return l.registro_nombre?.toLowerCase().includes(q) || l.usuario_nombre?.toLowerCase().includes(q)
-  })
+  const filtrados = useMemo(() => {
+    const q = busq.trim().toLowerCase()
+    return logs.filter(l => {
+      if (filtTabla && l.tabla_afectada !== filtTabla) return false
+      if (filtAccion && l.accion !== filtAccion) return false
+      if (!q) return true
+      return l.registro_nombre?.toLowerCase().includes(q) || l.usuario_nombre?.toLowerCase().includes(q)
+    })
+  }, [logs, busq, filtTabla, filtAccion])
 
   const total   = filtrados.length
-  const inicio  = (pagina - 1) * POR_PAGINA
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA))
+  const paginaActual = Math.min(pagina, paginas)
+  const inicio  = (paginaActual - 1) * POR_PAGINA
   const vista   = filtrados.slice(inicio, inicio + POR_PAGINA)
 
   function formatTs(ts) {
@@ -2521,8 +2647,8 @@ function AuditoriaTab({ usuario }) {
                 <div className="personal-pagination">
                   <span className="personal-pagination-info">{inicio + 1}–{Math.min(inicio + POR_PAGINA, total)} de {total}</span>
                   <div className="personal-pagination-btns">
-                    <button className="personal-pagination-btn" disabled={pagina === 1} onClick={() => setPagina(p => p - 1)}>‹ Anterior</button>
-                    <button className="personal-pagination-btn" disabled={pagina === paginas} onClick={() => setPagina(p => p + 1)}>Siguiente ›</button>
+                    <button className="personal-pagination-btn" disabled={paginaActual === 1} onClick={() => setPagina(paginaActual - 1)}>‹ Anterior</button>
+                    <button className="personal-pagination-btn" disabled={paginaActual === paginas} onClick={() => setPagina(paginaActual + 1)}>Siguiente ›</button>
                   </div>
                 </div>
               )}
