@@ -49,12 +49,20 @@ AS $$
       OR public.tiene_permiso('ver_documentos_personal');
 $$;
 
--- ── contrataciones ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "contrataciones_select" ON public.contrataciones;
-DROP POLICY IF EXISTS "contrataciones_insert" ON public.contrataciones;
-DROP POLICY IF EXISTS "contrataciones_update" ON public.contrataciones;
-DROP POLICY IF EXISTS "contrataciones_delete" ON public.contrataciones;
+-- ── Borrado dinámico de políticas previas (evita OR con políticas renombradas) ─
+DO $$
+DECLARE r record; t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['contrataciones','reemplazos','personal_documentos','personal_audit_logs']
+  LOOP
+    FOR r IN SELECT policyname FROM pg_policies WHERE schemaname='public' AND tablename=t
+    LOOP
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', r.policyname, t);
+    END LOOP;
+  END LOOP;
+END $$;
 
+-- ── contrataciones ──────────────────────────────────────────────────────────
 CREATE POLICY "contrataciones_select" ON public.contrataciones
   FOR SELECT TO authenticated USING (public.puede_ver_personal());
 CREATE POLICY "contrataciones_insert" ON public.contrataciones

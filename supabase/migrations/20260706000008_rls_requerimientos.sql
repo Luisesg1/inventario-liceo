@@ -43,10 +43,15 @@ CREATE POLICY "requerimientos_delete" ON public.requerimientos
   USING (public.tiene_permiso('eliminar_permanentemente') OR public.tiene_permiso('eliminar_requerimiento'));
 
 -- ── Storage 'requerimientos' — solo ESCRITURA (bucket público en lectura) ───
+-- IMPORTANTE: las políticas ORIGINALES de este bucket se llaman `req_imgs_*`
+-- (supabase_requerimientos_imagenes.sql). Hay que BORRARLAS por su nombre real,
+-- o su WITH CHECK permisivo (solo bucket_id) anularía por OR la restricción.
+DROP POLICY IF EXISTS "req_imgs_insert" ON storage.objects;
+DROP POLICY IF EXISTS "req_imgs_update" ON storage.objects;
+DROP POLICY IF EXISTS "req_imgs_delete" ON storage.objects;
 DROP POLICY IF EXISTS "requerimientos_storage_insert" ON storage.objects;
 DROP POLICY IF EXISTS "requerimientos_storage_delete" ON storage.objects;
--- (nombres reales pueden variar; si existían otras políticas de escritura para
---  este bucket, elimínalas manualmente para evitar OR permisivo.)
+-- `req_imgs_select` se conserva: el bucket es público en lectura (getPublicUrl).
 
 CREATE POLICY "requerimientos_storage_insert" ON storage.objects
   FOR INSERT TO authenticated
