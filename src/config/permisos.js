@@ -130,6 +130,7 @@ export const MODULOS = [
       { key: 'eliminar_reglamentos',             accion: 'eliminar',    label: 'Eliminar reglamentos',         labelCorto: 'Elim. regl.', desc: 'Permite enviar documentos a la papelera.' },
       { key: 'descargar_reglamentos',            accion: 'exportar',    label: 'Descargar reglamentos',        labelCorto: 'Desc. regl.', desc: 'Permite descargar archivos de documentos.' },
       { key: 'gestionar_versiones_reglamentos',  accion: 'administrar', label: 'Gestionar versiones',          labelCorto: 'Versiones',   desc: 'Permite subir nuevas versiones de documentos.' },
+      { key: 'administrar_reglamentos',          accion: 'administrar', label: 'Administrar reglamentos',       labelCorto: 'Admin. regl.',desc: 'Gestión completa del módulo: habilita las acciones avanzadas (gestión de versiones) sin depender de permisos individuales. Pensado para responsables del módulo.' },
       { key: 'ver_auditoria_reglamentos',        accion: 'auditoria',   label: 'Ver auditoría de reglamentos', labelCorto: 'Aud. Regl.',  desc: 'Permite ver el historial de cambios en el módulo de reglamentos.' },
     ],
   },

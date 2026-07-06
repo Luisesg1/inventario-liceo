@@ -80,13 +80,16 @@ function btnPag(dis) {
 
 // ── Componente principal ──────────────────────────────────────────────────
 export default function Reglamentos({ usuario, permisos = {} }) {
-  const esAdmin       = usuario?.rol === 'admin'
-  const puedVer       = esAdmin || !!permisos.ver
-  const puedCrear     = esAdmin || !!permisos.crear
-  const puedEditar    = esAdmin || !!permisos.editar
-  const puedEliminar  = esAdmin || !!permisos.eliminar
-  const puedDescargar = esAdmin || !!permisos.descargar
-  const puedVersiones = esAdmin || !!permisos.versiones
+  const esAdmin        = usuario?.rol === 'admin'
+  const puedAdministrar = esAdmin || !!permisos.administrar
+  const puedVer        = esAdmin || !!permisos.ver
+  const puedCrear      = esAdmin || !!permisos.crear
+  const puedEditar     = esAdmin || !!permisos.editar
+  const puedEliminar   = esAdmin || !!permisos.eliminar
+  const puedDescargar  = esAdmin || !!permisos.descargar
+  // La gestión de versiones es una acción avanzada: la habilita su permiso
+  // específico o el permiso paraguas de administración del módulo.
+  const puedVersiones  = esAdmin || !!permisos.versiones || puedAdministrar
 
   // ── Estado ─────────────────────────────────────────────────────────────
   const [docs,     setDocs]     = useState([])
@@ -207,6 +210,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
   // ── Abrir formulario crear ───────────────────────────────────────────────
   function abrirCrear() {
+    if (!puedCrear) return
     setDocEditar(null)
     setFNombre(''); setFDescripcion(''); setFCategoria('Reglamentos')
     setFEstado('Vigente'); setFFechaPubl(''); setFArchivo(null)
@@ -215,6 +219,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   }
 
   function abrirEditar(doc) {
+    if (!puedEditar) return
     setDocEditar(doc)
     setFNombre(doc.nombre ?? ''); setFDescripcion(doc.descripcion ?? '')
     setFCategoria(doc.categoria ?? 'Reglamentos'); setFEstado(doc.estado ?? 'Vigente')
@@ -226,6 +231,8 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
   // ── Guardar (crear/editar) ───────────────────────────────────────────────
   async function handleGuardar() {
+    // Guarda de permisos en la lógica (defensa en profundidad, no solo en la UI)
+    if (docEditar ? !puedEditar : !puedCrear) return mostrarAviso('error', 'No tienes permiso para realizar esta acción')
     if (!fNombre.trim()) return mostrarAviso('error', 'El nombre es obligatorio')
     if (!docEditar && !fArchivo) return mostrarAviso('error', 'Selecciona un archivo para el documento')
 
@@ -295,6 +302,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
   // ── Eliminar (soft delete) ───────────────────────────────────────────────
   async function handleEliminar() {
+    if (!puedEliminar) return mostrarAviso('error', 'No tienes permiso para eliminar documentos')
     if (!docEliminar) return
     const { error } = await supabase.from('reglamentos').update({
       is_deleted: true, deleted_at: new Date().toISOString(),
@@ -322,6 +330,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
   // ── Descargar ────────────────────────────────────────────────────────────
   async function handleDescargar(doc) {
+    if (!puedDescargar) return mostrarAviso('error', 'No tienes permiso para descargar documentos')
     if (!doc.url) return mostrarAviso('error', 'No hay archivo disponible')
     await supabase.from('reglamentos').update({ descargas: (doc.descargas ?? 0) + 1 }).eq('id', doc.id)
     setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, descargas: (d.descargas ?? 0) + 1 } : d))
@@ -333,6 +342,7 @@ export default function Reglamentos({ usuario, permisos = {} }) {
 
   // ── Subir nueva versión ──────────────────────────────────────────────────
   async function handleSubirVersion() {
+    if (!puedVersiones) return mostrarAviso('error', 'No tienes permiso para gestionar versiones')
     if (!vArchivo || !modalVersion) return
     setGuardando(true)
     try {
@@ -370,6 +380,23 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   const cardBase = {
     background: '#fff', borderRadius: 16, padding: '20px 22px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.07)', border: '1px solid #f1f5f9',
+  }
+
+  // ── Guarda de acceso al módulo (defensa en profundidad) ────────────────────
+  // App.jsx ya redirige a quien no tiene `ver_reglamentos`; esta guarda evita
+  // además que el módulo se renderice si se montara por cualquier otra vía.
+  if (!puedVer) {
+    return (
+      <div style={{ padding: '60px 28px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+          <AlertTriangle size={28} color="#dc2626" />
+        </div>
+        <h1 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, color: '#0f172a' }}>Acceso restringido</h1>
+        <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>
+          No tienes permiso para consultar el módulo de Reglamentos. Contacta a un administrador si crees que es un error.
+        </p>
+      </div>
+    )
   }
 
   // ── Render ────────────────────────────────────────────────────────────────

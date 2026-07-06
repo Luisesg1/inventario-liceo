@@ -247,13 +247,17 @@ export default function App() {
   }
 
   // ── Permisos Reglamentos ─────────────────────────────────────────────
+  const puedeAdministrarReglamentos = esAdmin || !!p.administrar_reglamentos
   const permisosReglamentos = {
     ver:       esAdmin || !!p.ver_reglamentos,
     crear:     esAdmin || !!p.crear_reglamentos,
     editar:    esAdmin || !!p.editar_reglamentos,
     eliminar:  esAdmin || !!p.eliminar_reglamentos,
     descargar: esAdmin || !!p.descargar_reglamentos,
-    versiones: esAdmin || !!p.gestionar_versiones_reglamentos,
+    // La gestión de versiones es una acción avanzada: la habilita su permiso
+    // específico o el permiso paraguas de administración del módulo.
+    versiones: esAdmin || !!p.gestionar_versiones_reglamentos || puedeAdministrarReglamentos,
+    administrar:  puedeAdministrarReglamentos,
     verAuditoria: esAdmin || !!p.ver_auditoria_reglamentos,
   }
   const puedeVerReglamentos = esAdmin || !!p.ver_reglamentos
