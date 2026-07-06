@@ -381,18 +381,19 @@ export default function Papelera({ usuario, permisos = {} }) {
       }
     }
 
-    // Ausencias: camino garantizado vía RPC SECURITY DEFINER (evita el bug de
-    // RLS sin política de DELETE y deja traza en la auditoría).
+    // Ausencias: camino garantizado vía RPC SECURITY DEFINER. La RPC valida el
+    // permiso en el servidor (auth.uid()) y evita el bug de RLS sin política de
+    // DELETE. La identidad no se envía desde el cliente: la deduce la propia RPC.
     if (item.tabla === 'ausencias') {
-      const { data, error } = await supabase.rpc('hard_delete_ausencia', {
-        p_id: item.id,
-        p_usuario_id: usuario.id,
-        p_usuario_nombre: usuario.nombre,
-        p_usuario_rol: usuario.rol,
-      })
-      if (error) return error
+      const { data, error } = await supabase.rpc('hard_delete_ausencia', { p_id: item.id })
+      if (error) {
+        if (error.message?.includes('access_denied')) {
+          return { message: 'No tienes permiso para eliminar ausencias de forma permanente.' }
+        }
+        return error
+      }
       if (!data || data < 1) {
-        return { message: 'El registro no se pudo eliminar en Supabase (ya no existe o falta permiso).' }
+        return { message: 'El registro no se pudo eliminar en Supabase (ya no existe).' }
       }
       return null
     }
