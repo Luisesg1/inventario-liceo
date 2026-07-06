@@ -5,6 +5,14 @@ import { supabase } from '../supabase'
 import './Usuarios.css'
 import ModalImportarUsuarios from './ModalImportarUsuarios'
 import HistorialUsuario from './HistorialUsuario'
+// Catálogo centralizado de permisos (fuente única de verdad)
+import {
+  ACCIONES,
+  GRUPOS_USUARIOS as GRUPOS_PERMISOS,
+  STEPS_MODULOS,
+  ULTIMO_PASO,
+  PERMISOS_VACIO,
+} from '../config/permisos'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
 const REQUISITOS_PASS = [
@@ -23,141 +31,8 @@ const STRENGTH_INFO = [null,
 ]
 
 // ── Constantes ─────────────────────────────────────────────────────────────
-const ACCIONES = [
-  // Inventario
-  { key: 'ver_inventario',       label: 'Ver inventario',        labelCorto: 'Ver inv.',   desc: 'Permite visualizar todos los bienes registrados en el sistema.' },
-  { key: 'agregar_bien',         label: 'Agregar bien',          labelCorto: 'Agregar',    desc: 'Permite registrar nuevos bienes en el inventario.' },
-  { key: 'editar_bien',          label: 'Editar bien',           labelCorto: 'Editar',     desc: 'Permite modificar la información de bienes ya registrados.' },
-  { key: 'eliminar_bien',        label: 'Eliminar bien',         labelCorto: 'Eliminar',   desc: 'Permite eliminar bienes individuales del inventario.' },
-  { key: 'eliminar_lote',        label: 'Eliminar en lote',      labelCorto: 'Lote',       desc: 'Permite eliminar múltiples bienes al mismo tiempo.' },
-  { key: 'gestionar_categorias', label: 'Gestionar categorías de inventario',  labelCorto: 'Categ.',     desc: 'Permite crear, editar y eliminar categorías de bienes.' },
-  { key: 'importar_csv',         label: 'Importar CSV',          labelCorto: 'CSV',        desc: 'Permite cargar bienes en masa desde un archivo CSV.' },
-  { key: 'exportar',             label: 'Exportar inventario',   labelCorto: 'Exportar',   desc: 'Permite exportar el inventario completo o filtrado a Excel o PDF.' },
-  { key: 'registrar_prestamo',   label: 'Registrar préstamo',    labelCorto: 'Préstamo',   desc: 'Permite registrar el préstamo de un bien a un funcionario o sala.' },
-  { key: 'registrar_incidencia', label: 'Registrar incidencia',  labelCorto: 'Incidencia', desc: 'Permite reportar fallas, daños o incidencias asociadas a bienes.' },
-  { key: 'ver_auditoria_inventario', label: 'Ver auditoría de inventario', labelCorto: 'Aud. Inv.', desc: 'Permite ver el historial de cambios en el módulo de inventario.' },
-  // Tickets
-  { key: 'ver_tickets',         label: 'Ver tickets propios',              labelCorto: 'Ver tick.',    desc: 'Permite ver los tickets creados por el propio usuario.' },
-  { key: 'crear_ticket',        label: 'Crear nuevo ticket',               labelCorto: 'Crear tick.',  desc: 'Permite abrir solicitudes de soporte técnico.' },
-  { key: 'editar_ticket',       label: 'Editar ticket propio',             labelCorto: 'Editar tick.', desc: 'Permite editar un ticket propio mientras está abierto.' },
-  { key: 'gestionar_tickets',   label: 'Gestionar todos los tickets',      labelCorto: 'Gest. tick.',  desc: 'Permite ver, responder y cambiar el estado de cualquier ticket.' },
-  { key: 'eliminar_ticket',     label: 'Eliminar tickets',                 labelCorto: 'Elim. tick.',  desc: 'Permite eliminar tickets del sistema de forma permanente.' },
-  { key: 'ver_alertas_tickets', label: 'Ver alertas de tickets',           labelCorto: 'Alert. tick.', desc: 'Muestra un banner de alertas con tickets abiertos en el Dashboard.' },
-  { key: 'exportar_tickets',    label: 'Exportar tickets',                 labelCorto: 'Exp. tick.',   desc: 'Permite exportar el listado de tickets a CSV, Excel o PDF.' },
-  // Requerimientos
-  { key: 'ver_requerimientos',           label: 'Ver requerimientos',          labelCorto: 'Ver req.',    desc: 'Permite consultar las solicitudes de compra o requerimientos registrados.' },
-  { key: 'crear_requerimiento',          label: 'Crear requerimiento',         labelCorto: 'Crear req.',  desc: 'Permite ingresar nuevas solicitudes de compra o requerimientos.' },
-  { key: 'editar_requerimiento',         label: 'Editar requerimiento',        labelCorto: 'Editar req.', desc: 'Permite modificar requerimientos ya registrados.' },
-  { key: 'eliminar_requerimiento',       label: 'Eliminar requerimiento',      labelCorto: 'Elim. req.', desc: 'Permite eliminar requerimientos del sistema.' },
-  { key: 'importar_requerimientos',      label: 'Importar requerimientos',     labelCorto: 'Imp. req.',   desc: 'Permite cargar requerimientos en masa desde un archivo.' },
-  { key: 'exportar_requerimientos',      label: 'Exportar requerimientos',     labelCorto: 'Exp. req.',   desc: 'Permite exportar el listado de requerimientos a Excel o PDF.' },
-  { key: 'ver_auditoria_requerimientos', label: 'Ver auditoría de compras',    labelCorto: 'Aud. Req.',   desc: 'Permite ver el historial de cambios en el módulo de requerimientos.' },
-  // Ausencia
-  { key: 'ver_propias_ausencias', label: 'Ver propias ausencias',              labelCorto: 'Ver prop.',   desc: 'Permite al usuario ver su propio registro de ausencias (Mis ausencias).' },
-  { key: 'ver_ausencias',         label: 'Ver ausencias del personal',         labelCorto: 'Ver aus.',    desc: 'Permite consultar el registro de ausencias de todo el personal.' },
-  { key: 'crear_ausencias',       label: 'Registrar ausencias',                labelCorto: 'Crear aus.',  desc: 'Permite ingresar nuevas ausencias para cualquier funcionario.' },
-  { key: 'editar_ausencias',      label: 'Editar ausencias',                   labelCorto: 'Editar aus.', desc: 'Permite modificar ausencias ya registradas.' },
-  { key: 'eliminar_ausencias',    label: 'Eliminar ausencias',                 labelCorto: 'Elim. aus.', desc: 'Permite eliminar registros de ausencias del sistema.' },
-  { key: 'aprobar_ausencias',     label: 'Aprobar / rechazar ausencias',       labelCorto: 'Aprob. aus.', desc: 'Permite cambiar el estado de una ausencia a Aprobada o Rechazada.' },
-  { key: 'exportar_ausencias',    label: 'Exportar ausencias',                 labelCorto: 'Exp. aus.',   desc: 'Permite exportar el registro de ausencias a PDF o Excel.' },
-  { key: 'ver_auditoria_permisos',label: 'Ver auditoría de ausencias',         labelCorto: 'Aud. Aus.',   desc: 'Permite ver el historial de cambios en el módulo de ausencias.' },
-  { key: 'invitar_usuario',            label: 'Invitar usuarios',               labelCorto: 'Invitar',        desc: 'Permite enviar invitaciones para que nuevos usuarios accedan al sistema.' },
-  { key: 'editar_usuario',            label: 'Editar usuarios',                labelCorto: 'Editar usr.',    desc: 'Permite modificar datos, rol y permisos de usuarios existentes.' },
-  { key: 'eliminar_usuario',          label: 'Eliminar usuarios',              labelCorto: 'Elim. usr.',     desc: 'Permite dar de baja cuentas de usuario del sistema.' },
-  { key: 'notificar_ausencia_correo', label: 'Notificar ausencia por correo',  labelCorto: 'Notif. correo',  desc: 'Permite enviar notificaciones automáticas por correo al registrar una ausencia.' },
-  // Compensatorios
-  { key: 'ver_compensatorios',       label: 'Ver días compensatorios',         labelCorto: 'Ver comp.',   desc: 'Permite consultar el registro de días compensatorios del personal.' },
-  { key: 'crear_compensatorios',     label: 'Registrar compensatorios',        labelCorto: 'Crear comp.', desc: 'Permite ingresar nuevos días compensatorios para cualquier funcionario.' },
-  { key: 'editar_compensatorios',    label: 'Editar compensatorios',           labelCorto: 'Editar comp.',desc: 'Permite modificar registros de días compensatorios ya existentes.' },
-  { key: 'eliminar_compensatorios',  label: 'Eliminar compensatorios',         labelCorto: 'Elim. comp.',desc: 'Permite eliminar registros de días compensatorios del sistema.' },
-  { key: 'exportar_compensatorios',  label: 'Exportar compensatorios',          labelCorto: 'Exp. comp.', desc: 'Permite exportar el registro de días compensatorios a PDF, Excel o CSV.' },
-  { key: 'ver_auditoria_compensatorios', label: 'Ver auditoría de compensatorios', labelCorto: 'Aud. Comp.', desc: 'Permite acceder al historial y auditoría de movimientos de días compensatorios.' },
-  // Configurar campos
-  { key: 'ver_campos',            label: 'Ver campos inventario',             labelCorto: 'Ver campos',    desc: 'Permite acceder a la sección de campos inventario desde el menú lateral y ver la configuración de cada categoría.' },
-  { key: 'agregar_campo',         label: 'Agregar campos',                    labelCorto: 'Agregar campo', desc: 'Permite agregar nuevos campos personalizados a cualquier categoría de inventario.' },
-  { key: 'editar_campo',          label: 'Editar campos',                     labelCorto: 'Editar campo',  desc: 'Permite renombrar campos del sistema y modificar campos personalizados existentes.' },
-  { key: 'ocultar_campo',         label: 'Ocultar / mostrar campos',          labelCorto: 'Ocultar campo', desc: 'Permite activar o desactivar la visibilidad de campos del sistema en cada categoría.' },
-  { key: 'eliminar_campo',        label: 'Eliminar campos',                   labelCorto: 'Eliminar campo',desc: 'Permite eliminar campos personalizados de una categoría de inventario.' },
-  { key: 'reordenar_campos',      label: 'Reordenar campos',                  labelCorto: 'Reordenar',     desc: 'Permite cambiar el orden en que se muestran los campos arrastrando y soltando.' },
-  { key: 'gestionar_campos_base', label: 'Gestionar campos base protegidos',  labelCorto: 'Campos base',   desc: 'Permite editar y reorganizar campos protegidos del sistema (marcados como 🔒 base).' },
-  // Configuración del sistema
-  { key: 'gestionar_ajustes', label: 'Personalizar sistema',                labelCorto: 'Ajustes',   desc: 'Permite acceder a la configuración visual del sistema (logo, colores, nombre).' },
-  { key: 'gestionar_campos',  label: 'Gestionar campos de inventario (legado)', labelCorto: 'Campos',    desc: 'Permiso heredado de gestión completa de campos. Se conserva por compatibilidad.' },
-  // Ajustes
-  { key: 'ver_ajustes',             label: 'Ver ajustes',                 labelCorto: 'Ver aj.',     desc: 'Permite acceder y visualizar la sección de Ajustes del sistema.' },
-  { key: 'gestionar_usuarios',      label: 'Gestionar usuarios',          labelCorto: 'Gest. usr.',  desc: 'Permite ver y administrar la lista completa de usuarios del sistema.' },
-  { key: 'editar_roles_permisos',   label: 'Editar roles/permisos',       labelCorto: 'Editar roles',desc: 'Permite modificar los roles y permisos asignados a los usuarios.' },
-  { key: 'guardar_cambios_ajustes', label: 'Guardar cambios de ajustes',  labelCorto: 'Guardar aj.', desc: 'Permite guardar cambios realizados en la configuración general del sistema.' },
-  { key: 'gestionar_roles',         label: 'Gestionar roles del sistema', labelCorto: 'Roles',       desc: 'Permite administrar los permisos predeterminados de cada rol desde el Mantenedor de Roles.' },
-  { key: 'ver_historial_usuarios',  label: 'Ver historial de usuarios',  labelCorto: 'Historial',   desc: 'Permite ver el historial completo de actividad, tickets, ausencias e inventario de cada usuario.' },
-  // Reglamentos
-  { key: 'ver_reglamentos',                  label: 'Ver reglamentos',              labelCorto: 'Ver regl.',   desc: 'Permite consultar el listado de documentos institucionales.' },
-  { key: 'crear_reglamentos',               label: 'Crear reglamentos',            labelCorto: 'Crear regl.', desc: 'Permite subir nuevos documentos institucionales.' },
-  { key: 'editar_reglamentos',              label: 'Editar reglamentos',           labelCorto: 'Editar regl.',desc: 'Permite modificar datos de documentos existentes.' },
-  { key: 'eliminar_reglamentos',            label: 'Eliminar reglamentos',         labelCorto: 'Elim. regl.', desc: 'Permite enviar documentos a la papelera.' },
-  { key: 'descargar_reglamentos',           label: 'Descargar reglamentos',        labelCorto: 'Desc. regl.', desc: 'Permite descargar archivos de documentos.' },
-  { key: 'gestionar_versiones_reglamentos', label: 'Gestionar versiones',          labelCorto: 'Versiones',   desc: 'Permite subir nuevas versiones de documentos.' },
-  { key: 'ver_auditoria_reglamentos',       label: 'Ver auditoría de reglamentos', labelCorto: 'Aud. Regl.',  desc: 'Permite ver el historial de cambios en el módulo de reglamentos.' },
-  // Papelera
-  { key: 'ver_papelera',             label: 'Ver Papelera',                    labelCorto: 'Ver pap.',    desc: 'Permite acceder a la Papelera y ver los registros eliminados de todos los módulos.' },
-  { key: 'restaurar_registros',      label: 'Restaurar registros',             labelCorto: 'Restaurar',   desc: 'Permite restaurar registros desde la Papelera al módulo de origen.' },
-  { key: 'eliminar_permanentemente', label: 'Eliminar permanentemente',        labelCorto: 'Elim. perm.', desc: 'Permite eliminar registros de forma permanente e irrecuperable desde la Papelera.' },
-  { key: 'ver_auditoria_papelera',   label: 'Ver auditoría de papelera',       labelCorto: 'Aud. Pap.',   desc: 'Permite ver el historial de acciones realizadas en la Papelera.' },
-]
-
-// Grupos de permisos por módulo (para el wizard de asignación)
-const GRUPOS_PERMISOS = [
-  {
-    key: 'inventario', label: 'Inventario', paso: 3, soloPersonalizado: false,
-    descripcion: 'Acciones sobre bienes, categorías, préstamos e incidencias.',
-    permisos: ['ver_inventario', 'agregar_bien', 'editar_bien', 'eliminar_bien',
-               'eliminar_lote', 'importar_csv', 'exportar',
-               'registrar_prestamo', 'registrar_incidencia', 'gestionar_categorias',
-               'ver_auditoria_inventario'],
-  },
-  {
-    key: 'configurar_campos', label: 'Campos inventario', paso: 4, soloPersonalizado: false,
-    descripcion: 'Permite administrar los campos de las categorías de inventario: agregar, editar, ocultar, eliminar y reordenar campos.',
-    permisos: ['ver_campos', 'agregar_campo', 'editar_campo', 'ocultar_campo', 'eliminar_campo', 'reordenar_campos', 'gestionar_campos_base'],
-  },
-  {
-    key: 'tickets', label: 'Tickets', paso: 5, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de tickets de soporte.',
-    permisos: ['ver_tickets', 'crear_ticket', 'editar_ticket', 'gestionar_tickets', 'eliminar_ticket', 'ver_alertas_tickets', 'exportar_tickets'],
-  },
-  {
-    key: 'requerimientos', label: 'Requerimientos', paso: 6, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de requerimientos y compras.',
-    permisos: ['ver_requerimientos', 'crear_requerimiento', 'editar_requerimiento',
-               'eliminar_requerimiento', 'importar_requerimientos', 'exportar_requerimientos',
-               'ver_auditoria_requerimientos'],
-  },
-  {
-    key: 'ausencia', label: 'Ausencia', paso: 7, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de ausencias del personal. Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_propias_ausencias', 'ver_ausencias', 'crear_ausencias', 'editar_ausencias', 'eliminar_ausencias', 'aprobar_ausencias', 'exportar_ausencias', 'ver_auditoria_permisos'],
-  },
-  {
-    key: 'compensatorios', label: 'Compensatorios', paso: 8, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de días compensatorios (desfiles, trabajo de verano, reemplazos, etc.). Cada acción puede activarse de forma independiente.',
-    permisos: ['ver_compensatorios', 'crear_compensatorios', 'editar_compensatorios', 'eliminar_compensatorios', 'exportar_compensatorios', 'ver_auditoria_compensatorios'],
-  },
-  {
-    key: 'ajustes', label: 'Ajustes', paso: 9, soloPersonalizado: false,
-    descripcion: 'Control de acceso a la sección de Ajustes: personalización visual, gestión de usuarios y configuración de roles.',
-    permisos: ['ver_ajustes', 'gestionar_ajustes', 'gestionar_usuarios', 'invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'notificar_ausencia_correo', 'editar_roles_permisos', 'guardar_cambios_ajustes', 'gestionar_roles', 'ver_historial_usuarios'],
-  },
-  {
-    key: 'reglamentos', label: 'Reglamentos', paso: 10, soloPersonalizado: false,
-    descripcion: 'Acceso al módulo de documentos institucionales: reglamentos, protocolos, manuales y circulares.',
-    permisos: ['ver_reglamentos','crear_reglamentos','editar_reglamentos','eliminar_reglamentos','descargar_reglamentos','gestionar_versiones_reglamentos','ver_auditoria_reglamentos'],
-  },
-  {
-    key: 'papelera', label: 'Papelera', paso: 11, soloPersonalizado: false,
-    descripcion: 'Control de acceso a la Papelera de reciclaje. Los registros eliminados se conservan 30 días antes de borrarse automáticamente.',
-    permisos: ['ver_papelera', 'restaurar_registros', 'eliminar_permanentemente', 'ver_auditoria_papelera'],
-  },
-]
+// El catálogo ACCIONES y los GRUPOS_PERMISOS ahora provienen de src/config/permisos.js
+// (importados arriba). Aquí solo quedan las listas de compatibilidad puntuales.
 
 // Backward-compat — algunos lugares aún usan estas listas
 const ACCIONES_POR_CATEGORIA = ['ver_inventario', 'agregar_bien', 'editar_bien',
@@ -167,7 +42,7 @@ const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
   'ver_tickets', 'gestionar_tickets', 'ver_alertas_tickets',
   'ver_auditoria_requerimientos', 'ver_auditoria_permisos', 'ver_auditoria_compensatorios']
 
-const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map((a) => [a.key, false]))
+// PERMISOS_VACIO se importa desde el catálogo central (deriva de ACCIONES).
 
 const PERMISOS_POR_ROL = {
   admin: {
@@ -405,8 +280,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   function pasoSiguiente(p) {
     return p + 1
   }
-  // Último paso del wizard
-  const ULTIMO_PASO = 10
+  // Último paso del wizard (derivado del catálogo central: 2 pasos fijos + un paso por módulo)
 
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
@@ -474,17 +348,11 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   }
 
   const pasoEfectivo = paso
+  // Pasos fijos (1 y 2) + un paso por cada módulo del catálogo central.
   const stepsBase = [
     { n: 1, label: 'Nivel de acceso' },
     { n: 2, label: 'Módulos' },
-    { n: 3, label: 'Inventario' },
-    { n: 4, label: 'Campos inv.' },
-    { n: 5, label: 'Tickets' },
-    { n: 6, label: 'Requerimientos' },
-    { n: 7, label: 'Ausencia' },
-    { n: 8, label: 'Compensatorios' },
-    { n: 9, label: 'Ajustes' },
-    { n: 10, label: 'Papelera' },
+    ...STEPS_MODULOS,
   ]
 
   const btn  = { padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
