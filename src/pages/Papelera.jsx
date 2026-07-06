@@ -349,25 +349,13 @@ export default function Papelera({ usuario, permisos = {} }) {
     setConflictoUnico(null)
   }
 
-  // ── Eliminar permanentemente (individual, sin cambios) ───────────────────
-  async function eliminarPermanente(item) {
-    setProcesando(true)
-
-    if (item.tabla === 'requerimientos') {
-      await borrarImagenesRequerimiento(item.id)
-    }
-
-    supabase.rpc('log_accion_papelera', {
-      p_registro_id: item.id, p_nombre: item.nombre, p_accion: 'eliminado_permanente_manual',
-      p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
-      p_usuario_rol: usuario.rol, p_modulo: item.modulo,
-    }).then(null, () => {})
-    logAuditPapelera({
-      accion: 'eliminado_permanente_manual', nombre: item.nombre, id: item.id, usuario,
-      detalles: { modulo: item.modulo },
-    })
-
-    let error
+  // ── Borrado físico de un registro (centralizado y verificado) ─────────────
+  // Devuelve un objeto de error (o null si se eliminó correctamente). Verifica
+  // que realmente se haya borrado una fila: bajo RLS, un DELETE sin política
+  // aplica 0 filas SIN devolver error, lo que antes provocaba "eliminaciones
+  // fantasma" (desaparecía de la UI pero seguía en Supabase).
+  async function borrarRegistroFisico(item) {
+    // Usuarios: se eliminan vía Edge Function (borra también en Auth).
     if (item.tabla === 'usuarios') {
       try {
         const { data: sessionData } = await supabase.auth.getSession()
@@ -380,21 +368,54 @@ export default function Papelera({ usuario, permisos = {} }) {
             body: JSON.stringify({ userId: item.id }),
           }
         )
-        if (!res.ok) {
-          // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
-          if (res.status === 400) {
-            ;({ error } = await supabase.from('usuarios').delete().eq('id', item.id))
-          } else {
-            const json = await res.json().catch(() => ({}))
-            error = { message: json.error ?? 'Error al eliminar usuario' }
-          }
+        if (res.ok) return null
+        // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
+        if (res.status === 400) {
+          const { error } = await supabase.from('usuarios').delete().eq('id', item.id)
+          return error ?? null
         }
+        const json = await res.json().catch(() => ({}))
+        return { message: json.error ?? 'Error al eliminar usuario' }
       } catch {
-        error = { message: 'No se pudo conectar con el servidor.' }
+        return { message: 'No se pudo conectar con el servidor.' }
       }
-    } else {
-      ;({ error } = await supabase.from(item.tabla).delete().eq('id', item.id))
     }
+
+    // Ausencias: camino garantizado vía RPC SECURITY DEFINER (evita el bug de
+    // RLS sin política de DELETE y deja traza en la auditoría).
+    if (item.tabla === 'ausencias') {
+      const { data, error } = await supabase.rpc('hard_delete_ausencia', {
+        p_id: item.id,
+        p_usuario_id: usuario.id,
+        p_usuario_nombre: usuario.nombre,
+        p_usuario_rol: usuario.rol,
+      })
+      if (error) return error
+      if (!data || data < 1) {
+        return { message: 'El registro no se pudo eliminar en Supabase (ya no existe o falta permiso).' }
+      }
+      return null
+    }
+
+    // Resto de módulos: DELETE directo, verificando que borró la fila.
+    const { data, error } = await supabase
+      .from(item.tabla).delete().eq('id', item.id).select('id')
+    if (error) return error
+    if (!data || data.length === 0) {
+      return { message: 'El registro no se pudo eliminar en Supabase (verifica las políticas RLS).' }
+    }
+    return null
+  }
+
+  // ── Eliminar permanentemente (individual) ────────────────────────────────
+  async function eliminarPermanente(item) {
+    setProcesando(true)
+
+    if (item.tabla === 'requerimientos') {
+      await borrarImagenesRequerimiento(item.id)
+    }
+
+    const error = await borrarRegistroFisico(item)
 
     if (error) {
       mostrarAviso('error', 'Error al eliminar: ' + error.message)
@@ -402,6 +423,17 @@ export default function Papelera({ usuario, permisos = {} }) {
       setConfirmacion(null)
       return
     }
+
+    // Traza de auditoría solo tras confirmar el borrado real
+    supabase.rpc('log_accion_papelera', {
+      p_registro_id: item.id, p_nombre: item.nombre, p_accion: 'eliminado_permanente_manual',
+      p_usuario_id: usuario.id, p_usuario_nombre: usuario.nombre,
+      p_usuario_rol: usuario.rol, p_modulo: item.modulo,
+    }).then(null, () => {})
+    logAuditPapelera({
+      accion: 'eliminado_permanente_manual', nombre: item.nombre, id: item.id, usuario,
+      detalles: { modulo: item.modulo },
+    })
 
     setItems(prev => prev.filter(i => i.id !== item.id || i.tabla !== item.tabla))
     mostrarAviso('ok', 'Registro eliminado permanentemente.')
@@ -415,34 +447,7 @@ export default function Papelera({ usuario, permisos = {} }) {
       await borrarImagenesRequerimiento(item.id)
     }
 
-    let error
-    if (item.tabla === 'usuarios') {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        const token = sessionData?.session?.access_token
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ userId: item.id }),
-          }
-        )
-        if (!res.ok) {
-          // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
-          if (res.status === 400) {
-            ;({ error } = await supabase.from('usuarios').delete().eq('id', item.id))
-          } else {
-            const json = await res.json().catch(() => ({}))
-            error = { message: json.error ?? 'Error al eliminar usuario' }
-          }
-        }
-      } catch {
-        error = { message: 'No se pudo conectar con el servidor.' }
-      }
-    } else {
-      ;({ error } = await supabase.from(item.tabla).delete().eq('id', item.id))
-    }
+    const error = await borrarRegistroFisico(item)
 
     if (!error) {
       supabase.rpc('log_accion_papelera', {
