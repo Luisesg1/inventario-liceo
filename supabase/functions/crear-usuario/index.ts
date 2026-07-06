@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
     if (permisosError) console.warn("Permisos no insertados:", permisosError.message);
 
     // 9. Enviar email (opcional — se omite si skipEmail es true)
-    const siteUrl = Deno.env.get("SITE_URL") ?? "https://inventario-liceo.vercel.app";
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://liceojhj.cl";
     let emailEnviado = false;
     let emailError: string | undefined;
 
