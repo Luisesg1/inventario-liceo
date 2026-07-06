@@ -19,6 +19,8 @@ import Papelera         from './pages/Papelera'
 import Personal        from './pages/Personal'
 import Reglamentos     from './pages/Reglamentos'
 import { aplicarTema } from './utils/tema'
+import { construirPermisos } from './utils/permisos'
+import { PRESETS_ROL } from './config/permisos'
 
 const RUTA_A_PAGINA = {
   '/':                         'dashboard',
@@ -79,38 +81,8 @@ const PAGINA_A_RUTA = {
   papelera_auditoria:             '/papelera/auditoria',
 }
 
-// Permisos mínimos por rol — usado como fallback cuando la BD no devuelve datos
-// (usuario recién registrado antes de que el trigger/función persistan los permisos)
-const PERMISOS_DEFAULT_ROL = {
-  docente: {
-    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-    ver_propias_ausencias: true, exportar_ausencias: true,
-  },
-  coordinador: {
-    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-    ver_propias_ausencias: true, exportar_ausencias: true,
-  },
-  asistente: {
-    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-    ver_propias_ausencias: true, exportar_ausencias: true,
-  },
-  administrativo: {
-    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-    ver_propias_ausencias: true, exportar_ausencias: true,
-  },
-  soporte: {
-    ver_tickets: true, crear_ticket: true, editar_ticket: true,
-    gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
-    ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
-  },
-  directivo: {
-    ver_inventario: true, agregar_bien: true, editar_bien: true,
-    importar_csv: true, exportar: true, registrar_prestamo: true, registrar_incidencia: true,
-    ver_auditoria_inventario: true,
-  },
-  visor_requerimientos: { ver_tickets: true },
-}
+// El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
+// PRESETS_ROL desde el catálogo central (fuente única). Ver cargarPerfil().
 
 export default function App() {
   const navigate = useNavigate()
@@ -134,163 +106,28 @@ export default function App() {
   const sesionCargada      = useRef(false)
   const forzarHome         = useRef(false)
 
-  // ── Permisos computados (null-safe para cuando usuario aún no cargó) ──
-  const esAdmin      = usuario?.rol === 'admin'
-  const esVisorReq   = usuario?.rol === 'visor_requerimientos'
-  const esSoporte    = usuario?.rol === 'soporte'
-  const esDirectivo  = usuario?.rol === 'directivo'
-  const p            = permisosUsuario ?? {}
+  // ── Motor de permisos (fuente única de la capa de consumo) ────────────────
+  // Toda la lógica antes desplegada a mano aquí (bypass admin, restricciones de
+  // rol, defaults backward-compat y guardas de ruta) vive ahora en
+  // construirPermisos(). App.jsx solo destructura lo que necesita.
+  const perm = construirPermisos(usuario, permisosUsuario)
+  const {
+    esSoporte,
+    puedeVerInventario, puedeVerAuditoriaInventario,
+    puedeVerTickets, puedeGestionarTickets, puedeVerAlertasTickets, puedeVerAuditoriaTickets, permisosTickets,
+    permisosReqs, puedeVerAuditoriaReq,
+    puedeAccederAusencias, permisosAusencia, puedeVerAuditoriaPermisos, puedeGestionarAusencias,
+    permisosComp, puedeVerCompensatorios, puedeVerAuditoriaCompensatorios,
+    puedeAccederUsuarios, puedeGestionarAjustes, puedeGestionarRoles,
+    puedeGestionarCampos, permisosCampos,
+    puedeVerAuditoriaGeneral,
+    permisosPersonal, puedeVerPersonal,
+    puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
+    permisosReglamentos, puedeVerReglamentos,
+  } = perm
 
-  // Restricciones duras por rol que prevalecen sobre el JSONB almacenado
-  // Garantizan cumplimiento de la matriz incluso para usuarios con permisos legacy
-  const rolPermiteTickets     = !esDirectivo
-  const rolPermiteReqs        = !esDirectivo && !esSoporte
-  const rolPermiteAusencias   = !esDirectivo
-  const rolPermiteAjustesMenu = !esDirectivo
-
-  const puedeVerInventario          = esAdmin || !!p.ver_inventario
-  const puedeVerAuditoriaInventario = esAdmin || !!p.ver_auditoria_inventario
-  const puedeVerTickets             = rolPermiteTickets  && (esAdmin || !!p.ver_tickets || !!p.gestionar_tickets)
-  const puedeGestionarTickets       = rolPermiteTickets  && (esAdmin || !!p.gestionar_tickets)
-  const puedeVerAlertasTickets      = rolPermiteTickets  && (esAdmin || esSoporte || !!p.ver_alertas_tickets)
-  const puedeVerAuditoriaReq        = rolPermiteReqs     && (esAdmin || !!p.ver_auditoria_requerimientos)
-  const puedeVerAuditoriaPermisos   = rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos)
-  const puedeVerAuditoriaTickets    = rolPermiteTickets  && (esAdmin || !!p.gestionar_tickets)
-  // "Mis ausencias" visible para todos los roles excepto directivo y visor_requerimientos
-  // No depende del JSONB para que usuarios con permisos legacy también lo vean
-  const puedeAccederAusencias       = rolPermiteAusencias && !esVisorReq
-  const permisosTickets = {
-    verPropios: rolPermiteTickets && (esAdmin || !!p.ver_tickets),
-    crear:      rolPermiteTickets && (esAdmin || p.crear_ticket !== false),
-    editar:     rolPermiteTickets && (esAdmin || !!p.editar_ticket),
-    gestionar:  rolPermiteTickets && (esAdmin || !!p.gestionar_tickets),
-    eliminar:   rolPermiteTickets && (esAdmin || !!p.eliminar_ticket),
-    exportar:   rolPermiteTickets && (esAdmin || p.exportar_tickets !== false),
-  }
-  const permisosReqs = {
-    ver:          rolPermiteReqs && (esAdmin || !!p.ver_requerimientos),
-    crear:        rolPermiteReqs && (esAdmin || !!p.crear_requerimiento),
-    editar:       rolPermiteReqs && (esAdmin || !!p.editar_requerimiento),
-    eliminar:     rolPermiteReqs && (esAdmin || !!p.eliminar_requerimiento),
-    importar:     rolPermiteReqs && (esAdmin || !!p.importar_requerimientos),
-    exportar:     rolPermiteReqs && (esAdmin || !!p.exportar_requerimientos),
-    verAuditoria: rolPermiteReqs && (esAdmin || !!p.ver_auditoria_requerimientos),
-  }
-  const permisosAusencia = {
-    ver:             rolPermiteAusencias && (esAdmin || !!p.ver_ausencias),
-    crear:           rolPermiteAusencias && (esAdmin || !!p.crear_ausencias),
-    editar:          rolPermiteAusencias && (esAdmin || !!p.editar_ausencias),
-    eliminar:        rolPermiteAusencias && (esAdmin || !!p.eliminar_ausencias),
-    aprobar:         rolPermiteAusencias && (esAdmin || !!p.aprobar_ausencias),
-    exportar:        rolPermiteAusencias && (esAdmin || !!p.exportar_ausencias),
-    verAuditoria:    rolPermiteAusencias && (esAdmin || !!p.ver_auditoria_permisos),
-    invitarUsuario:      esAdmin || !!p.invitar_usuario,
-    editarUsuario:       esAdmin || !!p.editar_usuario,
-    eliminarUsuario:     esAdmin || !!p.eliminar_usuario,
-    verHistorialUsuarios: esAdmin || !!p.ver_historial_usuarios,
-  }
-  const permisosComp = {
-    ver:          esAdmin || !!p.ver_compensatorios,
-    crear:        esAdmin || !!p.crear_compensatorios,
-    editar:       esAdmin || !!p.editar_compensatorios,
-    eliminar:     esAdmin || !!p.eliminar_compensatorios,
-    exportar:     esAdmin || !!p.exportar_compensatorios,
-    verAuditoria: esAdmin || !!p.ver_auditoria_compensatorios,
-  }
-  const puedeVerCompensatorios          = permisosComp.ver
-  const puedeVerAuditoriaCompensatorios = permisosComp.verAuditoria
-  const puedeGestionarAusencias = esAdmin || !!p.crear_ausencias || !!p.editar_ausencias
-  const paginasVisorReq         = ['dashboard', 'requerimientos', 'tickets']
-  const puedeAccederUsuarios    = esAdmin || !!p.invitar_usuario || !!p.editar_usuario || !!p.eliminar_usuario || !!p.gestionar_usuarios || !!p.editar_roles_permisos
-  const puedeGestionarAjustes   = rolPermiteAjustesMenu && (esAdmin || !!p.gestionar_ajustes || !!p.ver_ajustes || !!p.guardar_cambios_ajustes)
-  const puedeGestionarRoles     = esAdmin || !!p.gestionar_roles
-  const puedeGestionarCampos    = esAdmin || !!p.gestionar_campos || !!p.ver_campos
-  const permisosCampos = {
-    ver:           esAdmin || !!p.ver_campos || !!p.gestionar_campos,
-    agregar:       esAdmin || !!p.agregar_campo || !!p.gestionar_campos,
-    editar:        esAdmin || !!p.editar_campo || !!p.gestionar_campos,
-    ocultar:       esAdmin || !!p.ocultar_campo || !!p.gestionar_campos,
-    eliminar:      esAdmin || !!p.eliminar_campo || !!p.gestionar_campos,
-    reordenar:     esAdmin || !!p.reordenar_campos || !!p.gestionar_campos,
-    gestionarBase: esAdmin || !!p.gestionar_campos_base || !!p.gestionar_campos,
-  }
-
-  const puedeVerAuditoriaGeneral = esAdmin
-
-  // ── Permisos Personal ────────────────────────────────────────
   const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
-  const permisosPersonal = {
-    ver_contrataciones:      esAdmin || !!p.ver_contrataciones,
-    crear_contrataciones:    esAdmin || !!p.crear_contrataciones,
-    editar_contrataciones:   esAdmin || !!p.editar_contrataciones,
-    eliminar_contrataciones: esAdmin || !!p.eliminar_contrataciones,
-    ver_reemplazos:          esAdmin || !!p.ver_reemplazos,
-    crear_reemplazos:        esAdmin || !!p.crear_reemplazos,
-    editar_reemplazos:       esAdmin || !!p.editar_reemplazos,
-    eliminar_reemplazos:     esAdmin || !!p.eliminar_reemplazos,
-    ver_documentos_personal:    esAdmin || !!p.ver_documentos_personal,
-    subir_documentos_personal:  esAdmin || !!p.subir_documentos_personal,
-    eliminar_documentos_personal: esAdmin || !!p.eliminar_documentos_personal,
-    ver_auditoria_personal:     esAdmin || !!p.ver_auditoria_personal,
-  }
-  const puedeVerPersonal = esAdmin
-    || permisosPersonal.ver_contrataciones
-    || permisosPersonal.ver_reemplazos
-    || permisosPersonal.ver_documentos_personal
-
-  const puedeVerPapelera          = esAdmin || !!p.ver_papelera
-  const puedeVerAuditoriaPapelera = esAdmin || !!p.ver_auditoria_papelera
-  const permisosPapelera = {
-    restaurar:         esAdmin || !!p.restaurar_registros,
-    eliminarPermanente: esAdmin || !!p.eliminar_permanentemente,
-    verAuditoria:      esAdmin || !!p.ver_auditoria_papelera,
-  }
-
-  // ── Permisos Reglamentos ─────────────────────────────────────────────
-  const puedeAdministrarReglamentos = esAdmin || !!p.administrar_reglamentos
-  const permisosReglamentos = {
-    ver:       esAdmin || !!p.ver_reglamentos,
-    crear:     esAdmin || !!p.crear_reglamentos,
-    editar:    esAdmin || !!p.editar_reglamentos,
-    eliminar:  esAdmin || !!p.eliminar_reglamentos,
-    descargar: esAdmin || !!p.descargar_reglamentos,
-    // La gestión de versiones es una acción avanzada: la habilita su permiso
-    // específico o el permiso paraguas de administración del módulo.
-    versiones: esAdmin || !!p.gestionar_versiones_reglamentos || puedeAdministrarReglamentos,
-    administrar:  puedeAdministrarReglamentos,
-    verAuditoria: esAdmin || !!p.ver_auditoria_reglamentos,
-  }
-  const puedeVerReglamentos = esAdmin || !!p.ver_reglamentos
-
-  const soloAdmin = (pagina === 'reglamentos'       && !puedeVerReglamentos)
-    || (pagina === 'usuarios'         && !puedeAccederUsuarios)
-    || (pagina === 'mantenedor_roles'             && !puedeGestionarRoles)
-    || (pagina === 'auditoria'                   && !puedeVerAuditoriaInventario)
-    || (pagina === 'ajustes'                     && !puedeGestionarAjustes)
-    || (pagina === 'campos'                      && !puedeGestionarCampos)
-    || (pagina === 'permisos'                    && !puedeGestionarAusencias)
-    || (pagina === 'compensatorios'              && !puedeVerCompensatorios)
-    || (pagina === 'auditoria_requerimientos'    && !puedeVerAuditoriaReq)
-    || (pagina === 'auditoria_permisos'          && !puedeVerAuditoriaPermisos && !puedeVerAuditoriaCompensatorios)
-    || (pagina === 'auditoria_tickets'           && !puedeVerAuditoriaTickets)
-    || (pagina === 'auditoria_general'           && !puedeVerAuditoriaGeneral)
-    || (pagina === 'papelera'                    && !puedeVerPapelera)
-    || (pagina === 'reglamentos_auditoria'       && !permisosReglamentos.verAuditoria)
-    || (pagina === 'papelera_auditoria'          && !puedeVerAuditoriaPapelera)
-    || (pagina === 'tickets'                     && !puedeVerTickets)
-    || (pagina === 'requerimientos'              && !permisosReqs.ver)
-    || (pagina === 'mis_ausencias'               && !puedeAccederAusencias)
-    || (PAGINAS_PERSONAL.has(pagina)             && !puedeVerPersonal)
-  const soloStaff = pagina === 'inventario'
-    || (pagina === 'requerimientos' && !permisosReqs.ver)
-
-  const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
-  const paginaSegura = !usuario ? pagina
-    : (!puedeVerInventario && soloStaff) ? 'tickets'
-    : (esVisorReq && !paginasVisorReq.includes(pagina)) ? 'requerimientos'
-    : usuario.rol !== 'admin' && soloAdmin
-      ? (PAGINAS_AUSENCIAS.has(pagina) ? (puedeAccederAusencias ? 'mis_ausencias' : 'dashboard') : 'dashboard')
-    : pagina
+  const paginaSegura = perm.paginaSegura(pagina)
 
   // ── Navegación ───────────────────────────────────────────────────
   const cambiarPagina = (p) => navigate(PAGINA_A_RUTA[p] || '/')
@@ -472,7 +309,7 @@ export default function App() {
       // Fallback: si la BD no devolvió ningún permiso (usuario recién creado o migración pendiente),
       // usar los defaults del rol para que el menú sea funcional de inmediato
       const tienePermisos = Object.keys(merged).length > 0
-      setPermisosUsuario(tienePermisos ? merged : (PERMISOS_DEFAULT_ROL[data.rol] ?? {}))
+      setPermisosUsuario(tienePermisos ? merged : (PRESETS_ROL[data.rol]?.permisos ?? {}))
     } else {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true, gestionar_tickets: true })
     }

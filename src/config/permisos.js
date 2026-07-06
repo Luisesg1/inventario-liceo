@@ -56,12 +56,12 @@ export const MODULOS = [
     descripcion: 'Acceso al módulo de tickets de soporte.',
     permisos: [
       { key: 'ver_tickets',         accion: 'ver',         label: 'Ver tickets propios',         labelCorto: 'Ver tick.',    desc: 'Permite ver los tickets creados por el propio usuario.' },
-      { key: 'crear_ticket',        accion: 'crear',       label: 'Crear nuevo ticket',          labelCorto: 'Crear tick.',  desc: 'Permite abrir solicitudes de soporte técnico.' },
+      { key: 'crear_ticket',        accion: 'crear',       label: 'Crear nuevo ticket',          labelCorto: 'Crear tick.',  desc: 'Permite abrir solicitudes de soporte técnico.', default: true },
       { key: 'editar_ticket',       accion: 'editar',      label: 'Editar ticket propio',        labelCorto: 'Editar tick.', desc: 'Permite editar un ticket propio mientras está abierto.' },
       { key: 'gestionar_tickets',   accion: 'administrar', label: 'Gestionar todos los tickets', labelCorto: 'Gest. tick.',  desc: 'Permite ver, responder y cambiar el estado de cualquier ticket.' },
       { key: 'eliminar_ticket',     accion: 'eliminar',    label: 'Eliminar tickets',            labelCorto: 'Elim. tick.',  desc: 'Permite eliminar tickets del sistema de forma permanente.' },
       { key: 'ver_alertas_tickets', accion: 'accion',      label: 'Ver alertas de tickets',      labelCorto: 'Alert. tick.', desc: 'Muestra un banner de alertas con tickets abiertos en el Dashboard.' },
-      { key: 'exportar_tickets',    accion: 'exportar',    label: 'Exportar tickets',            labelCorto: 'Exp. tick.',   desc: 'Permite exportar el listado de tickets a CSV, Excel o PDF.' },
+      { key: 'exportar_tickets',    accion: 'exportar',    label: 'Exportar tickets',            labelCorto: 'Exp. tick.',   desc: 'Permite exportar el listado de tickets a CSV, Excel o PDF.', default: true },
     ],
   },
   {
@@ -208,3 +208,145 @@ export const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map(a => [a.key, false
 
 // Todas las claves de permiso (útil para validaciones)
 export const TODAS_LAS_CLAVES = ACCIONES.map(a => a.key)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CAPA DE CONSUMO — estructuras declarativas para el motor de permisos
+// (src/utils/permisos.js). Todo esto es DATO, sin lógica de UI. Agregar un
+// módulo nuevo a MODULOS lo integra automáticamente en el motor; solo hay que
+// registrar aquí sus guardas de ruta (GUARDAS_RUTA) y, si aplica, restricciones
+// duras por rol (RESTRICCIONES_ROL).
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Mapa clave-de-permiso → key del módulo al que pertenece (derivado del catálogo)
+export const MODULO_DE_PERMISO = Object.fromEntries(
+  MODULOS.flatMap(m => m.permisos.map(p => [p.key, m.key]))
+)
+
+// Valores por defecto cuando la clave NO está presente en el JSONB del usuario.
+// Backward-compat: históricamente `crear_ticket`/`exportar_tickets` se asumían
+// habilitados salvo que estuvieran explícitamente en `false` (`p.x !== false`).
+export const DEFAULTS_PERMISO = Object.fromEntries(
+  ACCIONES.filter(a => a.default !== undefined).map(a => [a.key, a.default])
+)
+
+// Restricciones duras por rol — prevalecen sobre el JSONB almacenado. Garantizan
+// la matriz oficial aunque un usuario legacy tenga permisos "stale".
+//   · modulosNegados: keys de MODULOS que el rol NO puede usar bajo ninguna
+//     circunstancia (equivale a los antiguos `rolPermite*` de App.jsx).
+//   · paginasPermitidas: si está definido, el rol SOLO puede abrir esas páginas.
+export const RESTRICCIONES_ROL = {
+  directivo: { modulosNegados: ['tickets', 'requerimientos', 'ausencia'] },
+  soporte:   { modulosNegados: ['requerimientos'] },
+  visor_requerimientos: { paginasPermitidas: ['dashboard', 'requerimientos', 'tickets'] },
+}
+
+// Guardas de ruta declarativas: página → permiso(s) requerido(s).
+// Valor admitido:
+//   · string            → requiere ese permiso (vía can()).
+//   · string[]          → requiere CUALQUIERA de esos permisos (OR).
+//   · (perm) => boolean → predicado libre sobre el objeto del motor.
+// Las páginas no listadas quedan accesibles (dashboard, mis_ausencias se
+// resuelven aparte con lógica de fallback en el motor).
+export const GUARDAS_RUTA = {
+  // 'inventario' NO se lista: su acceso se resuelve con el fallback soloStaff del
+  // motor (staff sin inventario se redirige a tickets, no se bloquea a dashboard).
+  auditoria:                'ver_auditoria_inventario',
+  tickets:                  ['ver_tickets', 'gestionar_tickets'],
+  auditoria_tickets:        'gestionar_tickets',
+  requerimientos:           'ver_requerimientos',
+  auditoria_requerimientos: 'ver_auditoria_requerimientos',
+  compensatorios:           'ver_compensatorios',
+  permisos:                 ['crear_ausencias', 'editar_ausencias'],
+  auditoria_permisos:       ['ver_auditoria_permisos', 'ver_auditoria_compensatorios'],
+  campos:                   ['ver_campos', 'gestionar_campos'],
+  usuarios:                 ['invitar_usuario', 'editar_usuario', 'eliminar_usuario', 'gestionar_usuarios', 'editar_roles_permisos'],
+  // Ajustes (personalización) veta a directivo aunque tenga el flag (matriz oficial).
+  ajustes:                  (perm) => !perm.esDirectivo && ['gestionar_ajustes', 'ver_ajustes', 'guardar_cambios_ajustes'].some(k => perm.can(k)),
+  mantenedor_roles:         'gestionar_roles',
+  auditoria_general:        (perm) => perm.esAdmin,
+  papelera:                 'ver_papelera',
+  papelera_auditoria:       'ver_auditoria_papelera',
+  reglamentos:              'ver_reglamentos',
+  reglamentos_auditoria:    'ver_auditoria_reglamentos',
+  personal:                 ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
+  personal_contrataciones:  ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
+  personal_reemplazos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
+  personal_documentos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
+}
+
+// ─── Presets de rol (FUENTE ÚNICA) ──────────────────────────────────────────
+// Definición única de los permisos base de cada rol. Consumida por:
+//   · src/pages/Usuarios.jsx  (botón "Aplicar rol" del wizard de creación)
+//   · src/App.jsx             (fallback cuando la BD aún no devolvió permisos)
+// La tabla `permisos_rol` en Supabase es la fuente viva en runtime (editable
+// desde el Mantenedor de Roles); su seed inicial debe reflejar estos valores.
+export const PRESETS_ROL = {
+  admin: {
+    permisos:   Object.fromEntries(ACCIONES.map((a) => [a.key, true])),
+    categorias: ['todos'],
+  },
+  directivo: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_inventario: true, agregar_bien: true, editar_bien: true,
+      importar_csv: true, exportar: true,
+      registrar_prestamo: true, registrar_incidencia: true,
+      ver_auditoria_inventario: true,
+    },
+    categorias: ['todos'],
+  },
+  coordinador: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
+  docente: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
+  asistente: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
+  administrativo: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
+  soporte: {
+    permisos: {
+      ...PERMISOS_VACIO,
+      ver_tickets: true, crear_ticket: true, editar_ticket: true,
+      gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
+      ver_propias_ausencias: true, exportar_ausencias: true,
+      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    },
+    categorias: ['todos'],
+  },
+  visor_requerimientos: { permisos: { ...PERMISOS_VACIO, ver_tickets: true }, categorias: [] },
+
+  // ── Legacy — roles anteriores, conservados para usuarios ya existentes ──
+  encargado_inventario: { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: false, gestionar_tickets: false }, categorias: ['todos'] },
+  encargado_soporte:    { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true }, categorias: ['todos'] },
+  encargado_permisos:   { permisos: { ...PERMISOS_VACIO, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true }, categorias: ['todos'] },
+  editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
+  encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
+}

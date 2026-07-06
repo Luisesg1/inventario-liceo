@@ -12,6 +12,7 @@ import {
   STEPS_MODULOS,
   ULTIMO_PASO,
   PERMISOS_VACIO,
+  PRESETS_ROL as PERMISOS_POR_ROL,
 } from '../config/permisos'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
@@ -43,72 +44,8 @@ const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
   'ver_auditoria_requerimientos', 'ver_auditoria_permisos', 'ver_auditoria_compensatorios']
 
 // PERMISOS_VACIO se importa desde el catálogo central (deriva de ACCIONES).
-
-const PERMISOS_POR_ROL = {
-  admin: {
-    permisos:   Object.fromEntries(ACCIONES.map((a) => [a.key, true])),
-    categorias: ['todos'],
-  },
-  directivo: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_inventario: true, agregar_bien: true, editar_bien: true,
-      importar_csv: true, exportar: true,
-      registrar_prestamo: true, registrar_incidencia: true,
-      ver_auditoria_inventario: true,
-    },
-    categorias: ['todos'],
-  },
-  coordinador: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      ver_propias_ausencias: true, exportar_ausencias: true,
-    },
-    categorias: ['todos'],
-  },
-  docente: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      ver_propias_ausencias: true, exportar_ausencias: true,
-    },
-    categorias: ['todos'],
-  },
-  asistente: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      ver_propias_ausencias: true, exportar_ausencias: true,
-    },
-    categorias: ['todos'],
-  },
-  administrativo: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      ver_propias_ausencias: true, exportar_ausencias: true,
-    },
-    categorias: ['todos'],
-  },
-  // Legacy — usuarios existentes con roles anteriores
-  encargado_inventario: { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: false, gestionar_tickets: false }, categorias: ['todos'] },
-  encargado_soporte:    { permisos: { ...PERMISOS_VACIO, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true }, categorias: ['todos'] },
-  encargado_permisos:   { permisos: { ...PERMISOS_VACIO, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true }, categorias: ['todos'] },
-  editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
-  encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
-  soporte: {
-    permisos: {
-      ...PERMISOS_VACIO,
-      ver_tickets: true, crear_ticket: true, editar_ticket: true,
-      gestionar_tickets: true, eliminar_ticket: true, ver_alertas_tickets: true, exportar_tickets: true,
-      ver_propias_ausencias: true, exportar_ausencias: true,
-      gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
-    },
-    categorias: ['todos'],
-  },
-  visor_requerimientos: { permisos: { ...PERMISOS_VACIO, ver_tickets: true }, categorias: [] },
-}
+// PERMISOS_POR_ROL es ahora PRESETS_ROL importado del catálogo (fuente única):
+// una sola definición compartida con App.jsx y reflejada en el seed permisos_rol.
 
 const ROL_COLORES = {
   admin:          { bg: '#e8eaf6', color: '#1a237e' },
