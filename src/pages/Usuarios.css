@@ -9,19 +9,22 @@
   font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* ── Grid de roles (Nivel de acceso) ──────────────────── */
-/* 4 columnas en escritorio (8 roles → 4+4 simétrico) y 2 en pantallas
+/* ── Grids de tarjetas del wizard (roles y módulos/categorías) ─────────── */
+/* 4 columnas en escritorio (8 tarjetas → 4+4 simétrico) y 2 en pantallas
    chicas (4+4). Se evita 3 columnas porque dejaría una fila huérfana. */
-.roles-grid {
+.roles-grid,
+.modulos-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 @media (max-width: 760px) {
-  .roles-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .roles-grid,
+  .modulos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 420px) {
-  .roles-grid { grid-template-columns: 1fr; }
+  .roles-grid,
+  .modulos-grid { grid-template-columns: 1fr; }
 }
 
 /* ── Header ───────────────────────────────────────────── */

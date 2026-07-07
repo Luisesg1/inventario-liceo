@@ -358,7 +358,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
               Cargando categorías…
             </p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+            <div className="modulos-grid">
               {catsBD.map(cat => {
                 const tieneAcceso = todasActivas || (draft.categorias?.includes(cat.id))
                 return (
