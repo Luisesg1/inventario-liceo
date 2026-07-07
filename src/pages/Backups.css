@@ -307,9 +307,41 @@
 
 .bk-actividad { display: flex; flex-direction: column; }
 
-@media (max-width: 720px) {
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  /* Encabezado: título arriba, acciones abajo ocupando el ancho */
+  .bk-head { flex-direction: column; align-items: stretch; gap: 14px; }
+  .bk-head-actions { flex-wrap: wrap; }
+  .bk-head-actions button { flex: 1 1 auto; justify-content: center; }
+
+  /* Filtros: búsqueda a todo el ancho, selects en pares, rango de fecha full */
+  .bk-search { flex: 1 1 100%; }
+  .bk-filtros select { flex: 1 1 46%; }
+  .bk-fecha-range { flex: 1 1 100%; }
+  .bk-fecha-range input { flex: 1; width: auto; }
+  .bk-limpiar { flex: 1 1 100%; justify-content: center; }
+
+  /* Tarjetas: icono + info en la 1ª fila; badges y acciones en la 2ª */
   .bk-card { flex-wrap: wrap; }
+  .bk-card-main { flex: 1 1 55%; }
+  .bk-card-desc { max-width: none; white-space: normal; }
+  .bk-card-title-row h3 { max-width: 60vw; }
   .bk-card-badges { flex-direction: row; align-items: center; }
-  .bk-card-title-row h3 { max-width: 200px; }
+  .bk-card-actions { margin-left: auto; }
+
   .bk-tipo-grid { grid-template-columns: 1fr; }
+  .bk-modal { padding: 20px 18px 16px; }
+
+  /* Toasts: barra inferior a todo el ancho en móvil */
+  .bk-toasts { left: 12px; right: 12px; bottom: 12px; }
+  .bk-toast { min-width: 0; width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .bk-head-title h1 { font-size: 19px; }
+  .bk-head-icon { width: 40px; height: 40px; }
+  .bk-kpi-valor { font-size: 16px; }
+  .bk-filtros select { flex: 1 1 100%; }
+  .bk-card-title-row h3 { max-width: 62vw; }
+  .bk-tl-meta { gap: 8px; }
 }
