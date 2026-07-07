@@ -141,39 +141,12 @@ function initials(name = '') {
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('')
 }
 
-async function auditLog({ accion, tabla, id, nombre, usuario, cambios = {} }) {
-  try {
-    await supabase.from('personal_audit_logs').insert({
-      accion,
-      tabla_afectada: tabla,
-      registro_id:    id,
-      registro_nombre: nombre,
-      usuario_id:    usuario?.id,
-      usuario_nombre: usuario?.nombre,
-      usuario_rol:   usuario?.rol,
-      cambios,
-    })
-  } catch { /* silenciar */ }
-  try {
-    const cambiosArr = Array.isArray(cambios)
-      ? cambios
-      : Object.entries(cambios).map(([campo, val]) =>
-          val !== null && typeof val === 'object' && ('anterior' in val || 'nuevo' in val)
-            ? { campo, anterior: val.anterior, nuevo: val.nuevo }
-            : { campo, nuevo: String(val ?? '') }
-        )
-    await supabase.from('audit_logs').insert({
-      bien_nombre:    nombre ?? `${tabla} #${id ?? '?'}`,
-      accion,
-      cambios:        cambiosArr,
-      usuario_id:     usuario?.id,
-      usuario_nombre: usuario?.nombre ?? 'Sistema',
-      usuario_rol:    usuario?.rol,
-      modulo:         'personal',
-      creado_en:      new Date().toISOString(),
-    })
-  } catch { /* silenciar */ }
-}
+// La auditoría de Personal la registran ahora triggers de base de datos
+// (fn_audit_personal, migración 20260706000011) sobre contrataciones, reemplazos
+// y personal_documentos: escriben en personal_audit_logs y audit_logs con la
+// identidad real (auth.uid()), no falsificable ni omitible desde el cliente.
+// Se conserva la función como no-op para no tocar sus numerosas llamadas.
+async function auditLog(_args) { /* server-side triggers */ }
 
 // ─── EstadoBadge ──────────────────────────────────────────────
 function EstadoBadge({ estado }) {

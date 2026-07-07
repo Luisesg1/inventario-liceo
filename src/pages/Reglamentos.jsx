@@ -182,20 +182,10 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   useEffect(() => { setPagina(1) }, [busqueda, filtroCategoria, filtroEstado, filtroFechaDesde, filtroFechaHasta])
 
   // ── Auditoría ───────────────────────────────────────────────────────────
-  async function auditoria(accion, doc, cambios = []) {
-    try {
-      await supabase.from('audit_logs').insert({
-        bien_nombre: doc.nombre ?? String(doc.id ?? '?'),
-        accion,
-        cambios,
-        usuario_id:    usuario.id,
-        usuario_nombre: usuario.nombre,
-        usuario_rol:   usuario.rol,
-        modulo:        'reglamentos',
-        creado_en:     new Date().toISOString(),
-      })
-    } catch { /* silencioso */ }
-  }
+  // La auditoría de reglamentos la registra ahora un trigger de base de datos
+  // (fn_audit_reglamentos, migración 20260706000011): identidad no falsificable
+  // vía auth.uid(). Se conserva la función como no-op para no tocar las llamadas.
+  async function auditoria(_accion, _doc, _cambios = []) { /* server-side trigger */ }
 
   // ── Subir archivo a Storage ─────────────────────────────────────────────
   async function subirArchivo(archivo, categoria) {
