@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabase'
 // Catálogo centralizado de permisos (fuente única de verdad, compartido con Usuarios.jsx)
 import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO } from '../config/permisos'
+import { useEsMovil } from '../hooks/useEsMovil'
 
 const ROL_LABEL = {
   admin: 'Administrador', directivo: 'Directivo', coordinador: 'Coordinador',
@@ -71,6 +72,7 @@ function RolAvatar({ rol, size = 34 }) {
 }
 
 export default function MantenedorRoles() {
+  const esMovil = useEsMovil()
   const [roles,          setRoles]          = useState([])
   const [conteos,        setConteos]        = useState({})
   const [rolSeleccionado, setRolSeleccionado] = useState(null)
@@ -243,15 +245,21 @@ export default function MantenedorRoles() {
     </div>
   )
 
+  // En móvil funciona como maestro-detalle: se ve la lista de roles y, al elegir
+  // uno, el panel de detalle a pantalla completa (con botón para volver).
+  const mostrarLista   = !esMovil || !rolSeleccionado
+  const mostrarDetalle = !esMovil || !!rolSeleccionado
+
   return (
     <div style={{ display: 'flex', gap: 0, height: '100%', background: '#f1f5f9', minHeight: 0, overflow: 'hidden' }}>
 
       {/* ─────────────────────── Panel izquierdo ─────────────────────────── */}
       <div style={{
-        width: 268, flexShrink: 0,
+        width: esMovil ? '100%' : 268, flexShrink: 0,
+        display: mostrarLista ? 'flex' : 'none',
         background: '#fff',
-        borderRight: '1px solid #e2e8f0',
-        display: 'flex', flexDirection: 'column',
+        borderRight: esMovil ? 'none' : '1px solid #e2e8f0',
+        flexDirection: 'column',
         overflow: 'hidden',
       }}>
         {/* Header del panel */}
@@ -368,7 +376,7 @@ export default function MantenedorRoles() {
       </div>
 
       {/* ─────────────────────── Panel derecho ───────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: mostrarDetalle ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {!rolSeleccionado ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             <div style={{ textAlign: 'center' }}>
@@ -382,12 +390,25 @@ export default function MantenedorRoles() {
           <>
             {/* ── Cabecera del rol ── */}
             <div style={{
-              padding: '16px 24px',
+              padding: esMovil ? '12px 16px' : '16px 24px',
               background: '#fff',
               borderBottom: '1px solid #e2e8f0',
             }}>
+              {/* Volver a la lista (solo móvil) */}
+              {esMovil && (
+                <button
+                  onClick={() => { setRolSeleccionado(null); setDraft(null); setSavedDraft(null) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12,
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    color: 'rgb(var(--primary-rgb))', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                  }}
+                >
+                  ← Roles
+                </button>
+              )}
               {/* Fila superior: info + acciones */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: esMovil ? 'flex-start' : 'center', gap: esMovil ? 10 : 16, marginBottom: 12, flexWrap: esMovil ? 'wrap' : 'nowrap' }}>
                 {/* Info del rol */}
                 <RolAvatar rol={rolSeleccionado.rol} size={40} />
 
@@ -432,7 +453,7 @@ export default function MantenedorRoles() {
                 </div>
 
                 {/* Botones de acción */}
-                <div style={{ display: 'flex', gap: 7, flexShrink: 0, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 7, flexShrink: 0, alignItems: 'center', flexWrap: 'wrap', ...(esMovil ? { width: '100%' } : null) }}>
                   {/* Restaurar */}
                   <ActionButton
                     onClick={restaurarDefecto}
@@ -550,7 +571,7 @@ export default function MantenedorRoles() {
             )}
 
             {/* ── Matriz de permisos ── */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 24px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: esMovil ? '14px 14px 24px' : '16px 24px 24px' }}>
               <style>{`
                 .permiso-row:hover { background: rgba(var(--primary-rgb),0.03) !important; }
                 .grupo-toggle-btn:hover { opacity: 0.85; }

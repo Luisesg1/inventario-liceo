@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabase'
+import { useEsMovil } from '../hooks/useEsMovil'
 import './CamposCategoria.css'
 
 const TIPOS = [
@@ -566,6 +567,7 @@ function FormularioConfigurable({
   addingSectionIdx, setAddingSectionIdx, onAddField, camposIds,
   pAgregar, pEditar, pOcultar, pEliminar, pReordenar,
 }) {
+  const esMovil = useEsMovil()
   // Assign fields to sections based on their order position
   const sectionOf = {}
   sections.forEach((sec, i) => sec.ids.forEach(id => { sectionOf[id] = i }))
@@ -701,14 +703,14 @@ function FormularioConfigurable({
                   </div>
                   {/* Custom fields that ended up in the footer section */}
                   {fields.filter(f => f._tipo === 'custom').length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: esMovil ? '1fr' : 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
                       {fields.filter(f => f._tipo === 'custom').map(renderField)}
                     </div>
                   )}
                 </div>
               ) : (
-                /* Header & regular sections — 3-column grid */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                /* Header & regular sections — 3-column grid (1 col en móvil) */
+                <div style={{ display: 'grid', gridTemplateColumns: esMovil ? '1fr' : 'repeat(3, 1fr)', gap: 10 }}>
                   {fields.map(renderField)}
                 </div>
               )}
@@ -777,6 +779,7 @@ function FormularioConfigurable({
 // ── Main component ──────────────────────────────────────────────────────────
 
 export default function CamposCategoria({ usuario, permisos = {} }) {
+  const esMovil       = useEsMovil()
   const esAdmin       = usuario?.rol === 'admin'
   const pAgregar      = esAdmin || !!permisos.agregar
   const pEditar       = esAdmin || !!permisos.editar
@@ -1064,7 +1067,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
       <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         {/* ── Category list sidebar ──────────────────────────── */}
-        <div style={{ width: 'min(220px, 100%)', flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden', alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
+        <div style={{ width: esMovil ? '100%' : 'min(220px, 100%)', flexShrink: 0, background: '#fff', borderRadius: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)', border: '1px solid #f1f1f3', overflow: 'hidden', alignSelf: 'flex-start', position: esMovil ? 'static' : 'sticky', top: 16 }}>
           <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <p style={{ margin: 0, fontSize: 11, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Categorías</p>
             {esAdmin && (
@@ -1114,7 +1117,7 @@ export default function CamposCategoria({ usuario, permisos = {} }) {
 
         {/* ── Form editor + save button ──────────────────────── */}
         {catObj && (
-          <div style={{ flex: 1, minWidth: 300, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ flex: 1, minWidth: esMovil ? 0 : 300, width: esMovil ? '100%' : 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             {soloLectura && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fefce8', border: '1.5px solid #fde047', borderRadius: 10, padding: '10px 14px' }}>
