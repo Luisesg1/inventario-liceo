@@ -137,11 +137,6 @@ const ROLES_SISTEMA = [
 ]
 
 // Roles legacy que no se muestran como opciones nuevas
-const ROLES_LEGACY = new Set([
-  'encargado_inventario','encargado_soporte','encargado_permisos',
-  'editor','encargado','visor_requerimientos',
-])
-
 function getIconForCat(label) {
   const l = (label ?? '').toLowerCase()
   if (l.includes('biblioteca') || l.includes('libro')) return '📚'
@@ -207,7 +202,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     const n = detectarNivelActual(draft?.permisos ?? {})
     return n.startsWith('rol:') ? n.slice(4) : null
   })
-  const [rolesDisponibles, setRolesDisponibles] = useState(ROLES_SISTEMA)
+  const [rolesDisponibles] = useState(ROLES_SISTEMA)
 
   // Devuelve el paso anterior
   function pasoAnterior(p) {
@@ -222,20 +217,6 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   useEffect(() => {
     supabase.from('categorias').select('id, label').order('label')
       .then(({ data }) => setCatsBD(data ?? []))
-    // Cargar roles existentes en la BD para mostrar automáticamente nuevos roles
-    supabase.from('perfiles').select('rol').then(({ data }) => {
-      if (!data) return
-      const base = new Set(ROLES_SISTEMA.map(r => r.key))
-      const extras = [...new Set(
-        data.map(r => r.rol).filter(r => r && !base.has(r) && !ROLES_LEGACY.has(r))
-      )]
-      if (extras.length > 0) {
-        setRolesDisponibles(prev => [
-          ...prev,
-          ...extras.map(r => ({ key: r, label: ROL_LABEL[r] ?? r, icon: '👤', desc: 'Rol del sistema' })),
-        ])
-      }
-    })
   }, [])
 
   if (!draft) return <p style={{ color: '#6b7280', fontSize: 13 }}>Cargando…</p>
