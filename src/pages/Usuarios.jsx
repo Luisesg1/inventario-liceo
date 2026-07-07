@@ -280,7 +280,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   return (
     <div>
       {/* ── Stepper ── */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 26 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 26, overflowX: 'auto', paddingBottom: 8 }}>
         {stepsBase.flatMap((s, i) => {
           const esActivo     = pasoEfectivo === s.n
           const esCompletado = pasoEfectivo > s.n
@@ -289,7 +289,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
             <div
               key={`s${s.n}`}
               onClick={() => !esActivo && setPaso(s.n)}
-              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, cursor: esActivo ? 'default' : 'pointer' }}
+              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0 8px', cursor: esActivo ? 'default' : 'pointer' }}
             >
               <div style={{
                 width: 30, height: 30, borderRadius: '50%',
@@ -319,7 +319,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
               <div
                 key={`l${s.n}`}
                 style={{
-                  flex: 1, height: 2, marginBottom: 20,
+                  flex: 1, minWidth: 22, height: 2, marginTop: 15,
                   background: esCompletado ? 'rgb(var(--acento-rgb))' : '#e5e7eb',
                   transition: 'background 0.3s',
                 }}
