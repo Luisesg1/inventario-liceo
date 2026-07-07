@@ -416,7 +416,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
           <p style={{ margin: '0 0 10px', fontWeight: 600, fontSize: 12.5, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Roles del sistema
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))', gap: 10 }}>
+          <div className="roles-grid">
             {rolesDisponibles.map(r => {
               const sel = nivel === 'rol:' + r.key
               return (
