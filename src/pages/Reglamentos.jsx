@@ -7,6 +7,7 @@ import {
   AlertTriangle, CheckCircle2, Loader2, History, CalendarDays,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { useEsMovil } from '../hooks/useEsMovil'
 
 // ── Constantes ────────────────────────────────────────────────────────────
 const CATEGORIAS = ['Reglamentos', 'Protocolos', 'Manuales', 'Formularios', 'Circulares', 'Leyes', 'Otros']
@@ -80,6 +81,7 @@ function btnPag(dis) {
 
 // ── Componente principal ──────────────────────────────────────────────────
 export default function Reglamentos({ usuario, permisos = {} }) {
+  const esMovil        = useEsMovil()
   const esAdmin        = usuario?.rol === 'admin'
   const puedAdministrar = esAdmin || !!permisos.administrar
   const puedVer        = esAdmin || !!permisos.ver
@@ -780,10 +782,10 @@ export default function Reglamentos({ usuario, permisos = {} }) {
           >
             <motion.div variants={modalV} initial="hidden" animate="visible" exit="exit"
               onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', width: '100%', maxWidth: 1100, height: 'calc(100vh - 40px)', maxHeight: 780, background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 30px 100px rgba(0,0,0,0.45)' }}
+              style={{ display: 'flex', flexDirection: esMovil ? 'column' : 'row', width: '100%', maxWidth: 1100, height: 'calc(100vh - 40px)', maxHeight: 780, background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 30px 100px rgba(0,0,0,0.45)' }}
             >
               {/* Panel info */}
-              <div style={{ width: 290, flexShrink: 0, background: '#f8fafc', borderRight: '1px solid #e2e8f0', padding: '24px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ width: esMovil ? '100%' : 290, flexShrink: 0, maxHeight: esMovil ? '42%' : 'none', background: '#f8fafc', borderRight: esMovil ? 'none' : '1px solid #e2e8f0', borderBottom: esMovil ? '1px solid #e2e8f0' : 'none', padding: esMovil ? '16px 16px' : '24px 20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <div style={{ marginBottom: 18 }}>
                   <div style={{ width: 46, height: 46, borderRadius: 13, background: 'linear-gradient(135deg, rgb(var(--primary-rgb)), #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
                     <FileText size={22} color="#fff" />

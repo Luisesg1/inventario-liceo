@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
+import { useEsMovil } from '../hooks/useEsMovil'
 
 const TIPOS = [
   { value: 'texto',    label: 'Texto',          icon: '📝' },
@@ -301,6 +302,7 @@ function PreviewFormulario({ catObj, unifiedVisibleFields, camposNombres }) {
 }
 
 export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUpdated, permisos = {} }) {
+  const esMovil       = useEsMovil()
   const esAdmin       = usuario?.rol === 'admin'
   const pAgregar      = esAdmin || !!permisos.agregar
   const pEditar       = esAdmin || !!permisos.editar
@@ -824,8 +826,8 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
               </div>}
             </div>
 
-            {/* ── Columna preview ────────────────────────────── */}
-            <div style={{ width: 252, flexShrink: 0, borderLeft: '1px solid #e5e7eb', overflowY: 'auto', padding: '18px 16px', background: '#f1f5f9' }}>
+            {/* ── Columna preview (oculta en móvil) ──────────── */}
+            <div style={{ display: esMovil ? 'none' : 'block', width: 252, flexShrink: 0, borderLeft: '1px solid #e5e7eb', overflowY: 'auto', padding: '18px 16px', background: '#f1f5f9' }}>
               <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Vista previa</p>
               <PreviewFormulario
                 catObj={catObj}
