@@ -110,8 +110,22 @@ const ETAPAS_REST = [
   'Finalizando…',
 ]
 
-export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
+export default function Backups({ usuario, permisos = {}, vista = 'respaldos', onIrAVista }) {
   const esAdmin = usuario?.rol === 'admin'
+  // Permisos efectivos (admin recibe todo por bypass). El backend (RLS + edge
+  // functions) sigue exigiendo rol='admin' para las operaciones reales.
+  const p = {
+    ver:               esAdmin || !!permisos.ver,
+    crear:             esAdmin || !!permisos.crear,
+    descargar:         esAdmin || !!permisos.descargar,
+    renombrar:         esAdmin || !!permisos.renombrar,
+    editarDescripcion: esAdmin || !!permisos.editarDescripcion,
+    duplicar:          esAdmin || !!permisos.duplicar,
+    restaurar:         esAdmin || !!permisos.restaurar,
+    eliminar:          esAdmin || !!permisos.eliminar,
+    automatizar:       esAdmin || !!permisos.automatizar,
+    verActividad:      esAdmin || !!permisos.verActividad,
+  }
 
   // ── Estado principal ──────────────────────────────────────────────────────
   const [archivos, setArchivos] = useState([])
@@ -151,7 +165,7 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
 
   // ── Carga de datos ────────────────────────────────────────────────────────
   const cargar = useCallback(async (silencioso = false) => {
-    if (!esAdmin) { setCargando(false); return }
+    if (!p.ver) { setCargando(false); return }
     if (silencioso) setRefrescando(true); else setCargando(true)
     const [{ data: files }, { data: metas }, { data: cfg }] = await Promise.all([
       supabase.storage.from(BUCKET).list('', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } }),
@@ -164,7 +178,7 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
     if (cfg?.valor) setAutoFrecuencia(cfg.valor)
     setCargando(false)
     setRefrescando(false)
-  }, [esAdmin])
+  }, [p.ver])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -338,13 +352,13 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
   }
 
   // ── Acceso denegado ───────────────────────────────────────────────────────
-  if (!esAdmin) {
+  if (!p.ver) {
     return (
       <div className="bk-denied">
         <div className="bk-denied-card">
           <div className="bk-denied-icon"><ShieldAlert size={30} /></div>
           <h2>Acceso restringido</h2>
-          <p>El módulo de <strong>Backups</strong> está disponible únicamente para administradores del sistema.</p>
+          <p>No tienes permiso para acceder al módulo de <strong>Backups</strong>. Solicita el permiso a un administrador.</p>
         </div>
       </div>
     )
@@ -362,15 +376,19 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
           </div>
         </div>
         <div className="bk-head-actions">
-          <button className="bk-btn-ghost" onClick={() => setModalAuto(true)}>
-            <CalendarClock size={15} /> Automatización
-          </button>
+          {p.automatizar && (
+            <button className="bk-btn-ghost" onClick={() => setModalAuto(true)}>
+              <CalendarClock size={15} /> Automatización
+            </button>
+          )}
           <button className="bk-btn-ghost" onClick={() => cargar(true)} disabled={refrescando}>
             <RefreshCw size={15} className={refrescando ? 'bk-spin' : ''} /> Actualizar
           </button>
-          <button className="bk-btn-primary" onClick={() => setModalNuevo(true)}>
-            <Plus size={16} /> Nuevo Backup
-          </button>
+          {p.crear && (
+            <button className="bk-btn-primary" onClick={() => setModalNuevo(true)}>
+              <Plus size={16} /> Nuevo Backup
+            </button>
+          )}
         </div>
       </div>
 
@@ -379,12 +397,14 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
         <button className={`bk-tab ${vista === 'respaldos' ? 'active' : ''}`} onClick={() => onIrAVista?.('respaldos')}>
           <ListChecks size={15} /> Respaldos
         </button>
-        <button className={`bk-tab ${vista === 'actividad' ? 'active' : ''}`} onClick={() => onIrAVista?.('actividad')}>
-          <Activity size={15} /> Actividad
-        </button>
+        {p.verActividad && (
+          <button className={`bk-tab ${vista === 'actividad' ? 'active' : ''}`} onClick={() => onIrAVista?.('actividad')}>
+            <Activity size={15} /> Actividad
+          </button>
+        )}
       </div>
 
-      {vista === 'actividad'
+      {vista === 'actividad' && p.verActividad
         ? <Actividad />
         : (
         <>
@@ -449,6 +469,7 @@ export default function Backups({ usuario, vista = 'respaldos', onIrAVista }) {
                   <BackupCard
                     key={item.archivo}
                     item={item}
+                    permisos={p}
                     menuAbierto={menuAbierto === item.archivo}
                     onMenu={(e) => { e.stopPropagation(); setMenuAbierto(m => m === item.archivo ? null : item.archivo) }}
                     onDetalle={() => { setMenuAbierto(null); setModalDetalle(item) }}
@@ -626,7 +647,7 @@ function EmptyState({ hayFiltros, onNuevo, onLimpiar }) {
   )
 }
 
-function BackupCard({ item, menuAbierto, onMenu, onDetalle, onRenombrar, onDescripcion, onDescargar, onRestaurar, onDuplicar, onEliminar }) {
+function BackupCard({ item, permisos = {}, menuAbierto, onMenu, onDetalle, onRenombrar, onDescripcion, onDescargar, onRestaurar, onDuplicar, onEliminar }) {
   const tipo = TIPOS[item.tipo] ?? TIPOS.completo
   const est  = ESTADOS[item.estado] ?? ESTADOS.correcto
   const origen = ORIGENES[item.origen]
@@ -663,8 +684,8 @@ function BackupCard({ item, menuAbierto, onMenu, onDetalle, onRenombrar, onDescr
       </div>
 
       <div className="bk-card-actions">
-        <button className="bk-icon-btn" title="Descargar" onClick={onDescargar}><Download size={15} /></button>
-        <button className="bk-icon-btn bk-icon-btn--warn" title="Restaurar" onClick={onRestaurar}><RotateCcw size={15} /></button>
+        {permisos.descargar && <button className="bk-icon-btn" title="Descargar" onClick={onDescargar}><Download size={15} /></button>}
+        {permisos.restaurar && <button className="bk-icon-btn bk-icon-btn--warn" title="Restaurar" onClick={onRestaurar}><RotateCcw size={15} /></button>}
         <div className="bk-menu-wrap">
           <button className={`bk-icon-btn ${menuAbierto ? 'active' : ''}`} title="Más acciones" onClick={onMenu}><MoreVertical size={15} /></button>
           <AnimatePresence>
@@ -678,13 +699,13 @@ function BackupCard({ item, menuAbierto, onMenu, onDetalle, onRenombrar, onDescr
                 onClick={e => e.stopPropagation()}
               >
                 <button onClick={onDetalle}><Eye size={14} /> Ver detalles</button>
-                <button onClick={onRenombrar}><Pencil size={14} /> Renombrar</button>
-                <button onClick={onDescripcion}><FileText size={14} /> Agregar descripción</button>
-                <button onClick={onDescargar}><Download size={14} /> Descargar</button>
-                <button onClick={onDuplicar}><Copy size={14} /> Duplicar</button>
-                <div className="bk-menu-sep" />
-                <button onClick={onRestaurar} className="bk-menu-warn"><RotateCcw size={14} /> Restaurar</button>
-                <button onClick={onEliminar} className="bk-menu-danger"><Trash2 size={14} /> Eliminar</button>
+                {permisos.renombrar && <button onClick={onRenombrar}><Pencil size={14} /> Renombrar</button>}
+                {permisos.editarDescripcion && <button onClick={onDescripcion}><FileText size={14} /> Agregar descripción</button>}
+                {permisos.descargar && <button onClick={onDescargar}><Download size={14} /> Descargar</button>}
+                {permisos.duplicar && <button onClick={onDuplicar}><Copy size={14} /> Duplicar</button>}
+                {(permisos.restaurar || permisos.eliminar) && <div className="bk-menu-sep" />}
+                {permisos.restaurar && <button onClick={onRestaurar} className="bk-menu-warn"><RotateCcw size={14} /> Restaurar</button>}
+                {permisos.eliminar && <button onClick={onEliminar} className="bk-menu-danger"><Trash2 size={14} /> Eliminar</button>}
               </motion.div>
             )}
           </AnimatePresence>

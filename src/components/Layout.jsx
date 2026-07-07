@@ -62,6 +62,7 @@ export default function Layout({
   puedeVerReglamentos = false,
   puedeVerAuditoriaReglamentos = false,
   puedeVerAuditoriaPapelera = false,
+  puedeVerBackups = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -717,8 +718,8 @@ export default function Layout({
             </>
           )}
 
-          {/* Backups — módulo exclusivo de administradores */}
-          {esAdmin && <>
+          {/* Backups — visible según permiso (admin lo recibe completo) */}
+          {puedeVerBackups && <>
             <motion.div
               className={`nav-item nav-item--parent ${backupsActivo ? 'active' : ''}`}
               onClick={() => setBackupsAbierto(o => !o)}

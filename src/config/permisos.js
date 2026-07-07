@@ -162,6 +162,22 @@ export const MODULOS = [
       { key: 'ver_auditoria_papelera',   accion: 'auditoria', label: 'Ver auditoría de papelera',labelCorto: 'Aud. Pap.',   desc: 'Permite ver el historial de acciones realizadas en la Papelera.' },
     ],
   },
+  {
+    key: 'backups', label: 'Backups', icon: '🗄️', pasoLabel: 'Backups',
+    descripcion: 'Acceso al módulo de respaldos del sistema: crear, descargar, renombrar, restaurar, duplicar y eliminar respaldos, además de la línea de tiempo de actividad.',
+    permisos: [
+      { key: 'ver_backups',                     accion: 'ver',         label: 'Ver backups',              labelCorto: 'Ver backups', desc: 'Permite acceder al módulo de Backups y ver el historial completo de respaldos.' },
+      { key: 'crear_backups',                   accion: 'crear',       label: 'Crear backups',            labelCorto: 'Crear',       desc: 'Permite generar nuevos respaldos del sistema.' },
+      { key: 'descargar_backups',               accion: 'exportar',    label: 'Descargar backups',        labelCorto: 'Descargar',   desc: 'Permite descargar el archivo de un respaldo.' },
+      { key: 'renombrar_backups',               accion: 'editar',      label: 'Renombrar backups',        labelCorto: 'Renombrar',   desc: 'Permite cambiar el nombre personalizado de un respaldo.' },
+      { key: 'editar_descripcion_backups',      accion: 'editar',      label: 'Editar descripción',       labelCorto: 'Descripción', desc: 'Permite agregar o modificar la descripción de un respaldo.' },
+      { key: 'duplicar_backups',                accion: 'accion',      label: 'Duplicar backups',         labelCorto: 'Duplicar',    desc: 'Permite crear una copia independiente de un respaldo existente.' },
+      { key: 'restaurar_backups',               accion: 'accion',      label: 'Restaurar backups',        labelCorto: 'Restaurar',   desc: 'Permite restaurar el sistema al estado de un respaldo (requiere confirmación).' },
+      { key: 'eliminar_backups',                accion: 'eliminar',    label: 'Eliminar backups',         labelCorto: 'Eliminar',    desc: 'Permite eliminar respaldos de forma permanente.' },
+      { key: 'configurar_automatizacion_backups', accion: 'administrar', label: 'Configurar automatización', labelCorto: 'Automatizar', desc: 'Permite definir la frecuencia de los respaldos automáticos.' },
+      { key: 'ver_actividad_backups',           accion: 'auditoria',   label: 'Ver actividad de backups', labelCorto: 'Actividad',   desc: 'Permite ver la línea de tiempo de auditoría de los respaldos.' },
+    ],
+  },
 ]
 
 // Permisos legado que existen por compatibilidad pero NO se muestran agrupados
@@ -272,10 +288,12 @@ export const GUARDAS_RUTA = {
   personal_contrataciones:  ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_reemplazos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_documentos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
-  // Backups es un módulo exclusivo de administradores (no se expone en el wizard
-  // de permisos): la guarda solo deja pasar al rol admin.
-  backups:                  (perm) => perm.esAdmin,
-  backups_actividad:        (perm) => perm.esAdmin,
+  // Backups es un módulo asignable por permisos (admin lo recibe completo por
+  // bypass). El backend (RLS del bucket/tabla y las edge functions) sigue
+  // restringido a rol='admin', por lo que conceder estos permisos a un no-admin
+  // muestra el módulo pero las operaciones reales requieren rol admin.
+  backups:                  'ver_backups',
+  backups_actividad:        'ver_actividad_backups',
 }
 
 // ─── Presets de rol (FUENTE ÚNICA) ──────────────────────────────────────────

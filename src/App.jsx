@@ -126,7 +126,7 @@ export default function App() {
     puedeAccederUsuarios, puedeGestionarAjustes, puedeGestionarRoles,
     puedeGestionarCampos, permisosCampos,
     puedeVerAuditoriaGeneral,
-    puedeVerBackups,
+    puedeVerBackups, permisosBackups,
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     permisosReglamentos, puedeVerReglamentos,
@@ -401,7 +401,7 @@ export default function App() {
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
       {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad') && puedeVerBackups &&
-        <Backups usuario={usuario} vista={paginaSegura === 'backups_actividad' ? 'actividad' : 'respaldos'}
+        <Backups usuario={usuario} permisos={permisosBackups} vista={paginaSegura === 'backups_actividad' ? 'actividad' : 'respaldos'}
           onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : 'backups')} />}
       {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
       {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}

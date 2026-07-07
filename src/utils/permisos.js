@@ -137,8 +137,20 @@ export function construirPermisos(usuario, permisosRaw) {
 
   const puedeVerAuditoriaGeneral = esAdmin
 
-  // Backups: módulo exclusivo de administradores.
-  const puedeVerBackups = esAdmin
+  // Backups: módulo asignable por permisos (admin recibe todo por bypass).
+  const permisosBackups = {
+    ver:               can('ver_backups'),
+    crear:             can('crear_backups'),
+    descargar:         can('descargar_backups'),
+    renombrar:         can('renombrar_backups'),
+    editarDescripcion: can('editar_descripcion_backups'),
+    duplicar:          can('duplicar_backups'),
+    restaurar:         can('restaurar_backups'),
+    eliminar:          can('eliminar_backups'),
+    automatizar:       can('configurar_automatizacion_backups'),
+    verActividad:      can('ver_actividad_backups'),
+  }
+  const puedeVerBackups = permisosBackups.ver
 
   const permisosPersonal = {
     ver_contrataciones:           can('ver_contrataciones'),
@@ -193,7 +205,7 @@ export function construirPermisos(usuario, permisosRaw) {
     puedeAccederUsuarios, puedeGestionarAjustes, puedeGestionarRoles,
     puedeGestionarCampos, permisosCampos,
     puedeVerAuditoriaGeneral,
-    puedeVerBackups,
+    puedeVerBackups, permisosBackups,
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     puedeAdministrarReglamentos, permisosReglamentos, puedeVerReglamentos,
