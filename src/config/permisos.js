@@ -272,6 +272,10 @@ export const GUARDAS_RUTA = {
   personal_contrataciones:  ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_reemplazos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_documentos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
+  // Backups es un módulo exclusivo de administradores (no se expone en el wizard
+  // de permisos): la guarda solo deja pasar al rol admin.
+  backups:                  (perm) => perm.esAdmin,
+  backups_actividad:        (perm) => perm.esAdmin,
 }
 
 // ─── Presets de rol (FUENTE ÚNICA) ──────────────────────────────────────────

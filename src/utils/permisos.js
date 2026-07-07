@@ -137,6 +137,9 @@ export function construirPermisos(usuario, permisosRaw) {
 
   const puedeVerAuditoriaGeneral = esAdmin
 
+  // Backups: módulo exclusivo de administradores.
+  const puedeVerBackups = esAdmin
+
   const permisosPersonal = {
     ver_contrataciones:           can('ver_contrataciones'),
     crear_contrataciones:         can('crear_contrataciones'),
@@ -190,6 +193,7 @@ export function construirPermisos(usuario, permisosRaw) {
     puedeAccederUsuarios, puedeGestionarAjustes, puedeGestionarRoles,
     puedeGestionarCampos, permisosCampos,
     puedeVerAuditoriaGeneral,
+    puedeVerBackups,
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     puedeAdministrarReglamentos, permisosReglamentos, puedeVerReglamentos,

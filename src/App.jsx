@@ -18,6 +18,7 @@ import MantenedorRoles  from './pages/MantenedorRoles'
 import Papelera         from './pages/Papelera'
 import Personal        from './pages/Personal'
 import Reglamentos     from './pages/Reglamentos'
+import Backups         from './pages/Backups'
 import { aplicarTema } from './utils/tema'
 import { construirPermisos } from './utils/permisos'
 import { PRESETS_ROL } from './config/permisos'
@@ -50,6 +51,8 @@ const RUTA_A_PAGINA = {
   '/reglamentos':                    'reglamentos',
   '/reglamentos/auditoria':          'reglamentos_auditoria',
   '/papelera/auditoria':             'papelera_auditoria',
+  '/backups':                        'backups',
+  '/backups/actividad':              'backups_actividad',
 }
 
 const PAGINA_A_RUTA = {
@@ -79,6 +82,8 @@ const PAGINA_A_RUTA = {
   reglamentos:                    '/reglamentos',
   reglamentos_auditoria:          '/reglamentos/auditoria',
   papelera_auditoria:             '/papelera/auditoria',
+  backups:                        '/backups',
+  backups_actividad:              '/backups/actividad',
 }
 
 // El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
@@ -121,6 +126,7 @@ export default function App() {
     puedeAccederUsuarios, puedeGestionarAjustes, puedeGestionarRoles,
     puedeGestionarCampos, permisosCampos,
     puedeVerAuditoriaGeneral,
+    puedeVerBackups,
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     permisosReglamentos, puedeVerReglamentos,
@@ -372,6 +378,7 @@ export default function App() {
       puedeVerReglamentos={puedeVerReglamentos}
       puedeVerAuditoriaReglamentos={permisosReglamentos.verAuditoria}
       puedeVerAuditoriaPapelera={puedeVerAuditoriaPapelera}
+      puedeVerBackups={puedeVerBackups}
     >
       {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
       {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
@@ -393,6 +400,9 @@ export default function App() {
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
+      {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad') && puedeVerBackups &&
+        <Backups usuario={usuario} vista={paginaSegura === 'backups_actividad' ? 'actividad' : 'respaldos'}
+          onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : 'backups')} />}
       {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
       {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
       {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
