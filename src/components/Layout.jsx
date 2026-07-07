@@ -113,7 +113,7 @@ export default function Layout({
     if (!puedeGestionarTickets) return
     const cargar = async () => {
       const { count } = await supabase
-        .from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto')
+        .from('tickets').select('*', { count: 'exact', head: true }).eq('estado', 'Abierto').eq('is_deleted', false)
       setTicketsAbiertos(count ?? 0)
     }
     cargar()
