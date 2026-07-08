@@ -6,58 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const BREVO_API_KEY = Deno.env.get("BREVO_API_KEY");
-const ADMIN_EMAIL   = Deno.env.get("ADMIN_EMAIL");
-
-// Envía un correo a todos los administradores con el resultado de un backup
-// automático (éxito o error). Silencioso si faltan credenciales Brevo.
-async function notificarAdmins(
-  // deno-lint-ignore no-explicit-any
-  supabaseAdmin: any,
-  ok: boolean,
-  detalle: string,
-) {
-  try {
-    if (!BREVO_API_KEY || !ADMIN_EMAIL) return;
-    const { data: admins } = await supabaseAdmin
-      .from("usuarios").select("email, nombre").eq("rol", "admin");
-    const to = (admins ?? [])
-      .filter((u: { email?: string }) => u.email)
-      .map((u: { email: string; nombre?: string }) => ({ email: u.email, name: u.nombre ?? u.email }));
-    if (!to.length) return;
-
-    const color   = ok ? "#15803d" : "#b91c1c";
-    const bg      = ok ? "#dcfce7" : "#fee2e2";
-    const titulo  = ok ? "✅ Backup automático completado" : "⚠️ Falló el backup automático";
-    const html = `
-      <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:560px;margin:0 auto;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
-        <div style="background:#1a237e;padding:20px 24px">
-          <h2 style="color:#f0d060;margin:0;font-size:18px">🗄️ Respaldo del sistema — Liceo JHJ</h2>
-        </div>
-        <div style="padding:24px">
-          <div style="background:${bg};border-radius:8px;padding:10px 16px;margin-bottom:18px;display:inline-block">
-            <span style="font-size:14px;font-weight:700;color:${color}">${titulo}</span>
-          </div>
-          <p style="margin:0;font-size:14px;color:#374151;line-height:1.6">${detalle}</p>
-          <p style="margin-top:22px;font-size:12px;color:#9ca3af">Ingresa al módulo <strong>Backups</strong> para ver el historial y gestionar los respaldos.</p>
-        </div>
-      </div>`;
-
-    await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": BREVO_API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sender:  { name: "Sistema de Gestión Liceo JHJ", email: ADMIN_EMAIL },
-        to,
-        subject: ok ? "✅ Backup automático del sistema" : "⚠️ Falló el backup automático",
-        htmlContent: html,
-      }),
-    });
-  } catch (e) {
-    console.error("No se pudo enviar el correo de backup:", String(e));
-  }
-}
-
 const TABLAS_BACKUP = [
   "bienes", "categorias", "usuarios", "permisos_rol", "permisos_usuario",
   "prestamos", "tickets", "requerimientos", "ausencias", "dias_compensatorios",
@@ -161,10 +109,6 @@ Deno.serve(async (req: Request) => {
       });
 
     if (uploadError) {
-      if (esLlamadaSistema) {
-        await notificarAdmins(supabaseAdmin, false,
-          `No se pudo guardar el respaldo automático en el almacenamiento.<br><br><strong>Detalle técnico:</strong> ${uploadError.message}`);
-      }
       return json({ error: `Error al guardar en Storage: ${uploadError.message}` }, 500);
     }
 
@@ -181,12 +125,6 @@ Deno.serve(async (req: Request) => {
         creado_en:      ahora,
       });
     } catch { /* ignorar si constraint rechaza */ }
-
-    // Avisar por correo solo en respaldos automáticos (los manuales se ven en la UI)
-    if (esLlamadaSistema) {
-      await notificarAdmins(supabaseAdmin, true,
-        `Se generó correctamente el respaldo automático <strong>${nombreArchivo}</strong> con <strong>${totalRegistros.toLocaleString("es-CL")} registros</strong> de ${TABLAS_BACKUP.length} tablas.`);
-    }
 
     return json({ ok: true, archivo: nombreArchivo, fecha, tipo: tipoCorto });
 

@@ -87,13 +87,6 @@ function nombrePorDefecto(nombre) {
   const m = nombre.match(/(\d{4}-\d{2}-\d{2})/)
   return `Respaldo ${m ? m[1] : ''} · ${origen.label}`.trim()
 }
-function proximoAuto(frecuencia) {
-  const hoy = new Date()
-  if (frecuencia === 'diario')  { const d = new Date(hoy); d.setDate(d.getDate() + 1); return fmtFecha(d.toISOString()) }
-  if (frecuencia === 'semanal') { const d = new Date(hoy); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); return fmtFecha(d.toISOString()) }
-  if (frecuencia === 'mensual') { const d = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1); return fmtFecha(d.toISOString()) }
-  return 'Desactivado'
-}
 
 const ETAPAS_CREAR = [
   'Recopilando datos del sistema…',
@@ -270,9 +263,9 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       total, espacio,
       ultimo: ultimo ? fmtFecha(ultimo.createdAt) : '—',
       ultimoExito: ultimoExito ? fmtFechaHora(ultimoExito.createdAt) : '—',
-      proximo: proximoAuto(autoFrecuencia),
+      proximo: 'No activo',
     }
-  }, [items, autoFrecuencia])
+  }, [items])
 
   // ── upsert meta ───────────────────────────────────────────────────────────
   const upsertMeta = useCallback(async (archivo, campos, item) => {
@@ -1156,7 +1149,7 @@ function ModalAuto({ actual, onClose, onGuardar }) {
           </button>
         ))}
       </div>
-      <div className="bk-note"><Info size={13} /> El sistema ejecuta el respaldo automático según esta frecuencia y avisa por correo a los administradores cuando termina o falla. Requiere la tarea programada activa en el servidor.</div>
+      <div className="bk-note"><Info size={13} /> Esta preferencia queda guardada, pero los respaldos automáticos no están activos por ahora. Genera respaldos cuando los necesites con el botón <strong>Nuevo Backup</strong>.</div>
       <div className="bk-modal-actions">
         <button className="bk-btn-ghost" onClick={onClose}>Cancelar</button>
         <button className="bk-btn-primary" onClick={() => onGuardar(sel)}><CheckCircle2 size={15} /> Guardar</button>
