@@ -154,6 +154,7 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [modalEliminar,  setModalEliminar]  = useState(null)   // item
   const [modalDuplicar,  setModalDuplicar]  = useState(null)   // item
   const [modalAuto,      setModalAuto]      = useState(false)
+  const [modalLimpiar,   setModalLimpiar]   = useState(false)
 
   // Toasts
   const [toasts, setToasts] = useState([])
@@ -353,6 +354,30 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     toast('ok', 'Preferencia de respaldo automático guardada.')
   }
 
+  // Respaldos de seguridad (generados antes de cada restauración) — se acumulan.
+  const backupsSeguridad = useMemo(() => items.filter(i => i.origen === 'seguridad'), [items])
+  const tamanoSeguridad  = useMemo(() => backupsSeguridad.reduce((a, i) => a + (i.size || 0), 0), [backupsSeguridad])
+
+  const handleLimpiarSeguridad = async () => {
+    const archivos = backupsSeguridad.map(i => i.archivo)
+    if (archivos.length === 0) { setModalLimpiar(false); return }
+    const { error } = await supabase.storage.from(BUCKET).remove(archivos)
+    if (error) { toast('error', 'No se pudieron eliminar los respaldos de seguridad.'); return }
+    await supabase.from('backups_meta').delete().in('archivo', archivos)
+    try {
+      await supabase.from('audit_logs').insert({
+        bien_nombre: `Limpieza de respaldos de seguridad (${archivos.length})`,
+        accion: 'eliminar',
+        cambios: { operacion: 'limpieza_seguridad', cantidad: archivos.length, archivos },
+        usuario_id: usuario.id, usuario_nombre: usuario.nombre, usuario_rol: usuario.rol,
+        modulo: 'backup', creado_en: new Date().toISOString(),
+      })
+    } catch { /* constraint */ }
+    setModalLimpiar(false)
+    toast('ok', `${archivos.length} ${archivos.length === 1 ? 'respaldo de seguridad eliminado' : 'respaldos de seguridad eliminados'}.`)
+    cargar(true)
+  }
+
   // ── Acceso denegado ───────────────────────────────────────────────────────
   if (!p.ver) {
     return (
@@ -378,6 +403,11 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
           </div>
         </div>
         <div className="bk-head-actions">
+          {p.eliminar && backupsSeguridad.length > 0 && (
+            <button className="bk-btn-ghost" onClick={() => setModalLimpiar(true)} title="Eliminar los respaldos de seguridad acumulados">
+              <Trash2 size={15} /> Limpiar seguridad ({backupsSeguridad.length})
+            </button>
+          )}
           {p.automatizar && (
             <button className="bk-btn-ghost" onClick={() => setModalAuto(true)}>
               <CalendarClock size={15} /> Automatización
@@ -573,6 +603,17 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
             actual={autoFrecuencia}
             onClose={() => setModalAuto(false)}
             onGuardar={guardarAutoFrecuencia}
+          />
+        )}
+        {modalLimpiar && (
+          <ModalConfirm
+            key="limpiar"
+            titulo="Limpiar respaldos de seguridad"
+            Icon={Trash2} tono="peligro"
+            mensaje={<>Se eliminarán <strong>{backupsSeguridad.length} {backupsSeguridad.length === 1 ? 'respaldo de seguridad' : 'respaldos de seguridad'}</strong> ({fmtBytes(tamanoSeguridad)}), generados automáticamente antes de cada restauración. Los respaldos <strong>manuales y automáticos no se tocan</strong>. Esta acción es permanente.</>}
+            confirmLabel="Limpiar"
+            onClose={() => setModalLimpiar(false)}
+            onConfirm={handleLimpiarSeguridad}
           />
         )}
       </AnimatePresence>
