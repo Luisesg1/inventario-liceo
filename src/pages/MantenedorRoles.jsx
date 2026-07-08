@@ -30,7 +30,14 @@ function Toggle({ activo, onChange, disabled }) {
   const w = 44, h = 24, d = 18
   return (
     <div
+      role="switch"
+      aria-checked={activo}
+      aria-disabled={disabled || undefined}
+      tabIndex={disabled ? -1 : 0}
       onClick={disabled ? undefined : onChange}
+      onKeyDown={disabled ? undefined : e => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange() }
+      }}
       style={{
         width: w, height: h, borderRadius: h / 2,
         background: activo ? 'rgb(var(--primary-rgb))' : '#cbd5e1',
@@ -680,12 +687,11 @@ export default function MantenedorRoles() {
                             <div
                               key={a.key}
                               className="permiso-row"
-                              onClick={() => togglePermiso(a.key)}
                               style={{
                                 display: 'flex', alignItems: 'center',
                                 justifyContent: 'space-between',
                                 padding: '11px 16px',
-                                cursor: 'pointer', userSelect: 'none',
+                                cursor: 'default', userSelect: 'none',
                                 background: activo ? 'rgba(var(--primary-rgb),0.025)' : '#fff',
                                 borderBottom: esUltimo ? 'none' : '1px solid #f8fafc',
                                 transition: 'background 0.12s',
