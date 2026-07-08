@@ -660,8 +660,9 @@ function BackupCard({ item, permisos = {}, menuAbierto, onMenu, onDetalle, onRen
   const TipoIcon = tipo.Icon
   return (
     <motion.div
-      className="bk-card"
+      className={`bk-card ${menuAbierto ? 'bk-card--menu-open' : ''}`}
       layout
+      style={{ zIndex: menuAbierto ? 50 : undefined }}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.18 } }}

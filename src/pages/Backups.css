@@ -102,11 +102,15 @@
 /* ── Lista / tarjetas ── */
 .bk-list { display: flex; flex-direction: column; gap: 10px; }
 .bk-card {
+  position: relative;
   display: flex; align-items: center; gap: 14px;
   background: #fff; border: 1px solid var(--bk-border); border-radius: 14px;
   padding: 14px 16px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: box-shadow 0.15s, border-color 0.15s;
 }
+/* La tarjeta con el menú ⋮ abierto se eleva sobre las siguientes para que el
+   desplegable no quede tapado por la tarjeta de abajo. */
+.bk-card--menu-open { z-index: 50; }
 .bk-card:hover { box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08); border-color: #d5dae5; }
 .bk-card-icon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .bk-card-main { flex: 1; min-width: 0; }
