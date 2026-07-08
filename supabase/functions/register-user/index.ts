@@ -154,9 +154,19 @@ serve(async (req) => {
       editar_roles_permisos: false,
     }
 
+    // Permisos del rol docente desde la fuente viva `permisos_rol` (editable en
+    // el Mantenedor de Roles). Si no hay fila, se usa la copia estática de
+    // respaldo. El auto-registro siempre asigna rol 'docente' por seguridad.
+    let permisosFinal = permisosDocente
+    const { data: rolDocente } = await admin
+      .from('permisos_rol').select('permisos').eq('rol', 'docente').maybeSingle()
+    if (rolDocente?.permisos && Object.keys(rolDocente.permisos).length > 0) {
+      permisosFinal = { ...permisosDocente, ...rolDocente.permisos }
+    }
+
     const { error: permisosError } = await admin.from('permisos_usuario').upsert({
       usuario_id: userId,
-      permisos: permisosDocente,
+      permisos: permisosFinal,
       categorias: ['todos'],
     }, { onConflict: 'usuario_id' })
 
@@ -166,7 +176,7 @@ serve(async (req) => {
       // Intentar insert directo como fallback
       const { error: insertError } = await admin.from('permisos_usuario').insert({
         usuario_id: userId,
-        permisos: permisosDocente,
+        permisos: permisosFinal,
         categorias: ['todos'],
       }).select().limit(1)
       if (insertError) {
