@@ -353,7 +353,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
     const cargar = async () => {
       if (!puedeVerInventario) { setCargando(false); return }
       const queries = [
-        supabase.from('bienes').select('categoria, estado, ubicacion'),
+        supabase.from('bienes').select('categoria, estado, ubicacion').eq('is_deleted', false),
         supabase.from('categorias').select('id, label, icon'),
       ]
       if (!esAdmin && usuario?.id) {
