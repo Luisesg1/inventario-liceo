@@ -871,6 +871,15 @@ function ModalTexto({ titulo, descripcion, label, valorInicial, placeholder, Ico
 }
 
 // ── Modal detalle ───────────────────────────────────────────────────────────
+const NOMBRE_TABLA = {
+  bienes: 'Bienes', categorias: 'Categorías', usuarios: 'Usuarios',
+  permisos_rol: 'Permisos por rol', permisos_usuario: 'Permisos de usuario',
+  prestamos: 'Préstamos', tickets: 'Tickets', requerimientos: 'Requerimientos',
+  ausencias: 'Ausencias', dias_compensatorios: 'Compensatorios', audit_logs: 'Auditoría',
+  actividades: 'Actividades', configuracion: 'Configuración', incidencias: 'Incidencias',
+  dias_inhabilitados: 'Días inhabilitados',
+}
+
 function ModalDetalle({ item, onClose }) {
   const tipo = TIPOS[item.tipo] ?? TIPOS.completo
   const est  = ESTADOS[item.estado] ?? ESTADOS.correcto
@@ -886,6 +895,32 @@ function ModalDetalle({ item, onClose }) {
     ['Tamaño', fmtBytes(item.size)],
     ['Descripción', item.descripcion || '—'],
   ]
+
+  // Contenido real del respaldo (registros por tabla), leyendo el JSON.
+  const [estadoCont, setEstadoCont] = useState('cargando') // cargando | ok | error
+  const [contenido, setContenido]   = useState(null)       // { total, tablas: [[nombre, n]] }
+
+  useEffect(() => {
+    let vivo = true
+    ;(async () => {
+      const { data, error } = await supabase.storage.from(BUCKET).download(item.archivo)
+      if (!vivo) return
+      if (error || !data) { setEstadoCont('error'); return }
+      try {
+        const json = JSON.parse(await data.text())
+        const tables = json.tables || {}
+        const tablas = Object.entries(tables)
+          .map(([n, rows]) => [n, Array.isArray(rows) ? rows.length : 0])
+          .sort((a, b) => b[1] - a[1])
+        const total = json.total_registros ?? tablas.reduce((a, [, n]) => a + n, 0)
+        if (vivo) { setContenido({ total, tablas }); setEstadoCont('ok') }
+      } catch {
+        if (vivo) setEstadoCont('error')
+      }
+    })()
+    return () => { vivo = false }
+  }, [item.archivo])
+
   return (
     <Overlay onClose={onClose} ancho={480}>
       <div className="bk-modal-head">
@@ -900,6 +935,33 @@ function ModalDetalle({ item, onClose }) {
           </div>
         ))}
       </div>
+
+      {/* ── Contenido del respaldo ── */}
+      <div className="bk-det-contenido">
+        <div className="bk-det-contenido-head">
+          <span><Database size={13} /> Contenido</span>
+          {estadoCont === 'ok' && <span className="bk-det-total">{contenido.total.toLocaleString('es-CL')} registros</span>}
+        </div>
+        {estadoCont === 'cargando' && (
+          <p className="bk-det-msg"><Loader2 size={13} className="bk-spin" /> Analizando contenido…</p>
+        )}
+        {estadoCont === 'error' && (
+          <p className="bk-det-msg">No se pudo leer el contenido del archivo.</p>
+        )}
+        {estadoCont === 'ok' && (
+          contenido.tablas.length === 0
+            ? <p className="bk-det-msg">El respaldo no contiene tablas.</p>
+            : <div className="bk-det-tablas">
+                {contenido.tablas.map(([n, c]) => (
+                  <div className="bk-det-tabla" key={n}>
+                    <span>{NOMBRE_TABLA[n] ?? n}</span>
+                    <span className="bk-det-tabla-n">{c.toLocaleString('es-CL')}</span>
+                  </div>
+                ))}
+              </div>
+        )}
+      </div>
+
       <div className="bk-modal-actions"><button className="bk-btn-primary" onClick={onClose} style={{ width: '100%' }}>Cerrar</button></div>
     </Overlay>
   )
