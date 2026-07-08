@@ -1156,7 +1156,7 @@ function ModalAuto({ actual, onClose, onGuardar }) {
           </button>
         ))}
       </div>
-      <div className="bk-note"><Info size={13} /> Actualmente el sistema genera un respaldo automático mensual. Las demás frecuencias quedan preparadas en la interfaz.</div>
+      <div className="bk-note"><Info size={13} /> El sistema ejecuta el respaldo automático según esta frecuencia y avisa por correo a los administradores cuando termina o falla. Requiere la tarea programada activa en el servidor.</div>
       <div className="bk-modal-actions">
         <button className="bk-btn-ghost" onClick={onClose}>Cancelar</button>
         <button className="bk-btn-primary" onClick={() => onGuardar(sel)}><CheckCircle2 size={15} /> Guardar</button>
