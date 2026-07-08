@@ -974,101 +974,6 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
     setMenuExportar(false); setMenuExportarDetalle(false)
   }
 
-  const exportarExcelPorCategorias = () => {
-    if (!bienes.length) { setAviso('No hay bienes para exportar.'); return }
-    const fecha = new Date().toISOString().slice(0, 10)
-    const cargarYExportar = () => {
-      const XLSX = window.XLSX
-      const wb = XLSX.utils.book_new()
-
-      // Hoja resumen
-      const resumenRows = [['Categoría', 'Ícono', 'Total bienes']]
-      const grupos = {}
-      bienes.forEach(b => {
-        if (b._pendiente) return
-        const cat = categorias.find(c => c.id === b.categoria)
-        const key = b.categoria || 'sin_categoria'
-        const label = cat?.label ?? b.categoria ?? 'Sin categoría'
-        const icon = cat?.icon ?? '📦'
-        if (!grupos[key]) grupos[key] = { label, icon, items: [] }
-        grupos[key].items.push(b)
-      })
-      Object.values(grupos).forEach(g => resumenRows.push([g.label, g.icon, g.items.length]))
-      resumenRows.push(['', '', ''])
-      resumenRows.push(['TOTAL', '', bienes.filter(b => !b._pendiente).length])
-      const wsResumen = XLSX.utils.aoa_to_sheet(resumenRows)
-      wsResumen['!cols'] = [{ wch: 28 }, { wch: 8 }, { wch: 14 }]
-      XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen')
-
-      const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, fill: { fgColor: { rgb: '1A237E' }, patternType: 'solid' }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } }
-      const applyHeaderStyle = (ws, numCols) => {
-        for (let C = 0; C < numCols; C++) {
-          const h = XLSX.utils.encode_cell({ r: 0, c: C })
-          if (ws[h]) ws[h].s = headerStyle
-        }
-      }
-
-      // Una hoja por categoría
-      Object.values(grupos).forEach(({ label, items }) => {
-        if (!items.length) return
-        const { cols, datosFlat } = getColumnasExportar(items)
-        const encabezados = cols.map(c => ETIQUETAS_COL[c] ?? c)
-        const rows = [encabezados, ...datosFlat.map(b => cols.map(c => b[c] ?? ''))]
-        const ws = XLSX.utils.aoa_to_sheet(rows)
-        ws['!cols'] = cols.map(c => ({ wch: Math.max((ETIQUETAS_COL[c] ?? c).length + 4, 14) }))
-        ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft', state: 'frozen' }
-        ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 0, c: encabezados.length - 1 } }) }
-        ws['!rows'] = [{ hpt: 22 }]
-        applyHeaderStyle(ws, encabezados.length)
-        const range = XLSX.utils.decode_range(ws['!ref'])
-        for (let R = 1; R <= range.e.r; R++) {
-          const rowFill = { fgColor: { rgb: R % 2 === 0 ? 'F0F4FF' : 'FFFFFF' }, patternType: 'solid' }
-          for (let C = 0; C <= range.e.c; C++) {
-            const cell = XLSX.utils.encode_cell({ r: R, c: C })
-            if (ws[cell]) ws[cell].s = { font: { sz: 9 }, fill: rowFill, alignment: { wrapText: true, vertical: 'top' } }
-          }
-        }
-        XLSX.utils.book_append_sheet(wb, ws, label.slice(0, 31))
-      })
-
-      // Estilos en hoja resumen
-      applyHeaderStyle(wsResumen, 3)
-
-      XLSX.writeFile(wb, `backup_inventario_${fecha}.xlsx`, { bookType: 'xlsx', cellStyles: true })
-      setMenuExportar(false)
-    }
-    if (window.XLSX) { cargarYExportar(); return }
-    const script = document.getElementById('sheetjs-script') || document.createElement('script')
-    script.id = 'sheetjs-script'
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-    script.onload = cargarYExportar
-    script.onerror = () => setAviso('No se pudo cargar la librería de Excel.')
-    document.head.appendChild(script)
-  }
-
-  const exportarJSON = () => {
-    if (!bienes.length) { setAviso('No hay bienes para exportar.'); return }
-    const fecha = new Date().toISOString()
-    const datos = bienes
-      .filter(b => !b._pendiente)
-      .map(({ _pendiente, ...b }) => b)
-    const backup = {
-      version: 1,
-      fecha_exportacion: fecha,
-      total: datos.length,
-      categorias: categorias.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
-      bienes: datos,
-    }
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `backup_inventario_${fecha.slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    setMenuExportar(false)
-  }
-
   // ── Categorías ────────────────────────────────────────
   const abrirModalCat = () => { setNuevaCat({ label: '', icon: '📦' }); setErrorCat(false); setModalCat(true) }
 
@@ -2094,36 +1999,13 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
                   ].map(({ icon, label, desc, fn }) => (
                     <button key={label} onClick={fn} style={{
                       display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                      padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                      padding: '7px 14px', background: 'none', border: 'none', cursor: 'pointer',
                       textAlign: 'left', transition: 'background 0.15s',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                     onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
-                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
-                        <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                  <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0' }} />
-                  <p style={{ margin: 0, padding: '6px 14px 4px', fontSize: '0.7rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                    Backup completo
-                  </p>
-                  {[
-                    { icon: '🗂️', label: 'Excel por categorías', desc: 'Una hoja por categoría + resumen', fn: exportarExcelPorCategorias },
-                    { icon: '💾', label: 'JSON',                  desc: 'Backup reimportable a BD',         fn: exportarJSON },
-                  ].map(({ icon, label, desc, fn }) => (
-                    <button key={label} onClick={fn} style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                      padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-                      textAlign: 'left', transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >
-                      <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+                      <span style={{ fontSize: '1.1rem', width: '22px', textAlign: 'center', flexShrink: 0 }}>{icon}</span>
                       <div>
                         <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem', color: '#111827' }}>{label}</p>
                         <p style={{ margin: 0, fontSize: '0.72rem', color: '#9ca3af' }}>{desc}</p>
