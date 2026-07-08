@@ -139,6 +139,7 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [fUsuario, setFUsuario] = useState('')
   const [fTipo,    setFTipo]    = useState('')
   const [fEstado,  setFEstado]  = useState('')
+  const [fOrigen,  setFOrigen]  = useState('')
   const [fDesde,   setFDesde]   = useState('')
   const [fHasta,   setFHasta]   = useState('')
   const [orden,    setOrden]    = useState({ campo: 'fecha', dir: 'desc' })
@@ -236,6 +237,7 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       if (fUsuario && i.usuario !== fUsuario) return false
       if (fTipo && i.tipo !== fTipo) return false
       if (fEstado && i.estado !== fEstado) return false
+      if (fOrigen && i.origen !== fOrigen) return false
       const fecha = (i.createdAt || '').slice(0, 10)
       if (fDesde && fecha < fDesde) return false
       if (fHasta && fecha > fHasta) return false
@@ -251,10 +253,10 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       return va < vb ? -dir : va > vb ? dir : 0
     })
     return arr
-  }, [items, q, fUsuario, fTipo, fEstado, fDesde, fHasta, orden])
+  }, [items, q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden])
 
-  const hayFiltros = q || fUsuario || fTipo || fEstado || fDesde || fHasta
-  const limpiarFiltros = () => { setQ(''); setFUsuario(''); setFTipo(''); setFEstado(''); setFDesde(''); setFHasta('') }
+  const hayFiltros = q || fUsuario || fTipo || fEstado || fOrigen || fDesde || fHasta
+  const limpiarFiltros = () => { setQ(''); setFUsuario(''); setFTipo(''); setFEstado(''); setFOrigen(''); setFDesde(''); setFHasta('') }
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
@@ -436,6 +438,10 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
             <select value={fEstado} onChange={e => setFEstado(e.target.value)}>
               <option value="">Todos los estados</option>
               {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <select value={fOrigen} onChange={e => setFOrigen(e.target.value)}>
+              <option value="">Todos los orígenes</option>
+              {Object.entries(ORIGENES).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
             </select>
             <div className="bk-fecha-range">
               <CalendarDays size={14} />
