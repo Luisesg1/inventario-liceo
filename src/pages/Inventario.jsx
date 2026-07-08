@@ -1828,13 +1828,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       margin:      [0, 0, 0, 0],
       filename:    `${verDetalle.codigo}_${verDetalle.nombre.replace(/\s+/g, '_')}.pdf`,
       image:       { type: 'jpeg', quality: 0.98 },
-      // windowWidth:794 hace que html2canvas clone el documento en un iframe
-      // de 794px — mismo ancho del template — sin activar media queries mobile.
+      // width:794 fuerza a html2canvas a recortar exactamente el ancho del
+      // template. NO usar windowWidth: en pantallas anchas con devicePixelRatio
+      // fraccionario (p. ej. escalado de Windows 120%) provoca que el contenido
+      // se renderice en una fracción del canvas → PDF desplazado a la izquierda
+      // con gran espacio en blanco a la derecha. width + scrollX/Y:0 es estable
+      // en escritorio y móvil por igual.
       html2canvas: {
         scale:           2,
         useCORS:         true,
         backgroundColor: '#ffffff',
-        windowWidth:     794,
+        width:           794,
+        scrollX:         0,
+        scrollY:         0,
         logging:         false,
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
