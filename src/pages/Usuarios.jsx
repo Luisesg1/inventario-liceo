@@ -14,6 +14,8 @@ import {
   PERMISOS_VACIO,
   PRESETS_ROL as PERMISOS_POR_ROL,
 } from '../config/permisos'
+import { labelDeRol } from '../config/roles'
+import { useRoles } from '../hooks/useRoles'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
 const REQUISITOS_PASS = [
@@ -64,22 +66,8 @@ const ROL_COLORES = {
   visor_requerimientos:{ bg: '#f3e8ff', color: '#6b21a8' },
 }
 
-const ROL_LABEL = {
-  admin:          'Administrador',
-  directivo:      'Directivo',
-  coordinador:    'Coordinador',
-  docente:        'Docente',
-  asistente:      'Asistente de la educación',
-  administrativo: 'Administrativo',
-  // Legacy
-  encargado_inventario:'Encargado inventario',
-  encargado_soporte:   'Encargado Soporte técnico',
-  encargado_permisos:  'Encargado Permisos',
-  editor:              'Editor',
-  encargado:           'Encargado',
-  soporte:             'Soporte técnico',
-  visor_requerimientos:'Visor requerimientos',
-}
+// ROL_LABEL, ROLES_SISTEMA (metadatos de roles) y sus helpers viven ahora en
+// src/config/roles.js (fuente única). Aquí se consumen vía useRoles()/labelDeRol.
 
 // ══════════════════════════════════════════════════════════════════════════
 // Configuración de permisos — Diseño por fases (Stepper)
@@ -125,18 +113,6 @@ const NIVELES_ACCESO = [
   },
 ]
 
-// Roles reales del sistema — base inicial; se amplían dinámicamente con roles de la BD
-const ROLES_SISTEMA = [
-  { key: 'admin',          label: 'Administrador',             icon: '⚙️',  desc: 'Acceso completo a todos los módulos' },
-  { key: 'directivo',      label: 'Directivo',                 icon: '🏛️', desc: 'Inventario, préstamos y auditoría' },
-  { key: 'coordinador',    label: 'Coordinador',               icon: '📋', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'docente',        label: 'Docente',                   icon: '📚', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'asistente',      label: 'Asistente de la educación', icon: '🤝', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'administrativo', label: 'Administrativo',            icon: '🗂️', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'soporte',        label: 'Soporte técnico',           icon: '🔧', desc: 'Gestión completa de tickets' },
-]
-
-// Roles legacy que no se muestran como opciones nuevas
 function getIconForCat(label) {
   const l = (label ?? '').toLowerCase()
   if (l.includes('biblioteca') || l.includes('libro')) return '📚'
@@ -202,7 +178,8 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     const n = detectarNivelActual(draft?.permisos ?? {})
     return n.startsWith('rol:') ? n.slice(4) : null
   })
-  const [rolesDisponibles] = useState(ROLES_SISTEMA)
+  // Lista viva de roles (base + personalizados de la BD) y sus permisos reales.
+  const { rolesDisponibles, permisosDe } = useRoles()
 
   // Devuelve el paso anterior
   function pasoAnterior(p) {
@@ -256,8 +233,9 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
   }
 
   function aplicarRol(rolKey) {
-    const rolData = PERMISOS_POR_ROL[rolKey]
-    if (!rolData) return
+    // Los permisos salen de la fuente viva (permisos_rol vía useRoles); así un
+    // rol personalizado aplica exactamente los permisos con que fue creado.
+    const rolData = permisosDe(rolKey)
     setNivel('rol:' + rolKey)
     setRolBase(rolKey)
     // Resetear TODOS los permisos a la plantilla del rol (incluyendo categorías/módulos)
@@ -456,7 +434,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
             {(() => {
               const sel = nivel === 'personalizado'
               const n = NIVELES_ACCESO.find(x => x.key === 'personalizado')
-              const baseLabel = rolBase ? (ROL_LABEL[rolBase] ?? rolBase) : null
+              const baseLabel = rolBase ? labelDeRol(rolBase) : null
               return (
                 <div
                   onClick={() => aplicarNivel('personalizado')}
@@ -561,6 +539,7 @@ function PanelPermisos({ usuario: u, onCerrar, onRolCambiado }) {
   const [mensaje, setMensaje]                       = useState({ tipo: '', texto: '' })
   const [confirmar, setConfirmar]                   = useState(false)
   const [rolTemplateSeleccionado, setRolTemplate]   = useState(null)
+  const { permisosDe } = useRoles()
 
   const rolCambiado = rolTemplateSeleccionado && rolTemplateSeleccionado !== u.rol
 
@@ -578,7 +557,7 @@ function PanelPermisos({ usuario: u, onCerrar, onRolCambiado }) {
       .select('permisos, categorias')
       .eq('usuario_id', u.id)
       .maybeSingle()
-    const def = PERMISOS_POR_ROL[u.rol] ?? PERMISOS_POR_ROL.encargado
+    const def = permisosDe(u.rol) // permisos base del rol desde la fuente viva
     const loaded = data
       ? { permisos: { ...data.permisos }, categorias: [...(data.categorias ?? def.categorias)] }
       : { permisos: { ...def.permisos }, categorias: [...def.categorias] }
@@ -634,7 +613,7 @@ function PanelPermisos({ usuario: u, onCerrar, onRolCambiado }) {
           padding: '8px 13px', marginBottom: 8, fontSize: 12.5, color: '#1e40af',
           display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500,
         }}>
-          ℹ️ Se cambiará el rol a <strong>{ROL_LABEL[rolTemplateSeleccionado] ?? rolTemplateSeleccionado}</strong> al guardar.
+          ℹ️ Se cambiará el rol a <strong>{labelDeRol(rolTemplateSeleccionado)}</strong> al guardar.
         </div>
       )}
 
@@ -735,6 +714,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [usuarioCreado, setUsuarioCreado] = useState(null)
   const [rutVinculado, setRutVinculado]   = useState([]) // cuentas existentes con ese RUT
   const [permisosListos, setPermisosListos] = useState(false)
+  const { rolesDisponibles, permisosDe } = useRoles()
 
   async function checkRutVinculado(rutVal) {
     if (!rutVal.trim() || !validarRut(rutVal)) { setRutVinculado([]); return }
@@ -754,10 +734,12 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     return { permisos: { ...def.permisos }, categorias: [...def.categorias] }
   })
 
-  // Actualizar draft cuando cambia el rol (solo en paso 1)
+  // Actualizar draft cuando cambia el rol (solo en paso 1). Los permisos salen
+  // de la fuente viva (permisos_rol), por lo que un rol personalizado precarga
+  // exactamente los permisos con que fue creado.
   function cambiarRol(nuevoRol) {
     setRol(nuevoRol)
-    const def = PERMISOS_POR_ROL[nuevoRol] ?? PERMISOS_POR_ROL.docente
+    const def = permisosDe(nuevoRol)
     setDraft({ permisos: { ...def.permisos }, categorias: [...def.categorias] })
   }
 
@@ -912,13 +894,9 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               <label className="form-label">
                 Rol
                 <select className="form-select" value={rol} onChange={(e) => cambiarRol(e.target.value)}>
-                  <option value="admin">Administrador</option>
-                  <option value="directivo">Directivo</option>
-                  <option value="coordinador">Coordinador</option>
-                  <option value="docente">Docente</option>
-                  <option value="asistente">Asistente de la educación</option>
-                  <option value="administrativo">Administrativo</option>
-                  <option value="soporte">Soporte técnico</option>
+                  {rolesDisponibles.map(r => (
+                    <option key={r.key} value={r.key}>{r.label}</option>
+                  ))}
                 </select>
               </label>
             </div>
@@ -1042,6 +1020,18 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   const puedeEditar       = esAdminReal || !!permisosAdmin.editarUsuario
   const puedeEliminar     = esAdminReal || !!permisosAdmin.eliminarUsuario
   const puedeVerHistorial = esAdminReal || !!permisosAdmin.verHistorialUsuarios
+
+  // Lista viva de roles (base + personalizados de la BD) para selectores y para
+  // resolver los permisos base al cambiar el rol de un usuario.
+  const { rolesDisponibles, permisosDe } = useRoles()
+
+  // Opciones para un <select> de asignación de rol, garantizando que el rol
+  // actual del usuario (aunque sea legacy o custom aún no listado) esté presente
+  // para no dejar el select en un valor "fantasma".
+  const opcionesRol = (rolActual) =>
+    rolActual && !rolesDisponibles.some(r => r.key === rolActual)
+      ? [{ key: rolActual, label: labelDeRol(rolActual) }, ...rolesDisponibles]
+      : rolesDisponibles
 
   const [usuarios, setUsuarios] = useState([])
   const [estado, setEstado]     = useState('cargando')
@@ -1263,7 +1253,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     // 2. Si cambió el rol, reemplazar permisos del usuario por los del nuevo rol
     const rolCambio = editRol !== uOriginal?.rol
     if (rolCambio) {
-      const perfilNuevo = PERMISOS_POR_ROL[editRol] ?? { permisos: { ...PERMISOS_VACIO }, categorias: ['todos'] }
+      const perfilNuevo = permisosDe(editRol) // permisos base del nuevo rol desde la fuente viva
       const { error: errPermisos } = await supabase
         .from('permisos_usuario')
         .upsert(
@@ -1489,13 +1479,9 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           title="Filtrar por rol"
         >
           <option value="todos">Todos los roles</option>
-          <option value="admin">Administrador</option>
-          <option value="directivo">Directivo</option>
-          <option value="coordinador">Coordinador</option>
-          <option value="docente">Docente</option>
-          <option value="asistente">Asistente de la educación</option>
-          <option value="administrativo">Administrativo</option>
-          <option value="soporte">Soporte técnico</option>
+          {rolesDisponibles.map(r => (
+            <option key={r.key} value={r.key}>{r.label}</option>
+          ))}
         </select>
       </div>
       {busqueda && (
@@ -1594,18 +1580,14 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                         setConfirmCambioRol({ userId: u.id, nombreUsuario: u.nombre, rolActual: u.rol, nuevoRol: e.target.value })
                     }}
                     disabled={eliminando}>
-                    <option value="admin">Administrador</option>
-                    <option value="directivo">Directivo</option>
-                    <option value="coordinador">Coordinador</option>
-                    <option value="docente">Docente</option>
-                    <option value="asistente">Asistente educación</option>
-                    <option value="administrativo">Administrativo</option>
-                    <option value="soporte">Soporte técnico</option>
+                    {opcionesRol(u.rol).map(r => (
+                      <option key={r.key} value={r.key}>{r.label}</option>
+                    ))}
                   </select>
                 ) : (
                   <span className="rol-select"
                     style={{ background: colores.bg, color: colores.color, cursor: 'default' }}>
-                    {ROL_LABEL[u.rol] ?? u.rol}
+                    {labelDeRol(u.rol)}
                   </span>
                 )}
 
@@ -1708,17 +1690,13 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                       <label className="form-label">Rol
                         <select className="form-select" value={editRol}
                           onChange={(e) => setEditRol(e.target.value)}>
-                          <option value="admin">Administrador</option>
-                          <option value="directivo">Directivo</option>
-                          <option value="coordinador">Coordinador</option>
-                          <option value="docente">Docente</option>
-                          <option value="asistente">Asistente de la educación</option>
-                          <option value="administrativo">Administrativo</option>
-                          <option value="soporte">Soporte técnico</option>
+                          {opcionesRol(editRol).map(r => (
+                            <option key={r.key} value={r.key}>{r.label}</option>
+                          ))}
                         </select>
                         {editRol !== u.rol && (
                           <span style={{ fontSize: 11.5, color: '#92400e', marginTop: 5, display: 'block', fontWeight: 500 }}>
-                            ⚠️ Los permisos serán reemplazados por los del rol <strong>{ROL_LABEL[editRol] ?? editRol}</strong> al guardar.
+                            ⚠️ Los permisos serán reemplazados por los del rol <strong>{labelDeRol(editRol)}</strong> al guardar.
                           </span>
                         )}
                       </label>
@@ -1920,11 +1898,11 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
               {/* Flecha de cambio */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
                 <span style={{ background: colActual.bg, color: colActual.color, borderRadius: 8, padding: '5px 14px', fontWeight: 700, fontSize: 13 }}>
-                  {ROL_LABEL[confirmCambioRol.rolActual] ?? confirmCambioRol.rolActual}
+                  {labelDeRol(confirmCambioRol.rolActual)}
                 </span>
                 <span style={{ color: '#9ca3af', fontSize: 18 }}>→</span>
                 <span style={{ background: colNuevo.bg, color: colNuevo.color, borderRadius: 8, padding: '5px 14px', fontWeight: 700, fontSize: 13 }}>
-                  {ROL_LABEL[confirmCambioRol.nuevoRol] ?? confirmCambioRol.nuevoRol}
+                  {labelDeRol(confirmCambioRol.nuevoRol)}
                 </span>
               </div>
 
@@ -1953,7 +1931,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
               {/* Aviso */}
               <div style={{ background: '#fef9c3', border: '1px solid #fde047', borderRadius: 8, padding: '9px 13px', marginBottom: 20, fontSize: 12.5, color: '#713f12' }}>
-                ⚠️ Los permisos actuales del usuario serán reemplazados por los del rol <strong>{ROL_LABEL[confirmCambioRol.nuevoRol]}</strong>.
+                ⚠️ Los permisos actuales del usuario serán reemplazados por los del rol <strong>{labelDeRol(confirmCambioRol.nuevoRol)}</strong>.
               </div>
 
               {/* Botones */}

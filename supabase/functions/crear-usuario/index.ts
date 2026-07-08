@@ -45,8 +45,18 @@ Deno.serve(async (req: Request) => {
     if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
     if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
 
-    const rolesValidos = ["admin", "directivo", "coordinador", "docente", "asistente", "administrativo", "encargado_inventario", "encargado_soporte", "encargado_permisos", "editor", "encargado", "soporte", "visor_requerimientos"];
-    const rolFinal = rolesValidos.includes(rol ?? "") ? rol! : "docente";
+    // Roles base/legacy conocidos + cualquier rol personalizado existente en
+    // `permisos_rol` (creado desde el Mantenedor de Roles). Así un usuario puede
+    // crearse con un rol nuevo sin que se degrade silenciosamente a "docente".
+    const rolesBaseValidos = ["admin", "directivo", "coordinador", "docente", "asistente", "administrativo", "encargado_inventario", "encargado_soporte", "encargado_permisos", "editor", "encargado", "soporte", "visor_requerimientos"];
+    let rolFinal = "docente";
+    if (rol && rolesBaseValidos.includes(rol)) {
+      rolFinal = rol;
+    } else if (rol) {
+      const { data: rolPersonalizado } = await supabaseAnon
+        .from("permisos_rol").select("rol").eq("rol", rol).maybeSingle();
+      if (rolPersonalizado) rolFinal = rol;
+    }
 
     // 5. RUT duplicado — permitido (una persona puede tener múltiples cuentas)
     //    El aviso se muestra en el frontend antes de crear.
@@ -96,10 +106,20 @@ Deno.serve(async (req: Request) => {
       return json({ error: `Error al registrar usuario: ${insertError.message}` }, 500);
     }
 
-    // 8. Permisos por defecto
+    // 8. Permisos por defecto. La tabla `permisos_rol` es la fuente viva
+    //    (editable desde el Mantenedor de Roles): si el rol tiene fila allí, se
+    //    usan esos permisos; si no (p. ej. admin, que no se seedea), se cae al
+    //    mapa estático getPermisosDefault().
+    let permisosDefault = getPermisosDefault(rolFinal);
+    const { data: permRolRow } = await supabaseAnon
+      .from("permisos_rol").select("permisos").eq("rol", rolFinal).maybeSingle();
+    if (permRolRow?.permisos && Object.keys(permRolRow.permisos).length > 0) {
+      permisosDefault = { ...permisosDefault, ...permRolRow.permisos };
+    }
+
     const { error: permisosError } = await supabaseAdmin.from("permisos_usuario").insert({
       usuario_id: nuevoUserId,
-      permisos: getPermisosDefault(rolFinal),
+      permisos: permisosDefault,
       categorias: ["todos"],
     });
     if (permisosError) console.warn("Permisos no insertados:", permisosError.message);
