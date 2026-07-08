@@ -26,7 +26,14 @@ import {
   DEFAULTS_PERMISO,
   RESTRICCIONES_ROL,
   GUARDAS_RUTA,
+  PERMISOS_OBLIGATORIOS,
+  PAGINAS_OBLIGATORIAS,
 } from '../config/permisos'
+
+// Módulos obligatorios (Mis Ausencias, Tickets, Reglamentos): sus permisos base
+// se conceden a TODOS los roles, por encima de cualquier restricción de rol.
+const OBLIGATORIOS_SET = new Set(PERMISOS_OBLIGATORIOS)
+const PAGINAS_OBLIGATORIAS_SET = new Set(PAGINAS_OBLIGATORIAS)
 
 // Páginas del grupo Ausencias — para el fallback de redirección (a "Mis ausencias").
 const PAGINAS_AUSENCIAS = new Set(['permisos', 'compensatorios', 'auditoria_permisos'])
@@ -46,6 +53,9 @@ export function construirPermisos(usuario, permisosRaw) {
   // ── Regla única de permiso ────────────────────────────────────────────────
   const can = (clave) => {
     if (esAdmin) return true
+    // Módulos obligatorios: siempre concedidos, aun si el rol tiene el módulo
+    // negado o el JSONB lo trae en false. Prevalecen sobre cualquier restricción.
+    if (OBLIGATORIOS_SET.has(clave)) return true
     const modKey = MODULO_DE_PERMISO[clave]
     if (modKey && modulosNegados.has(modKey)) return false
     const val = p[clave]
@@ -90,7 +100,9 @@ export function construirPermisos(usuario, permisosRaw) {
   }
   const puedeVerAuditoriaReq = permisosReqs.verAuditoria
 
-  const puedeAccederAusencias = rolPermiteModulo('ausencia') && !esVisorReq
+  // "Mis Ausencias" es un módulo obligatorio → el grupo Ausencias es accesible
+  // para todos (la gestión de ausencias de terceros sigue gateada aparte).
+  const puedeAccederAusencias = can('ver_propias_ausencias')
   const permisosAusencia = {
     ver:          can('ver_ausencias'),
     crear:        can('crear_ausencias'),
@@ -221,6 +233,9 @@ export function construirPermisos(usuario, permisosRaw) {
   // ¿La página está vetada para este usuario? (equivale al antiguo `soloAdmin`)
   const paginaBloqueada = (pagina) => {
     if (esAdmin) return false
+    // Páginas de módulos obligatorios: siempre accesibles (incluso si el rol
+    // tiene una whitelist de páginas que no las incluye).
+    if (PAGINAS_OBLIGATORIAS_SET.has(pagina)) return false
     if (restric.paginasPermitidas && !restric.paginasPermitidas.includes(pagina)) return true
     const guarda = GUARDAS_RUTA[pagina]
     if (guarda === undefined) return false
@@ -233,6 +248,8 @@ export function construirPermisos(usuario, permisosRaw) {
 
   const paginaSegura = (pagina) => {
     if (!usuario) return pagina
+    // Módulos obligatorios: nunca se redirige fuera de ellos.
+    if (PAGINAS_OBLIGATORIAS_SET.has(pagina)) return pagina
     if (!puedeVerInventario && soloStaff(pagina)) return 'tickets'
     if (esVisorReq && restric.paginasPermitidas && !restric.paginasPermitidas.includes(pagina)) return 'requerimientos'
     if (!esAdmin && paginaBloqueada(pagina)) {

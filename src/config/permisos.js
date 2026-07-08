@@ -224,6 +224,30 @@ export const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map(a => [a.key, false
 // Todas las claves de permiso (útil para validaciones)
 export const TODAS_LAS_CLAVES = ACCIONES.map(a => a.key)
 
+// ─── Módulos OBLIGATORIOS ────────────────────────────────────────────────────
+// Mis Ausencias, Tickets y Reglamentos son parte de la configuración BASE de
+// CUALQUIER rol (predeterminado o personalizado). Estas claves se fuerzan a
+// `true` en TODAS las capas: el motor de permisos (src/utils/permisos.js), los
+// presets de rol (PRESETS_ROL, más abajo), la creación/edición de roles
+// (MantenedorRoles.jsx), el frontend de usuarios (useRoles.js) y la BD
+// (migración 20260708000003). Así ningún rol puede quedar sin estos módulos.
+export const PERMISOS_OBLIGATORIOS = [
+  // Mis Ausencias (registro personal)
+  'ver_propias_ausencias', 'exportar_ausencias',
+  // Tickets (uso básico: ver/crear/editar/exportar los propios)
+  'ver_tickets', 'crear_ticket', 'editar_ticket', 'exportar_tickets',
+  // Reglamentos (consulta y descarga de documentos institucionales)
+  'ver_reglamentos', 'descargar_reglamentos',
+]
+
+// Páginas de los módulos obligatorios — nunca se bloquean por rol/restricción.
+export const PAGINAS_OBLIGATORIAS = ['tickets', 'mis_ausencias', 'reglamentos']
+
+// Mapa { clave: true } de los obligatorios — para merges (`...OBLIGATORIOS_TRUE`).
+export const OBLIGATORIOS_TRUE = Object.fromEntries(
+  PERMISOS_OBLIGATORIOS.map(k => [k, true])
+)
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CAPA DE CONSUMO — estructuras declarativas para el motor de permisos
 // (src/utils/permisos.js). Todo esto es DATO, sin lógica de UI. Agregar un
@@ -365,4 +389,11 @@ export const PRESETS_ROL = {
   encargado_permisos:   { permisos: { ...PERMISOS_VACIO, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true }, categorias: ['todos'] },
   editor:               { permisos: { ver_inventario: true, agregar_bien: true, editar_bien: true, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
   encargado:            { permisos: { ver_inventario: true, agregar_bien: false, editar_bien: false, eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false, importar_csv: false, gestionar_usuarios: false, exportar: false, registrar_prestamo: false, registrar_incidencia: false, ver_tickets: true, gestionar_tickets: false }, categorias: ['todos'] },
+}
+
+// Garantiza que TODOS los presets incluyan los módulos obligatorios (Mis
+// Ausencias, Tickets, Reglamentos). Se aplica aquí, en la fuente única, para
+// que ningún rol —presente o futuro— pueda definirse sin ellos.
+for (const cfg of Object.values(PRESETS_ROL)) {
+  cfg.permisos = { ...cfg.permisos, ...OBLIGATORIOS_TRUE }
 }

@@ -16,7 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
-import { PERMISOS_VACIO, PRESETS_ROL } from '../config/permisos'
+import { PERMISOS_VACIO, PRESETS_ROL, OBLIGATORIOS_TRUE } from '../config/permisos'
 import {
   ROLES_BASE, ROLES_BASE_META, ROLES_LEGACY, labelDeRol, iconoDeRol,
 } from '../config/roles'
@@ -56,16 +56,18 @@ export function useRoles() {
   // resuelven desde el preset (o 'todos' por defecto).
   const permisosDe = useCallback((key) => {
     const fila = rolesBD.find(r => r.rol === key)
+    // Los módulos obligatorios (Mis Ausencias, Tickets, Reglamentos) se fuerzan
+    // en true SIEMPRE, aunque el JSONB del rol/preset no los incluya.
     if (fila?.permisos) {
       return {
-        permisos: { ...PERMISOS_VACIO, ...fila.permisos },
+        permisos: { ...PERMISOS_VACIO, ...fila.permisos, ...OBLIGATORIOS_TRUE },
         categorias: PRESETS_ROL[key]?.categorias ?? ['todos'],
       }
     }
     const preset = PRESETS_ROL[key]
     return preset
-      ? { permisos: { ...PERMISOS_VACIO, ...preset.permisos }, categorias: [...preset.categorias] }
-      : { permisos: { ...PERMISOS_VACIO }, categorias: ['todos'] }
+      ? { permisos: { ...PERMISOS_VACIO, ...preset.permisos, ...OBLIGATORIOS_TRUE }, categorias: [...preset.categorias] }
+      : { permisos: { ...PERMISOS_VACIO, ...OBLIGATORIOS_TRUE }, categorias: ['todos'] }
   }, [rolesBD])
 
   return { rolesDisponibles, rolesBase, rolesCustom, permisosDe, cargando, recargar }

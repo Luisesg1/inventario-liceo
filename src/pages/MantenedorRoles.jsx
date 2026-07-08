@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabase'
 // Catálogo centralizado de permisos (fuente única de verdad, compartido con Usuarios.jsx)
-import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO } from '../config/permisos'
+import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO, PERMISOS_OBLIGATORIOS, OBLIGATORIOS_TRUE } from '../config/permisos'
 import { useEsMovil } from '../hooks/useEsMovil'
 
 const ROL_LABEL = {
@@ -24,6 +24,11 @@ const ROL_COLORES = {
 }
 
 const ROLES_BASE = ['admin','directivo','coordinador','docente','asistente','administrativo','soporte','visor_requerimientos']
+
+// Claves de los módulos obligatorios (Mis Ausencias, Tickets, Reglamentos):
+// se fuerzan en true y se bloquean en la UI para que ningún rol quede sin ellos.
+const OBLIGATORIOS_SET = new Set(PERMISOS_OBLIGATORIOS)
+const esObligatorio = (key) => OBLIGATORIOS_SET.has(key)
 
 // ── Toggle premium ─────────────────────────────────────────────────────────
 function Toggle({ activo, onChange, disabled }) {
@@ -133,7 +138,8 @@ export default function MantenedorRoles() {
 
   function seleccionarRol(rol) {
     setRolSeleccionado(rol)
-    const d = { permisos: { ...PERMISOS_VACIO, ...(rol.permisos ?? {}) }, descripcion: rol.descripcion ?? '' }
+    // Los módulos obligatorios siempre se muestran activos.
+    const d = { permisos: { ...PERMISOS_VACIO, ...(rol.permisos ?? {}), ...OBLIGATORIOS_TRUE }, descripcion: rol.descripcion ?? '' }
     setDraft(d)
     setSavedDraft(d)
     setMensaje({ tipo: '', texto: '' })
@@ -141,6 +147,7 @@ export default function MantenedorRoles() {
   }
 
   function togglePermiso(key) {
+    if (esObligatorio(key)) return // módulo obligatorio: no se puede desactivar
     setDraft(prev => ({
       ...prev,
       permisos: { ...prev.permisos, [key]: !prev.permisos[key] },
@@ -154,7 +161,8 @@ export default function MantenedorRoles() {
   function activarTodosGrupo(grupoKey, valor) {
     const grupo = GRUPOS.find(g => g.key === grupoKey)
     if (!grupo) return
-    const updates = Object.fromEntries(grupo.permisos.map(k => [k, valor]))
+    // Los obligatorios permanecen en true aunque se "desactive todo" el grupo.
+    const updates = Object.fromEntries(grupo.permisos.map(k => [k, esObligatorio(k) ? true : valor]))
     setDraft(prev => ({ ...prev, permisos: { ...prev.permisos, ...updates } }))
   }
 
@@ -166,7 +174,7 @@ export default function MantenedorRoles() {
       .from('permisos_rol')
       .upsert({
         rol: rolSeleccionado.rol,
-        permisos: draft.permisos,
+        permisos: { ...draft.permisos, ...OBLIGATORIOS_TRUE }, // garantiza obligatorios en BD
         descripcion: draft.descripcion,
       }, { onConflict: 'rol' })
 
@@ -176,7 +184,7 @@ export default function MantenedorRoles() {
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error al guardar: ' + error.message })
     } else {
-      const actualizado = { ...rolSeleccionado, permisos: draft.permisos, descripcion: draft.descripcion }
+      const actualizado = { ...rolSeleccionado, permisos: { ...draft.permisos, ...OBLIGATORIOS_TRUE }, descripcion: draft.descripcion }
       setSavedDraft(draft)
       setRoles(prev => prev.map(r => r.rol === rolSeleccionado.rol ? actualizado : r))
       setRolSeleccionado(actualizado)
@@ -186,7 +194,8 @@ export default function MantenedorRoles() {
   }
 
   async function restaurarDefecto() {
-    const defecto = { ...PERMISOS_VACIO }
+    // "Todo desactivado" conserva los módulos obligatorios activos.
+    const defecto = { ...PERMISOS_VACIO, ...OBLIGATORIOS_TRUE }
     setDraft(prev => ({ ...prev, permisos: defecto }))
     setMensaje({ tipo: 'info', texto: 'Permisos restablecidos. Haz clic en «Guardar» para aplicar.' })
     setTimeout(() => setMensaje({ tipo: '', texto: '' }), 3000)
@@ -197,7 +206,7 @@ export default function MantenedorRoles() {
     const nuevoRol = rolSeleccionado.rol + '_copia'
     const { error } = await supabase.from('permisos_rol').insert({
       rol: nuevoRol,
-      permisos: draft.permisos,
+      permisos: { ...draft.permisos, ...OBLIGATORIOS_TRUE },
       descripcion: `Copia de ${rolSeleccionado.descripcion || rolSeleccionado.rol}`,
     })
     if (error) {
@@ -680,7 +689,8 @@ export default function MantenedorRoles() {
                     {abierto && (
                       <div>
                         {ACCIONES.filter(a => grupo.permisos.includes(a.key)).map((a, idx) => {
-                          const activo = draft?.permisos?.[a.key] ?? false
+                          const obligatorio = esObligatorio(a.key)
+                          const activo = obligatorio || (draft?.permisos?.[a.key] ?? false)
                           const permsEnGrupo = ACCIONES.filter(x => grupo.permisos.includes(x.key))
                           const esUltimo = idx === permsEnGrupo.length - 1
                           return (
@@ -703,8 +713,19 @@ export default function MantenedorRoles() {
                                   margin: 0, fontSize: 13, fontWeight: 600,
                                   color: activo ? '#0f172a' : '#334155',
                                   lineHeight: 1.3,
+                                  display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
                                 }}>
                                   {a.label}
+                                  {obligatorio && (
+                                    <span style={{
+                                      fontSize: 9.5, fontWeight: 700, letterSpacing: '0.4px',
+                                      textTransform: 'uppercase', color: 'rgb(var(--primary-rgb))',
+                                      background: 'rgba(var(--primary-rgb),0.1)',
+                                      borderRadius: 5, padding: '2px 6px', lineHeight: 1.2,
+                                    }}>
+                                      🔒 Obligatorio
+                                    </span>
+                                  )}
                                 </p>
                                 {a.desc && (
                                   <p style={{
@@ -716,7 +737,7 @@ export default function MantenedorRoles() {
                                   </p>
                                 )}
                               </div>
-                              <Toggle activo={activo} onChange={() => togglePermiso(a.key)} />
+                              <Toggle activo={activo} disabled={obligatorio} onChange={() => togglePermiso(a.key)} />
                             </div>
                           )
                         })}
@@ -927,6 +948,8 @@ function ModalNuevoRol({ onCerrar, onCreado, rolesExistentes }) {
       const { data } = await supabase.from('permisos_rol').select('permisos').eq('rol', baseRol).maybeSingle()
       if (data?.permisos) permisos = { ...PERMISOS_VACIO, ...data.permisos }
     }
+    // Los módulos obligatorios se agregan automáticamente a todo rol nuevo.
+    permisos = { ...permisos, ...OBLIGATORIOS_TRUE }
 
     const { error: err } = await supabase.from('permisos_rol').insert({
       rol: claveRol,
