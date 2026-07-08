@@ -15,7 +15,7 @@ import {
   HardDrive, Plus, Search, X, Download, RotateCcw, Copy, Trash2,
   Pencil, FileText, MoreVertical, Eye, ShieldAlert, Loader2, CheckCircle2,
   XCircle, AlertTriangle, Database, Files, Package, Clock, HardDriveDownload,
-  CalendarClock, RefreshCw, Activity, ListChecks, CalendarDays,
+  RefreshCw, Activity, ListChecks, CalendarDays,
   Info, Zap,
 } from 'lucide-react'
 import { supabase } from '../supabase'
@@ -39,13 +39,6 @@ const ORIGENES = {
   auto:      { label: 'Automático', emoji: '🤖' },
   seguridad: { label: 'Seguridad',  emoji: '🛡️' },
 }
-const FRECUENCIAS = [
-  { key: 'desactivado', label: 'Desactivado' },
-  { key: 'diario',      label: 'Diario' },
-  { key: 'semanal',     label: 'Semanal' },
-  { key: 'mensual',     label: 'Mensual' },
-]
-
 // Etiquetas de acciones para la pestaña Actividad
 const ACT_META = {
   crear:      { label: 'Backup creado',        color: '#15803d', bg: '#dcfce7', Icon: Plus },
@@ -116,7 +109,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     duplicar:          esAdmin || !!permisos.duplicar,
     restaurar:         esAdmin || !!permisos.restaurar,
     eliminar:          esAdmin || !!permisos.eliminar,
-    automatizar:       esAdmin || !!permisos.automatizar,
     verActividad:      esAdmin || !!permisos.verActividad,
   }
 
@@ -125,7 +117,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [metaMap,  setMetaMap]  = useState({})
   const [cargando, setCargando] = useState(true)
   const [refrescando, setRefrescando] = useState(false)
-  const [autoFrecuencia, setAutoFrecuencia] = useState('mensual')
 
   // Filtros
   const [q,        setQ]        = useState('')
@@ -146,7 +137,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [modalRestaurar, setModalRestaurar] = useState(null)   // { item, fase, ... }
   const [modalEliminar,  setModalEliminar]  = useState(null)   // item
   const [modalDuplicar,  setModalDuplicar]  = useState(null)   // item
-  const [modalAuto,      setModalAuto]      = useState(false)
   const [modalLimpiar,   setModalLimpiar]   = useState(false)
 
   // Toasts
@@ -162,15 +152,13 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const cargar = useCallback(async (silencioso = false) => {
     if (!p.ver) { setCargando(false); return }
     if (silencioso) setRefrescando(true); else setCargando(true)
-    const [{ data: files }, { data: metas }, { data: cfg }] = await Promise.all([
+    const [{ data: files }, { data: metas }] = await Promise.all([
       supabase.storage.from(BUCKET).list('', { limit: 200, sortBy: { column: 'created_at', order: 'desc' } }),
       supabase.from('backups_meta').select('*'),
-      supabase.from('configuracion').select('valor').eq('clave', 'backup_auto_frecuencia').maybeSingle(),
     ])
     const soloJson = (files ?? []).filter(f => f.name.toLowerCase().endsWith('.json'))
     setArchivos(soloJson)
     setMetaMap(Object.fromEntries((metas ?? []).map(m => [m.archivo, m])))
-    if (cfg?.valor) setAutoFrecuencia(cfg.valor)
     setCargando(false)
     setRefrescando(false)
   }, [p.ver])
@@ -263,7 +251,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       total, espacio,
       ultimo: ultimo ? fmtFecha(ultimo.createdAt) : '—',
       ultimoExito: ultimoExito ? fmtFechaHora(ultimoExito.createdAt) : '—',
-      proximo: 'No activo',
     }
   }, [items])
 
@@ -339,14 +326,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     cargar(true)
   }
 
-  const guardarAutoFrecuencia = async (frecuencia) => {
-    setAutoFrecuencia(frecuencia)
-    const { data } = await supabase.from('configuracion').update({ valor: frecuencia }).eq('clave', 'backup_auto_frecuencia').select()
-    if (!data || data.length === 0) await supabase.from('configuracion').insert({ clave: 'backup_auto_frecuencia', valor: frecuencia })
-    setModalAuto(false)
-    toast('ok', 'Preferencia de respaldo automático guardada.')
-  }
-
   // Respaldos de seguridad (generados antes de cada restauración) — se acumulan.
   const backupsSeguridad = useMemo(() => items.filter(i => i.origen === 'seguridad'), [items])
   const tamanoSeguridad  = useMemo(() => backupsSeguridad.reduce((a, i) => a + (i.size || 0), 0), [backupsSeguridad])
@@ -401,11 +380,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
               <Trash2 size={15} /> Limpiar seguridad ({backupsSeguridad.length})
             </button>
           )}
-          {p.automatizar && (
-            <button className="bk-btn-ghost" onClick={() => setModalAuto(true)}>
-              <CalendarClock size={15} /> Automatización
-            </button>
-          )}
           <button className="bk-btn-ghost" onClick={() => cargar(true)} disabled={refrescando}>
             <RefreshCw size={15} className={refrescando ? 'bk-spin' : ''} /> Actualizar
           </button>
@@ -439,7 +413,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
             <KpiCard Icon={Clock}              color="#0891b2" bg="#ecfeff" label="Último respaldo"    valor={kpis.ultimo} cargando={cargando} />
             <KpiCard Icon={HardDriveDownload}  color="#b45309" bg="#fffbeb" label="Espacio utilizado"  valor={fmtBytes(kpis.espacio)} cargando={cargando} />
             <KpiCard Icon={CheckCircle2}       color="#15803d" bg="#dcfce7" label="Último exitoso"     valor={kpis.ultimoExito} cargando={cargando} chico />
-            <KpiCard Icon={CalendarClock}      color="#7c3aed" bg="#ede9fe" label="Próximo automático" valor={kpis.proximo} cargando={cargando} />
           </div>
 
           {/* ── Filtros ── */}
@@ -588,14 +561,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
             onClose={() => setModalRestaurar(null)}
             onDone={() => cargar(true)}
             registrarAuditoria={registrarAuditoria}
-          />
-        )}
-        {modalAuto && (
-          <ModalAuto
-            key="auto"
-            actual={autoFrecuencia}
-            onClose={() => setModalAuto(false)}
-            onGuardar={guardarAutoFrecuencia}
           />
         )}
         {modalLimpiar && (
@@ -1128,32 +1093,6 @@ function ModalRestaurar({ estado, setEstado, onClose, onDone, registrarAuditoria
           <button className="bk-btn-primary" onClick={onClose} style={{ width: '100%' }}>Cerrar</button>
         </div>
       )}
-    </Overlay>
-  )
-}
-
-// ── Modal automatización ────────────────────────────────────────────────────
-function ModalAuto({ actual, onClose, onGuardar }) {
-  const [sel, setSel] = useState(actual)
-  return (
-    <Overlay onClose={onClose} ancho={440}>
-      <div className="bk-modal-head">
-        <div className="bk-modal-icon" style={{ color: '#7c3aed', background: '#ede9fe' }}><CalendarClock size={20} /></div>
-        <div><h3>Respaldos automáticos</h3><p>Define con qué frecuencia se generan solos.</p></div>
-      </div>
-      <div className="bk-auto-opts">
-        {FRECUENCIAS.map(f => (
-          <button key={f.key} className={`bk-auto-opt ${sel === f.key ? 'active' : ''}`} onClick={() => setSel(f.key)}>
-            <span className="bk-radio">{sel === f.key && <span />}</span>
-            {f.label}
-          </button>
-        ))}
-      </div>
-      <div className="bk-note"><Info size={13} /> Esta preferencia queda guardada, pero los respaldos automáticos no están activos por ahora. Genera respaldos cuando los necesites con el botón <strong>Nuevo Backup</strong>.</div>
-      <div className="bk-modal-actions">
-        <button className="bk-btn-ghost" onClick={onClose}>Cancelar</button>
-        <button className="bk-btn-primary" onClick={() => onGuardar(sel)}><CheckCircle2 size={15} /> Guardar</button>
-      </div>
     </Overlay>
   )
 }

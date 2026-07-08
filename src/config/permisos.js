@@ -174,7 +174,6 @@ export const MODULOS = [
       { key: 'duplicar_backups',                accion: 'accion',      label: 'Duplicar backups',         labelCorto: 'Duplicar',    desc: 'Permite crear una copia independiente de un respaldo existente.' },
       { key: 'restaurar_backups',               accion: 'accion',      label: 'Restaurar backups',        labelCorto: 'Restaurar',   desc: 'Permite restaurar el sistema al estado de un respaldo (requiere confirmación).' },
       { key: 'eliminar_backups',                accion: 'eliminar',    label: 'Eliminar backups',         labelCorto: 'Eliminar',    desc: 'Permite eliminar respaldos de forma permanente.' },
-      { key: 'configurar_automatizacion_backups', accion: 'administrar', label: 'Configurar automatización', labelCorto: 'Automatizar', desc: 'Permite definir la frecuencia de los respaldos automáticos.' },
       { key: 'ver_actividad_backups',           accion: 'auditoria',   label: 'Ver actividad de backups', labelCorto: 'Actividad',   desc: 'Permite ver la línea de tiempo de auditoría de los respaldos.' },
     ],
   },

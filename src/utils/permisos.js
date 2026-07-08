@@ -147,7 +147,6 @@ export function construirPermisos(usuario, permisosRaw) {
     duplicar:          can('duplicar_backups'),
     restaurar:         can('restaurar_backups'),
     eliminar:          can('eliminar_backups'),
-    automatizar:       can('configurar_automatizacion_backups'),
     verActividad:      can('ver_actividad_backups'),
   }
   const puedeVerBackups = permisosBackups.ver
