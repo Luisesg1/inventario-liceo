@@ -1633,6 +1633,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 function ModalDetalleContratacion({ datos, onClose, onEditar }) {
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
+  const [historialAbierto, setHistorialAbierto] = useState(true)
 
   useEffect(() => {
     supabase.from('personal_documentos').select('*').eq('contratacion_id', datos.id)
@@ -1723,29 +1724,59 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
           )}
         </div>
 
-        {/* Historial */}
+        {/* Historial (acordeón expandible/contraíble) */}
         <div>
-          <p style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 13.5, color: '#374151' }}>Historial</p>
-          {historial.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#94a3b8' }}>Sin historial registrado.</p>
-          ) : (
-            <div className="personal-timeline">
-              {historial.map((h, i) => (
-                <div key={h.id} className="personal-timeline-item">
-                  <div className={`personal-timeline-dot ${i === 0 ? 'active' : ''}`}>
-                    <Activity size={11} style={{ color: i === 0 ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8' }} />
+          <button
+            type="button"
+            onClick={() => setHistorialAbierto(o => !o)}
+            aria-expanded={historialAbierto}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer',
+              fontFamily: 'inherit', marginBottom: historialAbierto ? 12 : 0,
+            }}
+          >
+            <span style={{ fontWeight: 700, fontSize: 13.5, color: '#374151' }}>
+              Historial{historial.length ? ` (${historial.length})` : ''}
+            </span>
+            {historialAbierto
+              ? <ChevronUp size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              : <ChevronDown size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+          </button>
+
+          <AnimatePresence initial={false}>
+            {historialAbierto && (
+              <motion.div
+                key="historial-contenido"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                {historial.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Sin historial registrado.</p>
+                ) : (
+                  <div className="personal-timeline">
+                    {historial.map((h, i) => (
+                      <div key={h.id} className="personal-timeline-item">
+                        <div className={`personal-timeline-dot ${i === 0 ? 'active' : ''}`}>
+                          <Activity size={11} style={{ color: i === 0 ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8' }} />
+                        </div>
+                        <div className="personal-timeline-content">
+                          <p className="personal-timeline-title">
+                            {h.accion === 'crear' ? 'Contrato creado' : h.accion === 'editar' ? 'Contrato modificado' : h.accion === 'eliminar' ? 'Contrato eliminado' : h.accion}
+                            {h.usuario_nombre && <span style={{ fontWeight: 400, color: '#64748b' }}> por {h.usuario_nombre}</span>}
+                          </p>
+                          <p className="personal-timeline-date">{formatFecha(h.creado_en?.slice(0,10))}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="personal-timeline-content">
-                    <p className="personal-timeline-title">
-                      {h.accion === 'crear' ? 'Contrato creado' : h.accion === 'editar' ? 'Contrato modificado' : h.accion === 'eliminar' ? 'Contrato eliminado' : h.accion}
-                      {h.usuario_nombre && <span style={{ fontWeight: 400, color: '#64748b' }}> por {h.usuario_nombre}</span>}
-                    </p>
-                    <p className="personal-timeline-date">{formatFecha(h.creado_en?.slice(0,10))}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </motion.div>
