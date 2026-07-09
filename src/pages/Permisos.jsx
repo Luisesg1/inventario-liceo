@@ -2116,13 +2116,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       // Cubrir todos los formatos posibles en DB: '20.469.215-7', '20469215-7', '204692157'
       const rutFormatos = [...new Set([rutRaw, rutNorm || null, rutFormated].filter(Boolean))]
 
-      // 1. Todos los IDs con el mismo RUT normalizado (cualquier formato en DB)
-      const { data: todosUs } = await supabase.from('usuarios').select('id, rut')
+      // 1. Todos los IDs con el mismo RUT normalizado. Se resuelve en el servidor
+      //    (RPC SECURITY DEFINER) porque un docente ya no puede leer usuarios ajenos.
+      const { data: mismoRut } = await supabase.rpc('ids_usuarios_mi_rut')
       const allIds = [...new Set([
         usuario.id,
-        ...(rutNorm ? (todosUs ?? [])
-          .filter(u => normRut(u.rut ?? '') === rutNorm)
-          .map(u => u.id) : []),
+        ...((mismoRut ?? []).map(r => r.id ?? r)),
       ])]
 
       // 2. Consultas en paralelo: usuario_id, externo_rut, snapshot_rut
