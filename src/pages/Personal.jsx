@@ -1633,6 +1633,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 function ModalDetalleContratacion({ datos, onClose, onEditar }) {
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
+  const [docsAbierto, setDocsAbierto] = useState(true)
   const [historialAbierto, setHistorialAbierto] = useState(true)
 
   useEffect(() => {
@@ -1704,24 +1705,54 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
           )}
         </div>
 
-        {/* Documentos */}
+        {/* Documentos (acordeón expandible/contraíble) */}
         <div style={{ marginBottom: 20 }}>
-          <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 13.5, color: '#374151' }}>Documentos ({docs.length})</p>
-          {docs.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#94a3b8' }}>Sin documentos adjuntos.</p>
-          ) : (
-            <div className="personal-doc-list">
-              {docs.map(d => (
-                <div key={d.id} className="personal-doc-item">
-                  <div className="personal-doc-icon"><FileText size={16} /></div>
-                  <div className="personal-doc-info">
-                    <p className="personal-doc-name">{d.nombre}</p>
-                    <p className="personal-doc-meta">{TIPOS_DOC_MAP[d.tipo_doc] ?? d.tipo_doc} · {formatBytes(d.tamanio)}</p>
+          <button
+            type="button"
+            onClick={() => setDocsAbierto(o => !o)}
+            aria-expanded={docsAbierto}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 8, background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer',
+              fontFamily: 'inherit', marginBottom: docsAbierto ? 10 : 0,
+            }}
+          >
+            <span style={{ fontWeight: 700, fontSize: 13.5, color: '#374151' }}>
+              Documentos ({docs.length})
+            </span>
+            {docsAbierto
+              ? <ChevronUp size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              : <ChevronDown size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+          </button>
+
+          <AnimatePresence initial={false}>
+            {docsAbierto && (
+              <motion.div
+                key="documentos-contenido"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
+                style={{ overflow: 'hidden' }}
+              >
+                {docs.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Sin documentos adjuntos.</p>
+                ) : (
+                  <div className="personal-doc-list">
+                    {docs.map(d => (
+                      <div key={d.id} className="personal-doc-item">
+                        <div className="personal-doc-icon"><FileText size={16} /></div>
+                        <div className="personal-doc-info">
+                          <p className="personal-doc-name">{d.nombre}</p>
+                          <p className="personal-doc-meta">{TIPOS_DOC_MAP[d.tipo_doc] ?? d.tipo_doc} · {formatBytes(d.tamanio)}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Historial (acordeón expandible/contraíble) */}
