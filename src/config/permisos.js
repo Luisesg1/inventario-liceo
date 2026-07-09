@@ -317,6 +317,7 @@ export const GUARDAS_RUTA = {
   // muestra el módulo pero las operaciones reales requieren rol admin.
   backups:                  'ver_backups',
   backups_actividad:        'ver_actividad_backups',
+  backups_papelera:         'ver_backups',
 }
 
 // ─── Presets de rol (FUENTE ÚNICA) ──────────────────────────────────────────

@@ -53,6 +53,7 @@ const RUTA_A_PAGINA = {
   '/papelera/auditoria':             'papelera_auditoria',
   '/backups':                        'backups',
   '/backups/actividad':              'backups_actividad',
+  '/backups/papelera':               'backups_papelera',
 }
 
 const PAGINA_A_RUTA = {
@@ -84,6 +85,7 @@ const PAGINA_A_RUTA = {
   papelera_auditoria:             '/papelera/auditoria',
   backups:                        '/backups',
   backups_actividad:              '/backups/actividad',
+  backups_papelera:               '/backups/papelera',
 }
 
 // El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
@@ -400,9 +402,10 @@ export default function App() {
       {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
       {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
       {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
-      {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad') && puedeVerBackups &&
-        <Backups usuario={usuario} permisos={permisosBackups} vista={paginaSegura === 'backups_actividad' ? 'actividad' : 'respaldos'}
-          onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : 'backups')} />}
+      {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad' || paginaSegura === 'backups_papelera') && puedeVerBackups &&
+        <Backups usuario={usuario} permisos={permisosBackups}
+          vista={paginaSegura === 'backups_actividad' ? 'actividad' : paginaSegura === 'backups_papelera' ? 'papelera' : 'respaldos'}
+          onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : v === 'papelera' ? 'backups_papelera' : 'backups')} />}
       {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
       {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
       {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}

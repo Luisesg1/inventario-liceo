@@ -16,12 +16,13 @@ import {
   Pencil, FileText, MoreVertical, Eye, ShieldAlert, Loader2, CheckCircle2,
   XCircle, AlertTriangle, Database, Files, Package, Clock, HardDriveDownload,
   RefreshCw, Activity, ListChecks, CalendarDays,
-  Info, Zap,
+  Info, Zap, Trash, Undo2, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Backups.css'
 
 const BUCKET = 'backups'
+const PAGE_SIZE = 8   // respaldos por página (lista y papelera)
 
 // ── Catálogo de tipos y estados ─────────────────────────────────────────────
 const TIPOS = {
@@ -96,6 +97,32 @@ const ETAPAS_REST = [
   'Finalizando…',
 ]
 
+// Filtro + orden compartido por la lista de Respaldos y la Papelera.
+// `f` = { q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden:{campo,dir} }
+function filtrarOrdenar(lista, f) {
+  const arr = lista.filter(i => {
+    if (f.q && !(`${i.nombre} ${i.archivo} ${i.descripcion}`.toLowerCase().includes(f.q.toLowerCase()))) return false
+    if (f.fUsuario && i.usuario !== f.fUsuario) return false
+    if (f.fTipo && i.tipo !== f.fTipo) return false
+    if (f.fEstado && i.estado !== f.fEstado) return false
+    if (f.fOrigen && i.origen !== f.fOrigen) return false
+    const fecha = (i.createdAt || '').slice(0, 10)
+    if (f.fDesde && fecha < f.fDesde) return false
+    if (f.fHasta && fecha > f.fHasta) return false
+    return true
+  })
+  const dir = f.orden.dir === 'asc' ? 1 : -1
+  return arr.sort((a, b) => {
+    let va, vb
+    if (f.orden.campo === 'nombre')       { va = a.nombre.toLowerCase(); vb = b.nombre.toLowerCase() }
+    else if (f.orden.campo === 'tamano')  { va = a.size; vb = b.size }
+    else if (f.orden.campo === 'usuario') { va = a.usuario.toLowerCase(); vb = b.usuario.toLowerCase() }
+    else if (f.orden.campo === 'eliminado') { va = a.deletedAt || ''; vb = b.deletedAt || '' }
+    else { va = a.createdAt; vb = b.createdAt }
+    return va < vb ? -dir : va > vb ? dir : 0
+  })
+}
+
 export default function Backups({ usuario, permisos = {}, vista = 'respaldos', onIrAVista }) {
   const esAdmin = usuario?.rol === 'admin'
   // Permisos efectivos (admin recibe todo por bypass). El backend (RLS + edge
@@ -135,9 +162,11 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [modalDescrip,   setModalDescrip]   = useState(null)   // item
   const [modalDetalle,   setModalDetalle]   = useState(null)   // item
   const [modalRestaurar, setModalRestaurar] = useState(null)   // { item, fase, ... }
-  const [modalEliminar,  setModalEliminar]  = useState(null)   // item
+  const [modalEliminar,  setModalEliminar]  = useState(null)   // item → enviar a papelera
   const [modalDuplicar,  setModalDuplicar]  = useState(null)   // item
   const [modalLimpiar,   setModalLimpiar]   = useState(false)
+  const [modalRestaurarPap, setModalRestaurarPap] = useState(null) // item (papelera)
+  const [modalEliminarDef,  setModalEliminarDef]  = useState(null) // item (papelera, permanente)
 
   // Toasts
   const [toasts, setToasts] = useState([])
@@ -204,47 +233,47 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       tipo:         meta.tipo   || 'completo',
       estado:       meta.estado || (origen === 'seguridad' ? 'correcto' : 'correcto'),
       usuario:      meta.created_by_nombre || (origen === 'manual' ? '—' : 'Sistema'),
+      // ── Papelera lógica ──
+      borrado:      meta.is_deleted === true,
+      deletedAt:    meta.deleted_at || null,
+      deletedBy:    meta.deleted_by_nombre || null,
     }
   }), [archivos, metaMap])
 
+  // Respaldos vigentes vs. enviados a la papelera
+  const itemsActivos  = useMemo(() => items.filter(i => !i.borrado), [items])
+  const itemsPapelera = useMemo(() => items.filter(i =>  i.borrado), [items])
+
   const usuariosUnicos = useMemo(
-    () => [...new Set(items.map(i => i.usuario).filter(u => u && u !== '—'))],
-    [items]
+    () => [...new Set(itemsActivos.map(i => i.usuario).filter(u => u && u !== '—'))],
+    [itemsActivos]
   )
 
   // ── Filtro + orden ────────────────────────────────────────────────────────
-  const itemsFiltrados = useMemo(() => {
-    let arr = items.filter(i => {
-      if (q && !(`${i.nombre} ${i.archivo} ${i.descripcion}`.toLowerCase().includes(q.toLowerCase()))) return false
-      if (fUsuario && i.usuario !== fUsuario) return false
-      if (fTipo && i.tipo !== fTipo) return false
-      if (fEstado && i.estado !== fEstado) return false
-      if (fOrigen && i.origen !== fOrigen) return false
-      const fecha = (i.createdAt || '').slice(0, 10)
-      if (fDesde && fecha < fDesde) return false
-      if (fHasta && fecha > fHasta) return false
-      return true
-    })
-    const dir = orden.dir === 'asc' ? 1 : -1
-    arr = arr.sort((a, b) => {
-      let va, vb
-      if (orden.campo === 'nombre')  { va = a.nombre.toLowerCase(); vb = b.nombre.toLowerCase() }
-      else if (orden.campo === 'tamano') { va = a.size; vb = b.size }
-      else if (orden.campo === 'usuario') { va = a.usuario.toLowerCase(); vb = b.usuario.toLowerCase() }
-      else { va = a.createdAt; vb = b.createdAt }
-      return va < vb ? -dir : va > vb ? dir : 0
-    })
-    return arr
-  }, [items, q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden])
+  const itemsFiltrados = useMemo(
+    () => filtrarOrdenar(itemsActivos, { q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }),
+    [itemsActivos, q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden]
+  )
 
   const hayFiltros = q || fUsuario || fTipo || fEstado || fOrigen || fDesde || fHasta
   const limpiarFiltros = () => { setQ(''); setFUsuario(''); setFTipo(''); setFEstado(''); setFOrigen(''); setFDesde(''); setFHasta('') }
 
+  // ── Paginación de la lista principal ───────────────────────────────────────
+  const [pagina, setPagina] = useState(1)
+  const totalPaginas = Math.max(1, Math.ceil(itemsFiltrados.length / PAGE_SIZE))
+  // Al cambiar filtros/orden o si la página queda fuera de rango, volver a rango.
+  useEffect(() => { setPagina(1) }, [q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden])
+  useEffect(() => { if (pagina > totalPaginas) setPagina(totalPaginas) }, [pagina, totalPaginas])
+  const itemsPagina = useMemo(
+    () => itemsFiltrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+    [itemsFiltrados, pagina]
+  )
+
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const kpis = useMemo(() => {
-    const total = items.length
-    const espacio = items.reduce((a, i) => a + (i.size || 0), 0)
-    const ordenados = [...items].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    const total = itemsActivos.length
+    const espacio = itemsActivos.reduce((a, i) => a + (i.size || 0), 0)
+    const ordenados = [...itemsActivos].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
     const ultimo = ordenados[0]
     const ultimoExito = ordenados.find(i => i.estado === 'correcto')
     return {
@@ -252,7 +281,7 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
       ultimo: ultimo ? fmtFecha(ultimo.createdAt) : '—',
       ultimoExito: ultimoExito ? fmtFechaHora(ultimoExito.createdAt) : '—',
     }
-  }, [items])
+  }, [itemsActivos])
 
   // ── upsert meta ───────────────────────────────────────────────────────────
   const upsertMeta = useCallback(async (archivo, campos, item) => {
@@ -316,18 +345,50 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     cargar(true)
   }
 
+  // Enviar a la Papelera (soft-delete): conserva el archivo en Storage y solo
+  // marca el metadato como borrado. Desde la Papelera se restaura o se elimina
+  // de forma permanente.
   const handleEliminar = async (item) => {
+    await upsertMeta(item.archivo, {
+      is_deleted: true,
+      deleted_at: new Date().toISOString(),
+      deleted_by: usuario.id,
+      deleted_by_nombre: usuario.nombre,
+    }, item)
+    registrarAuditoria('enviado_a_papelera', item)
+    setModalEliminar(null)
+    toast('ok', 'Respaldo enviado a la papelera.')
+    cargar(true)
+  }
+
+  // Restaurar desde la Papelera al listado de respaldos vigentes.
+  const handleRestaurarPapelera = async (item) => {
+    await upsertMeta(item.archivo, {
+      is_deleted: false,
+      deleted_at: null,
+      deleted_by: null,
+      deleted_by_nombre: null,
+    }, item)
+    registrarAuditoria('restaurado', item, { desde: 'papelera' })
+    setModalRestaurarPap(null)
+    toast('ok', 'Respaldo restaurado.')
+    cargar(true)
+  }
+
+  // Eliminación permanente desde la Papelera: recién aquí se borra el objeto del
+  // bucket y su fila de metadatos.
+  const handleEliminarDefinitivo = async (item) => {
     const { error } = await supabase.storage.from(BUCKET).remove([item.archivo])
     if (error) { toast('error', 'No se pudo eliminar el respaldo.'); return }
     await supabase.from('backups_meta').delete().eq('archivo', item.archivo)
-    registrarAuditoria('eliminar', item)
-    setModalEliminar(null)
-    toast('ok', 'Respaldo eliminado.')
+    registrarAuditoria('eliminado_permanente_manual', item)
+    setModalEliminarDef(null)
+    toast('ok', 'Respaldo eliminado permanentemente.')
     cargar(true)
   }
 
   // Respaldos de seguridad (generados antes de cada restauración) — se acumulan.
-  const backupsSeguridad = useMemo(() => items.filter(i => i.origen === 'seguridad'), [items])
+  const backupsSeguridad = useMemo(() => itemsActivos.filter(i => i.origen === 'seguridad'), [itemsActivos])
   const tamanoSeguridad  = useMemo(() => backupsSeguridad.reduce((a, i) => a + (i.size || 0), 0), [backupsSeguridad])
 
   const handleLimpiarSeguridad = async () => {
@@ -396,6 +457,10 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
         <button className={`bk-tab ${vista === 'respaldos' ? 'active' : ''}`} onClick={() => onIrAVista?.('respaldos')}>
           <ListChecks size={15} /> Respaldos
         </button>
+        <button className={`bk-tab ${vista === 'papelera' ? 'active' : ''}`} onClick={() => onIrAVista?.('papelera')}>
+          <Trash size={15} /> Papelera
+          {itemsPapelera.length > 0 && <span className="bk-tab-count">{itemsPapelera.length}</span>}
+        </button>
         {p.verActividad && (
           <button className={`bk-tab ${vista === 'actividad' ? 'active' : ''}`} onClick={() => onIrAVista?.('actividad')}>
             <Activity size={15} /> Actividad
@@ -405,6 +470,16 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
 
       {vista === 'actividad' && p.verActividad
         ? <Actividad />
+        : vista === 'papelera'
+        ? (
+          <PapeleraBackups
+            items={itemsPapelera}
+            permisos={p}
+            cargando={cargando}
+            onRestaurar={(item) => setModalRestaurarPap(item)}
+            onEliminar={(item) => setModalEliminarDef(item)}
+          />
+        )
         : (
         <>
           {/* ── KPIs ── */}
@@ -416,48 +491,15 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
           </div>
 
           {/* ── Filtros ── */}
-          <div className="bk-filtros">
-            <div className="bk-search">
-              <Search size={15} />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por nombre o descripción…" />
-              {q && <button onClick={() => setQ('')}><X size={14} /></button>}
-            </div>
-            <select value={fUsuario} onChange={e => setFUsuario(e.target.value)}>
-              <option value="">Todos los usuarios</option>
-              {usuariosUnicos.map(u => <option key={u} value={u}>{u}</option>)}
-              {items.some(i => i.usuario === 'Sistema') && <option value="Sistema">Sistema</option>}
-            </select>
-            <select value={fTipo} onChange={e => setFTipo(e.target.value)}>
-              <option value="">Todos los tipos</option>
-              {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-            <select value={fEstado} onChange={e => setFEstado(e.target.value)}>
-              <option value="">Todos los estados</option>
-              {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-            <select value={fOrigen} onChange={e => setFOrigen(e.target.value)}>
-              <option value="">Todos los orígenes</option>
-              {Object.entries(ORIGENES).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
-            </select>
-            <div className="bk-fecha-range">
-              <CalendarDays size={14} />
-              <input type="date" value={fDesde} onChange={e => setFDesde(e.target.value)} title="Desde" />
-              <span>–</span>
-              <input type="date" value={fHasta} onChange={e => setFHasta(e.target.value)} title="Hasta" />
-            </div>
-            <select value={`${orden.campo}:${orden.dir}`} onChange={e => { const [campo, dir] = e.target.value.split(':'); setOrden({ campo, dir }) }} title="Ordenar">
-              <option value="fecha:desc">Fecha ↓</option>
-              <option value="fecha:asc">Fecha ↑</option>
-              <option value="nombre:asc">Nombre A-Z</option>
-              <option value="nombre:desc">Nombre Z-A</option>
-              <option value="tamano:desc">Tamaño ↓</option>
-              <option value="tamano:asc">Tamaño ↑</option>
-              <option value="usuario:asc">Usuario A-Z</option>
-            </select>
-            {hayFiltros && (
-              <button className="bk-limpiar" onClick={limpiarFiltros}><X size={14} /> Limpiar</button>
-            )}
-          </div>
+          <FiltrosBar
+            f={{ q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }}
+            set={{ setQ, setFUsuario, setFTipo, setFEstado, setFOrigen, setFDesde, setFHasta, setOrden }}
+            usuariosUnicos={usuariosUnicos}
+            haySistema={itemsActivos.some(i => i.usuario === 'Sistema')}
+            hayFiltros={hayFiltros}
+            onLimpiar={limpiarFiltros}
+            placeholder="Buscar por nombre o descripción…"
+          />
 
           {/* ── Tabla / tarjetas ── */}
           {cargando ? (
@@ -465,26 +507,33 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
           ) : itemsFiltrados.length === 0 ? (
             <EmptyState hayFiltros={hayFiltros} onNuevo={() => setModalNuevo(true)} onLimpiar={limpiarFiltros} />
           ) : (
-            <div className="bk-list">
-              <AnimatePresence initial={false}>
-                {itemsFiltrados.map(item => (
-                  <BackupCard
-                    key={item.archivo}
-                    item={item}
-                    permisos={p}
-                    menuAbierto={menuAbierto === item.archivo}
-                    onMenu={(e) => { e.stopPropagation(); setMenuAbierto(m => m === item.archivo ? null : item.archivo) }}
-                    onDetalle={() => { setMenuAbierto(null); setModalDetalle(item) }}
-                    onRenombrar={() => { setMenuAbierto(null); setModalRenombrar(item) }}
-                    onDescripcion={() => { setMenuAbierto(null); setModalDescrip(item) }}
-                    onDescargar={() => handleDescargar(item)}
-                    onRestaurar={() => { setMenuAbierto(null); setModalRestaurar({ item, fase: 1, texto: '' }) }}
-                    onDuplicar={() => { setMenuAbierto(null); setModalDuplicar(item) }}
-                    onEliminar={() => { setMenuAbierto(null); setModalEliminar(item) }}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
+            <>
+              <div className="bk-list">
+                <AnimatePresence initial={false}>
+                  {itemsPagina.map(item => (
+                    <BackupCard
+                      key={item.archivo}
+                      item={item}
+                      permisos={p}
+                      menuAbierto={menuAbierto === item.archivo}
+                      onMenu={(e) => { e.stopPropagation(); setMenuAbierto(m => m === item.archivo ? null : item.archivo) }}
+                      onDetalle={() => { setMenuAbierto(null); setModalDetalle(item) }}
+                      onRenombrar={() => { setMenuAbierto(null); setModalRenombrar(item) }}
+                      onDescripcion={() => { setMenuAbierto(null); setModalDescrip(item) }}
+                      onDescargar={() => handleDescargar(item)}
+                      onRestaurar={() => { setMenuAbierto(null); setModalRestaurar({ item, fase: 1, texto: '' }) }}
+                      onDuplicar={() => { setMenuAbierto(null); setModalDuplicar(item) }}
+                      onEliminar={() => { setMenuAbierto(null); setModalEliminar(item) }}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+              <Paginador
+                pagina={pagina} totalPaginas={totalPaginas}
+                total={itemsFiltrados.length} mostrados={itemsPagina.length}
+                onIr={setPagina}
+              />
+            </>
           )}
         </>
       )}
@@ -545,12 +594,34 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
         {modalEliminar && (
           <ModalConfirm
             key="del"
-            titulo="Eliminar respaldo"
+            titulo="Enviar a la papelera"
             Icon={Trash2} tono="peligro"
-            mensaje={<>¿Eliminar <strong>{modalEliminar.nombre}</strong>? Esta acción es permanente y el archivo no se podrá recuperar.</>}
-            confirmLabel="Eliminar"
+            mensaje={<>Se enviará <strong>{modalEliminar.nombre}</strong> a la papelera. Podrás restaurarlo o eliminarlo de forma permanente desde ahí.</>}
+            confirmLabel="Enviar a papelera"
             onClose={() => setModalEliminar(null)}
             onConfirm={() => handleEliminar(modalEliminar)}
+          />
+        )}
+        {modalRestaurarPap && (
+          <ModalConfirm
+            key="rest-pap"
+            titulo="Restaurar respaldo"
+            Icon={Undo2} tono="info"
+            mensaje={<>Se restaurará <strong>{modalRestaurarPap.nombre}</strong> al listado de respaldos vigentes.</>}
+            confirmLabel="Restaurar"
+            onClose={() => setModalRestaurarPap(null)}
+            onConfirm={() => handleRestaurarPapelera(modalRestaurarPap)}
+          />
+        )}
+        {modalEliminarDef && (
+          <ModalConfirm
+            key="del-def"
+            titulo="Eliminar permanentemente"
+            Icon={Trash2} tono="peligro"
+            mensaje={<>¿Eliminar <strong>{modalEliminarDef.nombre}</strong> de forma permanente? Esta acción no se puede deshacer y el archivo no se podrá recuperar.</>}
+            confirmLabel="Eliminar definitivamente"
+            onClose={() => setModalEliminarDef(null)}
+            onConfirm={() => handleEliminarDefinitivo(modalEliminarDef)}
           />
         )}
         {modalRestaurar && (
@@ -649,6 +720,88 @@ function EmptyState({ hayFiltros, onNuevo, onLimpiar }) {
         </>
       )}
     </motion.div>
+  )
+}
+
+// ── Barra de filtros compartida (Respaldos y Papelera) ──────────────────────
+function FiltrosBar({ f, set, usuariosUnicos, haySistema, hayFiltros, onLimpiar, placeholder, papelera }) {
+  return (
+    <div className="bk-filtros">
+      <div className="bk-search">
+        <Search size={15} />
+        <input value={f.q} onChange={e => set.setQ(e.target.value)} placeholder={placeholder} />
+        {f.q && <button onClick={() => set.setQ('')}><X size={14} /></button>}
+      </div>
+      <select value={f.fUsuario} onChange={e => set.setFUsuario(e.target.value)}>
+        <option value="">Todos los usuarios</option>
+        {usuariosUnicos.map(u => <option key={u} value={u}>{u}</option>)}
+        {haySistema && <option value="Sistema">Sistema</option>}
+      </select>
+      <select value={f.fTipo} onChange={e => set.setFTipo(e.target.value)}>
+        <option value="">Todos los tipos</option>
+        {Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+      </select>
+      <select value={f.fEstado} onChange={e => set.setFEstado(e.target.value)}>
+        <option value="">Todos los estados</option>
+        {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+      </select>
+      <select value={f.fOrigen} onChange={e => set.setFOrigen(e.target.value)}>
+        <option value="">Todos los orígenes</option>
+        {Object.entries(ORIGENES).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+      </select>
+      <div className="bk-fecha-range">
+        <CalendarDays size={14} />
+        <input type="date" value={f.fDesde} onChange={e => set.setFDesde(e.target.value)} title="Desde" />
+        <span>–</span>
+        <input type="date" value={f.fHasta} onChange={e => set.setFHasta(e.target.value)} title="Hasta" />
+      </div>
+      <select value={`${f.orden.campo}:${f.orden.dir}`} onChange={e => { const [campo, dir] = e.target.value.split(':'); set.setOrden({ campo, dir }) }} title="Ordenar">
+        {papelera && <option value="eliminado:desc">Eliminado ↓</option>}
+        {papelera && <option value="eliminado:asc">Eliminado ↑</option>}
+        <option value="fecha:desc">Fecha ↓</option>
+        <option value="fecha:asc">Fecha ↑</option>
+        <option value="nombre:asc">Nombre A-Z</option>
+        <option value="nombre:desc">Nombre Z-A</option>
+        <option value="tamano:desc">Tamaño ↓</option>
+        <option value="tamano:asc">Tamaño ↑</option>
+        <option value="usuario:asc">Usuario A-Z</option>
+      </select>
+      {hayFiltros && (
+        <button className="bk-limpiar" onClick={onLimpiar}><X size={14} /> Limpiar</button>
+      )}
+    </div>
+  )
+}
+
+// ── Paginador reutilizable ──────────────────────────────────────────────────
+function rangoPaginas(pagina, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  if (pagina <= 4)          return [1, 2, 3, 4, 5, '…', total]
+  if (pagina >= total - 3)  return [1, '…', total - 4, total - 3, total - 2, total - 1, total]
+  return [1, '…', pagina - 1, pagina, pagina + 1, '…', total]
+}
+
+function Paginador({ pagina, totalPaginas, total, mostrados, onIr }) {
+  if (total <= PAGE_SIZE) return null
+  const desde = (pagina - 1) * PAGE_SIZE + 1
+  const hasta = (pagina - 1) * PAGE_SIZE + mostrados
+  return (
+    <div className="bk-paginador">
+      <span className="bk-pag-info">{desde}–{hasta} de {total}</span>
+      <div className="bk-pag-controls">
+        <button className="bk-pag-btn" disabled={pagina === 1} onClick={() => onIr(pagina - 1)} title="Anterior">
+          <ChevronLeft size={15} />
+        </button>
+        {rangoPaginas(pagina, totalPaginas).map((n, i) => (
+          n === '…'
+            ? <span key={`e${i}`} className="bk-pag-ellipsis">…</span>
+            : <button key={n} className={`bk-pag-btn ${n === pagina ? 'active' : ''}`} onClick={() => onIr(n)}>{n}</button>
+        ))}
+        <button className="bk-pag-btn" disabled={pagina === totalPaginas} onClick={() => onIr(pagina + 1)} title="Siguiente">
+          <ChevronRight size={15} />
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -1113,6 +1266,136 @@ function Progreso({ pasos }) {
         </div>
       ))}
     </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PESTAÑA PAPELERA (respaldos enviados a la papelera — soft-delete)
+// ═══════════════════════════════════════════════════════════════════════════
+function PapeleraBackups({ items, permisos = {}, cargando, onRestaurar, onEliminar }) {
+  const [q,        setQ]        = useState('')
+  const [fUsuario, setFUsuario] = useState('')
+  const [fTipo,    setFTipo]    = useState('')
+  const [fEstado,  setFEstado]  = useState('')
+  const [fOrigen,  setFOrigen]  = useState('')
+  const [fDesde,   setFDesde]   = useState('')
+  const [fHasta,   setFHasta]   = useState('')
+  const [orden,    setOrden]    = useState({ campo: 'eliminado', dir: 'desc' })
+  const [pagina,   setPagina]   = useState(1)
+
+  const usuariosUnicos = useMemo(
+    () => [...new Set(items.map(i => i.usuario).filter(u => u && u !== '—'))],
+    [items]
+  )
+  const filtrados = useMemo(
+    () => filtrarOrdenar(items, { q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }),
+    [items, q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden]
+  )
+  const hayFiltros = q || fUsuario || fTipo || fEstado || fOrigen || fDesde || fHasta
+  const limpiar = () => { setQ(''); setFUsuario(''); setFTipo(''); setFEstado(''); setFOrigen(''); setFDesde(''); setFHasta('') }
+
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
+  useEffect(() => { setPagina(1) }, [q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden])
+  useEffect(() => { if (pagina > totalPaginas) setPagina(totalPaginas) }, [pagina, totalPaginas])
+  const enPagina = useMemo(
+    () => filtrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+    [filtrados, pagina]
+  )
+
+  return (
+    <div className="bk-papelera">
+      <div className="bk-note" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>
+        <Info size={13} /> Los respaldos enviados a la papelera conservan su archivo. Puedes restaurarlos al listado o eliminarlos de forma permanente.
+      </div>
+
+      <FiltrosBar
+        f={{ q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }}
+        set={{ setQ, setFUsuario, setFTipo, setFEstado, setFOrigen, setFDesde, setFHasta, setOrden }}
+        usuariosUnicos={usuariosUnicos}
+        haySistema={items.some(i => i.usuario === 'Sistema')}
+        hayFiltros={hayFiltros}
+        onLimpiar={limpiar}
+        placeholder="Buscar en la papelera…"
+        papelera
+      />
+
+      {cargando ? (
+        <div className="bk-list">{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>
+      ) : filtrados.length === 0 ? (
+        <div className="bk-empty">
+          <div className="bk-empty-illu"><Trash size={40} /><div className="bk-empty-badge">{hayFiltros ? <Search size={16} /> : <CheckCircle2 size={16} />}</div></div>
+          <h3>{hayFiltros ? 'Sin resultados' : 'La papelera está vacía'}</h3>
+          <p>{hayFiltros ? 'Ningún respaldo eliminado coincide con los filtros.' : 'Los respaldos que elimines aparecerán aquí para restaurarlos o borrarlos definitivamente.'}</p>
+          {hayFiltros && <button className="bk-btn-ghost" onClick={limpiar}><X size={14} /> Limpiar filtros</button>}
+        </div>
+      ) : (
+        <>
+          <div className="bk-list">
+            <AnimatePresence initial={false}>
+              {enPagina.map(item => (
+                <PapeleraCard
+                  key={item.archivo}
+                  item={item}
+                  permisos={permisos}
+                  onRestaurar={() => onRestaurar(item)}
+                  onEliminar={() => onEliminar(item)}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+          <Paginador
+            pagina={pagina} totalPaginas={totalPaginas}
+            total={filtrados.length} mostrados={enPagina.length}
+            onIr={setPagina}
+          />
+        </>
+      )}
+    </div>
+  )
+}
+
+function PapeleraCard({ item, permisos = {}, onRestaurar, onEliminar }) {
+  const tipo = TIPOS[item.tipo] ?? TIPOS.completo
+  const origen = ORIGENES[item.origen]
+  const TipoIcon = tipo.Icon
+  return (
+    <motion.div
+      className="bk-card bk-card--papelera"
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.18 } }}
+    >
+      <div className="bk-card-icon" style={{ color: '#64748b', background: '#f1f5f9' }}>
+        <TipoIcon size={20} />
+      </div>
+
+      <div className="bk-card-main">
+        <div className="bk-card-title-row">
+          <h3 title={item.archivo}>{item.nombre}</h3>
+          <span className="bk-origen" title={`Origen: ${origen.label}`}>{origen.emoji} {origen.label}</span>
+        </div>
+        {item.descripcion && <p className="bk-card-desc">{item.descripcion}</p>}
+        <div className="bk-card-meta">
+          <span><Trash size={12} /> Eliminado {fmtFechaHora(item.deletedAt)}</span>
+          <span><Info size={12} /> por {item.deletedBy || '—'}</span>
+          <span><HardDriveDownload size={12} /> {fmtBytes(item.size)}</span>
+        </div>
+      </div>
+
+      <div className="bk-card-badges">
+        <span className="bk-badge" style={{ color: tipo.color, background: tipo.bg }}>{tipo.label}</span>
+      </div>
+
+      <div className="bk-card-actions">
+        {permisos.eliminar && (
+          <button className="bk-icon-btn bk-icon-btn--ok" title="Restaurar" onClick={onRestaurar}><Undo2 size={15} /></button>
+        )}
+        {permisos.eliminar && (
+          <button className="bk-icon-btn bk-icon-btn--danger" title="Eliminar permanentemente" onClick={onEliminar}><Trash2 size={15} /></button>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
