@@ -1150,9 +1150,10 @@ function ContratacionesTab({ usuario, permisos }) {
 
 // ─── Modal Crear/Editar Contratación ──────────────────────────
 // ─── Autocomplete: Persona a reemplazar ───────────────────────
-// Busca personas ya registradas en `contrataciones` por nombre, RUT o correo.
-// Guarda la referencia (id) + un snapshot del nombre en el formulario padre.
-function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSelect, onClear, error }) {
+// Busca personas registradas EN EL SISTEMA (tabla `usuarios`) por nombre, RUT o
+// correo. Solo se puede reemplazar a alguien registrado. Guarda la referencia
+// (usuarios.id) + un snapshot del nombre en el formulario padre.
+function AutocompletePersonaReemplazada({ valorId, valorNombre, onSelect, onClear, error }) {
   const [query,        setQuery]        = useState(valorNombre ?? '')
   const [resultados,   setResultados]   = useState([])
   const [abierto,      setAbierto]      = useState(false)
@@ -1177,27 +1178,26 @@ function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSel
     const q = query.trim()
     setBuscando(true)
     const t = setTimeout(async () => {
-      let req = supabase.from('contrataciones')
-        .select('id, nombre_completo, rut, correo, cargo')
-        .order('nombre_completo').limit(8)
+      let req = supabase.from('usuarios')
+        .select('id, nombre, rut, email')
+        .order('nombre').limit(8)
       if (q.length >= 2) {
         const qTexto = q.replace(/[%,()]/g, ' ')           // seguro para el filtro .or()
         const qRut   = q.replace(/[^0-9kK]/g, '').toUpperCase()
-        let filtro = `nombre_completo.ilike.%${qTexto}%,correo.ilike.%${qTexto}%`
+        let filtro = `nombre.ilike.%${qTexto}%,email.ilike.%${qTexto}%`
         if (qRut) filtro += `,rut.ilike.%${qRut}%`
         req = req.or(filtro)
       }
-      if (excluirId) req = req.neq('id', excluirId)
       const { data } = await req
       setResultados(data ?? [])
       setBuscando(false)
     }, 250)
     return () => clearTimeout(t)
-  }, [query, seleccionado, excluirId, abierto])
+  }, [query, seleccionado, abierto])
 
   function elegir(p) {
     setSeleccionado(true)
-    setQuery(p.nombre_completo)
+    setQuery(p.nombre)
     setAbierto(false)
     onSelect(p)
   }
@@ -1255,9 +1255,9 @@ function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSel
               onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
             >
-              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{p.nombre_completo}</span>
-              <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
-                {formatRut(p.rut)}{p.correo ? ` · ${p.correo}` : ''}{p.cargo ? ` · ${p.cargo}` : ''}
+              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{p.nombre}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 1, overflowWrap: 'anywhere' }}>
+                {p.rut ? formatRut(p.rut) : 'Sin RUT'}{p.email ? ` · ${p.email}` : ''}
               </span>
             </button>
           ))}
@@ -1564,10 +1564,9 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
                 <AutocompletePersonaReemplazada
                   valorId={form.persona_reemplazada_id}
                   valorNombre={form.persona_reemplazada_nombre}
-                  excluirId={datos?.id}
                   error={errors.persona_reemplazada_id}
                   onSelect={p => {
-                    setForm(f => ({ ...f, persona_reemplazada_id: p.id, persona_reemplazada_nombre: p.nombre_completo }))
+                    setForm(f => ({ ...f, persona_reemplazada_id: p.id, persona_reemplazada_nombre: p.nombre }))
                     setErrors(e => ({ ...e, persona_reemplazada_id: '' }))
                   }}
                   onClear={() => setForm(f => ({ ...f, persona_reemplazada_id: '', persona_reemplazada_nombre: '' }))}
