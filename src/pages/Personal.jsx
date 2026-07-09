@@ -1416,19 +1416,12 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     return () => clearTimeout(t)
   }, [form.rut, esEdicion])
 
-  // Alerta si el correo ya pertenece a OTRA persona (RUT distinto).
+  // Alerta en vivo si el correo ya pertenece a OTRA persona (RUT distinto).
   useEffect(() => {
-    const correo = form.correo.trim()
-    if (!correo || !correo.includes('@')) { setCorreoDup(false); return }
-    const rutClean = form.rut.replace(/[^0-9kK]/g, '').toUpperCase()
-    const t = setTimeout(async () => {
-      let req = supabase.from('contrataciones').select('id, rut').ilike('correo', correo).limit(5)
-      if (datos?.id) req = req.neq('id', datos.id)
-      const { data } = await req
-      setCorreoDup((data ?? []).some(r => (r.rut ?? '').toUpperCase() !== rutClean))
-    }, 350)
+    if (!form.correo.trim().includes('@')) { setCorreoDup(false); return }
+    const t = setTimeout(async () => { setCorreoDup(await correoPerteneceAOtro()) }, 350)
     return () => clearTimeout(t)
-  }, [form.correo, form.rut, datos?.id])
+  }, [form.correo, form.rut, datos?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const esReemplazo = form.tipo_contrato === 'reemplazo'
 
@@ -1457,12 +1450,31 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     return e
   }
 
+  // Verifica si el correo ya pertenece a otra persona (RUT distinto). Cada
+  // persona tiene un único correo, así que reutilizarlo desviaría sus avisos.
+  async function correoPerteneceAOtro() {
+    const correo = form.correo.trim()
+    if (!correo || !correo.includes('@')) return false
+    const rutClean = form.rut.replace(/[^0-9kK]/g, '').toUpperCase()
+    let req = supabase.from('contrataciones').select('id, rut').ilike('correo', correo).limit(5)
+    if (datos?.id) req = req.neq('id', datos.id)
+    const { data } = await req
+    return (data ?? []).some(r => (r.rut ?? '').toUpperCase() !== rutClean)
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     const errs = validar()
     if (Object.keys(errs).length) { setErrors(errs); return }
     setGuardando(true)
     setErrGlobal('')
+    // Verificación final (evita carreras con el debounce del aviso en vivo).
+    if (await correoPerteneceAOtro()) {
+      setCorreoDup(true)
+      setErrGlobal('El correo ya está registrado para otra persona. Cada persona debe tener un correo único.')
+      setGuardando(false)
+      return
+    }
     const err = await onGuardar({ ...form, id: datos?.id })
     if (err) { setErrGlobal(err); setGuardando(false) }
   }
@@ -1608,7 +1620,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 
           <div className="personal-form-actions">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={guardando}>Cancelar</button>
-            <button type="submit" className="btn-primary" disabled={guardando} style={{ flex: 1 }}>
+            <button type="submit" className="btn-primary" disabled={guardando || correoDup} style={{ flex: 1 }}>
               {guardando ? <><Loader2 size={14} className="animate-spin" /> Guardando…</> : (esEdicion ? 'Guardar cambios' : 'Crear contratación')}
             </button>
           </div>
