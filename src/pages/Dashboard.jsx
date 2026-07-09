@@ -375,11 +375,11 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
 
   useEffect(() => {
     const cargarStats = async () => {
-      let qT = supabase.from('tickets').select('estado, prioridad, titulo, creado_por_nombre, area_reporte, lugar_falla, creado_en')
+      let qT = supabase.from('tickets').select('estado, prioridad, titulo, creado_por_nombre, area_reporte, lugar_falla, creado_en').eq('is_deleted', false)
       if (!esGestor && !puedeGestionarTickets && usuario?.id) qT = qT.eq('creado_por', usuario.id)
       const [{ data: tData }, { data: rData }] = await Promise.all([
         qT,
-        supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo, fecha'),
+        supabase.from('requerimientos').select('estado, monto_solicitado, monto_real, fondo, fecha').eq('is_deleted', false),
       ])
       setStatsTickets(tData ?? [])
       setStatsReqs(rData ?? [])
@@ -405,6 +405,7 @@ export default function Dashboard({ usuario, onIrATickets, onIrARequerimientos, 
         supabase.from('usuarios').select('id, rut, nombre'),
         supabase.from('ausencias')
           .select('usuario_id, externo_rut, externo_nombre, snapshot_rut, snapshot_nombre, tipo, jornada, periodo, hora_inicio, hora_fin, fecha_inicio, fecha_fin, notas, usuario:usuario_id(id, rut, nombre)')
+          .eq('is_deleted', false)
           .in('tipo', ['permiso_administrativo', 'justificativo', 'cometido'])
           .lte('fecha_inicio', hoy).gte('fecha_fin', hoy),
       ])
