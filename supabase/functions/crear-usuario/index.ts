@@ -145,11 +145,16 @@ Deno.serve(async (req: Request) => {
       console.log("Email enviado:", emailEnviado, "Error:", emailError);
     }
 
+    // Solo exponer la contraseña temporal cuando el email NO llegó al usuario
+    // (fallo de envío o skipEmail). Si el email fue exitoso, la contraseña no
+    // tiene por qué aparecer en el response ni en los logs de Edge Functions.
+    const necesitaPassword = skipEmail || !emailEnviado;
+
     return json({
       usuario: usuarioInsertado,
       emailEnviado,
       emailError: emailError ?? null,
-      passwordTemporal,
+      ...(necesitaPassword && { passwordTemporal }),
       mensaje: skipEmail
         ? `Usuario creado. Correo omitido — contraseña temporal: ${passwordTemporal}`
         : emailEnviado
