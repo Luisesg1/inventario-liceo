@@ -781,6 +781,9 @@ function ContratacionesTab({ usuario, permisos }) {
       fecha_termino:   datos.fecha_termino || null,
       horas:           datos.horas ? parseInt(datos.horas) : null,
       observaciones:   datos.observaciones?.trim() || null,
+      // Persona a reemplazar — solo se guarda si el contrato es de tipo reemplazo.
+      persona_reemplazada_id:     datos.tipo_contrato === 'reemplazo' ? (datos.persona_reemplazada_id || null) : null,
+      persona_reemplazada_nombre: datos.tipo_contrato === 'reemplazo' ? (datos.persona_reemplazada_nombre?.trim() || null) : null,
       actualizado_en:  new Date().toISOString(),
     }
     if (esEdicion) {
@@ -1146,6 +1149,127 @@ function ContratacionesTab({ usuario, permisos }) {
 }
 
 // ─── Modal Crear/Editar Contratación ──────────────────────────
+// ─── Autocomplete: Persona a reemplazar ───────────────────────
+// Busca personas ya registradas en `contrataciones` por nombre, RUT o correo.
+// Guarda la referencia (id) + un snapshot del nombre en el formulario padre.
+function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSelect, onClear, error }) {
+  const [query,        setQuery]        = useState(valorNombre ?? '')
+  const [resultados,   setResultados]   = useState([])
+  const [abierto,      setAbierto]      = useState(false)
+  const [buscando,     setBuscando]     = useState(false)
+  const [seleccionado, setSeleccionado] = useState(!!valorId)
+  const boxRef = useRef(null)
+
+  // Sincroniza el texto con el valor externo (al abrir el modal en edición).
+  useEffect(() => { setQuery(valorNombre ?? ''); setSeleccionado(!!valorId) }, [valorNombre, valorId])
+
+  // Cierra el desplegable al hacer clic fuera.
+  useEffect(() => {
+    function onDoc(e) { if (boxRef.current && !boxRef.current.contains(e.target)) setAbierto(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  // Búsqueda dinámica con debounce.
+  useEffect(() => {
+    if (seleccionado) return
+    const q = query.trim()
+    if (q.length < 2) { setResultados([]); setBuscando(false); return }
+    setBuscando(true)
+    const t = setTimeout(async () => {
+      const qTexto = q.replace(/[%,()]/g, ' ')             // seguro para el filtro .or()
+      const qRut   = q.replace(/[^0-9kK]/g, '').toUpperCase()
+      let filtro = `nombre_completo.ilike.%${qTexto}%,correo.ilike.%${qTexto}%`
+      if (qRut) filtro += `,rut.ilike.%${qRut}%`
+      let req = supabase.from('contrataciones')
+        .select('id, nombre_completo, rut, correo, cargo')
+        .or(filtro).order('nombre_completo').limit(8)
+      if (excluirId) req = req.neq('id', excluirId)
+      const { data } = await req
+      setResultados(data ?? [])
+      setBuscando(false)
+      setAbierto(true)
+    }, 280)
+    return () => clearTimeout(t)
+  }, [query, seleccionado, excluirId])
+
+  function elegir(p) {
+    setSeleccionado(true)
+    setQuery(p.nombre_completo)
+    setAbierto(false)
+    onSelect(p)
+  }
+
+  function onChange(e) {
+    setQuery(e.target.value)
+    if (seleccionado) { setSeleccionado(false); onClear() }
+    setAbierto(true)
+  }
+
+  function limpiar() {
+    setQuery(''); setSeleccionado(false); setResultados([]); setAbierto(false); onClear()
+  }
+
+  const sinResultados = abierto && !buscando && !seleccionado && query.trim().length >= 2 && resultados.length === 0
+
+  return (
+    <div className="personal-form-field full" ref={boxRef} style={{ position: 'relative' }}>
+      <label>Persona a reemplazar *</label>
+      <div style={{ position: 'relative' }}>
+        <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+        <input
+          value={query}
+          onChange={onChange}
+          onFocus={() => { if (resultados.length || (query.trim().length >= 2 && !seleccionado)) setAbierto(true) }}
+          placeholder="Buscar por nombre, RUT o correo…"
+          className={error ? 'error' : ''}
+          style={{ paddingLeft: 34, paddingRight: valorId ? 34 : 12 }}
+          autoComplete="off"
+        />
+        {valorId && (
+          <button type="button" onClick={limpiar} aria-label="Quitar selección"
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 2 }}>
+            <X size={15} />
+          </button>
+        )}
+      </div>
+      {error && <span className="personal-form-error">{error}</span>}
+
+      {(abierto && !seleccionado && (buscando || resultados.length > 0 || sinResultados)) && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, marginTop: 4,
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(15,23,42,0.12)', overflow: 'hidden', maxHeight: 260, overflowY: 'auto',
+        }}>
+          {buscando && (
+            <div style={{ padding: '10px 14px', fontSize: 13, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Loader2 size={14} className="animate-spin" /> Buscando…
+            </div>
+          )}
+          {!buscando && resultados.map(p => (
+            <button type="button" key={p.id} onClick={() => elegir(p)}
+              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '9px 14px', cursor: 'pointer', display: 'block', fontFamily: 'inherit' }}
+              onMouseDown={e => e.preventDefault()}
+              onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{p.nombre_completo}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                {formatRut(p.rut)}{p.correo ? ` · ${p.correo}` : ''}{p.cargo ? ` · ${p.cargo}` : ''}
+              </span>
+            </button>
+          ))}
+          {sinResultados && (
+            <div style={{ padding: '10px 14px', fontSize: 13, color: '#94a3b8' }}>
+              No se encontraron coincidencias.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ModalContratacion({ datos, onGuardar, onClose }) {
   const esEdicion = !!datos
   const [form, setForm]     = useState({
@@ -1160,12 +1284,27 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     fecha_termino:   datos?.fecha_termino ?? '',
     horas:           datos?.horas ?? '',
     observaciones:   datos?.observaciones ?? '',
+    persona_reemplazada_id:     datos?.persona_reemplazada_id ?? '',
+    persona_reemplazada_nombre: datos?.persona_reemplazada_nombre ?? '',
   })
   const [errors,    setErrors]    = useState({})
   const [guardando, setGuardando] = useState(false)
   const [errGlobal, setErrGlobal] = useState('')
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+
+  const esReemplazo = form.tipo_contrato === 'reemplazo'
+
+  // Al cambiar el tipo de contrato: si deja de ser "reemplazo", ocultar el campo
+  // y limpiar la persona reemplazada.
+  function onTipoContratoChange(v) {
+    setForm(f => ({
+      ...f,
+      tipo_contrato: v,
+      ...(v !== 'reemplazo' ? { persona_reemplazada_id: '', persona_reemplazada_nombre: '' } : {}),
+    }))
+    setErrors(e => ({ ...e, tipo_contrato: '', persona_reemplazada_id: '' }))
+  }
 
   function validar() {
     const e = {}
@@ -1177,6 +1316,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     if (form.fecha_termino && form.fecha_inicio && form.fecha_termino < form.fecha_inicio)
       e.fecha_termino = 'Debe ser posterior al inicio'
     if (form.horas && parseInt(form.horas) < 0) e.horas = 'Valor inválido'
+    if (esReemplazo && !form.persona_reemplazada_id) e.persona_reemplazada_id = 'Selecciona a la persona a reemplazar'
     return e
   }
 
@@ -1250,10 +1390,25 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
               </div>
               <div className="personal-form-field">
                 <label>Tipo de contrato</label>
-                <select value={form.tipo_contrato} onChange={e => set('tipo_contrato', e.target.value)}>
+                <select value={form.tipo_contrato} onChange={e => onTipoContratoChange(e.target.value)}>
                   {TIPOS_CONTRATO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
+
+              {/* Persona a reemplazar — solo visible cuando el tipo es "Reemplazo" */}
+              {esReemplazo && (
+                <AutocompletePersonaReemplazada
+                  valorId={form.persona_reemplazada_id}
+                  valorNombre={form.persona_reemplazada_nombre}
+                  excluirId={datos?.id}
+                  error={errors.persona_reemplazada_id}
+                  onSelect={p => {
+                    setForm(f => ({ ...f, persona_reemplazada_id: p.id, persona_reemplazada_nombre: p.nombre_completo }))
+                    setErrors(e => ({ ...e, persona_reemplazada_id: '' }))
+                  }}
+                  onClear={() => setForm(f => ({ ...f, persona_reemplazada_id: '', persona_reemplazada_nombre: '' }))}
+                />
+              )}
             </div>
           </div>
 
@@ -1335,6 +1490,9 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
     { label: 'Cargo', val: datos.cargo },
     { label: 'Estamento', val: ESTAMENTO_MAP[datos.estamento] ?? datos.estamento },
     { label: 'Tipo de contrato', val: CONTRATO_MAP[datos.tipo_contrato] ?? datos.tipo_contrato },
+    ...(datos.tipo_contrato === 'reemplazo'
+      ? [{ label: 'Persona reemplazada', val: datos.persona_reemplazada_nombre || '—' }]
+      : []),
     { label: 'Fecha inicio', val: formatFecha(datos.fecha_inicio) },
     { label: 'Fecha término', val: formatFecha(datos.fecha_termino) },
     { label: 'Horas', val: datos.horas ? `${datos.horas} hrs.` : '—' },
