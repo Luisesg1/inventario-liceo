@@ -205,18 +205,14 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   // ── Auditoría (cliente) ───────────────────────────────────────────────────
   const registrarAuditoria = useCallback(async (accion, item, extra = {}) => {
     try {
-      await supabase.from('audit_logs').insert({
-        bien_nombre: `${item?.nombre ?? item?.archivo ?? 'Backup'}`,
-        accion,
-        cambios: { operacion: accion, archivo: item?.archivo, tipo: item?.tipo, ...extra },
-        usuario_id: usuario.id,
-        usuario_nombre: usuario.nombre,
-        usuario_rol: usuario.rol,
-        modulo: 'backup',
-        creado_en: new Date().toISOString(),
+      await supabase.rpc('log_auditoria', {
+        p_accion:      accion,
+        p_modulo:      'backup',
+        p_bien_nombre: item?.nombre ?? item?.archivo ?? 'Backup',
+        p_cambios:     { operacion: accion, archivo: item?.archivo, tipo: item?.tipo, ...extra },
       })
-    } catch { /* el constraint puede rechazar la acción si la migración no está aplicada */ }
-  }, [usuario])
+    } catch { /* audit is non-critical */ }
+  }, [])
 
   // ── Items derivados (storage + meta) ──────────────────────────────────────
   const items = useMemo(() => archivos.map(f => {
@@ -398,14 +394,13 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     if (error) { toast('error', 'No se pudieron eliminar los respaldos de seguridad.'); return }
     await supabase.from('backups_meta').delete().in('archivo', archivos)
     try {
-      await supabase.from('audit_logs').insert({
-        bien_nombre: `Limpieza de respaldos de seguridad (${archivos.length})`,
-        accion: 'eliminar',
-        cambios: { operacion: 'limpieza_seguridad', cantidad: archivos.length, archivos },
-        usuario_id: usuario.id, usuario_nombre: usuario.nombre, usuario_rol: usuario.rol,
-        modulo: 'backup', creado_en: new Date().toISOString(),
+      await supabase.rpc('log_auditoria', {
+        p_accion:      'eliminar',
+        p_modulo:      'backup',
+        p_bien_nombre: `Limpieza de respaldos de seguridad (${archivos.length})`,
+        p_cambios:     { operacion: 'limpieza_seguridad', cantidad: archivos.length, archivos },
       })
-    } catch { /* constraint */ }
+    } catch { /* audit is non-critical */ }
     setModalLimpiar(false)
     toast('ok', `${archivos.length} ${archivos.length === 1 ? 'respaldo de seguridad eliminado' : 'respaldos de seguridad eliminados'}.`)
     cargar(true)

@@ -109,19 +109,15 @@ function Spinner({ size = 14, color = '#fff' }) {
 }
 
 // ── Auditoría módulo Papelera ─────────────────────────────────────────────
-async function logAuditPapelera({ accion, nombre, id, usuario, detalles = {} }) {
+async function logAuditPapelera({ accion, nombre, id, detalles = {} }) {
   try {
-    await supabase.from('audit_logs').insert({
-      bien_nombre:    nombre ?? String(id ?? '?'),
-      accion,
-      cambios:        Object.keys(detalles).length
+    await supabase.rpc('log_auditoria', {
+      p_accion:      accion,
+      p_modulo:      'papelera',
+      p_bien_nombre: nombre ?? String(id ?? '?'),
+      p_cambios:     Object.keys(detalles).length
         ? Object.entries(detalles).map(([campo, nuevo]) => ({ campo, nuevo: String(nuevo) }))
         : [],
-      usuario_id:     usuario?.id,
-      usuario_nombre: usuario?.nombre ?? 'Sistema',
-      usuario_rol:    usuario?.rol,
-      modulo:         'papelera',
-      creado_en:      new Date().toISOString(),
     })
   } catch { /* silencioso */ }
 }

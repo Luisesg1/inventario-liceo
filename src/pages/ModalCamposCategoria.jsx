@@ -379,16 +379,12 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
 
   async function registrarAuditoria(accion, campoNombre, cambios = []) {
     try {
-      await supabase.from('audit_logs').insert({
-        bien_nombre: campoNombre || null,
-        categoria: catObj.label,
-        accion,
-        cambios,
-        usuario_id: usuario?.id || null,
-        usuario_nombre: usuario?.nombre || 'Sistema',
-        usuario_rol: usuario?.rol || 'desconocido',
-        dispositivo: navigator.userAgent.slice(0, 300),
-        modulo: 'campos',
+      await supabase.rpc('log_auditoria', {
+        p_accion:      accion,
+        p_modulo:      'campos',
+        p_bien_nombre: campoNombre || null,
+        p_categoria:   catObj.label,
+        p_cambios:     cambios,
       })
     } catch { /* audit is non-critical */ }
   }
