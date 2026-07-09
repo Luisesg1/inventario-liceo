@@ -8,6 +8,7 @@ import {
   Users, Gift, UserX, Download, Building2,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { labelDeRol } from '../config/roles'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -17,22 +18,6 @@ import './Permisos.css'
 
 const MAX_AUSENCIAS = 6
 
-const ROL_LABEL = {
-  admin:          'Administrador',
-  directivo:      'Directivo',
-  coordinador:    'Coordinador',
-  docente:        'Docente',
-  asistente:      'Asistente de la educación',
-  administrativo: 'Administrativo',
-  // Legacy
-  encargado_inventario:'Encargado inventario',
-  encargado_soporte:   'Encargado Soporte técnico',
-  encargado_permisos:  'Encargado Permisos',
-  editor:              'Editor',
-  encargado:           'Encargado',
-  soporte:             'Soporte',
-  visor_requerimientos:'Visor requerimientos',
-}
 
 const ROLES_ACTIVOS = [
   { value: 'admin',          label: 'Administrador' },
@@ -583,7 +568,7 @@ function ModalVerPermiso({ permiso, onClose, onEditar, onEliminar, diasInhabilit
               </div>
               <div>
                 <p className="mp-summary-user-name" style={{ fontSize: 15 }}>{nombre}</p>
-                <p className="mp-summary-user-email">{u.rut ?? ROL_LABEL[u.rol] ?? u.rol ?? 'Usuario externo'}</p>
+                <p className="mp-summary-user-email">{u.rut ?? labelDeRol(u.rol) ?? 'Usuario externo'}</p>
               </div>
             </div>
 
@@ -1003,7 +988,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                           <div className="mp-user-name">{usuarioSel.nombre}</div>
                           <div className="mp-user-email">{usuarioSel.rut ? `${usuarioSel.rut} · ` : ''}{usuarioSel.email}</div>
                         </div>
-                        <span className="mp-rol-tag">{ROL_LABEL[usuarioSel.rol] ?? usuarioSel.rol ?? 'Externo'}</span>
+                        <span className="mp-rol-tag">{labelDeRol(usuarioSel.rol) || 'Externo'}</span>
                       </>
                     ) : (
                       <span className="mp-user-placeholder">Buscar o seleccionar usuario…</span>
@@ -1035,7 +1020,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                                   <div className="mp-user-name">{u.nombre}</div>
                                   <div className="mp-user-email">{u.rut ? `${u.rut} · ` : ''}{u.email}</div>
                                 </div>
-                                <span className="mp-rol-tag">{ROL_LABEL[u.rol] ?? u.rol}</span>
+                                <span className="mp-rol-tag">{labelDeRol(u.rol)}</span>
                               </div>
                             ))
                           }
@@ -1572,7 +1557,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
                     )}
                     <div className="mp-summary-row">
                       <span className="mp-summary-label">Rol</span>
-                      <span className="mp-summary-value">{ROL_LABEL[usuarioSel.rol] ?? usuarioSel.rol ?? '—'}</span>
+                      <span className="mp-summary-value">{labelDeRol(usuarioSel.rol) || '—'}</span>
                     </div>
                     <div className="mp-summary-row">
                       <span className="mp-summary-label">Tipo</span>
@@ -2516,7 +2501,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       const u       = resolveUser(p)
       const nombre  = u?.nombre ?? '—'
       const rut     = u?.rut ?? p.externo_rut ?? p.snapshot_rut ?? '—'
-      const rol     = ROL_LABEL[u?.rol] ?? (u?.isExterno ? 'Externo' : '—')
+      const rol     = u?.rol ? labelDeRol(u.rol) : (u?.isExterno ? 'Externo' : '—')
       const tipo    = TIPO_LABEL[p.tipo] ?? p.tipo
       const jornada = JORNADA_LABEL[p.jornada] ?? p.jornada
       const duracion = calcDuration(p.fecha_inicio, p.fecha_fin, p.jornada, diasInhabilitados, p.tipo) ?? '—'
@@ -3085,7 +3070,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
                 const agotada   = stats.dias >= MAX_AUSENCIAS
                 const { dot: dotColor, text: textColor } = getAusenciaColors(stats.dias)
                 const diasFmt   = fmtDias(stats.dias)
-                const rolLabel    = ROL_LABEL[u.rol] ?? u.rol ?? 'Externo'
+                const rolLabel    = labelDeRol(u.rol) || 'Externo'
 
                 const todosSeleccionados = aus.every(p => seleccionados.has(p.id))
                 const algunoSeleccionado = aus.some(p => seleccionados.has(p.id))

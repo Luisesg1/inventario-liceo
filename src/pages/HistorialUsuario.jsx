@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../supabase'
 import './HistorialUsuario.css'
+import { labelDeRol } from '../config/roles'
 
 const PAGE_SIZE = 20
 
@@ -35,11 +36,6 @@ const MODULO_LABEL = {
   configuracion:  'Configuración',
 }
 
-const ROL_LABEL = {
-  admin: 'Administrador', directivo: 'Directivo', coordinador: 'Coordinador',
-  docente: 'Docente', asistente: 'Asistente', administrativo: 'Administrativo',
-  soporte: 'Soporte técnico', visor_requerimientos: 'Visor requerimientos',
-}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -329,7 +325,7 @@ export default function HistorialUsuario({ usuario: u, onCerrar }) {
 <body>
   <h1>👤 Historial de Usuario — ${u.nombre}</h1>
   <p class="meta">
-    RUT: ${u.rut ?? '—'} | Correo: ${u.email ?? '—'} | Rol: ${ROL_LABEL[u.rol] ?? u.rol}<br>
+    RUT: ${u.rut ?? '—'} | Correo: ${u.email ?? '—'} | Rol: ${labelDeRol(u.rol)}<br>
     Exportado el ${new Date().toLocaleString('es-CL')} | ${todos.length} registros
   </p>
   ${resumenCards}
@@ -409,7 +405,7 @@ export default function HistorialUsuario({ usuario: u, onCerrar }) {
         )}
         <div className="hu-resumen-item">
           <span className="hu-rl">Rol</span>
-          <span className="hu-rv">{ROL_LABEL[u.rol] ?? u.rol}</span>
+          <span className="hu-rv">{labelDeRol(u.rol)}</span>
         </div>
         <div className="hu-resumen-item">
           <span className="hu-rl">Cuenta creada</span>

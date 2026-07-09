@@ -9,22 +9,7 @@ import {
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
-
-const ROL_LABEL = {
-  admin:                 'Administrador',
-  directivo:             'Directivo',
-  coordinador:           'Coordinador',
-  docente:               'Docente',
-  asistente:             'Asistente de la educación',
-  administrativo:        'Administrativo',
-  soporte:               'Soporte técnico',
-  editor:                'Editor',
-  encargado:             'Encargado',
-  encargado_inventario:  'Encargado inventario',
-  encargado_soporte:     'Encargado Soporte',
-  encargado_permisos:    'Encargado Permisos',
-  visor_requerimientos:  'Visor requerimientos',
-}
+import { labelDeRol } from '../config/roles'
 
 const ROL_BADGE = {
   soporte: { bg: '#e0f2fe', color: '#0369a1', label: 'Soporte técnico' },
@@ -790,7 +775,7 @@ export default function Layout({
                 {ROL_BADGE[usuario.rol].label}
               </span>
             ) : (
-              <span>{ROL_LABEL[usuario.rol] ?? usuario.rol}</span>
+              <span>{labelDeRol(usuario.rol)}</span>
             )}
           </div>
         </div>

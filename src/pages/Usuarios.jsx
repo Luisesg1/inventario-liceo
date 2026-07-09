@@ -14,7 +14,7 @@ import {
   PERMISOS_VACIO,
   PRESETS_ROL as PERMISOS_POR_ROL,
 } from '../config/permisos'
-import { labelDeRol } from '../config/roles'
+import { labelDeRol, ROL_COLORES } from '../config/roles'
 import { useRoles } from '../hooks/useRoles'
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
@@ -34,40 +34,8 @@ const STRENGTH_INFO = [null,
 ]
 
 // ── Constantes ─────────────────────────────────────────────────────────────
-// El catálogo ACCIONES y los GRUPOS_PERMISOS ahora provienen de src/config/permisos.js
-// (importados arriba). Aquí solo quedan las listas de compatibilidad puntuales.
-
-// Backward-compat — algunos lugares aún usan estas listas
-const ACCIONES_POR_CATEGORIA = ['ver_inventario', 'agregar_bien', 'editar_bien',
-  'eliminar_bien', 'eliminar_lote', 'importar_csv', 'exportar']
-const ACCIONES_GLOBALES = ['gestionar_categorias', 'gestionar_usuarios',
-  'registrar_prestamo', 'registrar_incidencia',
-  'ver_tickets', 'gestionar_tickets', 'ver_alertas_tickets',
-  'ver_auditoria_requerimientos', 'ver_auditoria_permisos', 'ver_auditoria_compensatorios']
-
-// PERMISOS_VACIO se importa desde el catálogo central (deriva de ACCIONES).
-// PERMISOS_POR_ROL es ahora PRESETS_ROL importado del catálogo (fuente única):
-// una sola definición compartida con App.jsx y reflejada en el seed permisos_rol.
-
-const ROL_COLORES = {
-  admin:          { bg: '#e8eaf6', color: '#1a237e' },
-  directivo:      { bg: '#fce7f3', color: '#9d174d' },
-  coordinador:    { bg: '#ede9fe', color: '#5b21b6' },
-  docente:        { bg: '#fef3c7', color: '#92400e' },
-  asistente:      { bg: '#f3f4f6', color: '#374151' },
-  administrativo: { bg: '#dcfce7', color: '#15803d' },
-  // Legacy
-  encargado_inventario:{ bg: '#dcfce7', color: '#15803d' },
-  encargado_soporte:   { bg: '#e0f2fe', color: '#0369a1' },
-  encargado_permisos:  { bg: '#f3e8ff', color: '#6b21a8' },
-  editor:              { bg: '#dcfce7', color: '#15803d' },
-  encargado:           { bg: '#f3f4f6', color: '#374151' },
-  soporte:             { bg: '#e0f2fe', color: '#0369a1' },
-  visor_requerimientos:{ bg: '#f3e8ff', color: '#6b21a8' },
-}
-
-// ROL_LABEL, ROLES_SISTEMA (metadatos de roles) y sus helpers viven ahora en
-// src/config/roles.js (fuente única). Aquí se consumen vía useRoles()/labelDeRol.
+// ACCIONES, GRUPOS_PERMISOS, PERMISOS_VACIO, PRESETS_ROL → src/config/permisos.js
+// ROL_COLORES, labelDeRol → src/config/roles.js
 
 // ══════════════════════════════════════════════════════════════════════════
 // Configuración de permisos — Diseño por fases (Stepper)

@@ -3,27 +3,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabase'
 // Catálogo centralizado de permisos (fuente única de verdad, compartido con Usuarios.jsx)
 import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO, PERMISOS_OBLIGATORIOS, OBLIGATORIOS_TRUE } from '../config/permisos'
+import { ROLES_BASE, ROL_LABEL, ROL_COLORES } from '../config/roles'
 import { useEsMovil } from '../hooks/useEsMovil'
-
-const ROL_LABEL = {
-  admin: 'Administrador', directivo: 'Directivo', coordinador: 'Coordinador',
-  docente: 'Docente', asistente: 'Asistente de la educación',
-  administrativo: 'Administrativo', soporte: 'Soporte técnico',
-  visor_requerimientos: 'Visor requerimientos',
-}
-
-const ROL_COLORES = {
-  admin:          { bg: '#e8eaf6', color: '#1a237e', dot: '#1a237e' },
-  directivo:      { bg: '#fce7f3', color: '#9d174d', dot: '#db2777' },
-  coordinador:    { bg: '#ede9fe', color: '#5b21b6', dot: '#7c3aed' },
-  docente:        { bg: '#fef3c7', color: '#92400e', dot: '#d97706' },
-  asistente:      { bg: '#f3f4f6', color: '#374151', dot: '#6b7280' },
-  administrativo: { bg: '#dcfce7', color: '#15803d', dot: '#16a34a' },
-  soporte:        { bg: '#e0f2fe', color: '#0369a1', dot: '#0284c7' },
-  visor_requerimientos: { bg: '#f3e8ff', color: '#6b21a8', dot: '#9333ea' },
-}
-
-const ROLES_BASE = ['admin','directivo','coordinador','docente','asistente','administrativo','soporte','visor_requerimientos']
 
 // Claves de los módulos obligatorios (Mis Ausencias, Tickets, Reglamentos):
 // se fuerzan en true y se bloquean en la UI para que ningún rol quede sin ellos.

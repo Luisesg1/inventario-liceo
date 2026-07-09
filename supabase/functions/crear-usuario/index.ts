@@ -315,51 +315,76 @@ function generarPassword(): string {
   return `${Array.from({length:3},()=>rand(upper)).join('')}-${Array.from({length:3},()=>rand(nums)).join('')}-${Array.from({length:3},()=>rand(lower)).join('')}`;
 }
 
-// ── Permisos por defecto — sincronizados con PERMISOS_POR_ROL del frontend ─────
+// ── Permisos por defecto (fallback cuando permisos_rol no tiene fila para el rol)
+// La fuente viva es la tabla `permisos_rol` (leída en el paso 8 del flujo principal).
+// Este objeto solo actúa cuando esa tabla no tiene entrada para el rol dado.
+// Mantiene TODAS las claves conocidas para que el merge posterior sea completo.
 function getPermisosDefault(rol: string): Record<string, boolean> {
   const vacio: Record<string, boolean> = {
+    // Inventario
     ver_inventario: false, agregar_bien: false, editar_bien: false,
     eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-    importar_csv: false, gestionar_usuarios: false, exportar: false,
-    registrar_prestamo: false, registrar_incidencia: false,
-    ver_auditoria_inventario: false,
+    importar_csv: false, exportar: false,
+    registrar_prestamo: false, registrar_incidencia: false, ver_auditoria_inventario: false,
+    // Campos inventario
+    ver_campos: false, agregar_campo: false, editar_campo: false, ocultar_campo: false,
+    eliminar_campo: false, reordenar_campos: false, gestionar_campos_base: false,
+    gestionar_campos: false, // legacy
+    // Tickets
     ver_tickets: false, crear_ticket: false, editar_ticket: false,
     gestionar_tickets: false, eliminar_ticket: false,
     ver_alertas_tickets: false, exportar_tickets: false,
+    // Requerimientos
     ver_requerimientos: false, crear_requerimiento: false, editar_requerimiento: false,
     eliminar_requerimiento: false, importar_requerimientos: false,
     exportar_requerimientos: false, ver_auditoria_requerimientos: false,
+    // Ausencias
     ver_propias_ausencias: false, ver_ausencias: false, crear_ausencias: false,
     editar_ausencias: false, eliminar_ausencias: false, aprobar_ausencias: false,
     exportar_ausencias: false, ver_auditoria_permisos: false,
+    // Compensatorios
     ver_compensatorios: false, crear_compensatorios: false, editar_compensatorios: false,
-    eliminar_compensatorios: false, exportar_compensatorios: false,
-    ver_auditoria_compensatorios: false,
-    gestionar_campos: false, ver_campos: false, agregar_campo: false,
-    editar_campo: false, ocultar_campo: false, eliminar_campo: false,
-    reordenar_campos: false, gestionar_campos_base: false,
-    gestionar_ajustes: false, ver_ajustes: false, guardar_cambios_ajustes: false,
-    invitar_usuario: false, editar_usuario: false, eliminar_usuario: false,
-    editar_roles_permisos: false,
+    eliminar_compensatorios: false, exportar_compensatorios: false, ver_auditoria_compensatorios: false,
+    // Ajustes y usuarios
+    ver_ajustes: false, gestionar_ajustes: false, guardar_cambios_ajustes: false,
+    gestionar_usuarios: false, invitar_usuario: false, editar_usuario: false,
+    eliminar_usuario: false, notificar_ausencia_correo: false,
+    editar_roles_permisos: false, gestionar_roles: false, ver_historial_usuarios: false,
+    // Reglamentos
+    ver_reglamentos: false, crear_reglamentos: false, editar_reglamentos: false,
+    eliminar_reglamentos: false, descargar_reglamentos: false,
+    gestionar_versiones_reglamentos: false, administrar_reglamentos: false, ver_auditoria_reglamentos: false,
+    // Personal
+    ver_contrataciones: false, crear_contrataciones: false, editar_contrataciones: false, eliminar_contrataciones: false,
+    ver_reemplazos: false, crear_reemplazos: false, editar_reemplazos: false, eliminar_reemplazos: false,
+    ver_documentos_personal: false, subir_documentos_personal: false, eliminar_documentos_personal: false,
+    ver_auditoria_personal: false,
+    // Papelera
+    ver_papelera: false, restaurar_registros: false, eliminar_permanentemente: false, ver_auditoria_papelera: false,
+    // Backups
+    ver_backups: false, crear_backups: false, descargar_backups: false, renombrar_backups: false,
+    editar_descripcion_backups: false, duplicar_backups: false, restaurar_backups: false,
+    eliminar_backups: false, ver_actividad_backups: false,
   };
 
-  const staffBase = {
-    ...vacio,
-    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+  // Permisos obligatorios presentes en todos los roles (Mis Ausencias, Tickets, Reglamentos)
+  const obligatorios = {
     ver_propias_ausencias: true, exportar_ausencias: true,
-    gestionar_ajustes: true, ver_ajustes: true, guardar_cambios_ajustes: true,
+    ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
+    ver_reglamentos: true, descargar_reglamentos: true,
   };
+
+  if (rol === "admin") return Object.fromEntries(Object.keys(vacio).map(k => [k, true]));
+
+  const staffBase = { ...vacio, ...obligatorios };
 
   switch (rol) {
-    case "admin":
-      return Object.fromEntries(Object.keys(vacio).map(k => [k, true]));
     case "directivo":
       return {
-        ...vacio,
+        ...vacio, ...obligatorios,
         ver_inventario: true, agregar_bien: true, editar_bien: true,
         importar_csv: true, exportar: true,
-        registrar_prestamo: true, registrar_incidencia: true,
-        ver_auditoria_inventario: true,
+        registrar_prestamo: true, registrar_incidencia: true, ver_auditoria_inventario: true,
       };
     case "coordinador":
     case "docente":
@@ -373,25 +398,24 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
       };
     case "encargado_inventario":
       return {
-        ...vacio,
+        ...vacio, ...obligatorios,
         ver_inventario: true, agregar_bien: true, editar_bien: true,
         exportar: true, registrar_prestamo: true, registrar_incidencia: true,
       };
     case "encargado_soporte":
-      return { ...vacio, ver_tickets: true, gestionar_tickets: true, ver_alertas_tickets: true };
+      return { ...vacio, ...obligatorios, gestionar_tickets: true, ver_alertas_tickets: true };
     case "encargado_permisos":
-      return { ...vacio, ver_inventario: true, gestionar_usuarios: true, ver_tickets: true };
+      return { ...vacio, ...obligatorios, ver_inventario: true, gestionar_usuarios: true };
     case "visor_requerimientos":
       return { ...vacio, ver_tickets: true };
-    // Legacy
     case "editor":
       return {
-        ...vacio,
+        ...vacio, ...obligatorios,
         ver_inventario: true, agregar_bien: true, editar_bien: true,
-        exportar: true, registrar_prestamo: true, registrar_incidencia: true, ver_tickets: true,
+        exportar: true, registrar_prestamo: true, registrar_incidencia: true,
       };
     default:
-      return { ...vacio, ver_inventario: true, exportar: true };
+      return { ...vacio, ...obligatorios };
   }
 }
 
