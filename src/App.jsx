@@ -1,27 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase, esRecuperacion, recoveryTokens } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
-import Inventario from './pages/Inventario'
-import Dashboard from './pages/Dashboard'
-import Usuarios from './pages/Usuarios'
 import SetPassword from './pages/SetPassword'
-import Auditoria from './pages/Auditoria'
-import Tickets   from './pages/Tickets'
-import Ajustes          from './pages/Ajustes'
-import CamposCategoria  from './pages/CamposCategoria'
-import Requerimientos   from './pages/Requerimientos'
-import Permisos         from './pages/Permisos'
-import Compensatorios   from './pages/Compensatorios'
-import MantenedorRoles  from './pages/MantenedorRoles'
-import Papelera         from './pages/Papelera'
-import Personal        from './pages/Personal'
-import Reglamentos     from './pages/Reglamentos'
-import Backups         from './pages/Backups'
 import { aplicarTema } from './utils/tema'
 import { construirPermisos } from './utils/permisos'
 import { PRESETS_ROL } from './config/permisos'
+
+const Inventario      = lazy(() => import('./pages/Inventario'))
+const Dashboard       = lazy(() => import('./pages/Dashboard'))
+const Usuarios        = lazy(() => import('./pages/Usuarios'))
+const Auditoria       = lazy(() => import('./pages/Auditoria'))
+const Tickets         = lazy(() => import('./pages/Tickets'))
+const Ajustes         = lazy(() => import('./pages/Ajustes'))
+const CamposCategoria = lazy(() => import('./pages/CamposCategoria'))
+const Requerimientos  = lazy(() => import('./pages/Requerimientos'))
+const Permisos        = lazy(() => import('./pages/Permisos'))
+const Compensatorios  = lazy(() => import('./pages/Compensatorios'))
+const MantenedorRoles = lazy(() => import('./pages/MantenedorRoles'))
+const Papelera        = lazy(() => import('./pages/Papelera'))
+const Personal        = lazy(() => import('./pages/Personal'))
+const Reglamentos     = lazy(() => import('./pages/Reglamentos'))
+const Backups         = lazy(() => import('./pages/Backups'))
 
 const RUTA_A_PAGINA = {
   '/':                         'dashboard',
@@ -90,6 +91,18 @@ const PAGINA_A_RUTA = {
 
 // El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
 // PRESETS_ROL desde el catálogo central (fuente única). Ver cargarPerfil().
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f9fafb' }}>
+      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        Cargando...
+      </div>
+    </div>
+  )
+}
 
 export default function App() {
   const navigate = useNavigate()
@@ -333,15 +346,7 @@ export default function App() {
     procesandoCambio.current = false
   }
 
-  if (cargando) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f9fafb' }}>
-      <div style={{ textAlign: 'center', color: '#9ca3af' }}>
-        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#3b82f6', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-        Cargando...
-      </div>
-    </div>
-  )
+  if (cargando) return <PageLoader />
 
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
   if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
@@ -382,50 +387,52 @@ export default function App() {
       puedeVerAuditoriaPapelera={puedeVerAuditoriaPapelera}
       puedeVerBackups={puedeVerBackups}
     >
-      {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
-      {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
-      {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
-      {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
-      {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulos={[
-          ...(puedeVerAuditoriaPermisos        ? ['ausencias']      : []),
-          ...(puedeVerAuditoriaCompensatorios  ? ['compensatorios'] : []),
-        ]} />}
-      {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
-      {paginaSegura === 'auditoria_general'        && <Auditoria usuario={usuario} modoGeneral modulos={['inventario','requerimientos','tickets','ausencias','compensatorios','reglamentos','papelera','personal']} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
-      {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
-      {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
-      {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
-      {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
-      {paginaSegura === 'campos'          && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
-      {paginaSegura === 'mantenedor_roles' && <MantenedorRoles />}
-      {paginaSegura === 'papelera'         && <Papelera usuario={usuario} permisos={permisosPapelera} />}
-      {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
-      {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
-      {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
-      {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad' || paginaSegura === 'backups_papelera') && puedeVerBackups &&
-        <Backups usuario={usuario} permisos={permisosBackups}
-          vista={paginaSegura === 'backups_actividad' ? 'actividad' : paginaSegura === 'backups_papelera' ? 'papelera' : 'respaldos'}
-          onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : v === 'papelera' ? 'backups_papelera' : 'backups')} />}
-      {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
-      {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
-      {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
-      {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" />}
-      {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
-        usuario={usuario}
-        permisos={permisosPersonal}
-        vista={paginaSegura === 'personal' ? 'dashboard'
-          : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
-          : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
-          : paginaSegura === 'personal_documentos'     ? 'documentos'
-          : 'dashboard'}
-        onIrAVista={(v) => cambiarPagina(
-          v === 'dashboard'      ? 'personal'
-          : v === 'contrataciones' ? 'personal_contrataciones'
-          : v === 'reemplazos'     ? 'personal_reemplazos'
-          : v === 'documentos'     ? 'personal_documentos'
-          : 'personal'
-        )}
-      />}
+      <Suspense fallback={<PageLoader />}>
+        {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
+        {paginaSegura === 'usuarios'   && <Usuarios   usuario={usuario} permisosAdmin={permisosAusencia} />}
+        {paginaSegura === 'auditoria'  && <Auditoria  usuario={usuario} modulo="inventario" onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
+        {paginaSegura === 'auditoria_requerimientos' && <Auditoria usuario={usuario} modulo="requerimientos" />}
+        {paginaSegura === 'auditoria_permisos'       && <Auditoria usuario={usuario} modulos={[
+            ...(puedeVerAuditoriaPermisos        ? ['ausencias']      : []),
+            ...(puedeVerAuditoriaCompensatorios  ? ['compensatorios'] : []),
+          ]} />}
+        {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
+        {paginaSegura === 'auditoria_general'        && <Auditoria usuario={usuario} modoGeneral modulos={['inventario','requerimientos','tickets','ausencias','compensatorios','reglamentos','papelera','personal']} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
+        {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
+        {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
+        {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
+        {paginaSegura === 'ajustes'    && <Ajustes    onLogoChange={url => setLogoUrl(url)} onNombreChange={(s, i) => { setNombreSistema(s); setNombreInstitucion(i) }} />}
+        {paginaSegura === 'campos'          && <CamposCategoria usuario={usuario} permisos={permisosCampos} />}
+        {paginaSegura === 'mantenedor_roles' && <MantenedorRoles />}
+        {paginaSegura === 'papelera'         && <Papelera usuario={usuario} permisos={permisosPapelera} />}
+        {paginaSegura === 'mis_ausencias'   && <Permisos usuario={usuario} permisos={permisosAusencia} modoMisAusencias={true} />}
+        {paginaSegura === 'permisos'        && <Permisos        usuario={usuario} permisos={permisosAusencia} />}
+        {paginaSegura === 'compensatorios'  && <Compensatorios  usuario={usuario} permisos={permisosComp} />}
+        {(paginaSegura === 'backups' || paginaSegura === 'backups_actividad' || paginaSegura === 'backups_papelera') && puedeVerBackups &&
+          <Backups usuario={usuario} permisos={permisosBackups}
+            vista={paginaSegura === 'backups_actividad' ? 'actividad' : paginaSegura === 'backups_papelera' ? 'papelera' : 'respaldos'}
+            onIrAVista={(v) => cambiarPagina(v === 'actividad' ? 'backups_actividad' : v === 'papelera' ? 'backups_papelera' : 'backups')} />}
+        {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
+        {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
+        {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
+        {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" />}
+        {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
+          usuario={usuario}
+          permisos={permisosPersonal}
+          vista={paginaSegura === 'personal' ? 'dashboard'
+            : paginaSegura === 'personal_contrataciones' ? 'contrataciones'
+            : paginaSegura === 'personal_reemplazos'     ? 'reemplazos'
+            : paginaSegura === 'personal_documentos'     ? 'documentos'
+            : 'dashboard'}
+          onIrAVista={(v) => cambiarPagina(
+            v === 'dashboard'      ? 'personal'
+            : v === 'contrataciones' ? 'personal_contrataciones'
+            : v === 'reemplazos'     ? 'personal_reemplazos'
+            : v === 'documentos'     ? 'personal_documentos'
+            : 'personal'
+          )}
+        />}
+      </Suspense>
     </Layout>
   )
 }
