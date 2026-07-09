@@ -1814,6 +1814,148 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
   )
 }
 
+// ─── Modal Detalle Reemplazo ──────────────────────────────────
+function ModalDetalleReemplazo({ datos, onClose, onEditar }) {
+  const [docs,      setDocs]      = useState([])
+  const [historial, setHistorial] = useState([])
+  const [docsAbierto,      setDocsAbierto]      = useState(true)
+  const [historialAbierto, setHistorialAbierto] = useState(true)
+
+  useEffect(() => {
+    supabase.from('personal_documentos').select('*').eq('reemplazo_id', datos.id)
+      .order('subido_en', { ascending: false })
+      .then(({ data }) => setDocs(data ?? []))
+    supabase.from('personal_audit_logs').select('*').eq('registro_id', datos.id)
+      .order('creado_en', { ascending: false }).limit(10)
+      .then(({ data }) => setHistorial(data ?? []))
+  }, [datos.id])
+
+  const items = [
+    { label: 'Funcionario reemplazado', val: datos.funcionario_nombre },
+    { label: 'Motivo', val: MOTIVO_MAP[datos.motivo] ?? datos.motivo },
+    { label: 'Reemplazante', val: datos.reemplazante_nombre || '—' },
+    { label: 'Cargo', val: datos.cargo || '—' },
+    { label: 'Asignatura', val: datos.asignatura || '—' },
+    { label: 'Fecha inicio', val: formatFecha(datos.fecha_inicio) },
+    { label: 'Fecha término', val: formatFecha(datos.fecha_termino) },
+    { label: 'Horas', val: datos.horas ? `${datos.horas} hrs.` : '—' },
+  ]
+
+  return (
+    <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+      onClick={onClose}
+    >
+      <motion.div className="personal-modal personal-modal-wide" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+        onClick={e => e.stopPropagation()}
+        style={{ maxHeight: '88vh', overflowY: 'auto' }}
+      >
+        <div className="personal-modal-header" style={{ position: 'sticky', top: 0, background: '#fff', paddingBottom: 16, zIndex: 1, borderBottom: '1px solid #f1f5f9', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ margin: 0 }}>{datos.funcionario_nombre}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+              <EstadoBadge estado={datos.estado} />
+              <span style={{ fontSize: 12.5, color: '#64748b' }}>{MOTIVO_MAP[datos.motivo] ?? datos.motivo}{datos.reemplazante_nombre ? ` · ${datos.reemplazante_nombre}` : ''}</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {onEditar && (
+              <button onClick={() => onEditar(datos)} style={{ padding: '7px 14px', borderRadius: 9, border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Pencil size={13} /> Editar
+              </button>
+            )}
+            <button className="personal-modal-close" style={{ position: 'static' }} onClick={onClose}><X size={18} /></button>
+          </div>
+        </div>
+
+        {/* Info grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
+          {items.map(it => (
+            <div key={it.label} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
+              <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{it.label}</p>
+              <p style={{ margin: '3px 0 0', fontSize: 13.5, fontWeight: 500, color: '#0f172a' }}>{it.val}</p>
+            </div>
+          ))}
+          {datos.observaciones && (
+            <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', gridColumn: '1/-1' }}>
+              <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Observaciones</p>
+              <p style={{ margin: '3px 0 0', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>{datos.observaciones}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Documentos (acordeón expandible/contraíble) */}
+        <div style={{ marginBottom: 20 }}>
+          <button type="button" onClick={() => setDocsAbierto(o => !o)} aria-expanded={docsAbierto}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', fontFamily: 'inherit', marginBottom: docsAbierto ? 10 : 0 }}>
+            <span style={{ fontWeight: 700, fontSize: 13.5, color: '#374151' }}>Documentos ({docs.length})</span>
+            {docsAbierto
+              ? <ChevronUp size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              : <ChevronDown size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+          </button>
+          <AnimatePresence initial={false}>
+            {docsAbierto && (
+              <motion.div key="docs-reempl" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: 'easeInOut' }} style={{ overflow: 'hidden' }}>
+                {docs.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Sin documentos adjuntos.</p>
+                ) : (
+                  <div className="personal-doc-list">
+                    {docs.map(d => (
+                      <div key={d.id} className="personal-doc-item">
+                        <div className="personal-doc-icon"><FileText size={16} /></div>
+                        <div className="personal-doc-info">
+                          <p className="personal-doc-name">{d.nombre}</p>
+                          <p className="personal-doc-meta">{TIPOS_DOC_MAP[d.tipo_doc] ?? d.tipo_doc} · {formatBytes(d.tamanio)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Historial (acordeón expandible/contraíble) */}
+        <div>
+          <button type="button" onClick={() => setHistorialAbierto(o => !o)} aria-expanded={historialAbierto}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, background: 'none', border: 'none', padding: '4px 0', cursor: 'pointer', fontFamily: 'inherit', marginBottom: historialAbierto ? 12 : 0 }}>
+            <span style={{ fontWeight: 700, fontSize: 13.5, color: '#374151' }}>Historial{historial.length ? ` (${historial.length})` : ''}</span>
+            {historialAbierto
+              ? <ChevronUp size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              : <ChevronDown size={16} style={{ color: '#94a3b8', flexShrink: 0 }} />}
+          </button>
+          <AnimatePresence initial={false}>
+            {historialAbierto && (
+              <motion.div key="hist-reempl" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22, ease: 'easeInOut' }} style={{ overflow: 'hidden' }}>
+                {historial.length === 0 ? (
+                  <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Sin historial registrado.</p>
+                ) : (
+                  <div className="personal-timeline">
+                    {historial.map((h, i) => (
+                      <div key={h.id} className="personal-timeline-item">
+                        <div className={`personal-timeline-dot ${i === 0 ? 'active' : ''}`}>
+                          <Activity size={11} style={{ color: i === 0 ? 'rgb(var(--primary-rgb,26,35,126))' : '#94a3b8' }} />
+                        </div>
+                        <div className="personal-timeline-content">
+                          <p className="personal-timeline-title">
+                            {h.accion === 'crear' ? 'Reemplazo creado' : h.accion === 'editar' ? 'Reemplazo modificado' : h.accion === 'eliminar' ? 'Reemplazo eliminado' : h.accion}
+                            {h.usuario_nombre && <span style={{ fontWeight: 400, color: '#64748b' }}> por {h.usuario_nombre}</span>}
+                          </p>
+                          <p className="personal-timeline-date">{formatFecha(h.creado_en?.slice(0,10))}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════
 // REEMPLAZOS TAB
 // ═══════════════════════════════════════════════════════════════
@@ -1828,6 +1970,7 @@ function ReemplazosTab({ usuario, permisos }) {
   const [mostrarFiltros,  setMostrarFiltros]  = useState(false)
   const [pagina,          setPagina]          = useState(1)
   const [modal,           setModal]           = useState(null)
+  const [detalle,         setDetalle]         = useState(null)
   const [eliminar,        setEliminar]        = useState(null)
   const [eliminando,      setEliminando]      = useState(false)
   const [seleccionados,   setSeleccionados]   = useState(new Set())
@@ -2071,6 +2214,7 @@ function ReemplazosTab({ usuario, permisos }) {
                     <span className="personal-card-motivo">{MOTIVO_MAP[r.motivo] ?? r.motivo}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="personal-action-btn" title="Ver detalle" onClick={() => setDetalle(r)}><Eye size={14} /></button>
                     {permisos.editarReempl && (
                       <button className="personal-action-btn" title="Editar" onClick={() => setModal(r)}><Pencil size={13} /></button>
                     )}
@@ -2140,6 +2284,16 @@ function ReemplazosTab({ usuario, permisos }) {
             ausenciaInicial={modal._ausencia ?? null}
             usuarios={usuariosBD} ausencias={ausencias} contratos={contratos}
             onGuardar={handleGuardar} onClose={() => setModal(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {detalle && (
+          <ModalDetalleReemplazo
+            datos={detalle}
+            onClose={() => setDetalle(null)}
+            onEditar={permisos.editarReempl ? (d) => { setDetalle(null); setModal(d) } : null}
           />
         )}
       </AnimatePresence>
