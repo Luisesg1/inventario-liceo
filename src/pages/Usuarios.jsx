@@ -786,16 +786,23 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     setGuardando(false)
   }
 
-  // Paso 2: guardar permisos
+  // Paso 2: guardar permisos (y rol si cambió respecto al creado)
   async function handleGuardarPermisos() {
     if (!usuarioCreado) return
     setGuardando(true)
-    const { error } = await supabase
-      .from('permisos_usuario')
-      .upsert(
-        { usuario_id: usuarioCreado.id, permisos: draft.permisos, categorias: draft.categorias },
-        { onConflict: 'usuario_id' }
-      )
+    const ops = [
+      supabase
+        .from('permisos_usuario')
+        .upsert(
+          { usuario_id: usuarioCreado.id, permisos: draft.permisos, categorias: draft.categorias },
+          { onConflict: 'usuario_id' }
+        ),
+    ]
+    if (rol !== usuarioCreado.rol) {
+      ops.push(supabase.from('usuarios').update({ rol }).eq('id', usuarioCreado.id))
+    }
+    const results = await Promise.all(ops)
+    const error = results.find(r => r.error)?.error ?? null
     setGuardando(false)
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error al guardar permisos: ' + error.message })
@@ -891,14 +898,6 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
                   value={email} onChange={(e) => { setEmail(e.target.value); clearFE('email') }} />
                 {fieldErrors.email && <span style={{ fontSize: 11.5, color: '#dc2626', marginTop: 3, display: 'block' }}>{fieldErrors.email}</span>}
               </label>
-              <label className="form-label">
-                Rol
-                <select className="form-select" value={rol} onChange={(e) => cambiarRol(e.target.value)}>
-                  {rolesDisponibles.map(r => (
-                    <option key={r.key} value={r.key}>{r.label}</option>
-                  ))}
-                </select>
-              </label>
             </div>
             {mensaje.texto && (
               <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
@@ -921,7 +920,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               Permisos de {usuarioCreado?.nombre}
             </p>
             <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
-              Ajusta los permisos según necesites. Los valores iniciales corresponden al rol <strong>{rol}</strong>.
+              Elige el rol del usuario y ajusta los permisos según necesites.
             </p>
 
             {/* Aviso de contraseña temporal cuando el email no llegó */}
@@ -957,7 +956,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
               </div>
             )}
 
-            <TablaPermisos key={rol} draft={draft} onChange={setDraft} onFinalizado={() => setPermisosListos(true)} />
+            <TablaPermisos draft={draft} onChange={setDraft} onFinalizado={() => setPermisosListos(true)} onRolChange={cambiarRol} />
 
             {mensaje.texto && (
               <div className={`form-mensaje ${mensaje.tipo}`} style={{ marginTop: 12 }}>
