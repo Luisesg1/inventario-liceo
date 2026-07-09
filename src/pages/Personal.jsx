@@ -1170,28 +1170,30 @@ function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSel
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
-  // Búsqueda dinámica con debounce.
+  // Búsqueda dinámica con debounce. Con el desplegable abierto y sin texto (o <2
+  // chars) muestra una lista inicial; al escribir ≥2 filtra por nombre/RUT/correo.
   useEffect(() => {
-    if (seleccionado) return
+    if (seleccionado || !abierto) return
     const q = query.trim()
-    if (q.length < 2) { setResultados([]); setBuscando(false); return }
     setBuscando(true)
     const t = setTimeout(async () => {
-      const qTexto = q.replace(/[%,()]/g, ' ')             // seguro para el filtro .or()
-      const qRut   = q.replace(/[^0-9kK]/g, '').toUpperCase()
-      let filtro = `nombre_completo.ilike.%${qTexto}%,correo.ilike.%${qTexto}%`
-      if (qRut) filtro += `,rut.ilike.%${qRut}%`
       let req = supabase.from('contrataciones')
         .select('id, nombre_completo, rut, correo, cargo')
-        .or(filtro).order('nombre_completo').limit(8)
+        .order('nombre_completo').limit(8)
+      if (q.length >= 2) {
+        const qTexto = q.replace(/[%,()]/g, ' ')           // seguro para el filtro .or()
+        const qRut   = q.replace(/[^0-9kK]/g, '').toUpperCase()
+        let filtro = `nombre_completo.ilike.%${qTexto}%,correo.ilike.%${qTexto}%`
+        if (qRut) filtro += `,rut.ilike.%${qRut}%`
+        req = req.or(filtro)
+      }
       if (excluirId) req = req.neq('id', excluirId)
       const { data } = await req
       setResultados(data ?? [])
       setBuscando(false)
-      setAbierto(true)
-    }, 280)
+    }, 250)
     return () => clearTimeout(t)
-  }, [query, seleccionado, excluirId])
+  }, [query, seleccionado, excluirId, abierto])
 
   function elegir(p) {
     setSeleccionado(true)
@@ -1220,7 +1222,7 @@ function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSel
         <input
           value={query}
           onChange={onChange}
-          onFocus={() => { if (resultados.length || (query.trim().length >= 2 && !seleccionado)) setAbierto(true) }}
+          onFocus={() => setAbierto(true)}
           placeholder="Buscar por nombre, RUT o correo…"
           className={error ? 'error' : ''}
           style={{ paddingLeft: 34, paddingRight: valorId ? 34 : 12 }}
@@ -1256,6 +1258,96 @@ function AutocompletePersonaReemplazada({ valorId, valorNombre, excluirId, onSel
               <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{p.nombre_completo}</span>
               <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
                 {formatRut(p.rut)}{p.correo ? ` · ${p.correo}` : ''}{p.cargo ? ` · ${p.cargo}` : ''}
+              </span>
+            </button>
+          ))}
+          {sinResultados && (
+            <div style={{ padding: '10px 14px', fontSize: 13, color: '#94a3b8' }}>
+              No se encontraron coincidencias.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Autocomplete sobre usuarios del sistema (búsqueda por nombre/RUT/correo) ──
+// Filtra en cliente el arreglo `usuarios` ya cargado. Reemplaza a un <select>
+// simple: se puede buscar y elegir, o "Ingresar manualmente" para escribir libre.
+function AutocompleteUsuario({ usuarios, valorId, valorNombre, onSelect, onClear, label = 'Seleccionar del sistema', placeholder = 'Buscar por nombre, RUT o correo…' }) {
+  const [query,   setQuery]   = useState('')
+  const [abierto, setAbierto] = useState(false)
+  const boxRef = useRef(null)
+
+  useEffect(() => {
+    function onDoc(e) { if (boxRef.current && !boxRef.current.contains(e.target)) setAbierto(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  const q    = query.trim().toLowerCase()
+  const qRut = query.replace(/[^0-9kK]/g, '').toUpperCase()
+  const filtrados = (usuarios ?? []).filter(u => {
+    if (!q) return true
+    const rutN = (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+    return (u.nombre ?? '').toLowerCase().includes(q)
+      || (u.email ?? '').toLowerCase().includes(q)
+      || (!!qRut && rutN.includes(qRut))
+  }).slice(0, 8)
+
+  // Texto mostrado: si hay selección, el nombre; si no, lo que se teclea.
+  const display = valorId ? (valorNombre ?? '') : query
+
+  function elegir(u) {
+    setQuery(''); setAbierto(false); onSelect(u)
+  }
+  function onChange(e) {
+    if (valorId) onClear()          // rompe la selección al empezar a escribir
+    setQuery(e.target.value); setAbierto(true)
+  }
+  const sinResultados = abierto && q.length >= 1 && filtrados.length === 0
+
+  return (
+    <div className="personal-form-field" ref={boxRef} style={{ position: 'relative' }}>
+      <label>{label}</label>
+      <div style={{ position: 'relative' }}>
+        <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+        <input
+          value={display}
+          onChange={onChange}
+          onFocus={() => setAbierto(true)}
+          placeholder={placeholder}
+          autoComplete="off"
+          style={{ paddingLeft: 34, paddingRight: valorId ? 34 : 12 }}
+        />
+        {valorId && (
+          <button type="button" onClick={() => { setQuery(''); onClear() }} aria-label="Quitar selección"
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', padding: 2 }}>
+            <X size={15} />
+          </button>
+        )}
+      </div>
+
+      {abierto && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, marginTop: 4,
+          background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(15,23,42,0.12)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto',
+        }}>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setQuery(''); setAbierto(false); onClear() }}
+            style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: '#64748b' }}>
+            — Ingresar manualmente —
+          </button>
+          {filtrados.map(u => (
+            <button type="button" key={u.id} onMouseDown={e => e.preventDefault()} onClick={() => elegir(u)}
+              style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', padding: '9px 14px', cursor: 'pointer', display: 'block', fontFamily: 'inherit' }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#0f172a' }}>{u.nombre}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 1, overflowWrap: 'anywhere' }}>
+                {u.rut ? formatRut(u.rut) : 'Sin RUT'}{u.email ? ` · ${u.email}` : ''}
               </span>
             </button>
           ))}
@@ -2007,12 +2099,6 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
-  function onFuncionarioChange(e) {
-    const id = e.target.value
-    const u  = usuarios.find(u => u.id === id)
-    setForm(f => ({ ...f, funcionario_id: id, funcionario_nombre: u?.nombre ?? '' }))
-  }
-
   function onAusenciaChange(e) {
     const id  = e.target.value
     const aus = ausencias.find(a => a.id === id)
@@ -2029,16 +2115,6 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
     } else {
       set('ausencia_id', '')
     }
-  }
-
-  function onReemplazanteChange(e) {
-    const id = e.target.value
-    if (id === '__manual__') {
-      setForm(f => ({ ...f, reemplazante_id: '', reemplazante_nombre: '' }))
-      return
-    }
-    const u = usuarios.find(u => u.id === id)
-    setForm(f => ({ ...f, reemplazante_id: id, reemplazante_nombre: u?.nombre ?? '' }))
   }
 
   function validar() {
@@ -2061,6 +2137,8 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
   }
 
   const bloqueadoPorAusencia = !!ausenciaInicial
+  // "Asignatura" solo aplica si el reemplazante elegido del sistema es docente.
+  const reemplazanteEsDocente = usuarios.find(u => u.id === form.reemplazante_id)?.rol === 'docente'
 
   return (
     <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
@@ -2093,9 +2171,9 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
                 </div>
               )}
               {ausenciaInicial.usuario?.email && (
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Correo</p>
-                  <p style={{ margin: 0 }}>{ausenciaInicial.usuario.email}</p>
+                  <p style={{ margin: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{ausenciaInicial.usuario.email}</p>
                 </div>
               )}
               {contratoFuncionario?.cargo && (
@@ -2128,13 +2206,13 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
             <div className="personal-form-section">
               <p className="personal-form-section-title">Funcionario reemplazado</p>
               <div className="personal-form-grid">
-                <div className="personal-form-field">
-                  <label>Seleccionar del sistema</label>
-                  <select value={form.funcionario_id} onChange={onFuncionarioChange}>
-                    <option value="">— Ingresar manualmente —</option>
-                    {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                  </select>
-                </div>
+                <AutocompleteUsuario
+                  usuarios={usuarios}
+                  valorId={form.funcionario_id}
+                  valorNombre={form.funcionario_nombre}
+                  onSelect={u => setForm(f => ({ ...f, funcionario_id: u.id, funcionario_nombre: u.nombre }))}
+                  onClear={() => setForm(f => ({ ...f, funcionario_id: '' }))}
+                />
                 <div className="personal-form-field">
                   <label>Nombre *</label>
                   <input value={form.funcionario_nombre} onChange={e => set('funcionario_nombre', e.target.value)}
@@ -2183,13 +2261,13 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
           <div className="personal-form-section">
             <p className="personal-form-section-title">Reemplazante</p>
             <div className="personal-form-grid">
-              <div className="personal-form-field">
-                <label>Seleccionar del sistema</label>
-                <select value={form.reemplazante_id} onChange={onReemplazanteChange}>
-                  <option value="">— Ingresar manualmente —</option>
-                  {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
-                </select>
-              </div>
+              <AutocompleteUsuario
+                usuarios={usuarios}
+                valorId={form.reemplazante_id}
+                valorNombre={form.reemplazante_nombre}
+                onSelect={u => setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, ...(u.rol !== 'docente' ? { asignatura: '' } : {}) }))}
+                onClear={() => setForm(f => ({ ...f, reemplazante_id: '', asignatura: '' }))}
+              />
               <div className="personal-form-field">
                 <label>Nombre reemplazante</label>
                 <input value={form.reemplazante_nombre} onChange={e => set('reemplazante_nombre', e.target.value)}
@@ -2200,11 +2278,13 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
                 <input value={form.cargo} onChange={e => set('cargo', e.target.value)}
                   placeholder="Cargo que desempeña" />
               </div>
-              <div className="personal-form-field">
-                <label>Asignatura</label>
-                <input value={form.asignatura} onChange={e => set('asignatura', e.target.value)}
-                  placeholder="Ej: Matemática" />
-              </div>
+              {reemplazanteEsDocente && (
+                <div className="personal-form-field">
+                  <label>Asignatura</label>
+                  <input value={form.asignatura} onChange={e => set('asignatura', e.target.value)}
+                    placeholder="Ej: Matemática" />
+                </div>
+              )}
             </div>
           </div>
 
