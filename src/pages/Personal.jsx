@@ -773,7 +773,7 @@ function ContratacionesTab({ usuario, permisos }) {
       nombre_completo: datos.nombre_completo.trim(),
       rut:             datos.rut.replace(/[^0-9kK]/g, '').toUpperCase(),
       correo:          datos.correo?.trim() || null,
-      telefono:        datos.telefono?.trim() || null,
+      telefono:        (datos.telefono?.replace(/\s+/g, '') === '+56' ? '' : datos.telefono?.trim()) || null,
       cargo:           datos.cargo.trim(),
       estamento:       datos.estamento,
       tipo_contrato:   datos.tipo_contrato,
@@ -1368,7 +1368,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     nombre_completo: datos?.nombre_completo ?? '',
     rut:             datos ? formatRut(datos.rut) : '',
     correo:          datos?.correo ?? '',
-    telefono:        datos?.telefono ?? '',
+    telefono:        datos ? (datos.telefono ?? '') : '+56 ',
     cargo:           datos?.cargo ?? '',
     estamento:       datos?.estamento ?? 'docente',
     tipo_contrato:   datos?.tipo_contrato ?? 'contrata',
@@ -1382,8 +1382,53 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
   const [errors,    setErrors]    = useState({})
   const [guardando, setGuardando] = useState(false)
   const [errGlobal, setErrGlobal] = useState('')
+  const [rutInfo,   setRutInfo]   = useState({ estado: '', nombre: '' }) // '' | 'buscando' | 'encontrado'
+  const [correoDup, setCorreoDup] = useState(false)
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
+
+  // Al ingresar un RUT ya registrado, precargar los datos de esa persona.
+  useEffect(() => {
+    if (esEdicion) return
+    if (!validarRut(form.rut)) { setRutInfo({ estado: '', nombre: '' }); return }
+    const clean = form.rut.replace(/[^0-9kK]/g, '').toUpperCase()
+    setRutInfo({ estado: 'buscando', nombre: '' })
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from('contrataciones')
+        .select('nombre_completo, correo, telefono, cargo, estamento')
+        .eq('rut', clean).order('creado_en', { ascending: false }).limit(1)
+      const rec = data?.[0]
+      if (rec) {
+        setForm(f => ({
+          ...f,
+          nombre_completo: rec.nombre_completo || f.nombre_completo,
+          correo:          rec.correo   || f.correo,
+          telefono:        rec.telefono || f.telefono,
+          cargo:           rec.cargo    || f.cargo,
+          estamento:       rec.estamento || f.estamento,
+        }))
+        setErrors(e => ({ ...e, nombre_completo: '', cargo: '' }))
+        setRutInfo({ estado: 'encontrado', nombre: rec.nombre_completo ?? '' })
+      } else {
+        setRutInfo({ estado: '', nombre: '' })
+      }
+    }, 350)
+    return () => clearTimeout(t)
+  }, [form.rut, esEdicion])
+
+  // Alerta si el correo ya pertenece a OTRA persona (RUT distinto).
+  useEffect(() => {
+    const correo = form.correo.trim()
+    if (!correo || !correo.includes('@')) { setCorreoDup(false); return }
+    const rutClean = form.rut.replace(/[^0-9kK]/g, '').toUpperCase()
+    const t = setTimeout(async () => {
+      let req = supabase.from('contrataciones').select('id, rut').ilike('correo', correo).limit(5)
+      if (datos?.id) req = req.neq('id', datos.id)
+      const { data } = await req
+      setCorreoDup((data ?? []).some(r => (r.rut ?? '').toUpperCase() !== rutClean))
+    }, 350)
+    return () => clearTimeout(t)
+  }, [form.correo, form.rut, datos?.id])
 
   const esReemplazo = form.tipo_contrato === 'reemplazo'
 
@@ -1447,14 +1492,29 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
               </div>
               <div className="personal-form-field">
                 <label>RUT *</label>
-                <input value={form.rut} onChange={e => set('rut', e.target.value)}
-                  placeholder="12.345.678-9" className={errors.rut ? 'error' : ''} />
+                <input value={form.rut} onChange={e => set('rut', formatRut(e.target.value))}
+                  placeholder="12.345.678-9" className={errors.rut ? 'error' : ''} inputMode="text" />
                 {errors.rut && <span className="personal-form-error">{errors.rut}</span>}
+                {!errors.rut && rutInfo.estado === 'buscando' && (
+                  <span style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Loader2 size={12} className="animate-spin" /> Buscando registro…
+                  </span>
+                )}
+                {!errors.rut && rutInfo.estado === 'encontrado' && (
+                  <span style={{ fontSize: 12, color: '#15803d', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <CheckCircle2 size={12} /> Persona ya registrada — datos cargados.
+                  </span>
+                )}
               </div>
               <div className="personal-form-field">
                 <label>Correo electrónico</label>
                 <input type="email" value={form.correo} onChange={e => set('correo', e.target.value)}
-                  placeholder="correo@ejemplo.cl" />
+                  placeholder="correo@ejemplo.cl" className={correoDup ? 'error' : ''} />
+                {correoDup && (
+                  <span style={{ fontSize: 12, color: '#b45309', marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <AlertTriangle size={12} /> Este correo ya está registrado para otra persona.
+                  </span>
+                )}
               </div>
               <div className="personal-form-field">
                 <label>Teléfono</label>
