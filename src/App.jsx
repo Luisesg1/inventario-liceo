@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase, esRecuperacion, recoveryTokens } from './supabase'
 import Layout from './components/Layout'
@@ -102,6 +102,8 @@ function PageLoader() {
   )
 }
 
+const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
+
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -125,10 +127,9 @@ export default function App() {
   const forzarHome         = useRef(false)
 
   // ── Motor de permisos (fuente única de la capa de consumo) ────────────────
-  // Toda la lógica antes desplegada a mano aquí (bypass admin, restricciones de
-  // rol, defaults backward-compat y guardas de ruta) vive ahora en
-  // construirPermisos(). App.jsx solo destructura lo que necesita.
-  const perm = construirPermisos(usuario, permisosUsuario)
+  // Memoizado: solo se recalcula cuando cambian usuario o permisosUsuario,
+  // no en cada re-render por cambios de filtros o estado de navegación.
+  const perm = useMemo(() => construirPermisos(usuario, permisosUsuario), [usuario, permisosUsuario])
   const {
     esSoporte,
     puedeVerInventario, puedeVerAuditoriaInventario,
@@ -145,7 +146,6 @@ export default function App() {
     permisosReglamentos, puedeVerReglamentos,
   } = perm
 
-  const PAGINAS_PERSONAL = new Set(['personal','personal_contrataciones','personal_reemplazos','personal_documentos'])
   const paginaSegura = perm.paginaSegura(pagina)
 
   // ── Navegación ───────────────────────────────────────────────────

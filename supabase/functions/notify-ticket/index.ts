@@ -1,10 +1,9 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
 const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
 const ADMIN_EMAIL_2 = Deno.env.get('ADMIN_EMAIL_2')
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     const { record } = await req.json()
     const t = record

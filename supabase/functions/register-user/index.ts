@@ -1,4 +1,3 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!
@@ -24,7 +23,7 @@ const corsPara = (origin: string | null) => ({
 const RL_MAX = 10
 const RL_VENTANA_SEG = 600
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const cors = corsPara(req.headers.get('origin'))
   const json = (data: unknown, status = 200) =>
     new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -159,65 +158,19 @@ serve(async (req) => {
       return json({ error: 'Error al registrar usuario: ' + upsertError.message }, 500)
     }
 
-    // 5. Permisos base para docente (auto-registro).
-    // La tabla permisos_rol es la fuente viva (leída a continuación); este objeto
-    // solo actúa como fallback si la tabla no tiene fila para 'docente'.
-    // Incluye TODAS las claves conocidas para que el merge sea completo.
-    const permisosDocente = {
-      // Inventario
-      ver_inventario: false, agregar_bien: false, editar_bien: false,
-      eliminar_bien: false, eliminar_lote: false, gestionar_categorias: false,
-      importar_csv: false, exportar: false,
-      registrar_prestamo: false, registrar_incidencia: false, ver_auditoria_inventario: false,
-      // Campos inventario
-      ver_campos: false, agregar_campo: false, editar_campo: false, ocultar_campo: false,
-      eliminar_campo: false, reordenar_campos: false, gestionar_campos_base: false,
-      gestionar_campos: false,
-      // Tickets (obligatorios)
+    // 5. Permisos del rol docente desde la fuente viva `permisos_rol`.
+    // Fallback mínimo con solo los obligatorios si la BD no tiene fila para 'docente'.
+    // El mapa completo vive en permisos_rol (fuente única), no duplicado aquí.
+    const PERMISOS_OBLIGATORIOS_DOCENTE = {
       ver_tickets: true, crear_ticket: true, editar_ticket: true, exportar_tickets: true,
-      gestionar_tickets: false, eliminar_ticket: false, ver_alertas_tickets: false,
-      // Requerimientos
-      ver_requerimientos: false, crear_requerimiento: false, editar_requerimiento: false,
-      eliminar_requerimiento: false, importar_requerimientos: false,
-      exportar_requerimientos: false, ver_auditoria_requerimientos: false,
-      // Ausencias (obligatorios)
       ver_propias_ausencias: true, exportar_ausencias: true,
-      ver_ausencias: false, crear_ausencias: false, editar_ausencias: false,
-      eliminar_ausencias: false, aprobar_ausencias: false, ver_auditoria_permisos: false,
-      // Compensatorios
-      ver_compensatorios: false, crear_compensatorios: false, editar_compensatorios: false,
-      eliminar_compensatorios: false, exportar_compensatorios: false, ver_auditoria_compensatorios: false,
-      // Ajustes y usuarios
-      ver_ajustes: false, gestionar_ajustes: false, guardar_cambios_ajustes: false,
-      gestionar_usuarios: false, invitar_usuario: false, editar_usuario: false,
-      eliminar_usuario: false, notificar_ausencia_correo: false,
-      editar_roles_permisos: false, gestionar_roles: false, ver_historial_usuarios: false,
-      // Reglamentos (obligatorios)
       ver_reglamentos: true, descargar_reglamentos: true,
-      crear_reglamentos: false, editar_reglamentos: false, eliminar_reglamentos: false,
-      gestionar_versiones_reglamentos: false, administrar_reglamentos: false, ver_auditoria_reglamentos: false,
-      // Personal
-      ver_contrataciones: false, crear_contrataciones: false, editar_contrataciones: false, eliminar_contrataciones: false,
-      ver_reemplazos: false, crear_reemplazos: false, editar_reemplazos: false, eliminar_reemplazos: false,
-      ver_documentos_personal: false, subir_documentos_personal: false, eliminar_documentos_personal: false,
-      ver_auditoria_personal: false,
-      // Papelera
-      ver_papelera: false, restaurar_registros: false, eliminar_permanentemente: false, ver_auditoria_papelera: false,
-      // Backups
-      ver_backups: false, crear_backups: false, descargar_backups: false, renombrar_backups: false,
-      editar_descripcion_backups: false, duplicar_backups: false, restaurar_backups: false,
-      eliminar_backups: false, ver_actividad_backups: false,
     }
-
-    // Permisos del rol docente desde la fuente viva `permisos_rol` (editable en
-    // el Mantenedor de Roles). Si no hay fila, se usa la copia estática de
-    // respaldo. El auto-registro siempre asigna rol 'docente' por seguridad.
-    let permisosFinal = permisosDocente
     const { data: rolDocente } = await admin
       .from('permisos_rol').select('permisos').eq('rol', 'docente').maybeSingle()
-    if (rolDocente?.permisos && Object.keys(rolDocente.permisos).length > 0) {
-      permisosFinal = { ...permisosDocente, ...rolDocente.permisos }
-    }
+    const permisosFinal = rolDocente?.permisos && Object.keys(rolDocente.permisos).length > 0
+      ? { ...PERMISOS_OBLIGATORIOS_DOCENTE, ...rolDocente.permisos }
+      : PERMISOS_OBLIGATORIOS_DOCENTE
 
     const { error: permisosError } = await admin.from('permisos_usuario').upsert({
       usuario_id: userId,

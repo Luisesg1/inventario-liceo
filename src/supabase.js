@@ -41,13 +41,10 @@ const queryParams = new URLSearchParams(window.location.search)
 const esRecuperacionHash = hashParams.get('type') === 'recovery'
 
 // Flujo PKCE (moderno): Supabase envía ?code=... sin indicar el tipo en la URL.
-// Lo guardamos en sessionStorage al llegar, para que App.jsx sepa que es recovery
-// incluso después de que createClient consuma y limpie el code.
+// Variable de módulo (en memoria): se pierde en cada recarga, eliminando el riesgo
+// de que el flag persista en sessionStorage y active SetPassword en un login normal.
 const codigoPKCE = queryParams.get('code')
-if (codigoPKCE) {
-  sessionStorage.setItem('supabase_pkce_recovery', '1')
-}
-const esRecuperacionPKCE = !!sessionStorage.getItem('supabase_pkce_recovery')
+const esRecuperacionPKCE = !!codigoPKCE
 
 export const esRecuperacion = esRecuperacionHash || esRecuperacionPKCE
 

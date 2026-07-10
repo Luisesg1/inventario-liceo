@@ -148,6 +148,14 @@ export function construirPermisos(usuario, permisosRaw) {
   }
 
   const puedeVerAuditoriaGeneral = esAdmin
+    || can('ver_auditoria_inventario')
+    || can('ver_auditoria_requerimientos')
+    || can('ver_auditoria_permisos')
+    || can('ver_auditoria_compensatorios')
+    || can('ver_auditoria_personal')
+    || can('ver_auditoria_reglamentos')
+    || can('ver_auditoria_papelera')
+    || can('ver_actividad_backups')
 
   // Backups: módulo asignable por permisos (admin recibe todo por bypass).
   const permisosBackups = {
