@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
+import { useRoles } from '../hooks/useRoles'
 import './Tickets.css'
 
 const PRIORIDAD = {
@@ -72,7 +73,7 @@ function SkeletonTickets() {
 
 const AREAS = ['Proyector', 'Conector HDMI Muro', 'Conector HDMI Proyector', 'Notebook',
   'Computador de escritorio', 'Impresora', 'Red de Internet', 'Teclado', 'Mouse', 'Otro']
-const ROLES = ['Administrador', 'Directivo', 'Coordinador', 'Docente', 'Asistente de la educación', 'Administrativo']
+// ROLES ya no es estático — se obtiene dinámicamente de useRoles() dentro del componente
 
 const MAX_PALABRAS = 100
 const contarPalabras = (str) => str.trim() ? str.trim().split(/\s+/).length : 0
@@ -84,6 +85,7 @@ const FORM_VACIO = {
 }
 
 export default function Tickets({ usuario, onTicketActualizado, filtroInicial = '', permisos = {} }) {
+  const { rolesDisponibles } = useRoles()
   const esAdmin   = usuario.rol === 'admin'
   const esSoporte = usuario.rol === 'soporte'
   // Permisos: usa prop si viene de App, sino fallback a lógica de roles
@@ -619,7 +621,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
           </select>
           <select className={filtroRol ? 'activo' : ''} value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
             <option value="">Todos los roles</option>
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            {rolesDisponibles.map(r => <option key={r.key} value={r.label}>{r.label}</option>)}
           </select>
           {(filtroEstado || filtroPrioridad || filtroArea || filtroRol) && (
             <button className="btn-limpiar-filtros" onClick={() => { setFiltroEstado(''); setFiltroPrioridad(''); setFiltroArea(''); setFiltroRol('') }}>✕ Limpiar</button>
@@ -771,7 +773,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
                   <label className="modal-label">Rol *</label>
                   <select className="modal-select" value={form.rol_solicitante} onChange={e => setF('rol_solicitante', e.target.value)}>
                     <option value="">Seleccionar…</option>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {rolesDisponibles.map(r => <option key={r.key} value={r.label}>{r.label}</option>)}
                   </select>
                 </div>
                 <div className="modal-field">

@@ -44,8 +44,9 @@ export const ROLES_BASE_META = [
   { key: 'coordinador',    label: 'Coordinador',               icon: '📋', desc: 'Tickets, ausencias y ajustes' },
   { key: 'docente',        label: 'Docente',                   icon: '📚', desc: 'Tickets, ausencias y ajustes' },
   { key: 'asistente',      label: 'Asistente de la educación', icon: '🤝', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'administrativo', label: 'Administrativo',            icon: '🗂️', desc: 'Tickets, ausencias y ajustes' },
-  { key: 'soporte',        label: 'Soporte técnico',           icon: '🔧', desc: 'Gestión completa de tickets' },
+  { key: 'administrativo',       label: 'Administrativo',       icon: '🗂️', desc: 'Tickets, ausencias y ajustes' },
+  { key: 'soporte',              label: 'Soporte técnico',      icon: '🔧', desc: 'Gestión completa de tickets' },
+  { key: 'visor_requerimientos', label: 'Visor requerimientos', icon: '👁️', desc: 'Solo visualización de tickets' },
 ]
 
 // Colores de rol — usados en tarjetas de usuarios y avatar del mantenedor.
