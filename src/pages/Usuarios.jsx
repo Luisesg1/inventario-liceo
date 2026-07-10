@@ -1,5 +1,5 @@
 // src/pages/Usuarios.jsx
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import './Usuarios.css'
@@ -12,6 +12,7 @@ import {
   STEPS_MODULOS,
   ULTIMO_PASO,
   PERMISOS_VACIO,
+  OBLIGATORIOS_TRUE,
   PRESETS_ROL as PERMISOS_POR_ROL,
 } from '../config/permisos'
 import { labelDeRol, ROL_COLORES } from '../config/roles'
@@ -520,12 +521,18 @@ function PanelPermisos({ usuario: u, onCerrar, onRolCambiado }) {
 
   async function cargar() {
     setCargando(true)
-    const { data } = await supabase
-      .from('permisos_usuario')
-      .select('permisos, categorias')
-      .eq('usuario_id', u.id)
-      .maybeSingle()
-    const def = permisosDe(u.rol) // permisos base del rol desde la fuente viva
+    // Ambas consultas en paralelo para evitar race con useRoles()
+    const [{ data }, { data: rolRow }] = await Promise.all([
+      supabase.from('permisos_usuario').select('permisos, categorias').eq('usuario_id', u.id).maybeSingle(),
+      supabase.from('permisos_rol').select('permisos').eq('rol', u.rol).maybeSingle(),
+    ])
+    // Permisos base del rol directo desde la BD (sin depender del estado de useRoles)
+    const rolPreset = PERMISOS_POR_ROL[u.rol]
+    const def = rolRow?.permisos
+      ? { permisos: { ...PERMISOS_VACIO, ...rolRow.permisos, ...OBLIGATORIOS_TRUE }, categorias: rolPreset?.categorias ?? ['todos'] }
+      : rolPreset
+        ? { permisos: { ...PERMISOS_VACIO, ...rolPreset.permisos, ...OBLIGATORIOS_TRUE }, categorias: [...rolPreset.categorias] }
+        : { permisos: { ...PERMISOS_VACIO, ...OBLIGATORIOS_TRUE }, categorias: ['todos'] }
     const loaded = data
       ? { permisos: { ...data.permisos }, categorias: [...(data.categorias ?? def.categorias)] }
       : { permisos: { ...def.permisos }, categorias: [...def.categorias] }
@@ -682,7 +689,17 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
   const [usuarioCreado, setUsuarioCreado] = useState(null)
   const [rutVinculado, setRutVinculado]   = useState([]) // cuentas existentes con ese RUT
   const [permisosListos, setPermisosListos] = useState(false)
-  const { rolesDisponibles, permisosDe } = useRoles()
+  const { rolesDisponibles, permisosDe, cargando: rolesCargando } = useRoles()
+
+  // Sincronizar draft con BD una vez que useRoles termina de cargar (solo la primera vez)
+  const draftSincronizado = useRef(false)
+  useEffect(() => {
+    if (!rolesCargando && !draftSincronizado.current) {
+      draftSincronizado.current = true
+      const def = permisosDe(rol)
+      setDraft({ permisos: { ...def.permisos }, categorias: [...def.categorias] })
+    }
+  }, [rolesCargando]) // eslint-disable-line
 
   async function checkRutVinculado(rutVal) {
     if (!rutVal.trim() || !validarRut(rutVal)) { setRutVinculado([]); return }
@@ -1852,7 +1869,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
       {confirmCambioRol && (() => {
         const colActual  = ROL_COLORES[confirmCambioRol.rolActual] ?? { bg: '#f3f4f6', color: '#374151' }
         const colNuevo   = ROL_COLORES[confirmCambioRol.nuevoRol]  ?? { bg: '#f3f4f6', color: '#374151' }
-        const perfilNuevo = PERMISOS_POR_ROL[confirmCambioRol.nuevoRol] ?? { permisos: { ...PERMISOS_VACIO } }
+        const perfilNuevo = permisosDe(confirmCambioRol.nuevoRol)
         const tieneAlguno = Object.values(perfilNuevo.permisos).some(Boolean)
         return (
           <div style={ps.modalOverlay} onClick={() => !aplicandoRol && setConfirmCambioRol(null)}>
