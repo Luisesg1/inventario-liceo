@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabase'
 // Catálogo centralizado de permisos (fuente única de verdad, compartido con Usuarios.jsx)
-import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO, PERMISOS_OBLIGATORIOS, OBLIGATORIOS_TRUE } from '../config/permisos'
+import { ACCIONES, GRUPOS_ROLES as GRUPOS, PERMISOS_VACIO, PERMISOS_OBLIGATORIOS, OBLIGATORIOS_TRUE, PRESETS_ROL } from '../config/permisos'
 import { ROLES_BASE, ROL_LABEL, ROL_COLORES } from '../config/roles'
 import { useEsMovil } from '../hooks/useEsMovil'
 
@@ -100,7 +100,7 @@ export default function MantenedorRoles() {
     const dbRoleKeys = new Set(dbRoles.map(r => r.rol))
 
     const baseOrdenados = ROLES_BASE.map(r =>
-      dbRoles.find(d => d.rol === r) ?? { rol: r, permisos: { ...PERMISOS_VACIO }, descripcion: '' }
+      dbRoles.find(d => d.rol === r) ?? { rol: r, permisos: { ...(PRESETS_ROL[r]?.permisos ?? PERMISOS_VACIO) }, descripcion: '' }
     )
     const customRoles = dbRoles.filter(r => !ROLES_BASE.includes(r.rol))
 
@@ -111,8 +111,11 @@ export default function MantenedorRoles() {
     ;(uData ?? []).forEach(u => { cnt[u.rol] = (cnt[u.rol] ?? 0) + 1 })
     setConteos(cnt)
 
-    if (listaRoles.length > 0 && !rolSeleccionado) {
-      seleccionarRol(listaRoles[0])
+    if (listaRoles.length > 0) {
+      const rolActual = rolSeleccionado
+        ? listaRoles.find(r => r.rol === rolSeleccionado.rol) ?? listaRoles[0]
+        : listaRoles[0]
+      seleccionarRol(rolActual)
     }
     setCargando(false)
   }
@@ -165,8 +168,11 @@ export default function MantenedorRoles() {
     if (error) {
       setMensaje({ tipo: 'error', texto: 'Error al guardar: ' + error.message })
     } else {
-      const actualizado = { ...rolSeleccionado, permisos: { ...draft.permisos, ...OBLIGATORIOS_TRUE }, descripcion: draft.descripcion }
-      setSavedDraft(draft)
+      const permisosPersistidos = { ...draft.permisos, ...OBLIGATORIOS_TRUE }
+      const actualizado = { ...rolSeleccionado, permisos: permisosPersistidos, descripcion: draft.descripcion }
+      const draftSincronizado = { permisos: permisosPersistidos, descripcion: draft.descripcion }
+      setDraft(draftSincronizado)
+      setSavedDraft(draftSincronizado)
       setRoles(prev => prev.map(r => r.rol === rolSeleccionado.rol ? actualizado : r))
       setRolSeleccionado(actualizado)
       setMensaje({ tipo: 'exito', texto: '¡Permisos del rol guardados! Los usuarios heredarán estos permisos.' })
