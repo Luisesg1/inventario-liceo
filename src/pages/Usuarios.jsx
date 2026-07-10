@@ -1173,6 +1173,17 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   async function eliminarUsuario(userId) {
     setEliminandoId(userId)
     try {
+      // 1. Revocar acceso en Supabase Auth (y limpiar permisos/ausencias)
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await supabase.functions.invoke('eliminar-usuario', {
+        body: { userId },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error ?? res.error?.message ?? 'Error al revocar acceso')
+      }
+
+      // 2. Mover a papelera (mantiene historial, marca is_deleted=true)
       const { error } = await supabase.rpc('soft_delete_usuario', {
         p_id: userId,
         p_usuario_id: usuario.id,
@@ -1180,11 +1191,12 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
         p_usuario_rol: usuario.rol,
       })
       if (error) throw error
+
       setUsuarios(prev => prev.filter(u => u.id !== userId))
       setConfirmandoId(null)
       if (panelActivo?.id === userId) setPanelActivo(null)
     } catch (e) {
-      alert('Error al mover a la Papelera: ' + (e.message ?? 'Error desconocido'))
+      alert('Error al eliminar usuario: ' + (e.message ?? 'Error desconocido'))
     } finally {
       setEliminandoId(null)
     }

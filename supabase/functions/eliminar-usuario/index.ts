@@ -61,10 +61,11 @@ Deno.serve(async (req: Request) => {
       return json({ error: deleteError.message }, 400);
     }
 
-    // 6. Auth eliminado — ahora limpiar la BD (errores aquí no bloquean re-registro)
+    // 6. Auth eliminado — limpiar permisos y desvincular ausencias.
+    // La fila de usuarios NO se borra aquí: el soft_delete_usuario RPC la marca
+    // is_deleted=true para que quede en la papelera con su historial.
     await supabaseAdmin.from("permisos_usuario").delete().eq("usuario_id", userId);
     await supabaseAdmin.from("ausencias").update({ usuario_id: null }).eq("usuario_id", userId);
-    await supabaseAdmin.from("usuarios").delete().eq("id", userId);
 
     return json({ ok: true }, 200);
 
