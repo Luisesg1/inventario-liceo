@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
 import { useRoles } from '../hooks/useRoles'
+import { labelDeRol } from '../config/roles'
 import './Tickets.css'
 
 const PRIORIDAD = {
@@ -175,7 +176,7 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
 
   const abrirNuevo = () => {
     const [nombre = '', ...rest] = (usuario.nombre || '').split(' ')
-    setForm({ ...FORM_VACIO, nombre, apellidos: rest.join(' '), correo_contacto: usuario.email || '' })
+    setForm({ ...FORM_VACIO, nombre, apellidos: rest.join(' '), correo_contacto: usuario.email || '', rol_solicitante: labelDeRol(usuario.rol) })
     setModalNuevo(true)
   }
   const cerrarNuevo = () => { setModalNuevo(false); setExito(false) }
