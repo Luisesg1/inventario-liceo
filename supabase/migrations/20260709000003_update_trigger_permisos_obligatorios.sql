@@ -40,7 +40,7 @@ BEGIN
 
   -- 3. Insertar solo si no existe aún (el Edge Function puede llegar después y actualizar)
   INSERT INTO public.permisos_usuario (usuario_id, permisos, categorias)
-  VALUES (NEW.id, v_permisos, ARRAY['todos'])
+  VALUES (NEW.id, v_permisos, '["todos"]'::jsonb)
   ON CONFLICT (usuario_id) DO NOTHING;
 
   RETURN NEW;

@@ -136,7 +136,7 @@ BEGIN
     v_permisos := COALESCE(v_permisos, '{}'::jsonb) || v_obligatorios;
 
     INSERT INTO public.permisos_usuario (usuario_id, permisos, categorias)
-    VALUES (NEW.id, v_permisos, ARRAY['todos'])
+    VALUES (NEW.id, v_permisos, '["todos"]'::jsonb)
     ON CONFLICT (usuario_id) DO NOTHING;
 
   EXCEPTION WHEN OTHERS THEN

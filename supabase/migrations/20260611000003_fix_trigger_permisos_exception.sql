@@ -55,7 +55,7 @@ BEGIN
     END IF;
 
     INSERT INTO public.permisos_usuario (usuario_id, permisos, categorias)
-    VALUES (NEW.id, v_permisos, ARRAY['todos'])
+    VALUES (NEW.id, v_permisos, '["todos"]'::jsonb)
     ON CONFLICT (usuario_id) DO NOTHING;
 
   EXCEPTION WHEN OTHERS THEN
