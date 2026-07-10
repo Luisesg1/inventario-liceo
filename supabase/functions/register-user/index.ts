@@ -4,15 +4,31 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+// Orígenes permitidos. Configurable con ALLOWED_ORIGINS (lista separada por comas).
+// CORS no detiene clientes no-navegador (curl); el control real es el código de
+// invitación + el rate limit. Esto es defensa en profundidad.
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ??
+  'https://sistema.liceojhj.cl,https://liceojhj.cl')
+  .split(',').map(s => s.trim()).filter(Boolean)
 
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+const esOrigenPermitido = (o: string | null) =>
+  !!o && (ALLOWED_ORIGINS.includes(o) || /^http:\/\/localhost(:\d+)?$/.test(o))
+
+const corsPara = (origin: string | null) => ({
+  'Access-Control-Allow-Origin': esOrigenPermitido(origin) ? origin! : ALLOWED_ORIGINS[0],
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Vary': 'Origin',
+})
+
+// Límite de intentos por IP: 10 cada 10 minutos.
+const RL_MAX = 10
+const RL_VENTANA_SEG = 600
 
 serve(async (req) => {
+  const cors = corsPara(req.headers.get('origin'))
+  const json = (data: unknown, status = 200) =>
+    new Response(JSON.stringify(data), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
 
   try {
@@ -31,6 +47,22 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    // 0. Rate limit por IP — evita forzar el código de invitación por fuerza bruta.
+    const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'desconocida'
+    const { data: dentroDelLimite, error: rlError } = await admin.rpc('consumir_rate_limit', {
+      p_clave: `register-user:${ip}`,
+      p_max: RL_MAX,
+      p_ventana_seg: RL_VENTANA_SEG,
+    })
+    if (rlError) {
+      // No dejamos pasar en silencio: si el limitador no responde, es preferible
+      // registrar y continuar antes que bloquear el registro legítimo.
+      console.error('[rate-limit] error:', rlError.message)
+    } else if (dentroDelLimite === false) {
+      console.log('[429] rate limit excedido para IP:', ip)
+      return json({ error: 'Demasiados intentos. Vuelve a intentarlo en unos minutos.' }, 429)
+    }
+
     // 1. Validar código de invitación
     const { data: cfg, error: cfgError } = await admin
       .from('configuracion')
@@ -43,7 +75,8 @@ serve(async (req) => {
       return json({ error: 'Error de configuración' }, 500)
     }
     if (codigo.trim() !== cfg.valor.trim()) {
-      console.log('[400] código incorrecto — recibido:', JSON.stringify(codigo.trim()), '/ esperado:', JSON.stringify(cfg.valor.trim()))
+      // No registrar el código esperado ni el recibido: quedarían en los logs.
+      console.log('[400] código de invitación incorrecto desde IP:', ip)
       return json({ error: 'Código de invitación incorrecto' }, 400)
     }
 
