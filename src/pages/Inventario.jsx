@@ -355,7 +355,21 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
 
     const results = await Promise.all(queries)
     if (results[0].error || results[1].error) {
-      setAviso('Error al cargar el inventario. Recarga la página.')
+      // Conexión perdida a mitad: caer al caché si existe
+      const cats = obtenerCacheCategorias()
+      const bs   = obtenerCacheBienes()
+      if (cats && bs) {
+        const ediciones = obtenerPendientesEdicion()
+        const bsConEdits = Object.keys(ediciones).length
+          ? bs.map(b => ediciones[b.id] ? { ...b, ...ediciones[b.id], _pendienteEdit: true } : b)
+          : bs
+        const pends = obtenerPendientes()
+        setBienes([...pends, ...bsConEdits])
+        setCategorias(cats)
+        setAviso('Sin conexión — mostrando datos en caché.')
+      } else {
+        setAviso('Error al cargar el inventario. Recarga la página.')
+      }
       setCargando(false)
       return
     }

@@ -1169,7 +1169,19 @@ export default function Requerimientos({ usuario, filtroInicial = null, permisos
       return
     }
 
-    const { data } = await supabase.from('requerimientos').select('*').eq('is_deleted', false).order('id', { ascending: false })
+    const { data, error: reqError } = await supabase.from('requerimientos').select('*').eq('is_deleted', false).order('id', { ascending: false })
+    if (reqError) {
+      // Conexión perdida a mitad: caer al caché si existe
+      const cached = obtenerCacheRequerimientos()
+      const pends  = obtenerPendientesReq()
+      const edits  = obtenerEditadosReq()
+      if (cached) {
+        const base = cached.map(i => edits[i.id] ? { ...i, ...edits[i.id], _pendienteEdit: true } : i)
+        setItems([...base, ...pends])
+      }
+      setCargando(false)
+      return
+    }
     const resultado = data ?? []
     cachearRequerimientos(resultado)
     // Mantener en la lista los pendientes offline que aún no sincronizaron
