@@ -98,7 +98,7 @@ export default function Layout({
   const ajustesActivo = paginaActual === 'ajustes' || paginaActual === 'usuarios' || paginaActual === 'mantenedor_roles'
   const [ajustesAbierto, setAjustesAbierto] = useState(ajustesActivo)
 
-  const backupsActivo = paginaActual === 'backups' || paginaActual === 'backups_actividad' || paginaActual === 'backups_papelera'
+  const backupsActivo = paginaActual === 'backups' || paginaActual === 'backups_actividad'
   const [backupsAbierto, setBackupsAbierto] = useState(backupsActivo)
 
   const titulos = {
@@ -128,7 +128,6 @@ export default function Layout({
     papelera_auditoria:        'Auditoría de Papelera',
     backups:                   'Backups',
     backups_actividad:         'Actividad de Backups',
-    backups_papelera:          'Papelera de Backups',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -737,13 +736,6 @@ export default function Layout({
                   >
                     <span className="nav-subitem-dot" />
                     Respaldos
-                  </div>
-                  <div
-                    className={`nav-subitem ${paginaActual === 'backups_papelera' ? 'active' : ''}`}
-                    onClick={() => handleNav('backups_papelera')}
-                  >
-                    <span className="nav-subitem-dot" />
-                    Papelera
                   </div>
                   <div
                     className={`nav-subitem ${paginaActual === 'backups_actividad' ? 'active' : ''}`}

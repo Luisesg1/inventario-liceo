@@ -5,7 +5,7 @@ import {
   Trash2, RotateCcw, AlertTriangle, Package2,
   Ticket, Calendar, ShoppingCart, Gift, Clock,
   RefreshCw, CheckCircle2, Users, Square, CheckSquare,
-  Minus, BookOpen,
+  Minus, BookOpen, HardDrive,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 
@@ -21,6 +21,7 @@ const RESTORE_CONFIG = {
   requerimientos:     { nombreField: null, uniqueFields: [] },
   dias_compensatorios:{ nombreField: null, uniqueFields: [] },
   reglamentos:        { nombreField: 'nombre', uniqueFields: [] },
+  backups_meta:       { nombreField: null, uniqueFields: [] },
 }
 
 // ── Configuración por módulo ──────────────────────────────────────────────
@@ -32,6 +33,7 @@ const MODULO_CONFIG = {
   compensatorios: { label: 'Compensatorios',Icon: Gift,        color: '#ef4444', bg: '#fef2f2' },
   usuarios:       { label: 'Usuarios',      Icon: Users,       color: '#0891b2', bg: '#ecfeff' },
   reglamentos:    { label: 'Reglamentos',   Icon: BookOpen,    color: '#1a237e', bg: '#e8eaf6' },
+  backups:        { label: 'Backups',       Icon: HardDrive,   color: '#4f46e5', bg: '#eef2ff' },
 }
 
 const FILTROS_MODULO = [
@@ -42,7 +44,8 @@ const FILTROS_MODULO = [
   { value: 'requerimientos', label: 'Requerimientos' },
   { value: 'compensatorios', label: 'Compensatorios' },
   { value: 'usuarios',       label: 'Usuarios' },
-  { value: 'reglamentos',   label: 'Reglamentos' },
+  { value: 'reglamentos',    label: 'Reglamentos' },
+  { value: 'backups',        label: 'Backups' },
 ]
 
 const BUCKET_REQ_IMGS = 'requerimientos'
@@ -301,6 +304,12 @@ export default function Papelera({ usuario, permisos = {} }) {
       if (!error && nombreNuevo) {
         await supabase.from('usuarios').update({ nombre: nombreNuevo }).eq('id', item.id)
       }
+    } else if (item.tabla === 'backups_meta') {
+      // backups_meta usa 'archivo' (TEXT) como PK, no 'id'
+      ;({ error } = await supabase
+        .from('backups_meta')
+        .update({ is_deleted: false, deleted_at: null, deleted_by: null, deleted_by_nombre: null })
+        .eq('archivo', item.id))
     } else {
       ;({ error } = await supabase
         .from(item.tabla)
@@ -375,6 +384,13 @@ export default function Papelera({ usuario, permisos = {} }) {
       } catch {
         return { message: 'No se pudo conectar con el servidor.' }
       }
+    }
+
+    // Backups: eliminar el objeto del bucket y la fila de metadatos.
+    if (item.tabla === 'backups_meta') {
+      await supabase.storage.from('backups').remove([item.id])
+      const { error } = await supabase.from('backups_meta').delete().eq('archivo', item.id)
+      return error ?? null
     }
 
     // Ausencias: camino garantizado vía RPC SECURITY DEFINER. La RPC valida el
@@ -1215,7 +1231,10 @@ export default function Papelera({ usuario, permisos = {} }) {
                       </td>
                       {/* Expira en */}
                       <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
-                        <ExpiresChip diasRestantes={item.dias_restantes ?? 0} />
+                        {item.dias_restantes != null
+                          ? <ExpiresChip diasRestantes={item.dias_restantes} />
+                          : <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>Sin expiración</span>
+                        }
                       </td>
                       {/* Acciones */}
                       <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>

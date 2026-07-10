@@ -16,7 +16,7 @@ import {
   Pencil, FileText, MoreVertical, Eye, ShieldAlert, Loader2, CheckCircle2,
   XCircle, AlertTriangle, Database, Files, Package, Clock, HardDriveDownload,
   RefreshCw, Activity, ListChecks, CalendarDays,
-  Info, Zap, Trash, Undo2, ChevronLeft, ChevronRight,
+  Info, Zap, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Backups.css'
@@ -165,8 +165,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
   const [modalEliminar,  setModalEliminar]  = useState(null)   // item → enviar a papelera
   const [modalDuplicar,  setModalDuplicar]  = useState(null)   // item
   const [modalLimpiar,   setModalLimpiar]   = useState(false)
-  const [modalRestaurarPap, setModalRestaurarPap] = useState(null) // item (papelera)
-  const [modalEliminarDef,  setModalEliminarDef]  = useState(null) // item (papelera, permanente)
 
   // Toasts
   const [toasts, setToasts] = useState([])
@@ -236,9 +234,8 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     }
   }), [archivos, metaMap])
 
-  // Respaldos vigentes vs. enviados a la papelera
+  // Solo respaldos vigentes (los enviados a papelera se ven en la Papelera central)
   const itemsActivos  = useMemo(() => items.filter(i => !i.borrado), [items])
-  const itemsPapelera = useMemo(() => items.filter(i =>  i.borrado), [items])
 
   const usuariosUnicos = useMemo(
     () => [...new Set(itemsActivos.map(i => i.usuario).filter(u => u && u !== '—'))],
@@ -357,32 +354,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
     cargar(true)
   }
 
-  // Restaurar desde la Papelera al listado de respaldos vigentes.
-  const handleRestaurarPapelera = async (item) => {
-    await upsertMeta(item.archivo, {
-      is_deleted: false,
-      deleted_at: null,
-      deleted_by: null,
-      deleted_by_nombre: null,
-    }, item)
-    registrarAuditoria('restaurado', item, { desde: 'papelera' })
-    setModalRestaurarPap(null)
-    toast('ok', 'Respaldo restaurado.')
-    cargar(true)
-  }
-
-  // Eliminación permanente desde la Papelera: recién aquí se borra el objeto del
-  // bucket y su fila de metadatos.
-  const handleEliminarDefinitivo = async (item) => {
-    const { error } = await supabase.storage.from(BUCKET).remove([item.archivo])
-    if (error) { toast('error', 'No se pudo eliminar el respaldo.'); return }
-    await supabase.from('backups_meta').delete().eq('archivo', item.archivo)
-    registrarAuditoria('eliminado_permanente_manual', item)
-    setModalEliminarDef(null)
-    toast('ok', 'Respaldo eliminado permanentemente.')
-    cargar(true)
-  }
-
   // Respaldos de seguridad (generados antes de cada restauración) — se acumulan.
   const backupsSeguridad = useMemo(() => itemsActivos.filter(i => i.origen === 'seguridad'), [itemsActivos])
   const tamanoSeguridad  = useMemo(() => backupsSeguridad.reduce((a, i) => a + (i.size || 0), 0), [backupsSeguridad])
@@ -452,10 +423,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
         <button className={`bk-tab ${vista === 'respaldos' ? 'active' : ''}`} onClick={() => onIrAVista?.('respaldos')}>
           <ListChecks size={15} /> Respaldos
         </button>
-        <button className={`bk-tab ${vista === 'papelera' ? 'active' : ''}`} onClick={() => onIrAVista?.('papelera')}>
-          <Trash size={15} /> Papelera
-          {itemsPapelera.length > 0 && <span className="bk-tab-count">{itemsPapelera.length}</span>}
-        </button>
         {p.verActividad && (
           <button className={`bk-tab ${vista === 'actividad' ? 'active' : ''}`} onClick={() => onIrAVista?.('actividad')}>
             <Activity size={15} /> Actividad
@@ -465,16 +432,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
 
       {vista === 'actividad' && p.verActividad
         ? <Actividad />
-        : vista === 'papelera'
-        ? (
-          <PapeleraBackups
-            items={itemsPapelera}
-            permisos={p}
-            cargando={cargando}
-            onRestaurar={(item) => setModalRestaurarPap(item)}
-            onEliminar={(item) => setModalEliminarDef(item)}
-          />
-        )
         : (
         <>
           {/* ── KPIs ── */}
@@ -595,28 +552,6 @@ export default function Backups({ usuario, permisos = {}, vista = 'respaldos', o
             confirmLabel="Enviar a papelera"
             onClose={() => setModalEliminar(null)}
             onConfirm={() => handleEliminar(modalEliminar)}
-          />
-        )}
-        {modalRestaurarPap && (
-          <ModalConfirm
-            key="rest-pap"
-            titulo="Restaurar respaldo"
-            Icon={Undo2} tono="info"
-            mensaje={<>Se restaurará <strong>{modalRestaurarPap.nombre}</strong> al listado de respaldos vigentes.</>}
-            confirmLabel="Restaurar"
-            onClose={() => setModalRestaurarPap(null)}
-            onConfirm={() => handleRestaurarPapelera(modalRestaurarPap)}
-          />
-        )}
-        {modalEliminarDef && (
-          <ModalConfirm
-            key="del-def"
-            titulo="Eliminar permanentemente"
-            Icon={Trash2} tono="peligro"
-            mensaje={<>¿Eliminar <strong>{modalEliminarDef.nombre}</strong> de forma permanente? Esta acción no se puede deshacer y el archivo no se podrá recuperar.</>}
-            confirmLabel="Eliminar definitivamente"
-            onClose={() => setModalEliminarDef(null)}
-            onConfirm={() => handleEliminarDefinitivo(modalEliminarDef)}
           />
         )}
         {modalRestaurar && (
@@ -1261,136 +1196,6 @@ function Progreso({ pasos }) {
         </div>
       ))}
     </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PESTAÑA PAPELERA (respaldos enviados a la papelera — soft-delete)
-// ═══════════════════════════════════════════════════════════════════════════
-function PapeleraBackups({ items, permisos = {}, cargando, onRestaurar, onEliminar }) {
-  const [q,        setQ]        = useState('')
-  const [fUsuario, setFUsuario] = useState('')
-  const [fTipo,    setFTipo]    = useState('')
-  const [fEstado,  setFEstado]  = useState('')
-  const [fOrigen,  setFOrigen]  = useState('')
-  const [fDesde,   setFDesde]   = useState('')
-  const [fHasta,   setFHasta]   = useState('')
-  const [orden,    setOrden]    = useState({ campo: 'eliminado', dir: 'desc' })
-  const [pagina,   setPagina]   = useState(1)
-
-  const usuariosUnicos = useMemo(
-    () => [...new Set(items.map(i => i.usuario).filter(u => u && u !== '—'))],
-    [items]
-  )
-  const filtrados = useMemo(
-    () => filtrarOrdenar(items, { q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }),
-    [items, q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden]
-  )
-  const hayFiltros = q || fUsuario || fTipo || fEstado || fOrigen || fDesde || fHasta
-  const limpiar = () => { setQ(''); setFUsuario(''); setFTipo(''); setFEstado(''); setFOrigen(''); setFDesde(''); setFHasta('') }
-
-  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
-  useEffect(() => { setPagina(1) }, [q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden])
-  useEffect(() => { if (pagina > totalPaginas) setPagina(totalPaginas) }, [pagina, totalPaginas])
-  const enPagina = useMemo(
-    () => filtrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
-    [filtrados, pagina]
-  )
-
-  return (
-    <div className="bk-papelera">
-      <div className="bk-note" style={{ background: '#fefce8', color: '#92400e', border: '1px solid #fde68a' }}>
-        <Info size={13} /> Los respaldos enviados a la papelera conservan su archivo. Puedes restaurarlos al listado o eliminarlos de forma permanente.
-      </div>
-
-      <FiltrosBar
-        f={{ q, fUsuario, fTipo, fEstado, fOrigen, fDesde, fHasta, orden }}
-        set={{ setQ, setFUsuario, setFTipo, setFEstado, setFOrigen, setFDesde, setFHasta, setOrden }}
-        usuariosUnicos={usuariosUnicos}
-        haySistema={items.some(i => i.usuario === 'Sistema')}
-        hayFiltros={hayFiltros}
-        onLimpiar={limpiar}
-        placeholder="Buscar en la papelera…"
-        papelera
-      />
-
-      {cargando ? (
-        <div className="bk-list">{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>
-      ) : filtrados.length === 0 ? (
-        <div className="bk-empty">
-          <div className="bk-empty-illu"><Trash size={40} /><div className="bk-empty-badge">{hayFiltros ? <Search size={16} /> : <CheckCircle2 size={16} />}</div></div>
-          <h3>{hayFiltros ? 'Sin resultados' : 'La papelera está vacía'}</h3>
-          <p>{hayFiltros ? 'Ningún respaldo eliminado coincide con los filtros.' : 'Los respaldos que elimines aparecerán aquí para restaurarlos o borrarlos definitivamente.'}</p>
-          {hayFiltros && <button className="bk-btn-ghost" onClick={limpiar}><X size={14} /> Limpiar filtros</button>}
-        </div>
-      ) : (
-        <>
-          <div className="bk-list">
-            <AnimatePresence initial={false}>
-              {enPagina.map(item => (
-                <PapeleraCard
-                  key={item.archivo}
-                  item={item}
-                  permisos={permisos}
-                  onRestaurar={() => onRestaurar(item)}
-                  onEliminar={() => onEliminar(item)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
-          <Paginador
-            pagina={pagina} totalPaginas={totalPaginas}
-            total={filtrados.length} mostrados={enPagina.length}
-            onIr={setPagina}
-          />
-        </>
-      )}
-    </div>
-  )
-}
-
-function PapeleraCard({ item, permisos = {}, onRestaurar, onEliminar }) {
-  const tipo = TIPOS[item.tipo] ?? TIPOS.completo
-  const origen = ORIGENES[item.origen]
-  const TipoIcon = tipo.Icon
-  return (
-    <motion.div
-      className="bk-card bk-card--papelera"
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, height: 0, marginBottom: 0, transition: { duration: 0.18 } }}
-    >
-      <div className="bk-card-icon" style={{ color: '#64748b', background: '#f1f5f9' }}>
-        <TipoIcon size={20} />
-      </div>
-
-      <div className="bk-card-main">
-        <div className="bk-card-title-row">
-          <h3 title={item.archivo}>{item.nombre}</h3>
-          <span className="bk-origen" title={`Origen: ${origen.label}`}>{origen.emoji} {origen.label}</span>
-        </div>
-        {item.descripcion && <p className="bk-card-desc">{item.descripcion}</p>}
-        <div className="bk-card-meta">
-          <span><Trash size={12} /> Eliminado {fmtFechaHora(item.deletedAt)}</span>
-          <span><Info size={12} /> por {item.deletedBy || '—'}</span>
-          <span><HardDriveDownload size={12} /> {fmtBytes(item.size)}</span>
-        </div>
-      </div>
-
-      <div className="bk-card-badges">
-        <span className="bk-badge" style={{ color: tipo.color, background: tipo.bg }}>{tipo.label}</span>
-      </div>
-
-      <div className="bk-card-actions">
-        {permisos.eliminar && (
-          <button className="bk-icon-btn bk-icon-btn--ok" title="Restaurar" onClick={onRestaurar}><Undo2 size={15} /></button>
-        )}
-        {permisos.eliminar && (
-          <button className="bk-icon-btn bk-icon-btn--danger" title="Eliminar permanentemente" onClick={onEliminar}><Trash2 size={15} /></button>
-        )}
-      </div>
-    </motion.div>
   )
 }
 
