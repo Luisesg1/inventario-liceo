@@ -460,55 +460,52 @@ export default function HojaVida({ usuario, permisos }) {
   const [toast, setToast] = useState(null)
   const toastRef = useRef(null)
 
-  // ── Carga lista: usuarios como fuente principal, enriquecidos con contrataciones
+  // ── Carga lista: TODAS las personas (contrataciones + usuarios), unificadas por RUT
   useEffect(() => { cargarLista() }, [])
 
   async function cargarLista() {
     setCargando(true)
-    const [{ data: usrData }, { data: contData }] = await Promise.all([
-      supabase.from('usuarios')
-        .select('id, nombre, rut, email, rol, created_at')
-        .order('nombre', { ascending: true }),
+    const [{ data: contData }, { data: usrData }] = await Promise.all([
       supabase.from('contrataciones')
         .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_inicio, fecha_termino, horas, correo, telefono, creado_en')
         .order('nombre_completo', { ascending: true }),
+      supabase.from('usuarios')
+        .select('id, nombre, rut, email, rol, created_at')
+        .order('nombre', { ascending: true }),
     ])
 
-    const contPorRut = new Map()
+    const porRut = new Map()
+
     for (const c of (contData ?? [])) {
       const rn = normRut(c.rut)
       if (!rn) continue
-      const prev = contPorRut.get(rn)
+      const prev = porRut.get(rn)
       if (!prev || (c.creado_en > prev.creado_en)) {
-        contPorRut.set(rn, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id] })
+        porRut.set(rn, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id], _source: 'contratacion' })
       } else {
         prev._allContractIds.push(c.id)
       }
     }
 
-    const resultado = []
     for (const u of (usrData ?? [])) {
       const rn = normRut(u.rut)
-      const cont = rn ? contPorRut.get(rn) : null
-      if (cont) {
-        resultado.push({
-          ...cont,
-          nombre_completo: cont.nombre_completo || u.nombre,
-          correo: cont.correo || u.email,
-          _source: 'contratacion',
-        })
-      } else {
-        resultado.push({
-          id: u.id, nombre_completo: u.nombre, rut: u.rut,
-          cargo: u.rol ?? '', estamento: '', tipo_contrato: '',
-          fecha_inicio: null, fecha_termino: null, horas: null,
-          correo: u.email, telefono: '', creado_en: u.created_at,
-          _allContractIds: [], _source: 'usuario',
-        })
+      if (!rn) continue
+      if (porRut.has(rn)) {
+        const existing = porRut.get(rn)
+        existing.correo = existing.correo || u.email
+        existing.nombre_completo = existing.nombre_completo || u.nombre
+        continue
       }
+      porRut.set(rn, {
+        id: u.id, nombre_completo: u.nombre, rut: u.rut,
+        cargo: u.rol ?? '', estamento: '', tipo_contrato: '',
+        fecha_inicio: null, fecha_termino: null, horas: null,
+        correo: u.email, telefono: '', creado_en: u.created_at,
+        _allContractIds: [], _source: 'usuario',
+      })
     }
 
-    setContrataciones(resultado)
+    setContrataciones([...porRut.values()])
     setCargando(false)
   }
 
