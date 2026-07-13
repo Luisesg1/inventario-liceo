@@ -23,6 +23,7 @@ const Papelera        = lazy(() => import('./pages/Papelera'))
 const Personal        = lazy(() => import('./pages/Personal'))
 const Reglamentos     = lazy(() => import('./pages/Reglamentos'))
 const Backups         = lazy(() => import('./pages/Backups'))
+const HojaVida        = lazy(() => import('./pages/HojaVida'))
 
 const RUTA_A_PAGINA = {
   '/':                         'dashboard',
@@ -54,6 +55,7 @@ const RUTA_A_PAGINA = {
   '/papelera/auditoria':             'papelera_auditoria',
   '/backups':                        'backups',
   '/backups/actividad':              'backups_actividad',
+  '/hoja-vida':                      'hoja_vida',
 }
 
 const PAGINA_A_RUTA = {
@@ -85,6 +87,7 @@ const PAGINA_A_RUTA = {
   papelera_auditoria:             '/papelera/auditoria',
   backups:                        '/backups',
   backups_actividad:              '/backups/actividad',
+  hoja_vida:                      '/hoja-vida',
 }
 
 // El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
@@ -144,6 +147,7 @@ export default function App() {
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     permisosReglamentos, puedeVerReglamentos,
+    permisosHojaVida, puedeVerHojaVida,
   } = perm
 
   const paginaSegura = perm.paginaSegura(pagina)
@@ -384,6 +388,7 @@ export default function App() {
       puedeVerAuditoriaReglamentos={permisosReglamentos.verAuditoria}
       puedeVerAuditoriaPapelera={puedeVerAuditoriaPapelera}
       puedeVerBackups={puedeVerBackups}
+      puedeVerHojaVida={puedeVerHojaVida}
     >
       <Suspense fallback={<PageLoader />}>
         {paginaSegura === 'inventario' && <Inventario usuario={usuario} abrirBienId={abrirBienId} onAbrirBienDone={() => setAbrirBienId(null)} abrirCatId={abrirCatId} onAbrirCatDone={() => setAbrirCatId(null)} />}
@@ -395,7 +400,7 @@ export default function App() {
             ...(puedeVerAuditoriaCompensatorios  ? ['compensatorios'] : []),
           ]} />}
         {paginaSegura === 'auditoria_tickets'        && <Auditoria usuario={usuario} modulo="tickets" />}
-        {paginaSegura === 'auditoria_general'        && <Auditoria usuario={usuario} modoGeneral modulos={['inventario','requerimientos','tickets','ausencias','compensatorios','reglamentos','papelera','personal']} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
+        {paginaSegura === 'auditoria_general'        && <Auditoria usuario={usuario} modoGeneral modulos={['inventario','requerimientos','tickets','ausencias','compensatorios','reglamentos','papelera','personal','hoja_vida']} onVerBien={(id) => { setAbrirBienId(id); cambiarPagina('inventario') }} onVerCategoria={(catId) => { setAbrirCatId(catId); cambiarPagina('inventario') }} />}
         {(paginaSegura === 'dashboard' || !paginaSegura) && <Dashboard usuario={usuario} onIrATickets={puedeVerTickets ? irATickets : undefined} onIrARequerimientos={permisosReqs.ver ? irAReqs : undefined} onIrAInventario={puedeVerInventario ? irAInventario : undefined} onIrAAusencias={puedeAccederAusencias ? () => cambiarPagina(puedeGestionarAusencias ? 'permisos' : 'mis_ausencias') : undefined} puedeVerAlertasTickets={puedeVerAlertasTickets} puedeVerInventario={puedeVerInventario} puedeVerRequerimientos={permisosReqs.ver} puedeVerAusencias={permisosAusencia.ver} puedeGestionarTickets={puedeGestionarTickets} />}
         {paginaSegura === 'requerimientos' && <Requerimientos usuario={usuario} filtroInicial={filtroInicialReqs} permisos={permisosReqs} />}
         {paginaSegura === 'tickets'    && <Tickets    usuario={usuario} filtroInicial={filtroInicialTickets} onTicketActualizado={() => refreshTicketBadge.current?.()} permisos={permisosTickets} />}
@@ -413,6 +418,7 @@ export default function App() {
         {paginaSegura === 'reglamentos'          && <Reglamentos usuario={usuario} permisos={permisosReglamentos} />}
         {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
         {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
+        {paginaSegura === 'hoja_vida' && <HojaVida usuario={usuario} permisos={permisosHojaVida} />}
         {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" />}
         {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
           usuario={usuario}

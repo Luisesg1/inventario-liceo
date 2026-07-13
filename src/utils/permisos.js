@@ -190,6 +190,15 @@ export function construirPermisos(usuario, permisosRaw) {
     || permisosPersonal.ver_reemplazos
     || permisosPersonal.ver_documentos_personal
 
+  const permisosHojaVida = {
+    ver:      can('ver_hoja_vida'),
+    crear:    can('crear_hoja_vida'),
+    editar:   can('editar_hoja_vida'),
+    eliminar: can('eliminar_hoja_vida'),
+    exportar: can('exportar_hoja_vida'),
+  }
+  const puedeVerHojaVida = permisosHojaVida.ver
+
   const puedeVerPapelera          = can('ver_papelera')
   const puedeVerAuditoriaPapelera = can('ver_auditoria_papelera')
   const permisosPapelera = {
@@ -228,6 +237,7 @@ export function construirPermisos(usuario, permisosRaw) {
     permisosPersonal, puedeVerPersonal,
     puedeVerPapelera, puedeVerAuditoriaPapelera, permisosPapelera,
     puedeAdministrarReglamentos, permisosReglamentos, puedeVerReglamentos,
+    permisosHojaVida, puedeVerHojaVida,
   }
 
   // ── Guardas de ruta ───────────────────────────────────────────────────────

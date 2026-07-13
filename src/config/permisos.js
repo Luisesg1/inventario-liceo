@@ -163,6 +163,17 @@ export const MODULOS = [
     ],
   },
   {
+    key: 'hoja_vida', label: 'Hoja de Vida', icon: '📋', pasoLabel: 'Hoja de Vida',
+    descripcion: 'Acceso al módulo de Hoja de Vida del Personal: información personal, historial laboral, capacitaciones, evaluaciones y observaciones.',
+    permisos: [
+      { key: 'ver_hoja_vida',      accion: 'ver',      label: 'Ver Hoja de Vida del Personal',          labelCorto: 'Ver HV',        desc: 'Permite acceder al módulo de Hoja de Vida y visualizar los expedientes del personal.' },
+      { key: 'crear_hoja_vida',    accion: 'crear',    label: 'Registrar datos en Hoja de Vida',        labelCorto: 'Registrar HV',  desc: 'Permite agregar capacitaciones, evaluaciones, historial laboral y observaciones.' },
+      { key: 'editar_hoja_vida',   accion: 'editar',   label: 'Editar información de Hoja de Vida',     labelCorto: 'Editar HV',     desc: 'Permite modificar datos personales, laborales y registros de la Hoja de Vida.' },
+      { key: 'eliminar_hoja_vida', accion: 'eliminar', label: 'Eliminar registros de Hoja de Vida',     labelCorto: 'Eliminar HV',   desc: 'Permite eliminar capacitaciones, evaluaciones, historial y observaciones.' },
+      { key: 'exportar_hoja_vida', accion: 'exportar', label: 'Exportar Hoja de Vida a PDF',            labelCorto: 'Exportar HV',   desc: 'Permite exportar la Hoja de Vida completa de un funcionario a PDF.' },
+    ],
+  },
+  {
     key: 'backups', label: 'Backups', icon: '🗄️', pasoLabel: 'Backups',
     descripcion: 'Acceso al módulo de respaldos del sistema: crear, descargar, renombrar, restaurar, duplicar y eliminar respaldos, además de la línea de tiempo de actividad.',
     permisos: [
@@ -315,6 +326,7 @@ export const GUARDAS_RUTA = {
   // bypass). El backend (RLS del bucket/tabla y las edge functions) sigue
   // restringido a rol='admin', por lo que conceder estos permisos a un no-admin
   // muestra el módulo pero las operaciones reales requieren rol admin.
+  hoja_vida:                'ver_hoja_vida',
   backups:                  'ver_backups',
   backups_actividad:        'ver_actividad_backups',
   backups_papelera:         'ver_backups',

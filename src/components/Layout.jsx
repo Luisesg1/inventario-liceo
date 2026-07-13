@@ -5,7 +5,7 @@ import {
   Ticket, Settings2,
   HardDrive, ChevronRight, X, LogOut,
   ShoppingCart, ShieldCheck, History, Trash2,
-  UserCog, BookOpen,
+  UserCog, BookOpen, ClipboardList,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -48,6 +48,7 @@ export default function Layout({
   puedeVerAuditoriaReglamentos = false,
   puedeVerAuditoriaPapelera = false,
   puedeVerBackups = false,
+  puedeVerHojaVida = false,
   esSoporte = false,
 }) {
   const esAdmin   = usuario.rol === 'admin'
@@ -101,6 +102,8 @@ export default function Layout({
   const backupsActivo = paginaActual === 'backups' || paginaActual === 'backups_actividad'
   const [backupsAbierto, setBackupsAbierto] = useState(backupsActivo)
 
+  const hojaVidaActivo = paginaActual === 'hoja_vida'
+
   const titulos = {
     dashboard:  'Inicio',
     inventario: 'Inventario de Bienes',
@@ -128,6 +131,7 @@ export default function Layout({
     papelera_auditoria:        'Auditoría de Papelera',
     backups:                   'Backups',
     backups_actividad:         'Actividad de Backups',
+    hoja_vida:                 'Hoja de Vida del Personal',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -576,6 +580,22 @@ export default function Layout({
               )}
             </AnimatePresence>
           </>}
+
+          {/* Hoja de Vida del Personal */}
+          {puedeVerHojaVida && (
+            <motion.div
+              className={`nav-item ${hojaVidaActivo ? 'active' : ''}`}
+              onClick={() => handleNav('hoja_vida')}
+              whileHover={{ x: 2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            >
+              <span className="nav-icon">
+                <ClipboardList size={15} strokeWidth={hojaVidaActivo ? 2.5 : 2} />
+              </span>
+              Hoja de Vida
+            </motion.div>
+          )}
 
           {/* Auditoría General */}
           {puedeVerAuditoriaGeneral && (
