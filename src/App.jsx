@@ -56,7 +56,6 @@ const RUTA_A_PAGINA = {
   '/backups':                        'backups',
   '/backups/actividad':              'backups_actividad',
   '/hoja-vida':                      'hoja_vida',
-  '/hoja-vida/auditoria':            'hoja_vida_auditoria',
 }
 
 const PAGINA_A_RUTA = {
@@ -89,7 +88,6 @@ const PAGINA_A_RUTA = {
   backups:                        '/backups',
   backups_actividad:              '/backups/actividad',
   hoja_vida:                      '/hoja-vida',
-  hoja_vida_auditoria:            '/hoja-vida/auditoria',
 }
 
 // El fallback de permisos por rol (cuando la BD aún no devolvió datos) usa ahora
@@ -421,8 +419,7 @@ export default function App() {
         {paginaSegura === 'reglamentos_auditoria' && <Auditoria usuario={usuario} modulo="reglamentos" />}
         {paginaSegura === 'papelera_auditoria'    && <Auditoria usuario={usuario} modulo="papelera" />}
         {paginaSegura === 'hoja_vida' && <HojaVida usuario={usuario} permisos={permisosHojaVida} />}
-        {paginaSegura === 'hoja_vida_auditoria' && <Auditoria usuario={usuario} modulo="hoja_vida" />}
-        {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" />}
+        {paginaSegura === 'personal_auditoria'    && <Auditoria usuario={usuario} modulo="personal" modulos={['personal', 'hoja_vida']} />}
         {PAGINAS_PERSONAL.has(paginaSegura) && <Personal
           usuario={usuario}
           permisos={permisosPersonal}

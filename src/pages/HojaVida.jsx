@@ -620,10 +620,12 @@ export default function HojaVida({ usuario, permisos }) {
   }
 
   // ── Auditoría (RPC existente) ──────────────────────────────────────────
-  async function logAudit(accion, descripcion) {
+  async function logAudit(accion, detalle) {
+    const nombre = seleccionado?.nombre_completo ?? ''
+    const prefijo = detalle ? `${nombre} — ${detalle}` : nombre
     await supabase.rpc('log_auditoria', {
       p_accion: accion, p_modulo: 'hoja_vida',
-      p_bien_nombre: seleccionado?.nombre_completo ?? '', p_bien_id: hvPersona?.id ?? null, p_cambios: [],
+      p_bien_nombre: prefijo, p_bien_id: hvPersona?.id ?? null, p_cambios: [],
     }).catch(() => {})
   }
 
@@ -655,8 +657,9 @@ export default function HojaVida({ usuario, permisos }) {
     }
     setModal(null)
     const accionAudit = esEd || tabla === 'hv_personas' ? 'editar' : 'crear'
+    const tablaLabel = { hv_personas: 'Información personal', hv_capacitaciones: 'Capacitación', hv_evaluaciones: 'Evaluación', hv_observaciones: 'Observación', hv_anotaciones: 'Anotación' }[tabla] ?? tabla
     mostrarToast('ok', accionAudit === 'crear' ? 'Registrado correctamente' : 'Actualizado correctamente')
-    await logAudit(accionAudit)
+    await logAudit(accionAudit, `${tablaLabel} ${accionAudit === 'crear' ? 'agregada' : 'modificada'}`)
     cargarDetalle(seleccionado)
   }
 
@@ -664,8 +667,9 @@ export default function HojaVida({ usuario, permisos }) {
     const { error } = await supabase.from(tabla).delete().eq('id', id)
     if (error) { mostrarToast('error', 'Error al eliminar'); return }
     setModal(null)
+    const tablaLabel = { hv_capacitaciones: 'Capacitación', hv_evaluaciones: 'Evaluación', hv_observaciones: 'Observación', hv_anotaciones: 'Anotación' }[tabla] ?? tabla
     mostrarToast('ok', 'Eliminado correctamente')
-    await logAudit('eliminar')
+    await logAudit('eliminar', `${tablaLabel} eliminada`)
     cargarDetalle(seleccionado)
   }
 
@@ -698,7 +702,7 @@ export default function HojaVida({ usuario, permisos }) {
 
       doc.save(`hoja_vida_${nombre.replace(/\s+/g, '_')}.pdf`)
       mostrarToast('ok', 'PDF exportado correctamente')
-      await logAudit('exportar')
+      await logAudit('exportar', 'Exportación de expediente')
     } catch { mostrarToast('error', 'Error al exportar PDF') }
   }
 

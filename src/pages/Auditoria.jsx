@@ -87,6 +87,7 @@ const MODULO_LABEL = {
   reglamentos:    'Reglamentos',
   papelera:       'Papelera',
   personal:       'Personal',
+  hoja_vida:      'Hoja de Vida',
 }
 
 const MODULO_TITLE = {
@@ -99,6 +100,7 @@ const MODULO_TITLE = {
   reglamentos:    'Auditoría de Reglamentos',
   papelera:       'Auditoría de Papelera',
   personal:       'Auditoría de Personal',
+  hoja_vida:      'Auditoría de Hoja de Vida',
 }
 
 const MODULO_DESC = {
@@ -111,6 +113,7 @@ const MODULO_DESC = {
   reglamentos:    'Consulta y revisa todas las acciones realizadas sobre los documentos reglamentarios.',
   papelera:       'Consulta y revisa todas las acciones de la papelera del sistema.',
   personal:       'Consulta y revisa todas las acciones realizadas sobre el personal del establecimiento.',
+  hoja_vida:      'Consulta y revisa todas las acciones realizadas sobre la hoja de vida del personal.',
 }
 
 const RESUMEN_META = [
@@ -208,8 +211,9 @@ function cambiosTexto(cambios) {
 
 export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo = 'inventario', modulos, modoGeneral = false }) {
   const listaModulos  = modulos?.length ? modulos : [modulo]
+  const multiModulo   = listaModulos.length > 1
   const [activeModulo, setActiveModulo] = useState(listaModulos[0])
-  const [filtroModulo, setFiltroModulo] = useState('')   // solo en modoGeneral
+  const [filtroModulo, setFiltroModulo] = useState('')
 
   const [logs, setLogs]               = useState([])
   const [total, setTotal]             = useState(0)
@@ -283,20 +287,20 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
   const cargarResumen = useCallback(async () => {
     setResumen({})
     const counts = {}
-    const moduloFiltrado = modoGeneral ? (filtroModulo || null) : activeModulo
+    const moduloFiltrado = modoGeneral ? (filtroModulo || null) : (multiModulo ? (filtroModulo || null) : activeModulo)
     await Promise.all(['crear', 'editar', 'eliminar'].map(async accion => {
       let q = supabase
         .from('audit_logs')
         .select('*', { count: 'exact', head: true })
         .eq('accion', accion)
       if (moduloFiltrado) q = q.eq('modulo', moduloFiltrado)
-      else if (modoGeneral) q = q.in('modulo', listaModulos)
+      else if (modoGeneral || multiModulo) q = q.in('modulo', listaModulos)
       else q = q.eq('modulo', activeModulo)
       const { count } = await q
       counts[accion] = count ?? 0
     }))
     setResumen(counts)
-  }, [activeModulo, modoGeneral, filtroModulo])
+  }, [activeModulo, modoGeneral, filtroModulo, multiModulo])
 
   useEffect(() => { cargarResumen() }, [cargarResumen])
 
@@ -308,7 +312,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (m === 'tickets')        return CAMPO_LABEL_TICKETS[campo] ?? campo
     if (m === 'compensatorios') return CAMPO_LABEL_COMPENSATORIOS[campo] ?? campo
     if (m === 'reglamentos')    return CAMPO_LABEL_REGLAMENTOS[campo] ?? campo
-    if (m === 'personal')       return CAMPO_LABEL_PERSONAL[campo] ?? campo
+    if (m === 'personal' || m === 'hoja_vida') return CAMPO_LABEL_PERSONAL[campo] ?? campo
     return CAMPO_LABEL[campo] ?? campo
   }
 
@@ -324,7 +328,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
 
   // Devuelve los IDs de tickets que tienen el estado indicado (solo para modulo=tickets)
   const resolverTicketIdsPorEstado = async (estado) => {
-    const moduloActivo = modoGeneral ? (filtroModulo || null) : activeModulo
+    const moduloActivo = (modoGeneral || multiModulo) ? (filtroModulo || null) : activeModulo
     if (!estado || moduloActivo !== 'tickets') return null
     const { data } = await supabase.from('tickets').select('id').eq('estado', estado)
     return (data ?? []).map(t => String(t.id))
@@ -335,7 +339,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
     if (filtroAccion)  q = q.eq('accion', filtroAccion)
     if (filtroRol)     q = q.eq('usuario_rol', filtroRol)
     if (filtroUsuario) q = q.eq('usuario_id', filtroUsuario)
-    const moduloActivo = modoGeneral ? (filtroModulo || null) : activeModulo
+    const moduloActivo = (modoGeneral || multiModulo) ? (filtroModulo || null) : activeModulo
     if (moduloActivo === 'inventario' && filtroCat) q = q.eq('categoria', filtroCat)
     if (filtroDesde)   q = q.gte('creado_en', filtroDesde + 'T00:00:00')
     if (filtroHasta)   q = q.lte('creado_en', filtroHasta + 'T23:59:59')
@@ -360,7 +364,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
       .select('*', { count: 'exact' })
       .order('creado_en', { ascending: false })
       .range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1)
-    if (modoGeneral) {
+    if (modoGeneral || multiModulo) {
       if (filtroModulo) q = q.eq('modulo', filtroModulo)
       else              q = q.in('modulo', listaModulos)
     } else {
@@ -439,7 +443,7 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
       .select('*')
       .order('creado_en', { ascending: false })
       .limit(5000)
-    if (modoGeneral) {
+    if (modoGeneral || multiModulo) {
       if (filtroModulo) q = q.eq('modulo', filtroModulo)
       else              q = q.in('modulo', listaModulos)
     } else {
@@ -757,8 +761,8 @@ export default function Auditoria({ usuario, onVerBien, onVerCategoria, modulo =
         {/* Fila de filtros */}
         <div className="audit-filtros-grid">
 
-          {/* Filtro de módulo — solo en modo general */}
-          {modoGeneral && (
+          {/* Filtro de módulo — modo general o multi-módulo */}
+          {(modoGeneral || multiModulo) && (
             <select
               className={`audit-select ${filtroModulo ? 'audit-select-active' : ''}`}
               value={filtroModulo}
