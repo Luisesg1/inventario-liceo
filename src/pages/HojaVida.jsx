@@ -460,30 +460,48 @@ export default function HojaVida({ usuario, permisos }) {
   const [toast, setToast] = useState(null)
   const toastRef = useRef(null)
 
-  // ── Carga lista: TODOS los funcionarios desde contrataciones ───────────
+  // ── Carga lista: TODOS los funcionarios (usuarios + contrataciones) ────
   useEffect(() => { cargarLista() }, [])
 
   async function cargarLista() {
     setCargando(true)
-    const { data } = await supabase.from('contrataciones')
-      .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_inicio, fecha_termino, horas, correo, telefono, creado_en')
-      .order('nombre_completo', { ascending: true })
+    const [{ data: contData }, { data: usrData }] = await Promise.all([
+      supabase.from('contrataciones')
+        .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_inicio, fecha_termino, horas, correo, telefono, creado_en')
+        .order('nombre_completo', { ascending: true }),
+      supabase.from('usuarios')
+        .select('id, nombre, rut, email, rol, created_at')
+        .order('nombre', { ascending: true }),
+    ])
 
-    if (!data) { setCargando(false); return }
-
-    // Dedup por RUT normalizado — tomar el contrato más reciente
     const porRut = new Map()
-    for (const c of data) {
+
+    for (const c of (contData ?? [])) {
       const rn = normRut(c.rut)
       const key = rn || c.nombre_completo?.toLowerCase()
       if (!key) continue
       const prev = porRut.get(key)
       if (!prev || (c.creado_en > prev.creado_en)) {
-        porRut.set(key, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id] })
+        porRut.set(key, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id], _source: 'contratacion' })
       } else {
         prev._allContractIds.push(c.id)
       }
     }
+
+    for (const u of (usrData ?? [])) {
+      const rn = normRut(u.rut)
+      const key = rn || u.nombre?.toLowerCase()
+      if (!key) continue
+      if (porRut.has(key)) continue
+      porRut.set(key, {
+        id: u.id, nombre_completo: u.nombre, rut: u.rut,
+        cargo: u.rol ?? '', estamento: '', tipo_contrato: '',
+        fecha_inicio: null, fecha_termino: null, horas: null,
+        correo: u.email, telefono: '', creado_en: u.created_at,
+        _allContractIds: [], _source: 'usuario',
+      })
+    }
+
     setContrataciones([...porRut.values()])
     setCargando(false)
   }
@@ -534,7 +552,7 @@ export default function HojaVida({ usuario, permisos }) {
     setCargandoDetalle(true)
     const rn = normRut(persona.rut)
     const fmts = rutFormatos(rn)
-    const contractIds = persona._allContractIds ?? [persona.id]
+    const contractIds = (persona._allContractIds ?? []).length ? persona._allContractIds : (persona._source === 'usuario' ? [] : [persona.id])
 
     // Upsert hv_personas para asegurar que exista la fila
     await supabase.from('hv_personas').upsert({ rut: rn }, { onConflict: 'rut', ignoreDuplicates: true }).select()
@@ -548,7 +566,9 @@ export default function HojaVida({ usuario, permisos }) {
     // Consultas paralelas: TODAS las tablas del expediente
     const queries = [
       // Todos los contratos de este RUT
-      supabase.from('contrataciones').select('*').in('id', contractIds).order('creado_en', { ascending: false }),
+      contractIds.length
+        ? supabase.from('contrataciones').select('*').in('id', contractIds).order('creado_en', { ascending: false })
+        : Promise.resolve({ data: [] }),
       // Historial laboral (hv_*)
       supabase.from('hv_historial_laboral').select('*').eq('rut', rn).order('fecha_evento', { ascending: false }),
       // Capacitaciones (hv_*)
@@ -558,7 +578,9 @@ export default function HojaVida({ usuario, permisos }) {
       // Observaciones internas (hv_*)
       supabase.from('hv_observaciones').select('*').eq('rut', rn).order('creado_en', { ascending: false }),
       // Documentos (de personal_documentos, por todos los contract IDs)
-      supabase.from('personal_documentos').select('*').in('contratacion_id', contractIds).order('subido_en', { ascending: false }),
+      contractIds.length
+        ? supabase.from('personal_documentos').select('*').in('contratacion_id', contractIds).order('subido_en', { ascending: false })
+        : Promise.resolve({ data: [] }),
       // Anotaciones (hv_anotaciones)
       supabase.from('hv_anotaciones').select('*').eq('rut', rn).order('fecha', { ascending: false }),
       // Auditoría: registros del sistema de audit_logs
