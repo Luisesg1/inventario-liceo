@@ -327,6 +327,7 @@ export const GUARDAS_RUTA = {
   // restringido a rol='admin', por lo que conceder estos permisos a un no-admin
   // muestra el módulo pero las operaciones reales requieren rol admin.
   hoja_vida:                'ver_hoja_vida',
+  hoja_vida_auditoria:      'ver_hoja_vida',
   backups:                  'ver_backups',
   backups_actividad:        'ver_actividad_backups',
   backups_papelera:         'ver_backups',

@@ -5,7 +5,7 @@ import {
   Ticket, Settings2,
   HardDrive, ChevronRight, X, LogOut,
   ShoppingCart, ShieldCheck, History, Trash2,
-  UserCog, BookOpen, ClipboardList,
+  UserCog, BookOpen,
 } from 'lucide-react'
 import './Layout.css'
 import { supabase } from '../supabase'
@@ -87,7 +87,7 @@ export default function Layout({
   const [ticketsAbierto,         setTicketsAbierto]         = useState(ticketsActivo)
   const [permisosAbierto,        setPermisosAbierto]        = useState(permisosActivo)
 
-  const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria'].includes(paginaActual)
+  const personalActivo = ['personal','personal_contrataciones','personal_reemplazos','personal_documentos','personal_auditoria','hoja_vida','hoja_vida_auditoria'].includes(paginaActual)
   const [personalAbierto, setPersonalAbierto] = useState(personalActivo)
 
   const reglamentosActivo = paginaActual === 'reglamentos' || paginaActual === 'reglamentos_auditoria'
@@ -101,8 +101,6 @@ export default function Layout({
 
   const backupsActivo = paginaActual === 'backups' || paginaActual === 'backups_actividad'
   const [backupsAbierto, setBackupsAbierto] = useState(backupsActivo)
-
-  const hojaVidaActivo = paginaActual === 'hoja_vida'
 
   const titulos = {
     dashboard:  'Inicio',
@@ -132,6 +130,7 @@ export default function Layout({
     backups:                   'Backups',
     backups_actividad:         'Actividad de Backups',
     hoja_vida:                 'Hoja de Vida del Personal',
+    hoja_vida_auditoria:       'Auditoría de Hoja de Vida',
   }
 
   const handleNav = (id) => { setPagina(id); setSidebarOpen(false) }
@@ -527,6 +526,24 @@ export default function Layout({
                     <span className="nav-subitem-dot" />
                     Auditoría
                   </div>
+                  {puedeVerHojaVida && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'hoja_vida' ? 'active' : ''}`}
+                      onClick={() => handleNav('hoja_vida')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Hoja de Vida
+                    </div>
+                  )}
+                  {puedeVerHojaVida && (
+                    <div
+                      className={`nav-subitem ${paginaActual === 'hoja_vida_auditoria' ? 'active' : ''}`}
+                      onClick={() => handleNav('hoja_vida_auditoria')}
+                    >
+                      <span className="nav-subitem-dot" />
+                      Auditoría HV
+                    </div>
+                  )}
 
                 </motion.div>
               )}
@@ -580,22 +597,6 @@ export default function Layout({
               )}
             </AnimatePresence>
           </>}
-
-          {/* Hoja de Vida del Personal */}
-          {puedeVerHojaVida && (
-            <motion.div
-              className={`nav-item ${hojaVidaActivo ? 'active' : ''}`}
-              onClick={() => handleNav('hoja_vida')}
-              whileHover={{ x: 2 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            >
-              <span className="nav-icon">
-                <ClipboardList size={15} strokeWidth={hojaVidaActivo ? 2.5 : 2} />
-              </span>
-              Hoja de Vida
-            </motion.div>
-          )}
 
           {/* Auditoría General */}
           {puedeVerAuditoriaGeneral && (

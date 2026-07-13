@@ -1,9 +1,8 @@
-// src/pages/HojaVida.jsx
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Search, Plus, Edit2, Trash2, FileText, Download,
-  Loader2, X, BookOpen, Award, Calendar, ClipboardList,
+  Loader2, X, BookOpen, Calendar, ClipboardList,
   MessageSquare, History, Briefcase, Phone, Mail,
   ChevronRight, User, Users, Star, Info,
   AlertTriangle, CheckCircle2, Filter, AlertCircle,
@@ -16,8 +15,8 @@ const POR_PAGINA = 12
 const overlayV = { hidden: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
 const modalV = {
   hidden:  { opacity: 0, scale: 0.95, y: 12 },
-  visible: { opacity: 1, scale: 1,    y: 0,  transition: { type: 'spring', stiffness: 400, damping: 30 } },
-  exit:    { opacity: 0, scale: 0.95, y: 8,  transition: { duration: 0.15 } },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { type: 'spring', stiffness: 400, damping: 30 } },
+  exit:    { opacity: 0, scale: 0.95, y: 8, transition: { duration: 0.15 } },
 }
 
 const TABS = [
@@ -27,7 +26,7 @@ const TABS = [
   { id: 'documentos',     label: 'Documentos',     Icon: FileText },
   { id: 'capacitaciones', label: 'Capacitaciones', Icon: BookOpen },
   { id: 'evaluaciones',   label: 'Evaluaciones',   Icon: Star },
-  { id: 'ausencias',      label: 'Licencias',      Icon: Calendar },
+  { id: 'ausencias',      label: 'Permisos y Lic.', Icon: Calendar },
   { id: 'anotaciones',    label: 'Anotaciones',    Icon: AlertCircle },
   { id: 'observaciones',  label: 'Observaciones',  Icon: MessageSquare },
   { id: 'historial_sys',  label: 'Auditoría',      Icon: ClipboardList },
@@ -99,13 +98,29 @@ const ESTADO_ANOT_MAP = {
   archivado: { label: 'Archivado', color: '#64748b', bg: '#f8fafc' },
 }
 
+const TIPO_AUSENCIA_MAP = {
+  licencia_medica: 'Licencia médica', permiso_administrativo: 'Permiso administrativo',
+  vacaciones: 'Vacaciones', cometido: 'Cometido funcionario', justificativo: 'Justificativo',
+  feriado_legal: 'Feriado legal', otro: 'Otro',
+}
+
+const ESTADO_AUSENCIA_MAP = {
+  aprobada:   { label: 'Aprobada',   color: '#16a34a', bg: '#f0fdf4' },
+  pendiente:  { label: 'Pendiente',  color: '#d97706', bg: '#fffbeb' },
+  rechazada:  { label: 'Rechazada',  color: '#dc2626', bg: '#fef2f2' },
+}
+
 // ── Utilidades ───────────────────────────────────────────────────────────────
+function normRut(rut) {
+  if (!rut) return ''
+  return rut.replace(/[^0-9kK]/g, '').toUpperCase()
+}
 function formatRut(rut) {
   if (!rut) return ''
-  const clean = rut.replace(/[^0-9kK]/g, '')
+  const clean = normRut(rut)
   if (clean.length < 2) return clean
   const cuerpo = clean.slice(0, -1)
-  const dv = clean.slice(-1).toUpperCase()
+  const dv = clean.slice(-1)
   return cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + '-' + dv
 }
 function formatFecha(fecha) {
@@ -148,6 +163,14 @@ function formatBytes(bytes) {
 function iniciales(nombre) {
   if (!nombre) return '?'
   return nombre.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase()
+}
+
+// Genera los formatos de RUT que podrían existir en la BD
+function rutFormatos(rutNorm) {
+  if (!rutNorm || rutNorm.length < 2) return []
+  const cuerpo = rutNorm.slice(0, -1)
+  const dv = rutNorm.slice(-1)
+  return [rutNorm, rutNorm.toLowerCase(), `${cuerpo}-${dv}`, `${cuerpo}-${dv}`.toLowerCase(), formatRut(rutNorm)]
 }
 
 function EstadoBadge({ estado, mapa = ESTADO_CONTRATO_MAP }) {
@@ -193,10 +216,7 @@ function ModalInfoPersonal({ datos, onGuardar, onCerrar, guardando }) {
   return (
     <motion.div className="hv-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit" onClick={onCerrar}>
       <motion.div className="hv-modal" variants={modalV} onClick={e => e.stopPropagation()}>
-        <div className="hv-modal-header">
-          <h3>Información Personal</h3>
-          <button className="hv-modal-close" onClick={onCerrar}><X size={16} /></button>
-        </div>
+        <div className="hv-modal-header"><h3>Información Personal</h3><button className="hv-modal-close" onClick={onCerrar}><X size={16} /></button></div>
         <form onSubmit={e => { e.preventDefault(); onGuardar(form) }} className="hv-modal-body">
           <div className="hv-form-grid">
             <div className="hv-form-group"><label>Fecha de nacimiento</label><input type="date" value={form.fecha_nacimiento} onChange={e => set('fecha_nacimiento', e.target.value)} /></div>
@@ -242,7 +262,7 @@ function ModalInfoLaboral({ datos, onGuardar, onCerrar, guardando }) {
         <div className="hv-modal-header"><h3>Información Laboral</h3><button className="hv-modal-close" onClick={onCerrar}><X size={16} /></button></div>
         <form onSubmit={e => { e.preventDefault(); onGuardar(form) }} className="hv-modal-body">
           <div className="hv-form-grid">
-            <div className="hv-form-group"><label>Departamento</label><input value={form.departamento} onChange={e => set('departamento', e.target.value)} placeholder="Unidad Técnica Pedagógica" /></div>
+            <div className="hv-form-group"><label>Departamento</label><input value={form.departamento} onChange={e => set('departamento', e.target.value)} /></div>
             <div className="hv-form-group"><label>Jornada</label>
               <select value={form.jornada} onChange={e => set('jornada', e.target.value)}>
                 <option value="">Sin especificar</option><option value="completa">Completa</option><option value="media">Media jornada</option><option value="parcial">Parcial</option><option value="otro">Otro</option>
@@ -254,7 +274,7 @@ function ModalInfoLaboral({ datos, onGuardar, onCerrar, guardando }) {
                 <option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="licencia">En licencia</option><option value="comision">En comisión</option><option value="otro">Otro</option>
               </select>
             </div>
-            <div className="hv-form-group hv-form-group--full"><label>Jefatura directa</label><input value={form.jefatura_directa} onChange={e => set('jefatura_directa', e.target.value)} placeholder="Nombre de la jefatura" /></div>
+            <div className="hv-form-group hv-form-group--full"><label>Jefatura directa</label><input value={form.jefatura_directa} onChange={e => set('jefatura_directa', e.target.value)} /></div>
           </div>
           <div className="hv-modal-footer">
             <button type="button" className="hv-btn hv-btn--secondary" onClick={onCerrar}>Cancelar</button>
@@ -401,7 +421,7 @@ function ModalAnotacion({ datos, onGuardar, onCerrar, guardando }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL — Expediente único del funcionario
 // ══════════════════════════════════════════════════════════════════════════════
 export default function HojaVida({ usuario, permisos }) {
   const [vista, setVista] = useState('lista')
@@ -412,17 +432,19 @@ export default function HojaVida({ usuario, permisos }) {
   const [cargando, setCargando] = useState(true)
   const [busq, setBusq] = useState('')
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
-  const [filtros, setFiltros] = useState({ estamento: '', estado: '', tipo_contrato: '', cargo: '', departamento: '' })
+  const [filtros, setFiltros] = useState({ estamento: '', estado: '', tipo_contrato: '', cargo: '' })
   const [pagina, setPagina] = useState(1)
 
-  // Detalle
+  // Detalle — datos del expediente único (todos de tablas existentes)
   const [hvPersona, setHvPersona] = useState(null)
+  const [contratos, setContratos] = useState([])
   const [historial, setHistorial] = useState([])
   const [capacitaciones, setCapacitaciones] = useState([])
   const [evaluaciones, setEvaluaciones] = useState([])
   const [observaciones, setObservaciones] = useState([])
   const [documentos, setDocumentos] = useState([])
   const [ausencias, setAusencias] = useState([])
+  const [compensatorios, setCompensatorios] = useState([])
   const [anotaciones, setAnotaciones] = useState([])
   const [auditLogs, setAuditLogs] = useState([])
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
@@ -438,32 +460,38 @@ export default function HojaVida({ usuario, permisos }) {
   const [toast, setToast] = useState(null)
   const toastRef = useRef(null)
 
-  // ── Carga lista ────────────────────────────────────────────────────────────
+  // ── Carga lista: TODOS los funcionarios desde contrataciones ───────────
   useEffect(() => { cargarLista() }, [])
 
   async function cargarLista() {
     setCargando(true)
     const { data } = await supabase.from('contrataciones')
-      .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_termino, horas, correo, telefono, creado_en')
+      .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_inicio, fecha_termino, horas, correo, telefono, creado_en')
       .order('nombre_completo', { ascending: true })
-    setCargando(false)
-    if (!data) return
-    const visto = new Set()
-    const dedup = []
+
+    if (!data) { setCargando(false); return }
+
+    // Dedup por RUT normalizado — tomar el contrato más reciente
+    const porRut = new Map()
     for (const c of data) {
-      const rut = (c.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
-      const key = rut || c.nombre_completo?.toLowerCase()
-      if (!key || visto.has(key)) continue
-      visto.add(key)
-      dedup.push(c)
+      const rn = normRut(c.rut)
+      const key = rn || c.nombre_completo?.toLowerCase()
+      if (!key) continue
+      const prev = porRut.get(key)
+      if (!prev || (c.creado_en > prev.creado_en)) {
+        porRut.set(key, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id] })
+      } else {
+        prev._allContractIds.push(c.id)
+      }
     }
-    setContrataciones(dedup)
+    setContrataciones([...porRut.values()])
+    setCargando(false)
   }
 
-  // ── Valores únicos para filtros ────────────────────────────────────────────
+  // ── Valores únicos para filtros ────────────────────────────────────────
   const cargosUnicos = useMemo(() => [...new Set(contrataciones.map(c => c.cargo).filter(Boolean))].sort(), [contrataciones])
 
-  // ── Filtrado y paginación ──────────────────────────────────────────────────
+  // ── Filtrado y paginación ──────────────────────────────────────────────
   const personasFiltradas = useMemo(() => {
     const q = busq.toLowerCase().trim()
     return contrataciones.filter(c => {
@@ -478,9 +506,7 @@ export default function HojaVida({ usuario, permisos }) {
       if (filtros.estamento && c.estamento !== filtros.estamento) return false
       if (filtros.tipo_contrato && c.tipo_contrato !== filtros.tipo_contrato) return false
       if (filtros.cargo && c.cargo !== filtros.cargo) return false
-      if (filtros.estado) {
-        if (calcularEstadoContrato(c.fecha_termino) !== filtros.estado) return false
-      }
+      if (filtros.estado && calcularEstadoContrato(c.fecha_termino) !== filtros.estado) return false
       return true
     })
   }, [contrataciones, busq, filtros])
@@ -493,9 +519,9 @@ export default function HojaVida({ usuario, permisos }) {
   useEffect(() => { setPagina(1) }, [busq, filtros])
 
   const setFiltro = (k, v) => setFiltros(f => ({ ...f, [k]: v }))
-  const limpiarFiltros = () => setFiltros({ estamento: '', estado: '', tipo_contrato: '', cargo: '', departamento: '' })
+  const limpiarFiltros = () => setFiltros({ estamento: '', estado: '', tipo_contrato: '', cargo: '' })
 
-  // ── Abrir detalle ──────────────────────────────────────────────────────────
+  // ── Abrir detalle (expediente único) ───────────────────────────────────
   async function abrirDetalle(persona) {
     setSeleccionado(persona)
     setVista('detalle')
@@ -506,65 +532,116 @@ export default function HojaVida({ usuario, permisos }) {
   async function cargarDetalle(persona) {
     if (!persona) return
     setCargandoDetalle(true)
-    const rut = (persona.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+    const rn = normRut(persona.rut)
+    const fmts = rutFormatos(rn)
+    const contractIds = persona._allContractIds ?? [persona.id]
 
-    await supabase.from('hv_personas').upsert({ rut }, { onConflict: 'rut', ignoreDuplicates: true }).select()
-    const { data: hvData } = await supabase.from('hv_personas').select('*').eq('rut', rut).maybeSingle()
+    // Upsert hv_personas para asegurar que exista la fila
+    await supabase.from('hv_personas').upsert({ rut: rn }, { onConflict: 'rut', ignoreDuplicates: true }).select()
+    const { data: hvData } = await supabase.from('hv_personas').select('*').eq('rut', rn).maybeSingle()
     setHvPersona(hvData)
 
-    const [{ data: hist }, { data: caps }, { data: evals }, { data: obs }, { data: docs }, { data: aus }, { data: anot }, { data: audit }] = await Promise.all([
-      supabase.from('hv_historial_laboral').select('*').eq('rut', rut).order('fecha_evento', { ascending: false }),
-      supabase.from('hv_capacitaciones').select('*').eq('rut', rut).order('fecha_inicio', { ascending: false }),
-      supabase.from('hv_evaluaciones').select('*').eq('rut', rut).order('fecha_evaluacion', { ascending: false }),
-      supabase.from('hv_observaciones').select('*').eq('rut', rut).order('creado_en', { ascending: false }),
-      supabase.from('personal_documentos').select('*').eq('contratacion_id', persona.id).order('subido_en', { ascending: false }),
-      supabase.from('ausencias').select('id, tipo_ausencia, fecha_inicio, fecha_fin, dias, estado, creado_en')
-        .ilike('nombre_funcionario', `%${persona.nombre_completo ?? ''}%`).order('fecha_inicio', { ascending: false }).limit(50),
-      supabase.from('hv_anotaciones').select('*').eq('rut', rut).order('fecha', { ascending: false }),
+    // Buscar usuario_id vinculado por RUT para consultar ausencias y compensatorios
+    const { data: usrData } = await supabase.from('usuarios').select('id, rut').in('rut', fmts)
+    const userIds = (usrData ?? []).map(u => u.id)
+
+    // Consultas paralelas: TODAS las tablas del expediente
+    const queries = [
+      // Todos los contratos de este RUT
+      supabase.from('contrataciones').select('*').in('id', contractIds).order('creado_en', { ascending: false }),
+      // Historial laboral (hv_*)
+      supabase.from('hv_historial_laboral').select('*').eq('rut', rn).order('fecha_evento', { ascending: false }),
+      // Capacitaciones (hv_*)
+      supabase.from('hv_capacitaciones').select('*').eq('rut', rn).order('fecha_inicio', { ascending: false }),
+      // Evaluaciones (hv_*)
+      supabase.from('hv_evaluaciones').select('*').eq('rut', rn).order('fecha_evaluacion', { ascending: false }),
+      // Observaciones internas (hv_*)
+      supabase.from('hv_observaciones').select('*').eq('rut', rn).order('creado_en', { ascending: false }),
+      // Documentos (de personal_documentos, por todos los contract IDs)
+      supabase.from('personal_documentos').select('*').in('contratacion_id', contractIds).order('subido_en', { ascending: false }),
+      // Anotaciones (hv_anotaciones)
+      supabase.from('hv_anotaciones').select('*').eq('rut', rn).order('fecha', { ascending: false }),
+      // Auditoría: registros del sistema de audit_logs
       supabase.from('audit_logs')
         .select('id, accion, modulo, bien_nombre, usuario_nombre, usuario_rol, cambios, created_at')
         .or(`bien_nombre.ilike.%${persona.nombre_completo ?? ''}%,bien_id.eq.${persona.id}`)
         .order('created_at', { ascending: false }).limit(100),
-    ])
+    ]
 
-    setHistorial(hist ?? [])
-    setCapacitaciones(caps ?? [])
-    setEvaluaciones(evals ?? [])
-    setObservaciones(obs ?? [])
-    setDocumentos(docs ?? [])
-    setAusencias(aus ?? [])
-    setAnotaciones(anot ?? [])
-    setAuditLogs(audit ?? [])
+    // Ausencias: consultar por usuario_id, externo_rut y snapshot_rut
+    const ausQ = []
+    if (userIds.length) {
+      ausQ.push(supabase.from('ausencias')
+        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, usuario:usuario_id(id, nombre)')
+        .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(100))
+    }
+    if (fmts.length) {
+      ausQ.push(supabase.from('ausencias')
+        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, externo_rut, snapshot_rut')
+        .eq('is_deleted', false).in('externo_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100))
+      ausQ.push(supabase.from('ausencias')
+        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, snapshot_rut')
+        .eq('is_deleted', false).in('snapshot_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100))
+    }
+
+    // Compensatorios por usuario_id
+    const compQ = userIds.length
+      ? supabase.from('dias_compensatorios').select('*').in('usuario_id', userIds).order('fecha_ganado', { ascending: false })
+      : Promise.resolve({ data: [] })
+
+    const [contrRes, histRes, capsRes, evalsRes, obsRes, docsRes, anotRes, auditRes, ...ausRes] = await Promise.all([...queries, ...ausQ])
+    const compRes = await compQ
+
+    setContratos(contrRes.data ?? [])
+    setHistorial(histRes.data ?? [])
+    setCapacitaciones(capsRes.data ?? [])
+    setEvaluaciones(evalsRes.data ?? [])
+    setObservaciones(obsRes.data ?? [])
+    setDocumentos(docsRes.data ?? [])
+    setAnotaciones(anotRes.data ?? [])
+    setAuditLogs(auditRes.data ?? [])
+    setCompensatorios(compRes.data ?? [])
+
+    // Dedup ausencias by id
+    const ausMap = new Map()
+    for (const r of ausRes) {
+      for (const a of (r.data ?? [])) { if (!ausMap.has(a.id)) ausMap.set(a.id, a) }
+    }
+    setAusencias([...ausMap.values()].sort((a, b) => (b.fecha_inicio ?? '').localeCompare(a.fecha_inicio ?? '')))
+
     setCargandoDetalle(false)
   }
 
-  // ── Toast ──────────────────────────────────────────────────────────────────
+  // ── Toast ──────────────────────────────────────────────────────────────
   function mostrarToast(tipo, msg) {
     clearTimeout(toastRef.current)
     setToast({ tipo, msg })
     toastRef.current = setTimeout(() => setToast(null), 3500)
   }
 
-  // ── Auditoría ──────────────────────────────────────────────────────────────
-  async function logAudit(accion) {
+  // ── Auditoría (RPC existente) ──────────────────────────────────────────
+  async function logAudit(accion, descripcion) {
     await supabase.rpc('log_auditoria', {
       p_accion: accion, p_modulo: 'hoja_vida',
       p_bien_nombre: seleccionado?.nombre_completo ?? '', p_bien_id: hvPersona?.id ?? null, p_cambios: [],
     }).catch(() => {})
   }
 
-  // ── CRUD helpers ───────────────────────────────────────────────────────────
-  const rut = () => (seleccionado?.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+  // ── CRUD helpers ───────────────────────────────────────────────────────
+  const getRut = () => normRut(seleccionado?.rut)
   const autorInfo = () => ({ creado_por_id: usuario.id, creado_por_nombre: usuario.nombre })
 
   async function guardarHvPersona(tabla, form, accion) {
     setGuardando(true)
     const esEd = !!form.id
-    const payload = { ...form, rut: rut(), ...autorInfo() }
+    const rut = getRut()
+    const payload = { ...form, rut, ...autorInfo() }
+
     if (tabla === 'hv_personas') {
-      payload.actualizado_por_id = usuario.id; payload.actualizado_por_nombre = usuario.nombre
+      payload.actualizado_por_id = usuario.id
+      payload.actualizado_por_nombre = usuario.nombre
       delete payload.rut; delete payload.creado_por_id; delete payload.creado_por_nombre
-      const { error } = await supabase.from('hv_personas').update(payload).eq('rut', rut())
+      const { error } = await supabase.from('hv_personas').update(payload).eq('rut', rut)
       setGuardando(false)
       if (error) { mostrarToast('error', 'Error al guardar'); return }
     } else {
@@ -577,8 +654,9 @@ export default function HojaVida({ usuario, permisos }) {
       if (error) { mostrarToast('error', 'Error al guardar'); return }
     }
     setModal(null)
-    mostrarToast('ok', esEd || tabla === 'hv_personas' ? 'Actualizado correctamente' : 'Registrado correctamente')
-    await logAudit(esEd || tabla === 'hv_personas' ? 'editar' : 'crear')
+    const accionAudit = esEd || tabla === 'hv_personas' ? 'editar' : 'crear'
+    mostrarToast('ok', accionAudit === 'crear' ? 'Registrado correctamente' : 'Actualizado correctamente')
+    await logAudit(accionAudit)
     cargarDetalle(seleccionado)
   }
 
@@ -591,12 +669,12 @@ export default function HojaVida({ usuario, permisos }) {
     cargarDetalle(seleccionado)
   }
 
-  // ── PDF export ─────────────────────────────────────────────────────────────
+  // ── PDF export ─────────────────────────────────────────────────────────
   async function exportarPDF() {
     if (!seleccionado) return
     try {
       const { default: jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
+      await import('jspdf-autotable')
       const doc = new jsPDF()
       const nombre = seleccionado.nombre_completo ?? 'Funcionario'
       doc.setFontSize(18); doc.setTextColor(26, 35, 126); doc.text('Hoja de Vida del Personal', 14, 20)
@@ -606,22 +684,25 @@ export default function HojaVida({ usuario, permisos }) {
       doc.text(`Generado el ${new Date().toLocaleDateString('es-CL')}`, 14, 44)
       let y = 54
       const section = (t) => { if (y > 230) { doc.addPage(); y = 20 }; doc.setFontSize(11); doc.setTextColor(26, 35, 126); doc.text(t, 14, y); y += 6; doc.setDrawColor(180, 190, 220); doc.line(14, y, 196, y); y += 4; doc.setTextColor(0); doc.setFontSize(10) }
+
       if (hvPersona) {
         section('Información Laboral')
-        autoTable(doc, { startY: y, head: [], body: [['Departamento', hvPersona.departamento ?? '—'], ['Jornada', hvPersona.jornada ?? '—'], ['Fecha ingreso', hvPersona.fecha_ingreso ? formatFecha(hvPersona.fecha_ingreso) : '—'], ['Estado', ESTADO_LABORAL_MAP[hvPersona.estado_laboral]?.label ?? '—'], ['Jefatura', hvPersona.jefatura_directa ?? '—']], margin: { left: 14 }, styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } } })
+        doc.autoTable({ startY: y, head: [], body: [['Departamento', hvPersona.departamento ?? '—'], ['Jornada', hvPersona.jornada ?? '—'], ['Fecha ingreso', hvPersona.fecha_ingreso ? formatFecha(hvPersona.fecha_ingreso) : '—'], ['Estado', ESTADO_LABORAL_MAP[hvPersona.estado_laboral]?.label ?? '—']], margin: { left: 14 }, styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } } })
         y = doc.lastAutoTable.finalY + 8
       }
-      if (historial.length > 0) { section('Historial Laboral'); autoTable(doc, { startY: y, head: [['Fecha', 'Tipo', 'Descripción']], body: historial.map(h => [formatFecha(h.fecha_evento), TIPO_HISTORIAL[h.tipo] ?? h.tipo, h.descripcion ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (capacitaciones.length > 0) { section('Capacitaciones'); autoTable(doc, { startY: y, head: [['Curso', 'Institución', 'Horas', 'Fecha']], body: capacitaciones.map(c => [c.nombre_curso, c.institucion ?? '—', c.horas ?? '—', formatFecha(c.fecha_termino)]), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (evaluaciones.length > 0) { section('Evaluaciones'); autoTable(doc, { startY: y, head: [['Fecha', 'Evaluador', 'Puntaje', 'Calificación']], body: evaluaciones.map(e => [formatFecha(e.fecha_evaluacion), e.evaluador ?? '—', e.puntaje ?? '—', CALIFICACION_MAP[e.calificacion]?.label ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }) }
-      if (anotaciones.length > 0) { section('Anotaciones'); autoTable(doc, { startY: y, head: [['Fecha', 'Tipo', 'Descripción', 'Estado']], body: anotaciones.map(a => [formatFecha(a.fecha), TIPO_ANOT_MAP[a.tipo]?.label ?? a.tipo, a.descripcion, ESTADO_ANOT_MAP[a.estado]?.label ?? a.estado]), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (historial.length) { section('Historial Laboral'); doc.autoTable({ startY: y, head: [['Fecha', 'Tipo', 'Descripción']], body: historial.map(h => [formatFecha(h.fecha_evento), TIPO_HISTORIAL[h.tipo] ?? h.tipo, h.descripcion ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
+      if (capacitaciones.length) { section('Capacitaciones'); doc.autoTable({ startY: y, head: [['Curso', 'Institución', 'Horas', 'Fecha']], body: capacitaciones.map(c => [c.nombre_curso, c.institucion ?? '—', c.horas ?? '—', formatFecha(c.fecha_termino)]), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
+      if (evaluaciones.length) { section('Evaluaciones'); doc.autoTable({ startY: y, head: [['Fecha', 'Evaluador', 'Puntaje', 'Calificación']], body: evaluaciones.map(e => [formatFecha(e.fecha_evaluacion), e.evaluador ?? '—', e.puntaje ?? '—', CALIFICACION_MAP[e.calificacion]?.label ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
+      if (ausencias.length) { section('Permisos y Licencias'); doc.autoTable({ startY: y, head: [['Tipo', 'Inicio', 'Fin', 'Días', 'Estado']], body: ausencias.map(a => [TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo, formatFecha(a.fecha_inicio), formatFecha(a.fecha_fin), a.dias ?? '—', a.estado ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
+      if (anotaciones.length) { section('Anotaciones'); doc.autoTable({ startY: y, head: [['Fecha', 'Tipo', 'Descripción', 'Estado']], body: anotaciones.map(a => [formatFecha(a.fecha), TIPO_ANOT_MAP[a.tipo]?.label ?? a.tipo, a.descripcion, ESTADO_ANOT_MAP[a.estado]?.label ?? a.estado]), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+
       doc.save(`hoja_vida_${nombre.replace(/\s+/g, '_')}.pdf`)
       mostrarToast('ok', 'PDF exportado correctamente')
       await logAudit('exportar')
     } catch { mostrarToast('error', 'Error al exportar PDF') }
   }
 
-  // ── Anotaciones filtradas ──────────────────────────────────────────────────
+  // ── Anotaciones filtradas ──────────────────────────────────────────────
   const anotacionesFiltradas = useMemo(() => {
     return anotaciones.filter(a => {
       if (anotFiltroTipo && a.tipo !== anotFiltroTipo) return false
@@ -635,7 +716,6 @@ export default function HojaVida({ usuario, permisos }) {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="hv-page">
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div className={`hv-toast hv-toast--${toast.tipo}`} initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }}>
@@ -646,17 +726,16 @@ export default function HojaVida({ usuario, permisos }) {
       </AnimatePresence>
 
       <AnimatePresence mode="wait">
-        {/* ── VISTA LISTA ──────────────────────────────────────────────────── */}
+        {/* ── VISTA LISTA ──────────────────────────────────────────────── */}
         {vista === 'lista' && (
           <motion.div key="lista" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="hv-page-header">
               <div className="hv-page-header-left">
-                <h1 className="hv-page-title">Hoja de Vida del Personal</h1>
-                <p className="hv-page-desc">Expediente digital del personal del establecimiento</p>
+                <h1 className="hv-page-title">Expedientes del Personal</h1>
+                <p className="hv-page-desc">Expediente digital único de cada funcionario del establecimiento</p>
               </div>
             </div>
 
-            {/* Toolbar */}
             <div className="hv-toolbar">
               <div className="hv-search">
                 <Search size={15} className="hv-search-icon" />
@@ -669,7 +748,6 @@ export default function HojaVida({ usuario, permisos }) {
               </button>
             </div>
 
-            {/* Filtros expandibles */}
             <AnimatePresence>
               {mostrarFiltros && (
                 <motion.div className="hv-filters" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
@@ -730,57 +808,55 @@ export default function HojaVida({ usuario, permisos }) {
                 {(busq || hayFiltrosActivos) && <button className="hv-btn hv-btn--ghost hv-btn--sm" onClick={() => { setBusq(''); limpiarFiltros() }}>Limpiar filtros</button>}
               </div>
             ) : (
-              <>
-                <div className="hv-table-wrap">
-                  <table className="hv-table">
-                    <thead><tr>
-                      <th>Funcionario</th><th>RUT</th><th>Cargo / Estamento</th><th>Contrato</th><th>Estado</th><th>Antigüedad</th><th></th>
-                    </tr></thead>
-                    <tbody>
-                      {personasPagina.map(c => (
-                        <tr key={c.id} className="hv-table-row" onClick={() => abrirDetalle(c)}>
-                          <td>
-                            <div className="hv-persona-cell">
-                              <div className="hv-avatar">{iniciales(c.nombre_completo)}</div>
-                              <div>
-                                <p className="hv-persona-nombre">{c.nombre_completo}</p>
-                                {c.correo && <p className="hv-persona-sub">{c.correo}</p>}
-                              </div>
+              <div className="hv-table-wrap">
+                <table className="hv-table">
+                  <thead><tr>
+                    <th>Funcionario</th><th>RUT</th><th>Cargo / Estamento</th><th>Contrato</th><th>Estado</th><th>Antigüedad</th><th></th>
+                  </tr></thead>
+                  <tbody>
+                    {personasPagina.map(c => (
+                      <tr key={c.id} className="hv-table-row" onClick={() => abrirDetalle(c)}>
+                        <td>
+                          <div className="hv-persona-cell">
+                            <div className="hv-avatar">{iniciales(c.nombre_completo)}</div>
+                            <div>
+                              <p className="hv-persona-nombre">{c.nombre_completo}</p>
+                              {c.correo && <p className="hv-persona-sub">{c.correo}</p>}
                             </div>
-                          </td>
-                          <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{formatRut(c.rut)}</td>
-                          <td>
-                            <p style={{ margin: 0, fontSize: 13 }}>{c.cargo ?? '—'}</p>
-                            {c.estamento && <p className="hv-persona-sub">{ESTAMENTO_MAP[c.estamento] ?? c.estamento}</p>}
-                          </td>
-                          <td>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato ?? '—'}</td>
-                          <td><EstadoBadge estado={calcularEstadoContrato(c.fecha_termino)} /></td>
-                          <td><span style={{ fontSize: 12.5, color: '#64748b' }}>{calcularAntiguedad(c.creado_en?.slice(0, 10)) ?? '—'}</span></td>
-                          <td>
-                            <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={e => { e.stopPropagation(); abrirDetalle(c) }}>
-                              Ver HV <ChevronRight size={13} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {totalPaginas > 1 && (
-                    <div className="hv-pagination">
-                      <span className="hv-pagination-info">Página {pag} de {totalPaginas}</span>
-                      <div className="hv-pagination-btns">
-                        <button className="hv-pagination-btn" disabled={pag === 1} onClick={() => setPagina(p => p - 1)}>Anterior</button>
-                        <button className="hv-pagination-btn" disabled={pag === totalPaginas} onClick={() => setPagina(p => p + 1)}>Siguiente</button>
-                      </div>
+                          </div>
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontSize: 13 }}>{formatRut(c.rut)}</td>
+                        <td>
+                          <p style={{ margin: 0, fontSize: 13 }}>{c.cargo ?? '—'}</p>
+                          {c.estamento && <p className="hv-persona-sub">{ESTAMENTO_MAP[c.estamento] ?? c.estamento}</p>}
+                        </td>
+                        <td>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato ?? '—'}</td>
+                        <td><EstadoBadge estado={calcularEstadoContrato(c.fecha_termino)} /></td>
+                        <td><span style={{ fontSize: 12.5, color: '#64748b' }}>{calcularAntiguedad(c.fecha_inicio ?? c.creado_en?.slice(0, 10)) ?? '—'}</span></td>
+                        <td>
+                          <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={e => { e.stopPropagation(); abrirDetalle(c) }}>
+                            Ver HV <ChevronRight size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {totalPaginas > 1 && (
+                  <div className="hv-pagination">
+                    <span className="hv-pagination-info">Página {pag} de {totalPaginas}</span>
+                    <div className="hv-pagination-btns">
+                      <button className="hv-pagination-btn" disabled={pag === 1} onClick={() => setPagina(p => p - 1)}>Anterior</button>
+                      <button className="hv-pagination-btn" disabled={pag === totalPaginas} onClick={() => setPagina(p => p + 1)}>Siguiente</button>
                     </div>
-                  )}
-                </div>
-              </>
+                  </div>
+                )}
+              </div>
             )}
           </motion.div>
         )}
 
-        {/* ── VISTA DETALLE ─────────────────────────────────────────────────── */}
+        {/* ── VISTA DETALLE (Expediente) ───────────────────────────────── */}
         {vista === 'detalle' && seleccionado && (
           <motion.div key="detalle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="hv-detail-topbar">
@@ -789,10 +865,9 @@ export default function HojaVida({ usuario, permisos }) {
             </div>
 
             {cargandoDetalle ? (
-              <div className="hv-loading"><Loader2 size={28} className="hv-spin" /><span>Cargando hoja de vida…</span></div>
+              <div className="hv-loading"><Loader2 size={28} className="hv-spin" /><span>Cargando expediente…</span></div>
             ) : (
               <>
-                {/* Encabezado */}
                 <div className="hv-detail-header">
                   <div className="hv-detail-avatar">{iniciales(seleccionado.nombre_completo)}</div>
                   <div className="hv-detail-info">
@@ -808,7 +883,7 @@ export default function HojaVida({ usuario, permisos }) {
                     {[
                       { val: documentos.length, label: 'Documentos' },
                       { val: capacitaciones.length, label: 'Capacitaciones' },
-                      { val: evaluaciones.length, label: 'Evaluaciones' },
+                      { val: ausencias.length, label: 'Ausencias' },
                       { val: anotaciones.length, label: 'Anotaciones' },
                     ].map(k => (
                       <div key={k.label} className="hv-kpi-mini">
@@ -822,14 +897,13 @@ export default function HojaVida({ usuario, permisos }) {
                 <div className="hv-detail-badges">
                   <EstadoBadge estado={hvPersona?.estado_laboral ?? 'activo'} mapa={ESTADO_LABORAL_MAP} />
                   <EstadoBadge estado={calcularEstadoContrato(seleccionado.fecha_termino)} />
-                  {(hvPersona?.fecha_ingreso || seleccionado.creado_en) && (
+                  {(hvPersona?.fecha_ingreso || seleccionado.fecha_inicio) && (
                     <span className="hv-badge" style={{ color: 'rgb(var(--primary-rgb, 26,35,126))', background: 'rgba(var(--primary-rgb, 26,35,126), 0.06)' }}>
-                      {calcularAntiguedad(hvPersona?.fecha_ingreso ?? seleccionado.creado_en?.slice(0, 10))} de antigüedad
+                      {calcularAntiguedad(hvPersona?.fecha_ingreso ?? seleccionado.fecha_inicio ?? seleccionado.creado_en?.slice(0, 10))} de antigüedad
                     </span>
                   )}
                 </div>
 
-                {/* Tabs */}
                 <div className="hv-tabs-wrap">
                   <div className="hv-tabs">
                     {TABS.map(t => (
@@ -882,12 +956,33 @@ export default function HojaVida({ usuario, permisos }) {
                         <F label="Jornada" value={hvPersona?.jornada ? ({ completa: 'Completa', media: 'Media jornada', parcial: 'Parcial', otro: 'Otro' })[hvPersona.jornada] : null} />
                         <F label="Horas contratadas" value={seleccionado.horas != null ? `${seleccionado.horas} hrs` : null} />
                         <F label="Tipo de contrato" value={CONTRATO_MAP[seleccionado.tipo_contrato] ?? seleccionado.tipo_contrato} />
-                        <F label="Fecha de ingreso" value={formatFecha(hvPersona?.fecha_ingreso ?? seleccionado.creado_en?.slice(0, 10))} />
+                        <F label="Fecha de ingreso" value={formatFecha(hvPersona?.fecha_ingreso ?? seleccionado.fecha_inicio)} />
                         <F label="Fecha de término" value={formatFecha(seleccionado.fecha_termino)} />
-                        <F label="Antigüedad" value={calcularAntiguedad(hvPersona?.fecha_ingreso ?? seleccionado.creado_en?.slice(0, 10))} />
+                        <F label="Antigüedad" value={calcularAntiguedad(hvPersona?.fecha_ingreso ?? seleccionado.fecha_inicio ?? seleccionado.creado_en?.slice(0, 10))} />
                         <F label="Estado laboral" value={ESTADO_LABORAL_MAP[hvPersona?.estado_laboral ?? 'activo']?.label} />
                         <F label="Jefatura directa" value={hvPersona?.jefatura_directa} />
                       </div>
+                      {contratos.length > 1 && (
+                        <div style={{ marginTop: 20 }}>
+                          <p className="hv-section-label"><Briefcase size={12} /> Contratos registrados ({contratos.length})</p>
+                          <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
+                            <table className="hv-table">
+                              <thead><tr><th>Tipo</th><th>Inicio</th><th>Término</th><th>Horas</th><th>Estado</th></tr></thead>
+                              <tbody>
+                                {contratos.map(ct => (
+                                  <tr key={ct.id}>
+                                    <td>{CONTRATO_MAP[ct.tipo_contrato] ?? ct.tipo_contrato}</td>
+                                    <td>{formatFecha(ct.fecha_inicio)}</td>
+                                    <td>{formatFecha(ct.fecha_termino)}</td>
+                                    <td>{ct.horas ?? '—'}</td>
+                                    <td><EstadoBadge estado={calcularEstadoContrato(ct.fecha_termino)} /></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -917,11 +1012,11 @@ export default function HojaVida({ usuario, permisos }) {
                     </div>
                   )}
 
-                  {/* Documentos */}
+                  {/* Documentos (desde personal_documentos) */}
                   {tabActiva === 'documentos' && (
                     <div className="hv-card">
-                      <div className="hv-card-header"><h3>Documentos</h3><p className="hv-card-sub">Gestionados desde Personal → Documentos</p></div>
-                      {documentos.length === 0 ? <EmptyState msg="Sin documentos cargados" /> : (
+                      <div className="hv-card-header"><h3>Documentos</h3><p className="hv-card-sub">Sincronizados desde Personal → Documentos</p></div>
+                      {documentos.length === 0 ? <EmptyState msg="Sin documentos cargados para este funcionario" /> : (
                         <div className="hv-docs-grid">
                           {documentos.map(d => (
                             <div key={d.id} className="hv-doc-card">
@@ -997,27 +1092,56 @@ export default function HojaVida({ usuario, permisos }) {
                     </div>
                   )}
 
-                  {/* Permisos y Licencias */}
+                  {/* Permisos y Licencias (desde ausencias + compensatorios) */}
                   {tabActiva === 'ausencias' && (
                     <div className="hv-card">
-                      <div className="hv-card-header"><h3>Permisos y Licencias</h3><p className="hv-card-sub">Datos del módulo de Ausencias</p></div>
-                      {ausencias.length === 0 ? <EmptyState msg="Sin permisos ni licencias registrados" /> : (
-                        <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
-                          <table className="hv-table">
-                            <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Estado</th></tr></thead>
-                            <tbody>
-                              {ausencias.map(a => (
-                                <tr key={a.id}>
-                                  <td>{a.tipo_ausencia ?? '—'}</td>
-                                  <td>{formatFecha(a.fecha_inicio)}</td>
-                                  <td>{formatFecha(a.fecha_fin)}</td>
-                                  <td>{a.dias ?? '—'}</td>
-                                  <td><span className="hv-badge" style={{ color: a.estado === 'aprobada' ? '#16a34a' : a.estado === 'rechazada' ? '#dc2626' : '#d97706', background: a.estado === 'aprobada' ? '#f0fdf4' : a.estado === 'rechazada' ? '#fef2f2' : '#fffbeb' }}>{a.estado ?? '—'}</span></td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                      <div className="hv-card-header"><h3>Permisos, Licencias y Ausencias</h3><p className="hv-card-sub">Sincronizado automáticamente desde Gestión de Ausencias y Compensatorios</p></div>
+                      {ausencias.length === 0 && compensatorios.length === 0 ? <EmptyState msg="Sin permisos, licencias ni ausencias registradas" /> : (
+                        <>
+                          {ausencias.length > 0 && (
+                            <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
+                              <table className="hv-table">
+                                <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Jornada</th><th>Estado</th><th>Observaciones</th></tr></thead>
+                                <tbody>
+                                  {ausencias.map(a => (
+                                    <tr key={a.id}>
+                                      <td>{TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo ?? '—'}</td>
+                                      <td>{formatFecha(a.fecha_inicio)}</td>
+                                      <td>{formatFecha(a.fecha_fin)}</td>
+                                      <td>{a.dias ?? '—'}</td>
+                                      <td style={{ fontSize: 12 }}>{a.jornada === 'completa' ? 'Completa' : a.jornada === 'media' ? 'Media' : a.periodo ? a.periodo : '—'}</td>
+                                      <td><EstadoBadge estado={a.estado ?? 'pendiente'} mapa={ESTADO_AUSENCIA_MAP} /></td>
+                                      <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notas ?? '—'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          {compensatorios.length > 0 && (
+                            <div style={{ marginTop: 16 }}>
+                              <p className="hv-section-label"><Calendar size={12} /> Días compensatorios ({compensatorios.length})</p>
+                              <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
+                                <table className="hv-table">
+                                  <thead><tr><th>Tipo</th><th>Cantidad</th><th>Saldo</th><th>Fecha ganado</th><th>Vence</th><th>Estado</th><th>Motivo</th></tr></thead>
+                                  <tbody>
+                                    {compensatorios.map(c => (
+                                      <tr key={c.id}>
+                                        <td>{c.tipo ?? '—'}</td>
+                                        <td>{c.cantidad}</td>
+                                        <td>{c.saldo_restante}</td>
+                                        <td>{formatFecha(c.fecha_ganado)}</td>
+                                        <td>{formatFecha(c.vence_en)}</td>
+                                        <td><span className="hv-badge" style={{ color: c.estado === 'disponible' ? '#16a34a' : c.estado === 'usado' ? '#6b7280' : '#d97706', background: c.estado === 'disponible' ? '#f0fdf4' : c.estado === 'usado' ? '#f9fafb' : '#fffbeb' }}>{c.estado}</span></td>
+                                        <td style={{ fontSize: 12 }}>{c.motivo ?? '—'}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -1069,7 +1193,7 @@ export default function HojaVida({ usuario, permisos }) {
                     </div>
                   )}
 
-                  {/* Observaciones */}
+                  {/* Observaciones internas */}
                   {tabActiva === 'observaciones' && (
                     <div className="hv-card">
                       <div className="hv-card-header"><h3>Observaciones internas</h3>{permisos.crear && <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={() => setModal({ tipo: 'observacion' })}><Plus size={13} /> Agregar</button>}</div>
@@ -1089,20 +1213,21 @@ export default function HojaVida({ usuario, permisos }) {
                     </div>
                   )}
 
-                  {/* Historial del Sistema (Auditoría existente) */}
+                  {/* Historial del Sistema (audit_logs existente filtrado) */}
                   {tabActiva === 'historial_sys' && (
                     <div className="hv-card">
-                      <div className="hv-card-header"><h3>Historial del Sistema</h3><p className="hv-card-sub">Registros de auditoría relacionados con este funcionario</p></div>
+                      <div className="hv-card-header"><h3>Historial del Sistema</h3><p className="hv-card-sub">Registros de auditoría de todos los módulos relacionados con este funcionario</p></div>
                       {auditLogs.length === 0 ? <EmptyState msg="Sin registros de auditoría" /> : (
                         <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
                           <table className="hv-table">
-                            <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Módulo</th><th>Usuario</th><th>Rol</th></tr></thead>
+                            <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Módulo</th><th>Funcionario</th><th>Usuario</th><th>Rol</th></tr></thead>
                             <tbody>
                               {auditLogs.map(l => (
                                 <tr key={l.id}>
                                   <td style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>{new Date(l.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</td>
                                   <td><span className="hv-badge" style={{ color: 'rgb(var(--primary-rgb,26,35,126))', background: 'rgba(var(--primary-rgb,26,35,126),0.08)' }}>{l.accion}</span></td>
                                   <td style={{ fontSize: 12 }}>{l.modulo ?? '—'}</td>
+                                  <td style={{ fontSize: 12 }}>{l.bien_nombre ?? '—'}</td>
                                   <td style={{ fontSize: 12 }}>{l.usuario_nombre ?? '—'}</td>
                                   <td style={{ fontSize: 12 }}>{l.usuario_rol ?? '—'}</td>
                                 </tr>
@@ -1120,7 +1245,7 @@ export default function HojaVida({ usuario, permisos }) {
         )}
       </AnimatePresence>
 
-      {/* ── Modales ───────────────────────────────────────────────────────── */}
+      {/* ── Modales ───────────────────────────────────────────────────── */}
       <AnimatePresence>
         {modal?.tipo === 'info_personal' && <ModalInfoPersonal datos={hvPersona} onGuardar={f => guardarHvPersona('hv_personas', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'info_laboral' && <ModalInfoLaboral datos={hvPersona} onGuardar={f => guardarHvPersona('hv_personas', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
