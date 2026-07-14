@@ -8,6 +8,7 @@ import HistorialUsuario from './HistorialUsuario'
 // Catálogo centralizado de permisos (fuente única de verdad)
 import {
   ACCIONES,
+  MODULOS,
   GRUPOS_USUARIOS as GRUPOS_PERMISOS,
   STEPS_MODULOS,
   ULTIMO_PASO,
@@ -226,56 +227,98 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
 
   return (
     <div>
-      {/* ── Stepper ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 26, overflowX: 'auto', paddingBottom: 8 }}>
-        {stepsBase.flatMap((s, i) => {
-          const esActivo     = pasoEfectivo === s.n
-          const esCompletado = pasoEfectivo > s.n
-          const displayN     = i + 1
-          const items = [
-            <div
-              key={`s${s.n}`}
-              onClick={() => !esActivo && setPaso(s.n)}
-              style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '0 6px', cursor: esActivo ? 'default' : 'pointer' }}
-            >
-              <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, fontWeight: 700, transition: 'all 0.25s',
-                background: esActivo
-                  ? 'rgb(var(--primary-rgb))'
-                  : esCompletado ? 'rgba(var(--acento-rgb), 0.15)' : '#f3f4f6',
-                color: esActivo ? '#fff' : esCompletado ? 'rgb(var(--acento-rgb))' : '#9ca3af',
-                border: `2px solid ${esActivo
-                  ? 'rgb(var(--primary-rgb))'
-                  : esCompletado ? 'rgba(var(--acento-rgb), 0.4)' : '#e5e7eb'}`,
-                boxShadow: esActivo ? '0 0 0 3px rgba(var(--primary-rgb), 0.15)' : 'none',
-              }}>
-                {esCompletado ? '✓' : displayN}
+      {/* ── Stepper 3 fases ── */}
+      {(() => {
+        const FASES = [
+          { n: 1, label: 'Nivel de acceso' },
+          { n: 2, label: 'Módulos' },
+          { n: 3, label: 'Permisos detallados' },
+        ]
+        const faseActiva = pasoEfectivo <= 1 ? 1 : pasoEfectivo === 2 ? 2 : 3
+        return (
+          <div style={{ marginBottom: 22 }}>
+            {/* Fases principales */}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {FASES.flatMap((f, i) => {
+                const esActivo     = faseActiva === f.n
+                const esCompletado = faseActiva > f.n
+                const items = [
+                  <div
+                    key={`f${f.n}`}
+                    onClick={() => {
+                      if (f.n === 1) setPaso(1)
+                      else if (f.n === 2) setPaso(2)
+                      else if (f.n === 3 && pasoEfectivo < 3) setPaso(3)
+                    }}
+                    style={{
+                      flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8,
+                      cursor: faseActiva !== f.n ? 'pointer' : 'default',
+                    }}
+                  >
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700, transition: 'all 0.2s',
+                      background: esActivo
+                        ? 'rgb(var(--primary-rgb))'
+                        : esCompletado ? 'rgba(var(--acento-rgb),0.15)' : '#f3f4f6',
+                      color: esActivo ? '#fff' : esCompletado ? 'rgb(var(--acento-rgb))' : '#9ca3af',
+                      border: `2px solid ${esActivo
+                        ? 'rgb(var(--primary-rgb))'
+                        : esCompletado ? 'rgba(var(--acento-rgb),0.4)' : '#e5e7eb'}`,
+                      boxShadow: esActivo ? '0 0 0 3px rgba(var(--primary-rgb),0.12)' : 'none',
+                    }}>
+                      {esCompletado ? '✓' : f.n}
+                    </div>
+                    <span style={{
+                      fontSize: 12.5, fontWeight: esActivo ? 700 : 500, whiteSpace: 'nowrap',
+                      color: esActivo ? 'rgb(var(--primary-rgb))' : '#6b7280',
+                    }}>
+                      {f.label}
+                    </span>
+                  </div>,
+                ]
+                if (i < FASES.length - 1) items.push(
+                  <div key={`fl${f.n}`} style={{
+                    flex: 1, height: 2, margin: '0 12px',
+                    background: faseActiva > f.n ? 'rgb(var(--acento-rgb))' : '#e5e7eb',
+                    transition: 'background 0.3s',
+                  }} />
+                )
+                return items
+              })}
+            </div>
+
+            {/* Chips de módulos — visible cuando paso ≥ 3 */}
+            {pasoEfectivo >= 3 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>
+                {GRUPOS_PERMISOS.map(g => {
+                  const esActivo = pasoEfectivo === g.paso
+                  const mod = MODULOS.find(m => m.key === g.key)
+                  return (
+                    <button
+                      key={g.key}
+                      onClick={() => setPaso(g.paso)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        padding: '5px 12px', borderRadius: 20, fontSize: 12,
+                        fontWeight: esActivo ? 700 : 500,
+                        border: `1.5px solid ${esActivo ? 'rgb(var(--primary-rgb))' : '#e5e7eb'}`,
+                        background: esActivo ? 'rgba(var(--primary-rgb),0.08)' : '#fafafa',
+                        color: esActivo ? 'rgb(var(--primary-rgb))' : '#374151',
+                        cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1,
+                      }}
+                    >
+                      {mod?.icon && <span style={{ fontSize: 13, lineHeight: 1 }}>{mod.icon}</span>}
+                      {g.label}
+                    </button>
+                  )
+                })}
               </div>
-              <span style={{
-                fontSize: 10.5, fontWeight: esActivo ? 700 : 500, whiteSpace: 'nowrap',
-                color: esActivo ? 'rgb(var(--primary-rgb))' : '#6b7280',
-              }}>
-                {s.label}
-              </span>
-            </div>,
-          ]
-          if (i < stepsBase.length - 1) {
-            items.push(
-              <div
-                key={`l${s.n}`}
-                style={{
-                  flex: 1, minWidth: 14, height: 2, marginTop: 15,
-                  background: esCompletado ? 'rgb(var(--acento-rgb))' : '#e5e7eb',
-                  transition: 'background 0.3s',
-                }}
-              />
-            )
-          }
-          return items
-        })}
-      </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Paso 2: Módulos ── */}
       {pasoEfectivo === 2 && (
