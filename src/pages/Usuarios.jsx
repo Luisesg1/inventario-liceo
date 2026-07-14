@@ -148,6 +148,7 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     const n = detectarNivelActual(draft?.permisos ?? {})
     return n.startsWith('rol:') ? n.slice(4) : null
   })
+  const [moduloActivo, setModuloActivo]   = useState(GRUPOS_PERMISOS[0]?.key ?? '')
   // Lista viva de roles (base + personalizados de la BD) y sus permisos reales.
   const { rolesDisponibles, permisosDe } = useRoles()
 
@@ -289,33 +290,6 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
               })}
             </div>
 
-            {/* Chips de módulos — visible cuando paso ≥ 3 */}
-            {pasoEfectivo >= 3 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14, paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>
-                {GRUPOS_PERMISOS.map(g => {
-                  const esActivo = pasoEfectivo === g.paso
-                  const mod = MODULOS.find(m => m.key === g.key)
-                  return (
-                    <button
-                      key={g.key}
-                      onClick={() => setPaso(g.paso)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        padding: '5px 12px', borderRadius: 20, fontSize: 12,
-                        fontWeight: esActivo ? 700 : 500,
-                        border: `1.5px solid ${esActivo ? 'rgb(var(--primary-rgb))' : '#e5e7eb'}`,
-                        background: esActivo ? 'rgba(var(--primary-rgb),0.08)' : '#fafafa',
-                        color: esActivo ? 'rgb(var(--primary-rgb))' : '#374151',
-                        cursor: 'pointer', transition: 'all 0.15s', lineHeight: 1,
-                      }}
-                    >
-                      {mod?.icon && <span style={{ fontSize: 13, lineHeight: 1 }}>{mod.icon}</span>}
-                      {g.label}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
           </div>
         )
       })()}
@@ -489,53 +463,79 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
         </div>
       )}
 
-      {/* ── Pasos 3-6: Personalizar por módulo ── */}
-      {GRUPOS_PERMISOS.filter(g => !g.soloPersonalizado || nivel === 'personalizado').map(grupo => (
-        pasoEfectivo === grupo.paso && (
-          <div key={grupo.key}>
-            <p style={{ margin: '0 0 4px', fontWeight: 700, fontSize: 15, color: '#111827' }}>
-              Personalizar permisos — {grupo.label}
-            </p>
-            <p style={{ margin: '0 0 18px', fontSize: 12.5, color: '#6b7280' }}>
-              {grupo.descripcion}
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {ACCIONES.filter(a => grupo.permisos.includes(a.key)).map(a => {
-                const activo = draft.permisos?.[a.key] ?? false
+      {/* ── Paso 3: Permisos detallados — sidebar + contenido ── */}
+      {pasoEfectivo >= 3 && (
+        <div>
+          <div className="permisos-panel">
+            {/* Sidebar de módulos */}
+            <nav className="permisos-sidebar">
+              {GRUPOS_PERMISOS.map(g => {
+                const esActivo = moduloActivo === g.key
+                const mod = MODULOS.find(m => m.key === g.key)
                 return (
-                  <div
-                    key={a.key}
-                    onClick={() => toggleAccion(a.key)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '12px 16px', borderRadius: 10, cursor: 'pointer', userSelect: 'none',
-                      border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
-                      background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
-                      transition: 'all 0.15s',
-                      gap: 12,
-                    }}
+                  <button
+                    key={g.key}
+                    onClick={() => setModuloActivo(g.key)}
+                    className={`permisos-sidebar-item${esActivo ? ' permisos-sidebar-item--active' : ''}`}
                   >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
-                      {a.desc && <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#6b7280', fontWeight: 400, lineHeight: 1.4 }}>{a.desc}</p>}
+                    <span className="permisos-sidebar-icon">{mod?.icon}</span>
+                    <span className="permisos-sidebar-label">{g.label}</span>
+                    {esActivo && <span className="permisos-sidebar-bar" />}
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* Contenido del módulo seleccionado */}
+            <div className="permisos-content">
+              {GRUPOS_PERMISOS.filter(g => g.key === moduloActivo).map(grupo => {
+                const mod = MODULOS.find(m => m.key === grupo.key)
+                return (
+                  <div key={grupo.key}>
+                    <div className="permisos-content-header">
+                      <span className="permisos-content-icon">{mod?.icon}</span>
+                      <div>
+                        <p className="permisos-content-title">{grupo.label}</p>
+                        <p className="permisos-content-desc">{grupo.descripcion}</p>
+                      </div>
                     </div>
-                    <ToggleSwitch activo={activo} size="sm" />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {ACCIONES.filter(a => grupo.permisos.includes(a.key)).map(a => {
+                        const activo = draft.permisos?.[a.key] ?? false
+                        return (
+                          <div
+                            key={a.key}
+                            onClick={() => toggleAccion(a.key)}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '11px 14px', borderRadius: 9, cursor: 'pointer', userSelect: 'none',
+                              border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
+                              background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
+                              transition: 'all 0.15s', gap: 12,
+                            }}
+                          >
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
+                              {a.desc && <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#6b7280', lineHeight: 1.4 }}>{a.desc}</p>}
+                            </div>
+                            <ToggleSwitch activo={activo} size="sm" />
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )
               })}
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
-              <button onClick={() => setPaso(pasoAnterior(grupo.paso))} style={sec}>← Atrás</button>
-              {grupo.paso < ULTIMO_PASO
-                ? <button onClick={() => setPaso(pasoSiguiente(grupo.paso))} style={prim}>Siguiente →</button>
-                : <button onClick={() => onFinalizado?.()} style={prim}>Finalizar ✓</button>
-              }
-            </div>
           </div>
-        )
-      ))}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
+            <button onClick={() => setPaso(2)} style={sec}>← Atrás</button>
+            <button onClick={() => onFinalizado?.()} style={prim}>Finalizar ✓</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
