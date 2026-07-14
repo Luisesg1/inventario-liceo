@@ -66,8 +66,15 @@ Deno.serve(async (req: Request) => {
       if (rolPersonalizado) rolFinal = rol;
     }
 
-    // 5. RUT duplicado — permitido (una persona puede tener múltiples cuentas)
-    //    El aviso se muestra en el frontend antes de crear.
+    // 5. Validar RUT único (si se proporciona)
+    if (rut?.trim()) {
+      const rutLimpio = rut.trim();
+      const { data: rutExistente } = await supabaseAnon
+        .from("usuarios").select("id, nombre").eq("rut", rutLimpio).maybeSingle();
+      if (rutExistente) {
+        return h({ error: `Ya existe un usuario con el RUT ${rutLimpio} (${rutExistente.nombre}). No se permiten RUT duplicados.` }, 409);
+      }
+    }
 
     // 6. Cliente admin
     const supabaseAdmin = createClient(

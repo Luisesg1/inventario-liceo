@@ -2278,9 +2278,11 @@ function ReemplazosTab({ usuario, permisos }) {
     const payload = {
       funcionario_nombre:  datos.funcionario_nombre.trim(),
       funcionario_id:      datos.funcionario_id || null,
+      funcionario_rut:     datos.funcionario_rut || null,
       motivo:              datos.motivo,
       reemplazante_nombre: datos.reemplazante_nombre?.trim() || null,
       reemplazante_id:     datos.reemplazante_id || null,
+      reemplazante_rut:    datos.reemplazante_rut || null,
       cargo:               datos.cargo?.trim() || null,
       asignatura:          datos.asignatura?.trim() || null,
       fecha_inicio:        datos.fecha_inicio,
@@ -2648,9 +2650,11 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
   const [form, setForm] = useState({
     funcionario_id:      datos?.funcionario_id ?? ausenciaInicial?.usuario_id ?? '',
     funcionario_nombre:  datos?.funcionario_nombre ?? ausenciaInicial?.usuario?.nombre ?? '',
+    funcionario_rut:     datos?.funcionario_rut ?? ausenciaInicial?.usuario?.rut ?? '',
     motivo:              datos?.motivo ?? (ausenciaInicial ? mapMotivo(ausenciaInicial.tipo) : 'licencia_medica'),
     reemplazante_id:     datos?.reemplazante_id ?? '',
     reemplazante_nombre: datos?.reemplazante_nombre ?? '',
+    reemplazante_rut:    datos?.reemplazante_rut ?? '',
     cargo:               datos?.cargo ?? contratoFuncionario?.cargo ?? '',
     asignatura:          datos?.asignatura ?? '',
     fecha_inicio:        datos?.fecha_inicio ?? ausenciaInicial?.fecha_inicio ?? '',
@@ -2697,7 +2701,7 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
   }, [emailNuevo, usuarios])
 
   function seleccionarNuevo(u) {
-    setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre }))
+    setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, reemplazante_rut: u.rut || '' }))
     setModoCrear(false); setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo('')
     setEmailNuevo(''); setRolNuevo(''); setUsuarioEncontrado(null); setUsuarioEncontradoEmail(null)
   }
@@ -2868,8 +2872,8 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
                   usuarios={usuarios}
                   valorId={form.funcionario_id}
                   valorNombre={form.funcionario_nombre}
-                  onSelect={u => setForm(f => ({ ...f, funcionario_id: u.id, funcionario_nombre: u.nombre }))}
-                  onClear={() => setForm(f => ({ ...f, funcionario_id: '' }))}
+                  onSelect={u => setForm(f => ({ ...f, funcionario_id: u.id, funcionario_nombre: u.nombre, funcionario_rut: u.rut || '' }))}
+                  onClear={() => setForm(f => ({ ...f, funcionario_id: '', funcionario_rut: '' }))}
                 />
                 <div className="personal-form-field">
                   <label>Nombre *</label>
@@ -2924,7 +2928,7 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
                   usuarios={usuarios}
                   valorId={form.reemplazante_id}
                   valorNombre={form.reemplazante_nombre}
-                  onSelect={u => setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, ...(u.rol !== 'docente' ? { asignatura: '' } : {}) }))}
+                  onSelect={u => setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, reemplazante_rut: u.rut || '', ...(u.rol !== 'docente' ? { asignatura: '' } : {}) }))}
                   onClear={() => setForm(f => ({ ...f, reemplazante_id: '', asignatura: '' }))}
                 />
                 {errors.reemplazante_id && <span className="personal-form-error">{errors.reemplazante_id}</span>}
