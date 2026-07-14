@@ -1,7 +1,7 @@
 // supabase/functions/eliminar-usuario/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://sistema.liceojhj.cl,https://liceojhj.cl')
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://sistema.liceojhj.cl,https://liceojhj.cl,https://inventario-liceo.vercel.app')
   .split(',').map((s: string) => s.trim()).filter(Boolean)
 
 const corsHeaders = (origin: string | null) => ({
