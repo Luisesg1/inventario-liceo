@@ -1778,7 +1778,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
   const [docsAbierto, setDocsAbierto] = useState(true)
-  const [historialAbierto, setHistorialAbierto] = useState(true)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
   const [cuentaActiva, setCuentaActiva] = useState(null) // null=loading, true/false
 
   useEffect(() => {
@@ -2021,7 +2021,7 @@ function ModalDetalleReemplazo({ datos, onClose, onEditar }) {
   const [docs,      setDocs]      = useState([])
   const [historial, setHistorial] = useState([])
   const [docsAbierto,      setDocsAbierto]      = useState(true)
-  const [historialAbierto, setHistorialAbierto] = useState(true)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   useEffect(() => {
     supabase.from('personal_documentos').select('*').eq('reemplazo_id', datos.id)
