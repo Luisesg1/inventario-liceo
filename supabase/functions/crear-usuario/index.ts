@@ -18,11 +18,14 @@ Deno.serve(async (req: Request) => {
     return new Response("ok", { headers: corsHeaders(origin) });
   }
 
+  const h = (body: Record<string, unknown>, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(origin), "Content-Type": "application/json" } });
+
   try {
     // 1. Verificar token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return json({ error: "No autorizado: falta token." }, 401);
+      return h({ error: "No autorizado: falta token." }, 401);
     }
     const accessToken = authHeader.replace("Bearer ", "");
 
@@ -34,21 +37,21 @@ Deno.serve(async (req: Request) => {
     );
 
     const { data: { user }, error: authError } = await supabaseAnon.auth.getUser();
-    if (authError || !user) return json({ error: "Sesión inválida o expirada." }, 401);
+    if (authError || !user) return h({ error: "Sesión inválida o expirada." }, 401);
 
     // 3. Verificar que es admin
     const { data: solicitante, error: rolError } = await supabaseAnon
       .from("usuarios").select("rol").eq("id", user.id).single();
 
-    if (rolError || !solicitante) return json({ error: "No se pudo verificar el rol." }, 403);
-    if (solicitante.rol !== "admin") return json({ error: "Solo los administradores pueden crear usuarios." }, 403);
+    if (rolError || !solicitante) return h({ error: "No se pudo verificar el rol." }, 403);
+    if (solicitante.rol !== "admin") return h({ error: "Solo los administradores pueden crear usuarios." }, 403);
 
     // 4. Validar body
     const body = await req.json();
     const { nombre, rut, email, rol, passwordOverride, skipEmail } = body as { nombre?: string; rut?: string; email?: string; rol?: string; passwordOverride?: string; skipEmail?: boolean };
 
-    if (!nombre?.trim()) return json({ error: "El campo 'nombre' es requerido." }, 400);
-    if (!email?.trim())  return json({ error: "El campo 'email' es requerido." }, 400);
+    if (!nombre?.trim()) return h({ error: "El campo 'nombre' es requerido." }, 400);
+    if (!email?.trim())  return h({ error: "El campo 'email' es requerido." }, 400);
 
     // Roles base/legacy conocidos + cualquier rol personalizado existente en
     // `permisos_rol` (creado desde el Mantenedor de Roles). Así un usuario puede
@@ -88,7 +91,7 @@ Deno.serve(async (req: Request) => {
       const traducido = msg.includes("already been registered") || msg.includes("already registered")
         ? "Ya existe un usuario con ese correo electrónico."
         : "Error al crear el usuario: " + msg
-      return json({ error: traducido }, 400);
+      return h({ error: traducido }, 400);
     }
 
     const nuevoUserId = authData.user.id;
@@ -108,7 +111,7 @@ Deno.serve(async (req: Request) => {
 
     if (insertError) {
       await supabaseAdmin.auth.admin.deleteUser(nuevoUserId);
-      return json({ error: `Error al registrar usuario: ${insertError.message}` }, 500);
+      return h({ error: `Error al registrar usuario: ${insertError.message}` }, 500);
     }
 
     // 8. Permisos por defecto. La tabla `permisos_rol` es la fuente viva
@@ -155,7 +158,7 @@ Deno.serve(async (req: Request) => {
     // tiene por qué aparecer en el response ni en los logs de Edge Functions.
     const necesitaPassword = skipEmail || !emailEnviado;
 
-    return json({
+    return h({
       usuario: usuarioInsertado,
       emailEnviado,
       emailError: emailError ?? null,
@@ -169,7 +172,7 @@ Deno.serve(async (req: Request) => {
 
   } catch (err) {
     console.error("Error inesperado:", String(err));
-    return json({ error: "Error interno del servidor." }, 500);
+    return h({ error: "Error interno del servidor." }, 500);
   }
 });
 
@@ -429,10 +432,3 @@ function getPermisosDefault(rol: string): Record<string, boolean> {
   }
 }
 
-// ── Helper JSON ───────────────────────────────────────────────────────────────
-function json(body: Record<string, unknown>, status = 200, origin: string | null = null): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
-  });
-}
