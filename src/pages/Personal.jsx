@@ -786,7 +786,9 @@ function ContratacionesTab({ usuario, permisos }) {
   const [eliminandoMas,   setEliminandoMas]   = useState(false)
   const [desactivar,      setDesactivar]      = useState(null)
   const [desactivando,    setDesactivando]    = useState(false)
-  const [msgDesactivar,   setMsgDesactivar]   = useState(null)
+  const [reactivar,       setReactivar]       = useState(null)
+  const [reactivando,     setReactivando]     = useState(false)
+  const [msgCuenta,       setMsgCuenta]       = useState(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -857,12 +859,12 @@ function ContratacionesTab({ usuario, permisos }) {
 
   async function handleDesactivarCuenta(contrato) {
     const rut = (contrato.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
-    if (!rut) { setMsgDesactivar({ tipo: 'error', texto: 'No se puede desactivar: la contratación no tiene RUT asociado.' }); return }
+    if (!rut) { setMsgCuenta({ tipo: 'error', texto: 'No se puede desactivar: la contratación no tiene RUT asociado.' }); return }
     const { data: usrs } = await supabase.from('usuarios').select('id, nombre, rut, activo')
       .eq('is_deleted', false)
     const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
-    if (!usr) { setMsgDesactivar({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
-    if (usr.activo === false) { setMsgDesactivar({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está desactivada.' }); return }
+    if (!usr) { setMsgCuenta({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
+    if (usr.activo === false) { setMsgCuenta({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está desactivada.' }); return }
     setDesactivar({ contrato, usuario: usr })
   }
 
@@ -871,7 +873,7 @@ function ContratacionesTab({ usuario, permisos }) {
     setDesactivando(true)
     const { usuario: usr } = desactivar
     const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', usr.id)
-    if (error) { setMsgDesactivar({ tipo: 'error', texto: 'Error al desactivar la cuenta: ' + error.message }); setDesactivando(false); setDesactivar(null); return }
+    if (error) { setMsgCuenta({ tipo: 'error', texto: 'Error al desactivar la cuenta: ' + error.message }); setDesactivando(false); setDesactivar(null); return }
     await supabase.rpc('log_auditoria', {
       p_accion: 'desactivar_cuenta',
       p_modulo: 'personal',
@@ -882,19 +884,26 @@ function ContratacionesTab({ usuario, permisos }) {
     })
     setDesactivando(false)
     setDesactivar(null)
-    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' desactivada correctamente. El usuario ya no podrá iniciar sesión.' })
+    setMsgCuenta({ tipo: 'ok', accion: 'desactivar', texto: 'Cuenta de ' + usr.nombre + ' desactivada correctamente. El usuario ya no podrá iniciar sesión.' })
     setDetalle(null)
   }
 
   async function handleReactivarCuenta(contrato) {
     const rut = (contrato.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
-    if (!rut) { setMsgDesactivar({ tipo: 'error', texto: 'No se puede reactivar: la contratación no tiene RUT asociado.' }); return }
+    if (!rut) { setMsgCuenta({ tipo: 'error', texto: 'No se puede reactivar: la contratación no tiene RUT asociado.' }); return }
     const { data: usrs } = await supabase.from('usuarios').select('id, nombre, rut, activo').eq('is_deleted', false)
     const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
-    if (!usr) { setMsgDesactivar({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
-    if (usr.activo !== false) { setMsgDesactivar({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está activa.' }); return }
+    if (!usr) { setMsgCuenta({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
+    if (usr.activo !== false) { setMsgCuenta({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está activa.' }); return }
+    setReactivar({ contrato, usuario: usr })
+  }
+
+  async function confirmarReactivar() {
+    if (!reactivar) return
+    setReactivando(true)
+    const { contrato, usuario: usr } = reactivar
     const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', usr.id)
-    if (error) { setMsgDesactivar({ tipo: 'error', texto: 'Error al reactivar la cuenta: ' + error.message }); return }
+    if (error) { setMsgCuenta({ tipo: 'error', texto: 'Error al reactivar la cuenta: ' + error.message }); setReactivando(false); setReactivar(null); return }
     await supabase.from('contrataciones').update({ estado: 'vigente' }).eq('id', contrato.id)
     await supabase.rpc('log_auditoria', {
       p_accion: 'reactivar_cuenta',
@@ -905,7 +914,9 @@ function ContratacionesTab({ usuario, permisos }) {
       p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }, { campo: 'estado_contrato', anterior: contrato.estado, nuevo: 'vigente' }],
     })
     setRegistros(prev => prev.map(r => r.id === contrato.id ? { ...r, estado: 'vigente' } : r))
-    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' reactivada y contrato actualizado a vigente.' })
+    setReactivando(false)
+    setReactivar(null)
+    setMsgCuenta({ tipo: 'ok', accion: 'reactivar', texto: 'Cuenta de ' + usr.nombre + ' reactivada y contrato actualizado a vigente.' })
     setDetalle(null)
   }
 
@@ -1255,26 +1266,54 @@ function ContratacionesTab({ usuario, permisos }) {
         )}
       </AnimatePresence>
 
-      {/* Mensaje resultado desactivación */}
+      {/* Confirmar reactivar cuenta */}
       <AnimatePresence>
-        {msgDesactivar && (
+        {reactivar && (
           <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
-            onClick={() => setMsgDesactivar(null)}>
+            onClick={() => !reactivando && setReactivar(null)}>
             <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
               onClick={e => e.stopPropagation()}>
-              <div className="personal-confirm-icon" style={{ background: msgDesactivar.tipo === 'ok' ? '#f0fdf4' : '#fef2f2' }}>
-                {msgDesactivar.tipo === 'ok'
+              <div className="personal-confirm-icon" style={{ background: '#f0fdf4' }}><RefreshCw size={22} style={{ color: '#16a34a' }} /></div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>¿Reactivar cuenta?</h3>
+              <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+                Se reactivará la cuenta de <strong>{reactivar.usuario.nombre}</strong>. Podrá volver a iniciar sesión.
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: 12.5, color: '#94a3b8' }}>
+                El contrato se actualizará automáticamente a estado vigente.
+              </p>
+              <div className="personal-form-actions">
+                <button className="btn-secondary" onClick={() => setReactivar(null)} disabled={reactivando}>Cancelar</button>
+                <button className="btn-primary" onClick={confirmarReactivar} disabled={reactivando}>
+                  {reactivando ? <><Loader2 size={14} className="animate-spin" /> Reactivando…</> : 'Sí, reactivar cuenta'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mensaje resultado cuenta */}
+      <AnimatePresence>
+        {msgCuenta && (
+          <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+            onClick={() => setMsgCuenta(null)}>
+            <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: msgCuenta.tipo === 'ok' ? '#f0fdf4' : '#fef2f2' }}>
+                {msgCuenta.tipo === 'ok'
                   ? <CheckCircle2 size={22} style={{ color: '#16a34a' }} />
                   : <AlertCircle size={22} style={{ color: '#dc2626' }} />}
               </div>
               <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>
-                {msgDesactivar.tipo === 'ok' ? 'Cuenta desactivada' : 'No se pudo desactivar'}
+                {msgCuenta.tipo === 'ok'
+                  ? (msgCuenta.accion === 'reactivar' ? 'Cuenta reactivada' : 'Cuenta desactivada')
+                  : (msgCuenta.accion === 'reactivar' ? 'No se pudo reactivar' : 'No se pudo desactivar')}
               </h3>
               <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
-                {msgDesactivar.texto}
+                {msgCuenta.texto}
               </p>
               <div className="personal-form-actions">
-                <button className="btn-secondary" onClick={() => setMsgDesactivar(null)}>Cerrar</button>
+                <button className="btn-secondary" onClick={() => setMsgCuenta(null)}>Cerrar</button>
               </div>
             </motion.div>
           </motion.div>
