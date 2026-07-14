@@ -1190,7 +1190,8 @@ function ContratacionesTab({ usuario, permisos }) {
           <ModalDetalleContratacion datos={detalle} onClose={() => setDetalle(null)}
             onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null}
             onDesactivarCuenta={permisos.editarContrat ? handleDesactivarCuenta : null}
-            onReactivarCuenta={permisos.editarContrat ? handleReactivarCuenta : null} />
+            onReactivarCuenta={permisos.editarContrat ? handleReactivarCuenta : null}
+            usuarioActual={usuario} />
         )}
       </AnimatePresence>
 
@@ -1814,7 +1815,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 }
 
 // ─── Modal Detalle Contratación ───────────────────────────────
-function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta, onReactivarCuenta }) {
+function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta, onReactivarCuenta, usuarioActual }) {
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
   const [docsAbierto, setDocsAbierto] = useState(true)
@@ -1842,6 +1843,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
   }, [datos.id])
 
   const estado = datos.estado ?? 'vigente'
+  const esCuentaPropia = usuarioActual?.rut && (datos.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === (usuarioActual.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
 
   const items = [
     { label: 'Nombre completo', val: datos.nombre_completo },
@@ -1903,7 +1905,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
         </div>
 
         {/* Gestión de cuenta — solo si el contrato finalizó o no fue renovado */}
-        {(estado === 'finalizado' || estado === 'no_renovado') && cuentaActiva !== null && (
+        {(estado === 'finalizado' || estado === 'no_renovado') && cuentaActiva !== null && !esCuentaPropia && (
           <div style={{ background: cuentaActiva ? '#fef2f2' : '#f0fdf4', border: `1px solid ${cuentaActiva ? '#fecaca' : '#bbf7d0'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               {cuentaActiva
