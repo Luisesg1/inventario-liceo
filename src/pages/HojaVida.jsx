@@ -667,8 +667,8 @@ export default function HojaVida({ usuario, permisos }) {
 
       doc.save(`hoja_vida_${nombre.replace(/\s+/g, '_')}.pdf`)
       mostrarToast('ok', 'PDF exportado correctamente')
-      await logAudit('exportar', 'Exportación de expediente')
-    } catch { mostrarToast('error', 'Error al exportar PDF') }
+    } catch { mostrarToast('error', 'Error al exportar PDF'); return }
+    try { await logAudit('exportar', 'Exportación de expediente') } catch {}
   }
 
   // ── Anotaciones filtradas ──────────────────────────────────────────────
