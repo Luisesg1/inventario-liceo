@@ -902,7 +902,7 @@ function ContratacionesTab({ usuario, permisos }) {
         || r.cargo?.toLowerCase().includes(q)
         || ESTAMENTO_MAP[r.estamento]?.toLowerCase().includes(q)
         || CONTRATO_MAP[r.tipo_contrato]?.toLowerCase().includes(q)
-        || estado.includes(q)
+        || (ESTADO_CONTRATO_MAP[r.estado]?.label ?? r.estado ?? '').toLowerCase().includes(q)
     })
   }, [registros, filtros])
 
@@ -1094,11 +1094,11 @@ function ContratacionesTab({ usuario, permisos }) {
                         <td onClick={e => e.stopPropagation()}>
                           <p style={{ margin: 0, fontSize: 13 }}>{formatFecha(c.fecha_inicio)}</p>
                           {c.fecha_termino && <p className="personal-table-sub">hasta {formatFecha(c.fecha_termino)}</p>}
-                          {estado === 'por_vencer' && dias !== null && dias >= 0 && (
+                          {c.estado === 'por_vencer' && dias !== null && dias >= 0 && (
                             <span className="personal-vencer-alert"><AlertTriangle size={11} /> {dias}d</span>
                           )}
                         </td>
-                        <td onClick={e => e.stopPropagation()}><EstadoBadge estado={estado} /></td>
+                        <td onClick={e => e.stopPropagation()}><EstadoBadge estado={c.estado} /></td>
                         <td onClick={e => e.stopPropagation()}>
                           <div className="personal-actions">
                             <button className="personal-action-btn" title="Ver detalle" onClick={() => setDetalle(c)}><Eye size={14} /></button>
