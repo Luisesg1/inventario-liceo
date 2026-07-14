@@ -1792,8 +1792,10 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
       supabase.from('usuarios').select('id, activo').eq('is_deleted', false)
         .then(({ data: usrs }) => {
           const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
-          setCuentaActiva(usr ? (usr.activo !== false) : null)
+          setCuentaActiva(usr ? (usr.activo !== false) : true)
         })
+    } else {
+      setCuentaActiva(true)
     }
   }, [datos.id])
 
