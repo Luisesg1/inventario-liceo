@@ -1,6 +1,7 @@
 // src/pages/Usuarios.jsx
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { Search, Shield, AlertCircle } from 'lucide-react'
 import { supabase } from '../supabase'
 import './Usuarios.css'
 import ModalImportarUsuarios from './ModalImportarUsuarios'
@@ -18,6 +19,14 @@ import {
 } from '../config/permisos'
 import { labelDeRol, ROL_COLORES } from '../config/roles'
 import { useRoles } from '../hooks/useRoles'
+
+// Agrupación visual de módulos para el sidebar de permisos
+const CATEGORIAS_MODULOS = [
+  { key: 'operacion',      label: 'Operación',      modulos: ['inventario', 'configurar_campos', 'personal', 'hoja_vida'] },
+  { key: 'gestion',        label: 'Gestión',         modulos: ['ausencia', 'compensatorios', 'requerimientos'] },
+  { key: 'soporte',        label: 'Soporte',          modulos: ['tickets'] },
+  { key: 'administracion', label: 'Administración',  modulos: ['reglamentos', 'ajustes', 'papelera', 'backups'] },
+]
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────
 const REQUISITOS_PASS = [
@@ -149,6 +158,8 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
     return n.startsWith('rol:') ? n.slice(4) : null
   })
   const [moduloActivo, setModuloActivo]   = useState(GRUPOS_PERMISOS[0]?.key ?? '')
+  const [busqueda, setBusqueda]           = useState('')
+  const permisosIniciales                 = useRef(JSON.parse(JSON.stringify(draft?.permisos ?? {})))
   // Lista viva de roles (base + personalizados de la BD) y sus permisos reales.
   const { rolesDisponibles, permisosDe } = useRoles()
 
@@ -463,63 +474,95 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
         </div>
       )}
 
-      {/* ── Paso 3: Permisos detallados — sidebar + contenido ── */}
-      {pasoEfectivo >= 3 && (
-        <div>
-          <div className="permisos-panel">
-            {/* Sidebar de módulos */}
-            <nav className="permisos-sidebar">
-              {GRUPOS_PERMISOS.map(g => {
-                const esActivo = moduloActivo === g.key
-                const mod = MODULOS.find(m => m.key === g.key)
+      {/* ── Paso 3: Permisos detallados — layout 3 columnas ── */}
+      {pasoEfectivo >= 3 && (() => {
+        const totalActivos  = Object.values(draft.permisos ?? {}).filter(Boolean).length
+        const totalPermisos = ACCIONES.length
+        const cambiosCount  = Object.keys(PERMISOS_VACIO).filter(
+          k => !!(draft?.permisos?.[k]) !== !!(permisosIniciales.current[k])
+        ).length
+        const rolLabel = rolBase
+          ? labelDeRol(rolBase)
+          : nivel === 'personalizado' ? 'Personalizado' : 'Sin rol'
+        const q = busqueda.toLowerCase().trim()
+
+        return (
+          <div className="p3-root">
+
+            {/* ── Col 1: sidebar de módulos ── */}
+            <aside className="p3-sidebar">
+              <div className="p3-search-wrap">
+                <Search size={13} className="p3-search-icon" />
+                <input
+                  className="p3-search-input"
+                  placeholder="Buscar módulo…"
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                />
+              </div>
+
+              {CATEGORIAS_MODULOS.map(cat => {
+                const grupos = GRUPOS_PERMISOS.filter(g =>
+                  cat.modulos.includes(g.key) &&
+                  (!q || g.label.toLowerCase().includes(q))
+                )
+                if (grupos.length === 0) return null
                 return (
-                  <button
-                    key={g.key}
-                    onClick={() => setModuloActivo(g.key)}
-                    className={`permisos-sidebar-item${esActivo ? ' permisos-sidebar-item--active' : ''}`}
-                  >
-                    <span className="permisos-sidebar-icon">{mod?.icon}</span>
-                    <span className="permisos-sidebar-label">{g.label}</span>
-                    {esActivo && <span className="permisos-sidebar-bar" />}
-                  </button>
+                  <div key={cat.key} className="p3-cat-group">
+                    <p className="p3-cat-label">{cat.label}</p>
+                    {grupos.map(g => {
+                      const esActivo = moduloActivo === g.key
+                      const mod      = MODULOS.find(m => m.key === g.key)
+                      const count    = ACCIONES.filter(a => g.permisos.includes(a.key)).length
+                      const activos  = ACCIONES.filter(a => g.permisos.includes(a.key) && draft.permisos?.[a.key]).length
+                      return (
+                        <button
+                          key={g.key}
+                          onClick={() => setModuloActivo(g.key)}
+                          className={`p3-mod-item${esActivo ? ' p3-mod-item--active' : ''}`}
+                        >
+                          <span className="p3-mod-icon">{mod?.icon}</span>
+                          <span className="p3-mod-name">{g.label}</span>
+                          <span className={`p3-mod-badge${activos > 0 ? ' p3-mod-badge--on' : ''}`}>
+                            {activos}/{count}
+                          </span>
+                          {esActivo && <span className="p3-mod-bar" />}
+                        </button>
+                      )
+                    })}
+                  </div>
                 )
               })}
-            </nav>
+            </aside>
 
-            {/* Contenido del módulo seleccionado */}
-            <div className="permisos-content">
+            {/* ── Col 2: permisos del módulo seleccionado ── */}
+            <main className="p3-main">
               {GRUPOS_PERMISOS.filter(g => g.key === moduloActivo).map(grupo => {
                 const mod = MODULOS.find(m => m.key === grupo.key)
                 return (
                   <div key={grupo.key}>
-                    <div className="permisos-content-header">
-                      <span className="permisos-content-icon">{mod?.icon}</span>
+                    <div className="p3-mod-header">
+                      <span className="p3-mod-header-icon">{mod?.icon}</span>
                       <div>
-                        <p className="permisos-content-title">{grupo.label}</p>
-                        <p className="permisos-content-desc">{grupo.descripcion}</p>
+                        <h3 className="p3-mod-header-title">{grupo.label}</h3>
+                        <p className="p3-mod-header-desc">{grupo.descripcion}</p>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="p3-perm-list">
                       {ACCIONES.filter(a => grupo.permisos.includes(a.key)).map(a => {
                         const activo = draft.permisos?.[a.key] ?? false
                         return (
                           <div
                             key={a.key}
                             onClick={() => toggleAccion(a.key)}
-                            style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                              padding: '11px 14px', borderRadius: 9, cursor: 'pointer', userSelect: 'none',
-                              border: `1.5px solid ${activo ? 'rgba(var(--primary-rgb),0.2)' : '#e5e7eb'}`,
-                              background: activo ? 'rgba(var(--primary-rgb),0.03)' : '#fff',
-                              transition: 'all 0.15s', gap: 12,
-                            }}
+                            className={`p3-perm-card${activo ? ' p3-perm-card--on' : ''}`}
                           >
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111827' }}>{a.label}</p>
-                              {a.desc && <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#6b7280', lineHeight: 1.4 }}>{a.desc}</p>}
+                            <div className="p3-perm-body">
+                              <p className="p3-perm-name">{a.label}</p>
+                              {a.desc && <p className="p3-perm-desc">{a.desc}</p>}
                             </div>
-                            <ToggleSwitch activo={activo} size="sm" />
+                            <ToggleSwitch activo={activo} />
                           </div>
                         )
                       })}
@@ -527,15 +570,57 @@ function TablaPermisos({ draft, onChange, onFinalizado, onRolChange }) {
                   </div>
                 )
               })}
-            </div>
-          </div>
+            </main>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 22 }}>
-            <button onClick={() => setPaso(2)} style={sec}>← Atrás</button>
-            <button onClick={() => onFinalizado?.()} style={prim}>Finalizar ✓</button>
+            {/* ── Col 3: panel resumen + acciones ── */}
+            <aside className="p3-panel">
+              {/* Rol base */}
+              <div className="p3-panel-section">
+                <p className="p3-panel-label">Rol base</p>
+                <div className="p3-rol-badge">
+                  <Shield size={12} />
+                  {rolLabel}
+                </div>
+              </div>
+
+              {/* Contador */}
+              <div className="p3-panel-section">
+                <p className="p3-panel-label">Permisos activos</p>
+                <p className="p3-panel-count">
+                  {totalActivos}<span className="p3-panel-total"> / {totalPermisos}</span>
+                </p>
+                <div className="p3-progress-bar">
+                  <div
+                    className="p3-progress-fill"
+                    style={{ width: `${Math.round((totalActivos / totalPermisos) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Cambios */}
+              {cambiosCount > 0 && (
+                <div className="p3-cambios-badge">
+                  <AlertCircle size={12} />
+                  {cambiosCount} cambio{cambiosCount !== 1 ? 's' : ''} sin guardar
+                </div>
+              )}
+
+              <p className="p3-panel-aviso">
+                Los cambios se aplican al usuario al guardar.
+              </p>
+
+              {/* Navegación */}
+              <div className="p3-panel-nav">
+                <button onClick={() => setPaso(2)} className="p3-btn-back">← Atrás</button>
+                <button onClick={() => onFinalizado?.()} className="p3-btn-finish">
+                  Finalizar ✓
+                </button>
+              </div>
+            </aside>
+
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
