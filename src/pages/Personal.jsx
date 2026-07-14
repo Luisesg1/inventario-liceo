@@ -784,6 +784,9 @@ function ContratacionesTab({ usuario, permisos }) {
   const [seleccionados,   setSeleccionados]   = useState(new Set())
   const [confirmarMasivo, setConfirmarMasivo] = useState(false)
   const [eliminandoMas,   setEliminandoMas]   = useState(false)
+  const [desactivar,      setDesactivar]      = useState(null)
+  const [desactivando,    setDesactivando]    = useState(false)
+  const [msgDesactivar,   setMsgDesactivar]   = useState(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -854,15 +857,21 @@ function ContratacionesTab({ usuario, permisos }) {
 
   async function handleDesactivarCuenta(contrato) {
     const rut = (contrato.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
-    if (!rut) { alert('No se puede desactivar: la contratación no tiene RUT asociado.'); return }
+    if (!rut) { setMsgDesactivar({ tipo: 'error', texto: 'No se puede desactivar: la contratación no tiene RUT asociado.' }); return }
     const { data: usrs } = await supabase.from('usuarios').select('id, nombre, rut, activo')
       .eq('is_deleted', false)
     const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
-    if (!usr) { alert('No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.'); return }
-    if (usr.activo === false) { alert('La cuenta de ' + usr.nombre + ' ya está desactivada.'); return }
-    if (!window.confirm(`¿Desactivar la cuenta de ${usr.nombre}?\n\nNo se eliminará ningún dato. La cuenta podrá reactivarse en el futuro.`)) return
+    if (!usr) { setMsgDesactivar({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
+    if (usr.activo === false) { setMsgDesactivar({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está desactivada.' }); return }
+    setDesactivar({ contrato, usuario: usr })
+  }
+
+  async function confirmarDesactivar() {
+    if (!desactivar) return
+    setDesactivando(true)
+    const { usuario: usr } = desactivar
     const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', usr.id)
-    if (error) { alert('Error al desactivar la cuenta: ' + error.message); return }
+    if (error) { setMsgDesactivar({ tipo: 'error', texto: 'Error al desactivar la cuenta: ' + error.message }); setDesactivando(false); setDesactivar(null); return }
     await supabase.rpc('log_auditoria', {
       p_accion: 'desactivar_cuenta',
       p_modulo: 'personal',
@@ -871,7 +880,9 @@ function ContratacionesTab({ usuario, permisos }) {
       p_categoria: null,
       p_cambios: [{ campo: 'activo', anterior: true, nuevo: false }],
     })
-    alert('Cuenta de ' + usr.nombre + ' desactivada correctamente.')
+    setDesactivando(false)
+    setDesactivar(null)
+    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' desactivada correctamente. El usuario ya no podrá iniciar sesión.' })
     setDetalle(null)
   }
 
@@ -1188,6 +1199,58 @@ function ContratacionesTab({ usuario, permisos }) {
                 <button className="btn-danger" onClick={handleEliminarMasivo} disabled={eliminandoMas}>
                   {eliminandoMas ? <><Loader2 size={14} className="animate-spin" /> Eliminando…</> : `Sí, eliminar ${seleccionados.size}`}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirmar desactivar cuenta */}
+      <AnimatePresence>
+        {desactivar && (
+          <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+            onClick={() => !desactivando && setDesactivar(null)}>
+            <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: '#fef2f2' }}><UserX size={22} style={{ color: '#dc2626' }} /></div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>¿Desactivar cuenta?</h3>
+              <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+                Se desactivará la cuenta de <strong>{desactivar.usuario.nombre}</strong>. No podrá iniciar sesión.
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: 12.5, color: '#94a3b8' }}>
+                No se eliminará ningún dato. Toda su información histórica, hoja de vida, contratos y documentos se conservarán. La cuenta podrá reactivarse en el futuro.
+              </p>
+              <div className="personal-form-actions">
+                <button className="btn-secondary" onClick={() => setDesactivar(null)} disabled={desactivando}>Cancelar</button>
+                <button className="btn-danger" onClick={confirmarDesactivar} disabled={desactivando}>
+                  {desactivando ? <><Loader2 size={14} className="animate-spin" /> Desactivando…</> : 'Sí, desactivar cuenta'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mensaje resultado desactivación */}
+      <AnimatePresence>
+        {msgDesactivar && (
+          <motion.div className="personal-overlay" variants={overlayV} initial="hidden" animate="visible" exit="hidden"
+            onClick={() => setMsgDesactivar(null)}>
+            <motion.div className="personal-modal personal-confirm-modal" variants={modalV} initial="hidden" animate="visible" exit="hidden"
+              onClick={e => e.stopPropagation()}>
+              <div className="personal-confirm-icon" style={{ background: msgDesactivar.tipo === 'ok' ? '#f0fdf4' : '#fef2f2' }}>
+                {msgDesactivar.tipo === 'ok'
+                  ? <CheckCircle2 size={22} style={{ color: '#16a34a' }} />
+                  : <AlertCircle size={22} style={{ color: '#dc2626' }} />}
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>
+                {msgDesactivar.tipo === 'ok' ? 'Cuenta desactivada' : 'No se pudo desactivar'}
+              </h3>
+              <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+                {msgDesactivar.texto}
+              </p>
+              <div className="personal-form-actions">
+                <button className="btn-secondary" onClick={() => setMsgDesactivar(null)}>Cerrar</button>
               </div>
             </motion.div>
           </motion.div>

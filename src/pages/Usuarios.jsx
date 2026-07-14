@@ -1035,6 +1035,10 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
   const [aplicandoRol,     setAplicandoRol]     = useState(false)
   const [mensajeRol,       setMensajeRol]       = useState({ tipo: '', texto: '' })
 
+  // Desactivar / reactivar cuenta
+  const [confirmActivoId,  setConfirmActivoId]  = useState(null) // { id, nombre, accion: 'desactivar'|'reactivar' }
+  const [toggling,         setToggling]         = useState(false)
+
   // Panel activo: null | { id, modo: 'editar'|'permisos' }
   const [panelActivo, setPanelActivo] = useState(null)
 
@@ -1200,6 +1204,24 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     } finally {
       setEliminandoId(null)
     }
+  }
+
+  async function toggleActivo() {
+    if (!confirmActivoId) return
+    setToggling(true)
+    const { id, nombre, accion } = confirmActivoId
+    const nuevoValor = accion === 'reactivar'
+    const { error } = await supabase.from('usuarios').update({ activo: nuevoValor }).eq('id', id)
+    if (error) { setToggling(false); setConfirmActivoId(null); return }
+    await supabase.rpc('log_auditoria', {
+      p_accion: accion === 'reactivar' ? 'reactivar_cuenta' : 'desactivar_cuenta',
+      p_modulo: 'usuarios',
+      p_bien_nombre: nombre, p_bien_id: id,
+      p_categoria: null, p_cambios: [{ campo: 'activo', anterior: !nuevoValor, nuevo: nuevoValor }],
+    })
+    setToggling(false)
+    setConfirmActivoId(null)
+    cargarUsuarios()
   }
 
   function iniciarGuardarEdicion(userId) {
@@ -1636,17 +1658,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                           <motion.button title="Reactivar cuenta"
                             whileHover={shouldReduce ? {} : { scale: 1.1 }}
                             whileTap={shouldReduce ? {} : { scale: 0.88 }}
-                            onClick={async () => {
-                              if (!window.confirm(`¿Reactivar la cuenta de ${u.nombre}?`)) return
-                              const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', u.id)
-                              if (error) { alert('Error: ' + error.message); return }
-                              await supabase.rpc('log_auditoria', {
-                                p_accion: 'reactivar_cuenta', p_modulo: 'usuarios',
-                                p_bien_nombre: u.nombre, p_bien_id: u.id,
-                                p_categoria: null, p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }],
-                              })
-                              cargarUsuarios()
-                            }}
+                            onClick={() => setConfirmActivoId({ id: u.id, nombre: u.nombre, accion: 'reactivar' })}
                             style={{
                               background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a',
                               borderRadius: 6, padding: '5px 9px', fontSize: 12, fontWeight: 600,
@@ -1657,17 +1669,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                           <motion.button title="Desactivar cuenta"
                             whileHover={shouldReduce ? {} : { scale: 1.1 }}
                             whileTap={shouldReduce ? {} : { scale: 0.88 }}
-                            onClick={async () => {
-                              if (!window.confirm(`¿Desactivar la cuenta de ${u.nombre}?\n\nNo se eliminará ningún dato. La cuenta podrá reactivarse.`)) return
-                              const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', u.id)
-                              if (error) { alert('Error: ' + error.message); return }
-                              await supabase.rpc('log_auditoria', {
-                                p_accion: 'desactivar_cuenta', p_modulo: 'usuarios',
-                                p_bien_nombre: u.nombre, p_bien_id: u.id,
-                                p_categoria: null, p_cambios: [{ campo: 'activo', anterior: true, nuevo: false }],
-                              })
-                              cargarUsuarios()
-                            }}
+                            onClick={() => setConfirmActivoId({ id: u.id, nombre: u.nombre, accion: 'desactivar' })}
                             style={{
                               background: 'none', border: '1px solid #e5e7eb', color: '#9ca3af',
                               borderRadius: 6, padding: '5px 9px', fontSize: 12,
@@ -1693,6 +1695,23 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                     </button>
                     <button className="btn-cancelar-eliminar"
                       onClick={() => setConfirmandoId(null)} disabled={eliminando}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {confirmActivoId?.id === u.id && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: confirmActivoId.accion === 'desactivar' ? '#fef2f2' : '#f0fdf4', borderRadius: 8, marginTop: 4, fontSize: 12.5 }}>
+                    <span style={{ color: confirmActivoId.accion === 'desactivar' ? '#991b1b' : '#166534', fontWeight: 600 }}>
+                      ¿{confirmActivoId.accion === 'desactivar' ? 'Desactivar' : 'Reactivar'} cuenta de {confirmActivoId.nombre}?
+                    </span>
+                    <button onClick={toggleActivo} disabled={toggling}
+                      style={{ padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                        background: confirmActivoId.accion === 'desactivar' ? '#dc2626' : '#16a34a', color: '#fff' }}>
+                      {toggling ? 'Procesando…' : 'Confirmar'}
+                    </button>
+                    <button onClick={() => setConfirmActivoId(null)} disabled={toggling}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Cancelar
                     </button>
                   </div>
