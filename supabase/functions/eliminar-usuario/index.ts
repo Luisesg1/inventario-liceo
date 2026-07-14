@@ -58,9 +58,9 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 5. Eliminar de Supabase Auth primero — si esto falla, no tocamos la BD
+    // 5. Eliminar de Supabase Auth — si ya no existe, continuar igualmente
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (deleteError) {
+    if (deleteError && !deleteError.message?.toLowerCase().includes('not found')) {
       return h({ error: deleteError.message }, 400);
     }
 
