@@ -123,6 +123,7 @@ export default function App() {
   const [abrirCatId,           setAbrirCatId]           = useState(null)
   const [filtroInicialTickets, setFiltroInicialTickets] = useState('')
   const [filtroInicialReqs,    setFiltroInicialReqs]    = useState(null)
+  const [cuentaDesactivada,    setCuentaDesactivada]    = useState(false)
   const refreshTicketBadge = useRef(null)
   const procesandoCambio   = useRef(false)
   const modoRecovery       = useRef(esRecuperacion)
@@ -320,7 +321,7 @@ export default function App() {
 
     if (data.activo === false) {
       await supabase.auth.signOut()
-      alert('Tu cuenta ha sido desactivada. Contacta al administrador para más información.')
+      setCuentaDesactivada(true)
       setCargando(false)
       return
     }
@@ -358,7 +359,27 @@ export default function App() {
   if (cargando) return <PageLoader />
 
   if (mostrarSetPassword) return <SetPassword onComplete={handlePasswordSet} usuario={usuario} />
-  if (!usuario) return <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
+  if (!usuario) return (
+    <>
+      <Login onLogin={setUsuario} logoUrl={logoUrl} nombreInstitucion={nombreInstitucion} nombreSistema={nombreSistema} />
+      {cuentaDesactivada && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px 24px', maxWidth: 400, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Cuenta desactivada</h3>
+            <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+              Tu cuenta ha sido desactivada. Contacta al administrador para más información.
+            </p>
+            <button onClick={() => setCuentaDesactivada(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
 
   return (
     <Layout
