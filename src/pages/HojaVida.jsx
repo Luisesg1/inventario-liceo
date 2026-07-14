@@ -538,12 +538,18 @@ export default function HojaVida({ usuario, permisos }) {
         .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(100))
     }
     if (fmts.length) {
-      ausQ.push(supabase.from('ausencias')
-        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, externo_rut, snapshot_rut')
-        .eq('is_deleted', false).in('externo_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100))
-      ausQ.push(supabase.from('ausencias')
-        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, snapshot_rut')
-        .eq('is_deleted', false).in('snapshot_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100))
+      ausQ.push(
+        supabase.from('ausencias')
+          .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, externo_rut, snapshot_rut')
+          .eq('is_deleted', false).in('externo_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100)
+          .then(r => r.error ? { data: [] } : r)
+      )
+      ausQ.push(
+        supabase.from('ausencias')
+          .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, snapshot_rut')
+          .eq('is_deleted', false).in('snapshot_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100)
+          .then(r => r.error ? { data: [] } : r)
+      )
     }
 
     // Compensatorios por usuario_id
@@ -637,7 +643,7 @@ export default function HojaVida({ usuario, permisos }) {
     if (!seleccionado) return
     try {
       const { jsPDF } = await import('jspdf')
-      await import('jspdf-autotable')
+      const { default: autoTable } = await import('jspdf-autotable')
       const doc = new jsPDF()
       const nombre = seleccionado.nombre_completo ?? 'Funcionario'
       doc.setFontSize(18); doc.setTextColor(26, 35, 126); doc.text('Hoja de Vida del Personal', 14, 20)
@@ -647,17 +653,17 @@ export default function HojaVida({ usuario, permisos }) {
       doc.text(`Generado el ${new Date().toLocaleDateString('es-CL')}`, 14, 44)
       let y = 54
       const section = (t) => { if (y > 230) { doc.addPage(); y = 20 }; doc.setFontSize(11); doc.setTextColor(26, 35, 126); doc.text(t, 14, y); y += 6; doc.setDrawColor(180, 190, 220); doc.line(14, y, 196, y); y += 4; doc.setTextColor(0); doc.setFontSize(10) }
+      const tbl = (opts) => { autoTable(doc, opts); y = doc.lastAutoTable.finalY + 8 }
 
       if (hvPersona) {
         section('Información Laboral')
-        doc.autoTable({ startY: y, head: [], body: [['Departamento', hvPersona.departamento ?? '—'], ['Jornada', hvPersona.jornada ?? '—'], ['Fecha ingreso', hvPersona.fecha_ingreso ? formatFecha(hvPersona.fecha_ingreso) : '—'], ['Estado', ESTADO_LABORAL_MAP[hvPersona.estado_laboral]?.label ?? '—']], margin: { left: 14 }, styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } } })
-        y = doc.lastAutoTable.finalY + 8
+        tbl({ startY: y, head: [], body: [['Departamento', hvPersona.departamento ?? '—'], ['Jornada', hvPersona.jornada ?? '—'], ['Fecha ingreso', hvPersona.fecha_ingreso ? formatFecha(hvPersona.fecha_ingreso) : '—'], ['Estado', ESTADO_LABORAL_MAP[hvPersona.estado_laboral]?.label ?? '—']], margin: { left: 14 }, styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 45 } } })
       }
-      if (historial.length) { section('Historial Laboral'); doc.autoTable({ startY: y, head: [['Fecha', 'Tipo', 'Descripción']], body: historial.map(h => [formatFecha(h.fecha_evento), TIPO_HISTORIAL[h.tipo] ?? h.tipo, h.descripcion ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (capacitaciones.length) { section('Capacitaciones'); doc.autoTable({ startY: y, head: [['Curso', 'Institución', 'Horas', 'Fecha']], body: capacitaciones.map(c => [c.nombre_curso, c.institucion ?? '—', c.horas ?? '—', formatFecha(c.fecha_termino)]), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (evaluaciones.length) { section('Evaluaciones'); doc.autoTable({ startY: y, head: [['Fecha', 'Evaluador', 'Puntaje', 'Calificación']], body: evaluaciones.map(e => [formatFecha(e.fecha_evaluacion), e.evaluador ?? '—', e.puntaje ?? '—', CALIFICACION_MAP[e.calificacion]?.label ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (ausencias.length) { section('Permisos y Licencias'); doc.autoTable({ startY: y, head: [['Tipo', 'Inicio', 'Fin', 'Días', 'Estado']], body: ausencias.map(a => [TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo, formatFecha(a.fecha_inicio), formatFecha(a.fecha_fin), a.dias ?? '—', a.estado ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }); y = doc.lastAutoTable.finalY + 8 }
-      if (anotaciones.length) { section('Anotaciones'); doc.autoTable({ startY: y, head: [['Fecha', 'Tipo', 'Descripción', 'Estado']], body: anotaciones.map(a => [formatFecha(a.fecha), TIPO_ANOT_MAP[a.tipo]?.label ?? a.tipo, a.descripcion, ESTADO_ANOT_MAP[a.estado]?.label ?? a.estado]), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (historial.length) { section('Historial Laboral'); tbl({ startY: y, head: [['Fecha', 'Tipo', 'Descripción']], body: historial.map(h => [formatFecha(h.fecha_evento), TIPO_HISTORIAL[h.tipo] ?? h.tipo, h.descripcion ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (capacitaciones.length) { section('Capacitaciones'); tbl({ startY: y, head: [['Curso', 'Institución', 'Horas', 'Fecha']], body: capacitaciones.map(c => [c.nombre_curso, c.institucion ?? '—', c.horas ?? '—', formatFecha(c.fecha_termino)]), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (evaluaciones.length) { section('Evaluaciones'); tbl({ startY: y, head: [['Fecha', 'Evaluador', 'Puntaje', 'Calificación']], body: evaluaciones.map(e => [formatFecha(e.fecha_evaluacion), e.evaluador ?? '—', e.puntaje ?? '—', CALIFICACION_MAP[e.calificacion]?.label ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (ausencias.length) { section('Permisos y Licencias'); tbl({ startY: y, head: [['Tipo', 'Inicio', 'Fin', 'Días', 'Estado']], body: ausencias.map(a => [TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo, formatFecha(a.fecha_inicio), formatFecha(a.fecha_fin), a.dias ?? '—', a.estado ?? '—']), margin: { left: 14 }, styles: { fontSize: 8 } }) }
+      if (anotaciones.length) { section('Anotaciones'); autoTable(doc, { startY: y, head: [['Fecha', 'Tipo', 'Descripción', 'Estado']], body: anotaciones.map(a => [formatFecha(a.fecha), TIPO_ANOT_MAP[a.tipo]?.label ?? a.tipo, a.descripcion, ESTADO_ANOT_MAP[a.estado]?.label ?? a.estado]), margin: { left: 14 }, styles: { fontSize: 8 } }) }
 
       doc.save(`hoja_vida_${nombre.replace(/\s+/g, '_')}.pdf`)
       mostrarToast('ok', 'PDF exportado correctamente')
