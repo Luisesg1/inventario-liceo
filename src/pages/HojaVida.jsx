@@ -413,47 +413,53 @@ export default function HojaVida({ usuario, permisos }) {
 
   async function cargarLista() {
     setCargando(true)
-    const [{ data: contData }, { data: usrData }] = await Promise.all([
+    // usuarios es la fuente de verdad — solo activos (is_deleted=false)
+    const [{ data: usrData }, { data: contData }] = await Promise.all([
+      supabase.from('usuarios')
+        .select('id, nombre, rut, email, rol, created_at')
+        .eq('is_deleted', false)
+        .order('nombre', { ascending: true }),
       supabase.from('contrataciones')
         .select('id, nombre_completo, rut, cargo, estamento, tipo_contrato, fecha_inicio, fecha_termino, horas, correo, telefono, creado_en')
         .order('nombre_completo', { ascending: true }),
-      supabase.from('usuarios')
-        .select('id, nombre, rut, email, rol, created_at')
-        .order('nombre', { ascending: true }),
     ])
 
-    const porRut = new Map()
-
+    // índice de contrataciones por RUT normalizado (más reciente gana)
+    const contPorRut = new Map()
     for (const c of (contData ?? [])) {
       const rn = normRut(c.rut)
       if (!rn) continue
-      const prev = porRut.get(rn)
+      const prev = contPorRut.get(rn)
       if (!prev || (c.creado_en > prev.creado_en)) {
-        porRut.set(rn, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id], _source: 'contratacion' })
+        contPorRut.set(rn, { ...c, _allContractIds: [...(prev?._allContractIds ?? []), c.id], _source: 'contratacion' })
       } else {
         prev._allContractIds.push(c.id)
       }
     }
 
-    for (const u of (usrData ?? [])) {
+    // lista final: un registro por usuario activo, enriquecido con contrataciones si existe
+    const lista = (usrData ?? []).map(u => {
       const rn = normRut(u.rut)
-      if (!rn) continue
-      if (porRut.has(rn)) {
-        const existing = porRut.get(rn)
-        existing.correo = existing.correo || u.email
-        existing.nombre_completo = existing.nombre_completo || u.nombre
-        continue
+      const cont = rn ? contPorRut.get(rn) : null
+      if (cont) {
+        return {
+          ...cont,
+          correo: cont.correo || u.email,
+          nombre_completo: cont.nombre_completo || u.nombre,
+          _allContractIds: cont._allContractIds ?? [],
+          _source: 'contratacion',
+        }
       }
-      porRut.set(rn, {
+      return {
         id: u.id, nombre_completo: u.nombre, rut: u.rut,
         cargo: u.rol ?? '', estamento: '', tipo_contrato: '',
         fecha_inicio: null, fecha_termino: null, horas: null,
         correo: u.email, telefono: '', creado_en: u.created_at,
         _allContractIds: [], _source: 'usuario',
-      })
-    }
+      }
+    })
 
-    setContrataciones([...porRut.values()])
+    setContrataciones(lista)
     setCargando(false)
   }
 
