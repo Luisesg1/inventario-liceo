@@ -886,6 +886,27 @@ function ContratacionesTab({ usuario, permisos }) {
     setDetalle(null)
   }
 
+  async function handleReactivarCuenta(contrato) {
+    const rut = (contrato.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+    if (!rut) { setMsgDesactivar({ tipo: 'error', texto: 'No se puede reactivar: la contratación no tiene RUT asociado.' }); return }
+    const { data: usrs } = await supabase.from('usuarios').select('id, nombre, rut, activo').eq('is_deleted', false)
+    const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
+    if (!usr) { setMsgDesactivar({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
+    if (usr.activo !== false) { setMsgDesactivar({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está activa.' }); return }
+    const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', usr.id)
+    if (error) { setMsgDesactivar({ tipo: 'error', texto: 'Error al reactivar la cuenta: ' + error.message }); return }
+    await supabase.rpc('log_auditoria', {
+      p_accion: 'reactivar_cuenta',
+      p_modulo: 'personal',
+      p_bien_nombre: usr.nombre,
+      p_bien_id: usr.id,
+      p_categoria: null,
+      p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }],
+    })
+    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' reactivada correctamente. El usuario puede volver a iniciar sesión.' })
+    setDetalle(null)
+  }
+
   const filtrados = useMemo(() => {
     const f = filtros
     return registros.filter(r => {
@@ -1154,7 +1175,8 @@ function ContratacionesTab({ usuario, permisos }) {
         {detalle && (
           <ModalDetalleContratacion datos={detalle} onClose={() => setDetalle(null)}
             onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null}
-            onDesactivarCuenta={permisos.editarContrat ? handleDesactivarCuenta : null} />
+            onDesactivarCuenta={permisos.editarContrat ? handleDesactivarCuenta : null}
+            onReactivarCuenta={permisos.editarContrat ? handleReactivarCuenta : null} />
         )}
       </AnimatePresence>
 
@@ -1750,11 +1772,12 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 }
 
 // ─── Modal Detalle Contratación ───────────────────────────────
-function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta }) {
+function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta, onReactivarCuenta }) {
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
   const [docsAbierto, setDocsAbierto] = useState(true)
   const [historialAbierto, setHistorialAbierto] = useState(true)
+  const [cuentaActiva, setCuentaActiva] = useState(null) // null=loading, true/false
 
   useEffect(() => {
     supabase.from('personal_documentos').select('*').eq('contratacion_id', datos.id)
@@ -1763,6 +1786,15 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
     supabase.from('personal_audit_logs').select('*').eq('registro_id', datos.id)
       .order('creado_en', { ascending: false }).limit(10)
       .then(({ data }) => setHistorial(data ?? []))
+    // Check if user account is active
+    const rut = (datos.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+    if (rut) {
+      supabase.from('usuarios').select('id, activo').eq('is_deleted', false)
+        .then(({ data: usrs }) => {
+          const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
+          setCuentaActiva(usr ? (usr.activo !== false) : null)
+        })
+    }
   }, [datos.id])
 
   const estado = datos.estado ?? 'vigente'
@@ -1826,28 +1858,48 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
           )}
         </div>
 
-        {/* Desactivar cuenta — solo si el contrato finalizó o no fue renovado */}
-        {onDesactivarCuenta && (estado === 'finalizado' || estado === 'no_renovado') && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+        {/* Gestión de cuenta — solo si el contrato finalizó o no fue renovado */}
+        {(estado === 'finalizado' || estado === 'no_renovado') && cuentaActiva !== null && (
+          <div style={{ background: cuentaActiva ? '#fef2f2' : '#f0fdf4', border: `1px solid ${cuentaActiva ? '#fecaca' : '#bbf7d0'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <AlertTriangle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#991b1b' }}>
-                Contrato {estado === 'no_renovado' ? 'no renovado' : 'finalizado'}
+              {cuentaActiva
+                ? <AlertTriangle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+                : <CheckCircle2 size={15} style={{ color: '#16a34a', flexShrink: 0 }} />}
+              <span style={{ fontSize: 13, fontWeight: 600, color: cuentaActiva ? '#991b1b' : '#166534' }}>
+                {cuentaActiva
+                  ? `Contrato ${estado === 'no_renovado' ? 'no renovado' : 'finalizado'}`
+                  : 'Cuenta desactivada'}
               </span>
             </div>
-            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#7f1d1d', lineHeight: 1.5 }}>
-              Puedes desactivar la cuenta del funcionario. No se eliminará ningún dato: se conservará toda su información histórica, hoja de vida, contratos y documentos. La cuenta podrá reactivarse en el futuro.
+            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: cuentaActiva ? '#7f1d1d' : '#14532d', lineHeight: 1.5 }}>
+              {cuentaActiva
+                ? 'Puedes desactivar la cuenta del funcionario. No se eliminará ningún dato: se conservará toda su información histórica, hoja de vida, contratos y documentos. La cuenta podrá reactivarse en el futuro.'
+                : 'La cuenta de este funcionario está desactivada y no puede iniciar sesión. Toda su información histórica se conserva intacta. Puedes reactivarla si la persona vuelve a ser contratada.'}
             </p>
-            <button
-              onClick={() => onDesactivarCuenta(datos)}
-              style={{
-                padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626',
-                background: '#fff', color: '#dc2626', fontSize: 12.5, fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
-              }}
-            >
-              <UserX size={13} /> Desactivar cuenta del funcionario
-            </button>
+            {cuentaActiva && onDesactivarCuenta && (
+              <button
+                onClick={() => onDesactivarCuenta(datos)}
+                style={{
+                  padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626',
+                  background: '#fff', color: '#dc2626', fontSize: 12.5, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <UserX size={13} /> Desactivar cuenta del funcionario
+              </button>
+            )}
+            {!cuentaActiva && onReactivarCuenta && (
+              <button
+                onClick={() => onReactivarCuenta(datos)}
+                style={{
+                  padding: '7px 16px', borderRadius: 8, border: '1.5px solid #16a34a',
+                  background: '#fff', color: '#16a34a', fontSize: 12.5, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                <RefreshCw size={13} /> Reactivar cuenta del funcionario
+              </button>
+            )}
           </div>
         )}
 
