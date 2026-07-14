@@ -864,6 +864,7 @@ function ContratacionesTab({ usuario, permisos }) {
       .eq('is_deleted', false)
     const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
     if (!usr) { setMsgCuenta({ tipo: 'error', texto: 'No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.' }); return }
+    if (usr.id === usuario.id) { setMsgCuenta({ tipo: 'error', texto: 'No puedes desactivar tu propia cuenta.' }); return }
     if (usr.activo === false) { setMsgCuenta({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está desactivada.' }); return }
     setDesactivar({ contrato, usuario: usr })
   }

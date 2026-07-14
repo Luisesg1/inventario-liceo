@@ -1665,7 +1665,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                               cursor: 'pointer', lineHeight: 1,
                             }}>↻ Reactivar</motion.button>
                         )}
-                        {puedeEditar && u.activo !== false && (
+                        {puedeEditar && u.activo !== false && u.id !== usuario.id && (
                           <motion.button title="Desactivar cuenta"
                             whileHover={shouldReduce ? {} : { scale: 1.1 }}
                             whileTap={shouldReduce ? {} : { scale: 0.88 }}
