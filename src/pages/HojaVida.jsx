@@ -537,20 +537,9 @@ export default function HojaVida({ usuario, permisos }) {
         .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, usuario:usuario_id(id, nombre)')
         .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(100))
     }
-    if (fmts.length) {
-      ausQ.push(
-        supabase.from('ausencias')
-          .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, externo_rut, snapshot_rut')
-          .eq('is_deleted', false).in('externo_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100)
-          .then(r => r.error ? { data: [] } : r)
-      )
-      ausQ.push(
-        supabase.from('ausencias')
-          .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, externo_nombre, snapshot_rut')
-          .eq('is_deleted', false).in('snapshot_rut', fmts).order('fecha_inicio', { ascending: false }).limit(100)
-          .then(r => r.error ? { data: [] } : r)
-      )
-    }
+    // Las queries por externo_rut/snapshot_rut se omiten: PostgREST devuelve
+    // 400 con valores de RUT que contienen puntos/guiones sin comillas en .in().
+    // Los usuarios con cuenta en el sistema quedan cubiertos por usuario_id.
 
     // Compensatorios por usuario_id
     const compQ = userIds.length
