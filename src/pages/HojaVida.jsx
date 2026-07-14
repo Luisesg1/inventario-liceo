@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Search, Plus, Edit2, Trash2, FileText, Download,
-  Loader2, X, BookOpen, Calendar, ClipboardList,
-  MessageSquare, History, Briefcase, Phone, Mail,
+  Loader2, X, BookOpen, Calendar,
+  Briefcase, Phone, Mail,
   ChevronRight, User, Users, Star, Info,
   AlertTriangle, CheckCircle2, Filter, AlertCircle,
 } from 'lucide-react'
@@ -20,16 +20,12 @@ const modalV = {
 }
 
 const TABS = [
-  { id: 'info_personal',  label: 'Personal',      Icon: User },
-  { id: 'info_laboral',   label: 'Laboral',        Icon: Briefcase },
-  { id: 'historial',      label: 'Historial',      Icon: History },
-  { id: 'documentos',     label: 'Documentos',     Icon: FileText },
-  { id: 'capacitaciones', label: 'Capacitaciones', Icon: BookOpen },
-  { id: 'evaluaciones',   label: 'Evaluaciones',   Icon: Star },
+  { id: 'info_personal',  label: 'Personal',       Icon: User },
+  { id: 'info_laboral',   label: 'Laboral',         Icon: Briefcase },
+  { id: 'capacitaciones', label: 'Capacitaciones',  Icon: BookOpen },
+  { id: 'evaluaciones',   label: 'Evaluaciones',    Icon: Star },
   { id: 'ausencias',      label: 'Permisos y Lic.', Icon: Calendar },
-  { id: 'anotaciones',    label: 'Anotaciones',    Icon: AlertCircle },
-  { id: 'observaciones',  label: 'Observaciones',  Icon: MessageSquare },
-  { id: 'historial_sys',  label: 'Auditoría',      Icon: ClipboardList },
+  { id: 'anotaciones',    label: 'Anotaciones',     Icon: AlertCircle },
 ]
 
 const TIPO_HISTORIAL = {
@@ -63,11 +59,6 @@ const ESTADO_CONTRATO_MAP = {
   vencido:     { label: 'Vencido',      color: '#dc2626', bg: '#fef2f2' },
 }
 
-const TIPOS_DOC_MAP = {
-  contrato: 'Contrato', anexo: 'Anexo', certificado: 'Certificado', afp: 'AFP',
-  salud: 'Salud', licencia: 'Licencia médica', titulo: 'Título', evaluacion: 'Evaluación',
-  decreto: 'Decreto', otro: 'Otro',
-}
 
 const ESTAMENTO_MAP = {
   docente: 'Docente', asistente: 'Asistente de la Educación',
@@ -289,31 +280,6 @@ function ModalInfoLaboral({ datos, onGuardar, onCerrar, guardando }) {
   )
 }
 
-// ── Modal Historial ──────────────────────────────────────────────────────────
-function ModalHistorial({ datos, onGuardar, onCerrar, guardando }) {
-  const [form, setForm] = useState(datos ?? { tipo: 'ingreso', descripcion: '', fecha_evento: '', cargo_anterior: '', cargo_nuevo: '' })
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  return (
-    <motion.div className="hv-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit" onClick={onCerrar}>
-      <motion.div className="hv-modal" variants={modalV} onClick={e => e.stopPropagation()}>
-        <div className="hv-modal-header"><h3>{datos?.id ? 'Editar evento' : 'Registrar evento'}</h3><button className="hv-modal-close" onClick={onCerrar}><X size={16} /></button></div>
-        <form onSubmit={e => { e.preventDefault(); onGuardar(form) }} className="hv-modal-body">
-          <div className="hv-form-grid">
-            <div className="hv-form-group"><label>Tipo *</label><select value={form.tipo} onChange={e => set('tipo', e.target.value)} required>{Object.entries(TIPO_HISTORIAL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-            <div className="hv-form-group"><label>Fecha *</label><input type="date" value={form.fecha_evento} onChange={e => set('fecha_evento', e.target.value)} required /></div>
-            <div className="hv-form-group"><label>Cargo anterior</label><input value={form.cargo_anterior} onChange={e => set('cargo_anterior', e.target.value)} /></div>
-            <div className="hv-form-group"><label>Cargo nuevo</label><input value={form.cargo_nuevo} onChange={e => set('cargo_nuevo', e.target.value)} /></div>
-            <div className="hv-form-group hv-form-group--full"><label>Descripción</label><textarea rows={3} value={form.descripcion} onChange={e => set('descripcion', e.target.value)} /></div>
-          </div>
-          <div className="hv-modal-footer">
-            <button type="button" className="hv-btn hv-btn--secondary" onClick={onCerrar}>Cancelar</button>
-            <button type="submit" className="hv-btn hv-btn--primary" disabled={guardando}>{guardando ? <><Loader2 size={14} className="hv-spin" /> Guardando…</> : datos?.id ? 'Guardar' : 'Registrar'}</button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  )
-}
 
 // ── Modal Capacitación ───────────────────────────────────────────────────────
 function ModalCapacitacion({ datos, onGuardar, onCerrar, guardando }) {
@@ -370,24 +336,6 @@ function ModalEvaluacion({ datos, onGuardar, onCerrar, guardando }) {
   )
 }
 
-// ── Modal Observación ────────────────────────────────────────────────────────
-function ModalObservacion({ datos, onGuardar, onCerrar, guardando }) {
-  const [comentario, setComentario] = useState(datos?.comentario ?? '')
-  return (
-    <motion.div className="hv-overlay" variants={overlayV} initial="hidden" animate="visible" exit="exit" onClick={onCerrar}>
-      <motion.div className="hv-modal hv-modal--sm" variants={modalV} onClick={e => e.stopPropagation()}>
-        <div className="hv-modal-header"><h3>{datos?.id ? 'Editar observación' : 'Agregar observación'}</h3><button className="hv-modal-close" onClick={onCerrar}><X size={16} /></button></div>
-        <form onSubmit={e => { e.preventDefault(); onGuardar({ comentario }) }} className="hv-modal-body">
-          <div className="hv-form-group hv-form-group--full"><label>Comentario *</label><textarea rows={4} value={comentario} onChange={e => setComentario(e.target.value)} required /></div>
-          <div className="hv-modal-footer">
-            <button type="button" className="hv-btn hv-btn--secondary" onClick={onCerrar}>Cancelar</button>
-            <button type="submit" className="hv-btn hv-btn--primary" disabled={guardando || !comentario.trim()}>{guardando ? <><Loader2 size={14} className="hv-spin" /> Guardando…</> : datos?.id ? 'Guardar' : 'Agregar'}</button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  )
-}
 
 // ── Modal Anotación ──────────────────────────────────────────────────────────
 function ModalAnotacion({ datos, onGuardar, onCerrar, guardando }) {
@@ -444,12 +392,9 @@ export default function HojaVida({ usuario, permisos }) {
   const [historial, setHistorial] = useState([])
   const [capacitaciones, setCapacitaciones] = useState([])
   const [evaluaciones, setEvaluaciones] = useState([])
-  const [observaciones, setObservaciones] = useState([])
-  const [documentos, setDocumentos] = useState([])
   const [ausencias, setAusencias] = useState([])
   const [compensatorios, setCompensatorios] = useState([])
   const [anotaciones, setAnotaciones] = useState([])
-  const [auditLogs, setAuditLogs] = useState([])
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
   const [tabActiva, setTabActiva] = useState('info_personal')
 
@@ -569,31 +514,20 @@ export default function HojaVida({ usuario, permisos }) {
     const { data: usrData } = await supabase.from('usuarios').select('id, rut').in('rut', fmts)
     const userIds = (usrData ?? []).map(u => u.id)
 
-    // Consultas paralelas: TODAS las tablas del expediente
+    // Consultas paralelas
     const queries = [
       // Todos los contratos de este RUT
       contractIds.length
         ? supabase.from('contrataciones').select('*').in('id', contractIds).order('creado_en', { ascending: false })
         : Promise.resolve({ data: [] }),
-      // Historial laboral (hv_*)
+      // Historial laboral (usado en PDF)
       supabase.from('hv_historial_laboral').select('*').eq('rut', rn).order('fecha_evento', { ascending: false }),
-      // Capacitaciones (hv_*)
+      // Capacitaciones
       supabase.from('hv_capacitaciones').select('*').eq('rut', rn).order('fecha_inicio', { ascending: false }),
-      // Evaluaciones (hv_*)
+      // Evaluaciones
       supabase.from('hv_evaluaciones').select('*').eq('rut', rn).order('fecha_evaluacion', { ascending: false }),
-      // Observaciones internas (hv_*)
-      supabase.from('hv_observaciones').select('*').eq('rut', rn).order('creado_en', { ascending: false }),
-      // Documentos (de personal_documentos, por todos los contract IDs)
-      contractIds.length
-        ? supabase.from('personal_documentos').select('*').in('contratacion_id', contractIds).order('subido_en', { ascending: false })
-        : Promise.resolve({ data: [] }),
-      // Anotaciones (hv_anotaciones)
+      // Anotaciones
       supabase.from('hv_anotaciones').select('*').eq('rut', rn).order('fecha', { ascending: false }),
-      // Auditoría: registros del sistema de audit_logs
-      supabase.from('audit_logs')
-        .select('id, accion, modulo, bien_nombre, usuario_nombre, usuario_rol, cambios, created_at')
-        .or(`bien_nombre.ilike.%${persona.nombre_completo ?? ''}%,bien_id.eq.${persona.id}`)
-        .order('created_at', { ascending: false }).limit(100),
     ]
 
     // Ausencias: consultar por usuario_id, externo_rut y snapshot_rut
@@ -617,17 +551,14 @@ export default function HojaVida({ usuario, permisos }) {
       ? supabase.from('dias_compensatorios').select('*').in('usuario_id', userIds).order('fecha_ganado', { ascending: false })
       : Promise.resolve({ data: [] })
 
-    const [contrRes, histRes, capsRes, evalsRes, obsRes, docsRes, anotRes, auditRes, ...ausRes] = await Promise.all([...queries, ...ausQ])
+    const [contrRes, histRes, capsRes, evalsRes, anotRes, ...ausRes] = await Promise.all([...queries, ...ausQ])
     const compRes = await compQ
 
     setContratos(contrRes.data ?? [])
     setHistorial(histRes.data ?? [])
     setCapacitaciones(capsRes.data ?? [])
     setEvaluaciones(evalsRes.data ?? [])
-    setObservaciones(obsRes.data ?? [])
-    setDocumentos(docsRes.data ?? [])
     setAnotaciones(anotRes.data ?? [])
-    setAuditLogs(auditRes.data ?? [])
     setCompensatorios(compRes.data ?? [])
 
     // Dedup ausencias by id
@@ -705,7 +636,7 @@ export default function HojaVida({ usuario, permisos }) {
   async function exportarPDF() {
     if (!seleccionado) return
     try {
-      const { default: jsPDF } = await import('jspdf')
+      const { jsPDF } = await import('jspdf')
       await import('jspdf-autotable')
       const doc = new jsPDF()
       const nombre = seleccionado.nombre_completo ?? 'Funcionario'
@@ -913,7 +844,6 @@ export default function HojaVida({ usuario, permisos }) {
                   </div>
                   <div className="hv-detail-kpis">
                     {[
-                      { val: documentos.length, label: 'Documentos' },
                       { val: capacitaciones.length, label: 'Capacitaciones' },
                       { val: ausencias.length, label: 'Ausencias' },
                       { val: anotaciones.length, label: 'Anotaciones' },
@@ -1013,54 +943,6 @@ export default function HojaVida({ usuario, permisos }) {
                               </tbody>
                             </table>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Historial Laboral */}
-                  {tabActiva === 'historial' && (
-                    <div className="hv-card">
-                      <div className="hv-card-header"><h3>Historial Laboral</h3>{permisos.crear && <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={() => setModal({ tipo: 'historial' })}><Plus size={13} /> Registrar</button>}</div>
-                      {historial.length === 0 ? <EmptyState msg="Sin eventos en el historial laboral" accion={permisos.crear ? () => setModal({ tipo: 'historial' }) : null} btnLabel="Registrar primer evento" /> : (
-                        <div className="hv-timeline">
-                          {historial.map(h => (
-                            <div key={h.id} className="hv-timeline-item">
-                              <div className="hv-timeline-dot" />
-                              <div className="hv-timeline-body">
-                                <div className="hv-timeline-top">
-                                  <span className="hv-badge" style={{ color: 'rgb(var(--primary-rgb,26,35,126))', background: 'rgba(var(--primary-rgb,26,35,126),0.08)' }}>{TIPO_HISTORIAL[h.tipo] ?? h.tipo}</span>
-                                  <span className="hv-timeline-date">{formatFecha(h.fecha_evento)}</span>
-                                  <CrudBtns permisos={permisos} onEdit={() => setModal({ tipo: 'historial', datos: h })} onDel={() => setModal({ tipo: 'confirm', tabla: 'hv_historial_laboral', id: h.id, msg: '¿Eliminar este evento?' })} />
-                                </div>
-                                {h.descripcion && <p className="hv-timeline-desc">{h.descripcion}</p>}
-                                {(h.cargo_anterior || h.cargo_nuevo) && <p className="hv-timeline-cargos">{h.cargo_anterior && <span>Antes: <b>{h.cargo_anterior}</b></span>}{h.cargo_anterior && h.cargo_nuevo && <ChevronRight size={11} />}{h.cargo_nuevo && <span>Después: <b>{h.cargo_nuevo}</b></span>}</p>}
-                                {h.creado_por_nombre && <p className="hv-timeline-meta">Registrado por {h.creado_por_nombre}</p>}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Documentos (desde personal_documentos) */}
-                  {tabActiva === 'documentos' && (
-                    <div className="hv-card">
-                      <div className="hv-card-header"><h3>Documentos</h3><p className="hv-card-sub">Sincronizados desde Personal → Documentos</p></div>
-                      {documentos.length === 0 ? <EmptyState msg="Sin documentos cargados para este funcionario" /> : (
-                        <div className="hv-docs-grid">
-                          {documentos.map(d => (
-                            <div key={d.id} className="hv-doc-card">
-                              <FileText size={22} className="hv-doc-icon" />
-                              <div className="hv-doc-info">
-                                <p className="hv-doc-nombre">{d.nombre}</p>
-                                <p className="hv-doc-meta">{TIPOS_DOC_MAP[d.tipo_doc] ?? d.tipo_doc}{d.tamanio ? ` · ${formatBytes(d.tamanio)}` : ''}</p>
-                                <p className="hv-doc-meta">{formatFecha(d.subido_en?.slice(0, 10))}</p>
-                              </div>
-                              {d.url && <a href={d.url} target="_blank" rel="noreferrer" className="hv-btn hv-btn--ghost hv-btn--sm" onClick={e => e.stopPropagation()}><Download size={12} /></a>}
-                            </div>
-                          ))}
                         </div>
                       )}
                     </div>
@@ -1225,51 +1107,6 @@ export default function HojaVida({ usuario, permisos }) {
                     </div>
                   )}
 
-                  {/* Observaciones internas */}
-                  {tabActiva === 'observaciones' && (
-                    <div className="hv-card">
-                      <div className="hv-card-header"><h3>Observaciones internas</h3>{permisos.crear && <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={() => setModal({ tipo: 'observacion' })}><Plus size={13} /> Agregar</button>}</div>
-                      {observaciones.length === 0 ? <EmptyState msg="Sin observaciones" accion={permisos.crear ? () => setModal({ tipo: 'observacion' }) : null} btnLabel="Agregar" /> : (
-                        <div className="hv-items-list">
-                          {observaciones.map(o => (
-                            <div key={o.id} className="hv-obs-item">
-                              <div className="hv-obs-body">
-                                <p className="hv-obs-text">{o.comentario}</p>
-                                <p className="hv-timeline-meta">{o.creado_por_nombre && `${o.creado_por_nombre} · `}{formatFecha(o.creado_en?.slice(0, 10))}</p>
-                              </div>
-                              <CrudBtns permisos={permisos} onEdit={() => setModal({ tipo: 'observacion', datos: o })} onDel={() => setModal({ tipo: 'confirm', tabla: 'hv_observaciones', id: o.id, msg: '¿Eliminar esta observación?' })} />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Historial del Sistema (audit_logs existente filtrado) */}
-                  {tabActiva === 'historial_sys' && (
-                    <div className="hv-card">
-                      <div className="hv-card-header"><h3>Historial del Sistema</h3><p className="hv-card-sub">Registros de auditoría de todos los módulos relacionados con este funcionario</p></div>
-                      {auditLogs.length === 0 ? <EmptyState msg="Sin registros de auditoría" /> : (
-                        <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
-                          <table className="hv-table">
-                            <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Módulo</th><th>Funcionario</th><th>Usuario</th><th>Rol</th></tr></thead>
-                            <tbody>
-                              {auditLogs.map(l => (
-                                <tr key={l.id}>
-                                  <td style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>{new Date(l.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                                  <td><span className="hv-badge" style={{ color: 'rgb(var(--primary-rgb,26,35,126))', background: 'rgba(var(--primary-rgb,26,35,126),0.08)' }}>{l.accion}</span></td>
-                                  <td style={{ fontSize: 12 }}>{l.modulo ?? '—'}</td>
-                                  <td style={{ fontSize: 12 }}>{l.bien_nombre ?? '—'}</td>
-                                  <td style={{ fontSize: 12 }}>{l.usuario_nombre ?? '—'}</td>
-                                  <td style={{ fontSize: 12 }}>{l.usuario_rol ?? '—'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </>
             )}
@@ -1281,10 +1118,8 @@ export default function HojaVida({ usuario, permisos }) {
       <AnimatePresence>
         {modal?.tipo === 'info_personal' && <ModalInfoPersonal datos={hvPersona} onGuardar={f => guardarHvPersona('hv_personas', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'info_laboral' && <ModalInfoLaboral datos={hvPersona} onGuardar={f => guardarHvPersona('hv_personas', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
-        {modal?.tipo === 'historial' && <ModalHistorial datos={modal.datos} onGuardar={f => guardarHvPersona('hv_historial_laboral', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'capacitacion' && <ModalCapacitacion datos={modal.datos} onGuardar={f => guardarHvPersona('hv_capacitaciones', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'evaluacion' && <ModalEvaluacion datos={modal.datos} onGuardar={f => guardarHvPersona('hv_evaluaciones', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
-        {modal?.tipo === 'observacion' && <ModalObservacion datos={modal.datos} onGuardar={f => guardarHvPersona('hv_observaciones', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'anotacion' && <ModalAnotacion datos={modal.datos} onGuardar={f => guardarHvPersona('hv_anotaciones', f)} onCerrar={() => setModal(null)} guardando={guardando} />}
         {modal?.tipo === 'confirm' && (
           <ConfirmModal mensaje={modal.msg} onCancelar={() => setModal(null)} cargando={guardando}
