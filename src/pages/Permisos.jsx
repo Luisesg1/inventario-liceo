@@ -2110,11 +2110,8 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         .eq('id', usuario.id)
         .maybeSingle()
 
-      const rutRaw      = freshUser?.rut ?? usuario.rut ?? null
-      const rutNorm     = normRut(rutRaw ?? '')
-      const rutFormated = rutNorm ? formatRut(rutNorm) : null
-      // Cubrir todos los formatos posibles en DB: '20.469.215-7', '20469215-7', '204692157'
-      const rutFormatos = [...new Set([rutRaw, rutNorm || null, rutFormated].filter(Boolean))]
+      const rutRaw  = freshUser?.rut ?? usuario.rut ?? null
+      const rutNorm = normRut(rutRaw ?? '')
 
       // 1. Todos los IDs con el mismo RUT normalizado. Se resuelve en el servidor
       //    (RPC SECURITY DEFINER) porque un docente ya no puede leer usuarios ajenos.
@@ -2124,17 +2121,18 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
         ...((mismoRut ?? []).map(r => r.id ?? r)),
       ])]
 
-      // 2. Consultas en paralelo: usuario_id, externo_rut, snapshot_rut
-      //    Se usan .in() con ambos formatos de RUT para máxima compatibilidad
+      // 2. Consultas en paralelo: usuario_id, externo_rut y snapshot_rut.
+      //    Se usa .eq() con RUT normalizado (sin puntos/guiones) porque .in()
+      //    con esos caracteres falla en PostgREST (error 400).
       const sel = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
       const consultas = [
         supabase.from('ausencias').select(sel)
           .eq('is_deleted', false)
           .in('usuario_id', allIds)
           .order('fecha_inicio', { ascending: false }),
-        ...(rutFormatos.length ? [
-          supabase.from('ausencias').select(sel).eq('is_deleted', false).in('externo_rut',  rutFormatos),
-          supabase.from('ausencias').select(sel).eq('is_deleted', false).in('snapshot_rut', rutFormatos),
+        ...(rutNorm ? [
+          supabase.from('ausencias').select(sel).eq('is_deleted', false).eq('externo_rut',  rutNorm),
+          supabase.from('ausencias').select(sel).eq('is_deleted', false).eq('snapshot_rut', rutNorm),
         ] : []),
       ]
       const resultados = await Promise.all(consultas)
@@ -2321,10 +2319,10 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
     const payload = {
       usuario_id:      u?.isExterno ? null    : (u?.id ?? null),
       externo_nombre:  u?.isExterno ? u.nombre : null,
-      externo_rut:     u?.isExterno ? u.rut    : null,
+      externo_rut:     u?.isExterno ? normRut(u.rut ?? '') || null : null,
       externo_email:   u?.isExterno ? (u.email ?? null) : null,
       // Snapshot para recuperar si el usuario es borrado (el RUT manda)
-      snapshot_rut:    u?.isExterno ? null : (u?.rut ?? null),
+      snapshot_rut:    u?.isExterno ? null : (normRut(u?.rut ?? '') || null),
       snapshot_nombre: u?.isExterno ? null : (u?.nombre ?? null),
       fecha_inicio:   datos.fechaInicio,
       fecha_fin:      datos.fechaFin,

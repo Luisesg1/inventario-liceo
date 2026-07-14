@@ -537,15 +537,20 @@ export default function HojaVida({ usuario, permisos }) {
     ]
 
     // Ausencias: consultar por usuario_id, externo_rut y snapshot_rut
+    // Se usa .eq() con RUT normalizado (sin puntos/guiones) porque .in() con
+    // valores que contienen esos caracteres falla en PostgREST (error 400).
+    const selAus = 'id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, usuario:usuario_id(id, nombre)'
     const ausQ = []
     if (userIds.length) {
-      ausQ.push(supabase.from('ausencias')
-        .select('id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, usuario:usuario_id(id, nombre)')
+      ausQ.push(supabase.from('ausencias').select(selAus)
         .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(100))
     }
-    // Las queries por externo_rut/snapshot_rut se omiten: PostgREST devuelve
-    // 400 con valores de RUT que contienen puntos/guiones sin comillas en .in().
-    // Los usuarios con cuenta en el sistema quedan cubiertos por usuario_id.
+    if (rn) {
+      ausQ.push(supabase.from('ausencias').select(selAus)
+        .eq('is_deleted', false).eq('externo_rut', rn).order('fecha_inicio', { ascending: false }).limit(100))
+      ausQ.push(supabase.from('ausencias').select(selAus)
+        .eq('is_deleted', false).eq('snapshot_rut', rn).order('fecha_inicio', { ascending: false }).limit(100))
+    }
 
     // Compensatorios por usuario_id
     const compQ = userIds.length
