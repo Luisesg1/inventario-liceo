@@ -1700,22 +1700,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                   </div>
                 )}
 
-                {confirmActivoId?.id === u.id && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: confirmActivoId.accion === 'desactivar' ? '#fef2f2' : '#f0fdf4', borderRadius: 8, marginTop: 4, fontSize: 12.5 }}>
-                    <span style={{ color: confirmActivoId.accion === 'desactivar' ? '#991b1b' : '#166534', fontWeight: 600 }}>
-                      ¿{confirmActivoId.accion === 'desactivar' ? 'Desactivar' : 'Reactivar'} cuenta de {confirmActivoId.nombre}?
-                    </span>
-                    <button onClick={toggleActivo} disabled={toggling}
-                      style={{ padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                        background: confirmActivoId.accion === 'desactivar' ? '#dc2626' : '#16a34a', color: '#fff' }}>
-                      {toggling ? 'Procesando…' : 'Confirmar'}
-                    </button>
-                    <button onClick={() => setConfirmActivoId(null)} disabled={toggling}
-                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Cancelar
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Panel historial */}
@@ -2011,6 +1995,52 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
           </div>
         )
       })()}
+
+      {/* Modal confirmar desactivar/reactivar cuenta */}
+      <AnimatePresence>
+        {confirmActivoId && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+            onClick={() => !toggling && setConfirmActivoId(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.18 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: '#fff', borderRadius: 16, padding: '32px 28px 24px', maxWidth: 400, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: confirmActivoId.accion === 'desactivar' ? '#fef2f2' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                {confirmActivoId.accion === 'desactivar'
+                  ? <span style={{ fontSize: 20 }}>⏸</span>
+                  : <span style={{ fontSize: 20 }}>↻</span>}
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>
+                ¿{confirmActivoId.accion === 'desactivar' ? 'Desactivar' : 'Reactivar'} cuenta?
+              </h3>
+              <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+                {confirmActivoId.accion === 'desactivar'
+                  ? <>Se desactivará la cuenta de <strong>{confirmActivoId.nombre}</strong>. No podrá iniciar sesión.</>
+                  : <>Se reactivará la cuenta de <strong>{confirmActivoId.nombre}</strong>. Podrá volver a iniciar sesión.</>}
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: 12.5, color: '#94a3b8' }}>
+                {confirmActivoId.accion === 'desactivar'
+                  ? 'No se eliminará ningún dato. Toda su información se conservará.'
+                  : 'Se restaurará el acceso completo al sistema.'}
+              </p>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={() => setConfirmActivoId(null)} disabled={toggling}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Cancelar
+                </button>
+                <button onClick={toggleActivo} disabled={toggling}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#fff',
+                    background: confirmActivoId.accion === 'desactivar' ? '#dc2626' : '#16a34a' }}>
+                  {toggling ? 'Procesando…' : (confirmActivoId.accion === 'desactivar' ? 'Sí, desactivar' : 'Sí, reactivar')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
