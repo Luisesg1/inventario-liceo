@@ -1905,6 +1905,14 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
         </div>
 
         {/* Gestión de cuenta — solo si el contrato finalizó o no fue renovado */}
+        {(estado === 'finalizado' || estado === 'no_renovado') && cuentaActiva !== null && esCuentaPropia && (
+          <div style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', marginBottom: 20, opacity: 0.7 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Shield size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>No puedes desactivar tu propia cuenta</span>
+            </div>
+          </div>
+        )}
         {(estado === 'finalizado' || estado === 'no_renovado') && cuentaActiva !== null && !esCuentaPropia && (
           <div style={{ background: cuentaActiva ? '#fef2f2' : '#f0fdf4', border: `1px solid ${cuentaActiva ? '#fecaca' : '#bbf7d0'}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
