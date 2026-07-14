@@ -895,15 +895,17 @@ function ContratacionesTab({ usuario, permisos }) {
     if (usr.activo !== false) { setMsgDesactivar({ tipo: 'error', texto: 'La cuenta de ' + usr.nombre + ' ya está activa.' }); return }
     const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', usr.id)
     if (error) { setMsgDesactivar({ tipo: 'error', texto: 'Error al reactivar la cuenta: ' + error.message }); return }
+    await supabase.from('contrataciones').update({ estado: 'vigente' }).eq('id', contrato.id)
     await supabase.rpc('log_auditoria', {
       p_accion: 'reactivar_cuenta',
       p_modulo: 'personal',
       p_bien_nombre: usr.nombre,
       p_bien_id: usr.id,
       p_categoria: null,
-      p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }],
+      p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }, { campo: 'estado_contrato', anterior: contrato.estado, nuevo: 'vigente' }],
     })
-    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' reactivada correctamente. El usuario puede volver a iniciar sesión.' })
+    setRegistros(prev => prev.map(r => r.id === contrato.id ? { ...r, estado: 'vigente' } : r))
+    setMsgDesactivar({ tipo: 'ok', texto: 'Cuenta de ' + usr.nombre + ' reactivada y contrato actualizado a vigente.' })
     setDetalle(null)
   }
 
@@ -1789,7 +1791,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta
     // Check if user account is active
     const rut = (datos.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
     if (rut) {
-      supabase.from('usuarios').select('id, activo').eq('is_deleted', false)
+      supabase.from('usuarios').select('id, rut, activo').eq('is_deleted', false)
         .then(({ data: usrs }) => {
           const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
           setCuentaActiva(usr ? (usr.activo !== false) : true)
