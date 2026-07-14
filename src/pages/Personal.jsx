@@ -2248,6 +2248,33 @@ function ReemplazosTab({ usuario, permisos }) {
 
   async function handleGuardar(datos) {
     const esEdicion = !!datos.id
+
+    // Backend: no autoreemplazo
+    if (
+      datos.funcionario_id && datos.reemplazante_id &&
+      datos.funcionario_id === datos.reemplazante_id
+    ) return 'El funcionario no puede ser asignado como reemplazo de sí mismo.'
+
+    // Backend: solapamiento de períodos para el mismo titular
+    if (datos.funcionario_id && datos.fecha_inicio) {
+      let q = supabase
+        .from('reemplazos')
+        .select('id, fecha_inicio, fecha_termino')
+        .eq('funcionario_id', datos.funcionario_id)
+      if (esEdicion) q = q.neq('id', datos.id)
+      const { data: existentes, error: errQ } = await q
+      if (!errQ && existentes) {
+        const ini = datos.fecha_inicio
+        const fin = datos.fecha_termino || '9999-12-31'
+        const solapa = existentes.some(r => {
+          const rIni = r.fecha_inicio
+          const rFin = r.fecha_termino || '9999-12-31'
+          return ini <= rFin && fin >= rIni
+        })
+        if (solapa) return 'El funcionario ya posee un reemplazo activo durante el período seleccionado.'
+      }
+    }
+
     const payload = {
       funcionario_nombre:  datos.funcionario_nombre.trim(),
       funcionario_id:      datos.funcionario_id || null,
@@ -2750,6 +2777,10 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
     if (!form.fecha_inicio) e.fecha_inicio = 'Requerida'
     if (form.fecha_termino && form.fecha_inicio && form.fecha_termino < form.fecha_inicio)
       e.fecha_termino = 'Debe ser posterior al inicio'
+    if (
+      form.funcionario_id && form.reemplazante_id &&
+      form.funcionario_id === form.reemplazante_id
+    ) e.reemplazante_id = 'El funcionario no puede ser asignado como reemplazo de sí mismo.'
     return e
   }
 
@@ -2888,13 +2919,16 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
           <div className="personal-form-section">
             <p className="personal-form-section-title">Reemplazante</p>
             <div className="personal-form-grid">
-              <AutocompleteUsuario
-                usuarios={usuarios}
-                valorId={form.reemplazante_id}
-                valorNombre={form.reemplazante_nombre}
-                onSelect={u => setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, ...(u.rol !== 'docente' ? { asignatura: '' } : {}) }))}
-                onClear={() => setForm(f => ({ ...f, reemplazante_id: '', asignatura: '' }))}
-              />
+              <div>
+                <AutocompleteUsuario
+                  usuarios={usuarios}
+                  valorId={form.reemplazante_id}
+                  valorNombre={form.reemplazante_nombre}
+                  onSelect={u => setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre, ...(u.rol !== 'docente' ? { asignatura: '' } : {}) }))}
+                  onClear={() => setForm(f => ({ ...f, reemplazante_id: '', asignatura: '' }))}
+                />
+                {errors.reemplazante_id && <span className="personal-form-error">{errors.reemplazante_id}</span>}
+              </div>
               <div className="personal-form-field">
                 <label>Nombre reemplazante</label>
                 <input value={form.reemplazante_nombre} onChange={e => set('reemplazante_nombre', e.target.value)}
