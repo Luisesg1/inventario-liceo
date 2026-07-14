@@ -191,11 +191,18 @@ export function construirPermisos(usuario, permisosRaw) {
     || permisosPersonal.ver_documentos_personal
 
   const permisosHojaVida = {
-    ver:      can('ver_hoja_vida'),
-    crear:    can('crear_hoja_vida'),
-    editar:   can('editar_hoja_vida'),
-    eliminar: can('eliminar_hoja_vida'),
-    exportar: can('exportar_hoja_vida'),
+    ver:              can('ver_hoja_vida'),
+    crear:            can('crear_hoja_vida'),
+    editar:           can('editar_hoja_vida'),
+    eliminar:         can('eliminar_hoja_vida'),
+    exportar:         can('exportar_hoja_vida'),
+    verCapacitaciones: can('ver_capacitaciones_hv'),
+    verEvaluaciones:   can('ver_evaluaciones_hv'),
+    verAusencias:      can('ver_ausencias_hv'),
+    // Fallback al perm general mientras no se haya configurado el específico
+    crearAnotacion:    can('crear_anotaciones_hv')    || can('crear_hoja_vida'),
+    editarAnotacion:   can('editar_anotaciones_hv')   || can('editar_hoja_vida'),
+    eliminarAnotacion: can('eliminar_anotaciones_hv') || can('eliminar_hoja_vida'),
   }
   const puedeVerHojaVida = permisosHojaVida.ver
 

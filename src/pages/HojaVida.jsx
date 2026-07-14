@@ -869,7 +869,12 @@ export default function HojaVida({ usuario, permisos }) {
 
                 <div className="hv-tabs-wrap">
                   <div className="hv-tabs">
-                    {TABS.map(t => (
+                    {TABS.filter(t => {
+                      if (t.id === 'capacitaciones') return permisos.verCapacitaciones
+                      if (t.id === 'evaluaciones')   return permisos.verEvaluaciones
+                      if (t.id === 'ausencias')      return permisos.verAusencias
+                      return true
+                    }).map(t => (
                       <button key={t.id} className={`hv-tab ${tabActiva === t.id ? 'hv-tab--active' : ''}`} onClick={() => setTabActiva(t.id)}>
                         <t.Icon size={13} />{t.label}
                       </button>
@@ -1064,7 +1069,7 @@ export default function HojaVida({ usuario, permisos }) {
                   {/* ANOTACIONES */}
                   {tabActiva === 'anotaciones' && (
                     <div className="hv-card">
-                      <div className="hv-card-header"><h3>Anotaciones e Incidencias</h3>{permisos.crear && <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={() => setModal({ tipo: 'anotacion' })}><Plus size={13} /> Registrar</button>}</div>
+                      <div className="hv-card-header"><h3>Anotaciones e Incidencias</h3>{permisos.crearAnotacion && <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={() => setModal({ tipo: 'anotacion' })}><Plus size={13} /> Registrar</button>}</div>
                       <div className="hv-anot-filters">
                         <select className="hv-filter-select" value={anotFiltroTipo} onChange={e => setAnotFiltroTipo(e.target.value)}>
                           <option value="">Todos los tipos</option>
@@ -1076,7 +1081,7 @@ export default function HojaVida({ usuario, permisos }) {
                         </select>
                         {(anotFiltroTipo || anotFiltroEstado) && <button className="hv-btn hv-btn--ghost hv-btn--sm" onClick={() => { setAnotFiltroTipo(''); setAnotFiltroEstado('') }}><X size={13} /> Limpiar</button>}
                       </div>
-                      {anotacionesFiltradas.length === 0 ? <EmptyState msg={anotaciones.length === 0 ? 'Sin anotaciones registradas' : 'Sin resultados para los filtros aplicados'} accion={permisos.crear && anotaciones.length === 0 ? () => setModal({ tipo: 'anotacion' }) : null} btnLabel="Registrar primera anotación" /> : (
+                      {anotacionesFiltradas.length === 0 ? <EmptyState msg={anotaciones.length === 0 ? 'Sin anotaciones registradas' : 'Sin resultados para los filtros aplicados'} accion={permisos.crearAnotacion && anotaciones.length === 0 ? () => setModal({ tipo: 'anotacion' }) : null} btnLabel="Registrar primera anotación" /> : (
                         <div className="hv-items-list">
                           {anotacionesFiltradas.map(a => {
                             const tipo = TIPO_ANOT_MAP[a.tipo]
@@ -1095,7 +1100,7 @@ export default function HojaVida({ usuario, permisos }) {
                                         {estAnot && <span><span className="hv-badge" style={{ color: estAnot.color, background: estAnot.bg }}>{estAnot.label}</span></span>}
                                       </p>
                                     </div>
-                                    <CrudBtns permisos={permisos} onEdit={() => setModal({ tipo: 'anotacion', datos: a })} onDel={() => setModal({ tipo: 'confirm', tabla: 'hv_anotaciones', id: a.id, msg: '¿Eliminar esta anotación?' })} />
+                                    <CrudBtns permisos={{ editar: permisos.editarAnotacion, eliminar: permisos.eliminarAnotacion }} onEdit={() => setModal({ tipo: 'anotacion', datos: a })} onDel={() => setModal({ tipo: 'confirm', tabla: 'hv_anotaciones', id: a.id, msg: '¿Eliminar esta anotación?' })} />
                                   </div>
                                   <p className="hv-item-obs" style={{ whiteSpace: 'pre-wrap' }}>{a.descripcion}</p>
                                   {a.creado_por_nombre && <p className="hv-timeline-meta">Registrado por {a.creado_por_nombre}</p>}
