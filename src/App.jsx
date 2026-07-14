@@ -318,6 +318,13 @@ export default function App() {
       return
     }
 
+    if (data.activo === false) {
+      await supabase.auth.signOut()
+      alert('Tu cuenta ha sido desactivada. Contacta al administrador para más información.')
+      setCargando(false)
+      return
+    }
+
     sesionCargada.current = true
     setUsuario(data)
     if (data.rol !== 'admin') {

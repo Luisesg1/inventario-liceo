@@ -1547,6 +1547,11 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                   <div className="usuario-nombre">
                     {u.nombre}
                     {esYo && <span className="badge-yo">Tú</span>}
+                    {u.activo === false && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', marginLeft: 6 }}>
+                        Inactivo
+                      </span>
+                    )}
                   </div>
                   {u.rut && (
                     <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -1626,6 +1631,48 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
                               borderRadius: 6, padding: '5px 9px',
                               fontSize: 14, cursor: 'pointer', lineHeight: 1, transition: 'background 0.15s, border-color 0.15s, color 0.15s',
                             }}>🔐</motion.button>
+                        )}
+                        {puedeEditar && u.activo === false && (
+                          <motion.button title="Reactivar cuenta"
+                            whileHover={shouldReduce ? {} : { scale: 1.1 }}
+                            whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                            onClick={async () => {
+                              if (!window.confirm(`¿Reactivar la cuenta de ${u.nombre}?`)) return
+                              const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', u.id)
+                              if (error) { alert('Error: ' + error.message); return }
+                              await supabase.rpc('log_auditoria', {
+                                p_accion: 'reactivar_cuenta', p_modulo: 'usuarios',
+                                p_bien_nombre: u.nombre, p_bien_id: u.id,
+                                p_categoria: null, p_cambios: [{ campo: 'activo', anterior: false, nuevo: true }],
+                              })
+                              cargarUsuarios()
+                            }}
+                            style={{
+                              background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a',
+                              borderRadius: 6, padding: '5px 9px', fontSize: 12, fontWeight: 600,
+                              cursor: 'pointer', lineHeight: 1,
+                            }}>↻ Reactivar</motion.button>
+                        )}
+                        {puedeEditar && u.activo !== false && (
+                          <motion.button title="Desactivar cuenta"
+                            whileHover={shouldReduce ? {} : { scale: 1.1 }}
+                            whileTap={shouldReduce ? {} : { scale: 0.88 }}
+                            onClick={async () => {
+                              if (!window.confirm(`¿Desactivar la cuenta de ${u.nombre}?\n\nNo se eliminará ningún dato. La cuenta podrá reactivarse.`)) return
+                              const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', u.id)
+                              if (error) { alert('Error: ' + error.message); return }
+                              await supabase.rpc('log_auditoria', {
+                                p_accion: 'desactivar_cuenta', p_modulo: 'usuarios',
+                                p_bien_nombre: u.nombre, p_bien_id: u.id,
+                                p_categoria: null, p_cambios: [{ campo: 'activo', anterior: true, nuevo: false }],
+                              })
+                              cargarUsuarios()
+                            }}
+                            style={{
+                              background: 'none', border: '1px solid #e5e7eb', color: '#9ca3af',
+                              borderRadius: 6, padding: '5px 9px', fontSize: 12,
+                              cursor: 'pointer', lineHeight: 1,
+                            }}>⏸</motion.button>
                         )}
                         {puedeEliminar && (
                           <motion.button className="btn-eliminar-icono" title="Eliminar"

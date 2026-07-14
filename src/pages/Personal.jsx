@@ -49,6 +49,16 @@ const ESTADOS_REEMPLAZO = [
   { value: 'finalizado',  label: 'Finalizado',  color: '#64748b', bg: '#f8fafc' },
 ]
 
+const ESTADOS_CONTRATO = [
+  { value: 'vigente',      label: 'Vigente',      color: '#16a34a', bg: '#f0fdf4' },
+  { value: 'por_vencer',   label: 'Por vencer',   color: '#d97706', bg: '#fffbeb' },
+  { value: 'finalizado',   label: 'Finalizado',   color: '#64748b', bg: '#f8fafc' },
+  { value: 'no_renovado',  label: 'No renovado',  color: '#dc2626', bg: '#fef2f2' },
+  { value: 'suspendido',   label: 'Suspendido',   color: '#9333ea', bg: '#faf5ff' },
+]
+
+const ESTADO_CONTRATO_MAP = Object.fromEntries(ESTADOS_CONTRATO.map(e => [e.value, e]))
+
 const TIPOS_DOC = [
   { value: 'contrato',   label: 'Contrato' },
   { value: 'anexo',      label: 'Anexo' },
@@ -63,6 +73,15 @@ const CONTRATO_MAP   = Object.fromEntries(TIPOS_CONTRATO.map(t => [t.value, t.la
 const MOTIVO_MAP     = Object.fromEntries(MOTIVOS_REEMPLAZO.map(m => [m.value, m.label]))
 const ESTADO_REEMPL  = Object.fromEntries(ESTADOS_REEMPLAZO.map(s => [s.value, s]))
 const TIPOS_DOC_MAP  = Object.fromEntries(TIPOS_DOC.map(t => [t.value, t.label]))
+
+const ROLES_REEMPLAZO = [
+  { value: 'docente',        label: 'Docente' },
+  { value: 'asistente',      label: 'Asistente de la educación' },
+  { value: 'administrativo', label: 'Administrativo' },
+  { value: 'coordinador',    label: 'Coordinador' },
+  { value: 'directivo',      label: 'Directivo' },
+  { value: 'admin',          label: 'Administrador' },
+]
 
 const POR_PAGINA = 10
 
@@ -151,12 +170,14 @@ async function auditLog(_args) { /* server-side triggers */ }
 // ─── EstadoBadge ──────────────────────────────────────────────
 function EstadoBadge({ estado }) {
   const map = {
-    vigente:    { color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a', label: 'Vigente' },
-    por_vencer: { color: '#d97706', bg: '#fffbeb', dot: '#d97706', label: 'Por vencer' },
-    finalizado: { color: '#64748b', bg: '#f8fafc', dot: '#94a3b8', label: 'Finalizado' },
-    pendiente:  { color: '#dc2626', bg: '#fef2f2', dot: '#dc2626', label: 'Pendiente' },
-    en_busqueda:{ color: '#d97706', bg: '#fffbeb', dot: '#d97706', label: 'En búsqueda' },
-    activo:     { color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a', label: 'Activo' },
+    vigente:     { color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a', label: 'Vigente' },
+    por_vencer:  { color: '#d97706', bg: '#fffbeb', dot: '#d97706', label: 'Por vencer' },
+    finalizado:  { color: '#64748b', bg: '#f8fafc', dot: '#94a3b8', label: 'Finalizado' },
+    no_renovado: { color: '#dc2626', bg: '#fef2f2', dot: '#dc2626', label: 'No renovado' },
+    suspendido:  { color: '#9333ea', bg: '#faf5ff', dot: '#9333ea', label: 'Suspendido' },
+    pendiente:   { color: '#dc2626', bg: '#fef2f2', dot: '#dc2626', label: 'Pendiente' },
+    en_busqueda: { color: '#d97706', bg: '#fffbeb', dot: '#d97706', label: 'En búsqueda' },
+    activo:      { color: '#16a34a', bg: '#f0fdf4', dot: '#16a34a', label: 'Activo' },
   }
   const s = map[estado] ?? { color: '#64748b', bg: '#f8fafc', dot: '#94a3b8', label: estado }
   return (
@@ -220,7 +241,7 @@ function prepContrato(c) {
     fecha_inicio: c.fecha_inicio ?? '',
     fecha_termino: c.fecha_termino ?? '',
     horas: c.horas != null ? String(c.horas) : '',
-    estado: calcularEstado(c),
+    estado: ESTADO_CONTRATO_MAP[c.estado]?.label ?? c.estado ?? '',
     observaciones: c.observaciones ?? '',
   }
 }
@@ -579,13 +600,15 @@ function DashboardTab({ usuario, onIrA }) {
       { data: reemplazos },
       { data: ausencias },
     ] = await Promise.all([
-      supabase.from('contrataciones').select('id, fecha_termino'),
+      supabase.from('contrataciones').select('id, fecha_termino, estado'),
       supabase.from('reemplazos').select('id, estado, ausencia_id'),
       supabase.from('ausencias').select('id, tipo'),
     ])
 
-    const vigentes   = (contratos ?? []).filter(c => calcularEstado(c) === 'vigente').length
-    const finalizados= (contratos ?? []).filter(c => calcularEstado(c) === 'finalizado').length
+    const vigentes   = (contratos ?? []).filter(c => c.estado === 'vigente').length
+    const finalizados= (contratos ?? []).filter(c => c.estado === 'finalizado').length
+    const noRenovados= (contratos ?? []).filter(c => c.estado === 'no_renovado').length
+    const suspendidos= (contratos ?? []).filter(c => c.estado === 'suspendido').length
     const vencer7    = (contratos ?? []).filter(c => {
       const d = diasHasta(c.fecha_termino)
       return d !== null && d >= 0 && d <= 7
@@ -608,7 +631,7 @@ function DashboardTab({ usuario, onIrA }) {
       ['licencia_medica','cometido'].includes(a.tipo) && !reemplazoAusenciaIds.has(a.id)
     ).length
 
-    setKpi({ vigentes, finalizados, vencer7, vencer15, vencer30, reemplActivos, reemplPendientes, ausConReemplazo, ausSinReemplazo, totalContratos: (contratos ?? []).length })
+    setKpi({ vigentes, finalizados, noRenovados, suspendidos, vencer7, vencer15, vencer30, reemplActivos, reemplPendientes, ausConReemplazo, ausSinReemplazo, totalContratos: (contratos ?? []).length })
 
     const { data: rec } = await supabase.from('contrataciones')
       .select('id, nombre_completo, cargo, tipo_contrato, fecha_termino, creado_en')
@@ -627,11 +650,16 @@ function DashboardTab({ usuario, onIrA }) {
     {
       label: 'Contratos Vigentes', value: kpi.vigentes,
       icon: <FileCheck size={18} />, iconBg: '#eff6ff', iconColor: '#1d4ed8',
-      sub: `${kpi.totalContratos} total`,
+      sub: `${kpi.totalContratos} total · ${kpi.finalizados} finalizado${kpi.finalizados !== 1 ? 's' : ''}`,
     },
     {
       label: 'Contratos por Vencer', special: true,
       icon: <Clock size={18} />, iconBg: '#fffbeb', iconColor: '#d97706',
+    },
+    {
+      label: 'No Renovados', value: kpi.noRenovados,
+      icon: <AlertCircle size={18} />, iconBg: '#fef2f2', iconColor: '#dc2626',
+      sub: `${kpi.suspendidos} suspendido${kpi.suspendidos !== 1 ? 's' : ''}`,
     },
     {
       label: 'Reemplazos Activos', value: kpi.reemplActivos,
@@ -728,7 +756,7 @@ function DashboardTab({ usuario, onIrA }) {
                   </td>
                   <td>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato}</td>
                   <td>{formatFecha(c.fecha_termino)}</td>
-                  <td><EstadoBadge estado={calcularEstado(c)} /></td>
+                  <td><EstadoBadge estado={c.estado} /></td>
                 </tr>
               ))}
             </tbody>
@@ -781,6 +809,7 @@ function ContratacionesTab({ usuario, permisos }) {
       fecha_termino:   datos.fecha_termino || null,
       horas:           datos.horas ? parseInt(datos.horas) : null,
       observaciones:   datos.observaciones?.trim() || null,
+      estado:          datos.estado ?? 'vigente',
       // Persona a reemplazar — solo se guarda si el contrato es de tipo reemplazo.
       persona_reemplazada_id:     datos.tipo_contrato === 'reemplazo' ? (datos.persona_reemplazada_id || null) : null,
       persona_reemplazada_nombre: datos.tipo_contrato === 'reemplazo' ? (datos.persona_reemplazada_nombre?.trim() || null) : null,
@@ -823,11 +852,33 @@ function ContratacionesTab({ usuario, permisos }) {
     setEliminandoMas(false)
   }
 
+  async function handleDesactivarCuenta(contrato) {
+    const rut = (contrato.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+    if (!rut) { alert('No se puede desactivar: la contratación no tiene RUT asociado.'); return }
+    const { data: usrs } = await supabase.from('usuarios').select('id, nombre, rut, activo')
+      .eq('is_deleted', false)
+    const usr = (usrs ?? []).find(u => (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase() === rut)
+    if (!usr) { alert('No se encontró un usuario con el RUT ' + formatRut(rut) + ' en el sistema.'); return }
+    if (usr.activo === false) { alert('La cuenta de ' + usr.nombre + ' ya está desactivada.'); return }
+    if (!window.confirm(`¿Desactivar la cuenta de ${usr.nombre}?\n\nNo se eliminará ningún dato. La cuenta podrá reactivarse en el futuro.`)) return
+    const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', usr.id)
+    if (error) { alert('Error al desactivar la cuenta: ' + error.message); return }
+    await supabase.rpc('log_auditoria', {
+      p_accion: 'desactivar_cuenta',
+      p_modulo: 'personal',
+      p_bien_nombre: usr.nombre,
+      p_bien_id: usr.id,
+      p_categoria: null,
+      p_cambios: [{ campo: 'activo', anterior: true, nuevo: false }],
+    })
+    alert('Cuenta de ' + usr.nombre + ' desactivada correctamente.')
+    setDetalle(null)
+  }
+
   const filtrados = useMemo(() => {
     const f = filtros
     return registros.filter(r => {
-      const estado = calcularEstado(r)
-      if (f.estado && estado !== f.estado) return false
+      if (f.estado && r.estado !== f.estado) return false
       if (f.estamento && r.estamento !== f.estamento) return false
       if (f.tipo_contrato && r.tipo_contrato !== f.tipo_contrato) return false
       if (f.fecha_inicio_desde && (!r.fecha_inicio || r.fecha_inicio < f.fecha_inicio_desde)) return false
@@ -922,9 +973,7 @@ function ContratacionesTab({ usuario, permisos }) {
               <label>Estado</label>
               <select value={filtros.estado} onChange={e => setF('estado', e.target.value)} className={filtros.estado ? 'activo' : ''}>
                 <option value="">Todos</option>
-                <option value="vigente">Vigente</option>
-                <option value="por_vencer">Por vencer</option>
-                <option value="finalizado">Finalizado</option>
+                {ESTADOS_CONTRATO.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
             </div>
             <div className="personal-filtros-field">
@@ -1023,7 +1072,6 @@ function ContratacionesTab({ usuario, permisos }) {
                 </thead>
                 <tbody>
                   {vista.map(c => {
-                    const estado = calcularEstado(c)
                     const dias   = diasHasta(c.fecha_termino)
                     const sel    = seleccionados.has(c.id)
                     return (
@@ -1094,7 +1142,8 @@ function ContratacionesTab({ usuario, permisos }) {
       <AnimatePresence>
         {detalle && (
           <ModalDetalleContratacion datos={detalle} onClose={() => setDetalle(null)}
-            onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null} />
+            onEditar={permisos.editarContrat ? (d) => { setDetalle(null); setModal(d) } : null}
+            onDesactivarCuenta={permisos.editarContrat ? handleDesactivarCuenta : null} />
         )}
       </AnimatePresence>
 
@@ -1376,6 +1425,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
     fecha_termino:   datos?.fecha_termino ?? '',
     horas:           datos?.horas ?? '',
     observaciones:   datos?.observaciones ?? '',
+    estado:          datos?.estado ?? 'vigente',
     persona_reemplazada_id:     datos?.persona_reemplazada_id ?? '',
     persona_reemplazada_nombre: datos?.persona_reemplazada_nombre ?? '',
   })
@@ -1559,6 +1609,13 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
                 </select>
               </div>
 
+              <div className="personal-form-field">
+                <label>Estado del contrato</label>
+                <select value={form.estado} onChange={e => set('estado', e.target.value)}>
+                  {ESTADOS_CONTRATO.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                </select>
+              </div>
+
               {/* Persona a reemplazar — solo visible cuando el tipo es "Reemplazo" */}
               {esReemplazo && (
                 <AutocompletePersonaReemplazada
@@ -1630,7 +1687,7 @@ function ModalContratacion({ datos, onGuardar, onClose }) {
 }
 
 // ─── Modal Detalle Contratación ───────────────────────────────
-function ModalDetalleContratacion({ datos, onClose, onEditar }) {
+function ModalDetalleContratacion({ datos, onClose, onEditar, onDesactivarCuenta }) {
   const [docs,    setDocs]    = useState([])
   const [historial, setHistorial] = useState([])
   const [docsAbierto, setDocsAbierto] = useState(true)
@@ -1645,7 +1702,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
       .then(({ data }) => setHistorial(data ?? []))
   }, [datos.id])
 
-  const estado = calcularEstado(datos)
+  const estado = datos.estado ?? 'vigente'
 
   const items = [
     { label: 'Nombre completo', val: datos.nombre_completo },
@@ -1658,6 +1715,7 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
     ...(datos.tipo_contrato === 'reemplazo'
       ? [{ label: 'Persona reemplazada', val: datos.persona_reemplazada_nombre || '—' }]
       : []),
+    { label: 'Estado', val: ESTADO_CONTRATO_MAP[estado]?.label ?? estado },
     { label: 'Fecha inicio', val: formatFecha(datos.fecha_inicio) },
     { label: 'Fecha término', val: formatFecha(datos.fecha_termino) },
     { label: 'Horas', val: datos.horas ? `${datos.horas} hrs.` : '—' },
@@ -1704,6 +1762,31 @@ function ModalDetalleContratacion({ datos, onClose, onEditar }) {
             </div>
           )}
         </div>
+
+        {/* Desactivar cuenta — solo si el contrato finalizó o no fue renovado */}
+        {onDesactivarCuenta && (estado === 'finalizado' || estado === 'no_renovado') && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <AlertTriangle size={15} style={{ color: '#dc2626', flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#991b1b' }}>
+                Contrato {estado === 'no_renovado' ? 'no renovado' : 'finalizado'}
+              </span>
+            </div>
+            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#7f1d1d', lineHeight: 1.5 }}>
+              Puedes desactivar la cuenta del funcionario. No se eliminará ningún dato: se conservará toda su información histórica, hoja de vida, contratos y documentos. La cuenta podrá reactivarse en el futuro.
+            </p>
+            <button
+              onClick={() => onDesactivarCuenta(datos)}
+              style={{
+                padding: '7px 16px', borderRadius: 8, border: '1.5px solid #dc2626',
+                background: '#fff', color: '#dc2626', fontSize: 12.5, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              <UserX size={13} /> Desactivar cuenta del funcionario
+            </button>
+          </div>
+        )}
 
         {/* Documentos (acordeón expandible/contraíble) */}
         <div style={{ marginBottom: 20 }}>
@@ -2284,6 +2367,7 @@ function ReemplazosTab({ usuario, permisos }) {
             ausenciaInicial={modal._ausencia ?? null}
             usuarios={usuariosBD} ausencias={ausencias} contratos={contratos}
             onGuardar={handleGuardar} onClose={() => setModal(null)}
+            onUsuarioCreado={u => setUsuariosBD(prev => [...prev, u])}
           />
         )}
       </AnimatePresence>
@@ -2344,7 +2428,7 @@ function ReemplazosTab({ usuario, permisos }) {
 }
 
 // ─── Modal Crear/Editar Reemplazo ─────────────────────────────
-function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos, onGuardar, onClose }) {
+function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos, onGuardar, onClose, onUsuarioCreado }) {
   const esEdicion = !!datos
 
   function mapMotivo(tipo) {
@@ -2383,6 +2467,93 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
   const [errors,    setErrors]    = useState({})
   const [guardando, setGuardando] = useState(false)
   const [errGlobal, setErrGlobal] = useState('')
+
+  // User creation inline (same pattern as Ausencias/Permisos.jsx)
+  const [modoCrear,    setModoCrear]    = useState(false)
+  const [rutNuevo,     setRutNuevo]     = useState('')
+  const [nombresNuevo, setNombresNuevo] = useState('')
+  const [apellidosNuevo, setApellidosNuevo] = useState('')
+  const [emailNuevo,   setEmailNuevo]   = useState('')
+  const [rolNuevo,     setRolNuevo]     = useState('')
+  const [creandoUser,  setCreandoUser]  = useState(false)
+  const [nuevoFE,      setNuevoFE]      = useState({})
+  const [usuarioEncontrado, setUsuarioEncontrado] = useState(null)
+  const [usuarioEncontradoEmail, setUsuarioEncontradoEmail] = useState(null)
+
+  function setNFE(field, msg) { setNuevoFE(p => ({ ...p, [field]: msg })) }
+  function clearNFE(field)    { setNuevoFE(p => ({ ...p, [field]: '' })) }
+
+  useEffect(() => {
+    const rut = rutNuevo.trim()
+    if (!rut) { setUsuarioEncontrado(null); return }
+    const found = usuarios.find(u => {
+      const a = (u.rut ?? '').replace(/[^0-9kK]/g, '').toUpperCase()
+      const b = rut.replace(/[^0-9kK]/g, '').toUpperCase()
+      return a && b && a === b
+    })
+    setUsuarioEncontrado(found ?? null)
+  }, [rutNuevo, usuarios])
+
+  useEffect(() => {
+    if (!emailNuevo.trim()) { setUsuarioEncontradoEmail(null); return }
+    const found = usuarios.find(u => u.email?.toLowerCase() === emailNuevo.trim().toLowerCase())
+    setUsuarioEncontradoEmail(found ?? null)
+  }, [emailNuevo, usuarios])
+
+  function seleccionarNuevo(u) {
+    setForm(f => ({ ...f, reemplazante_id: u.id, reemplazante_nombre: u.nombre }))
+    setModoCrear(false); setRutNuevo(''); setNombresNuevo(''); setApellidosNuevo('')
+    setEmailNuevo(''); setRolNuevo(''); setUsuarioEncontrado(null); setUsuarioEncontradoEmail(null)
+  }
+
+  async function handleCrearUsuario() {
+    setNuevoFE({})
+    let ok = true
+    if (!rutNuevo.trim()) { setNFE('rut', 'El RUT es requerido'); ok = false }
+    else if (!validarRut(rutNuevo)) { setNFE('rut', 'RUT no válido'); ok = false }
+    if (!nombresNuevo.trim()) { setNFE('nombres', 'Ingresa al menos 1 nombre'); ok = false }
+    if (apellidosNuevo.trim().split(/\s+/).length < 2) { setNFE('apellidos', 'Ingresa al menos 2 apellidos'); ok = false }
+    if (!emailNuevo.trim()) { setNFE('email', 'El correo es requerido'); ok = false }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo.trim())) { setNFE('email', 'Correo no válido'); ok = false }
+    if (!rolNuevo) { setNFE('rol', 'Selecciona un rol'); ok = false }
+    if (!ok) return
+    const nombre = `${nombresNuevo.trim()} ${apellidosNuevo.trim()}`.trim()
+    const rut = rutNuevo.trim()
+
+    const interno = usuarioEncontradoEmail ?? usuarios.find(u =>
+      u.email?.toLowerCase() === emailNuevo.trim().toLowerCase()
+    )
+    if (interno) {
+      if (!interno.rut && rut) {
+        await supabase.from('usuarios').update({ rut }).eq('id', interno.id)
+      }
+      seleccionarNuevo({ ...interno, rut: interno.rut || rut })
+      return
+    }
+
+    setCreandoUser(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData?.session?.access_token
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok) { setNFE('server', json.error ?? 'Error al crear el usuario.'); return }
+      const nuevoUsuario = { ...json.usuario, rut }
+      onUsuarioCreado?.(nuevoUsuario)
+      seleccionarNuevo(nuevoUsuario)
+    } catch {
+      setNFE('server', 'No se pudo conectar al servidor.')
+    } finally {
+      setCreandoUser(false)
+    }
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }
 
@@ -2560,6 +2731,98 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
                 <input value={form.reemplazante_nombre} onChange={e => set('reemplazante_nombre', e.target.value)}
                   placeholder="Nombre del reemplazante" />
               </div>
+
+              {/* Registrar nuevo usuario inline */}
+              {!modoCrear ? (
+                <div className="personal-form-field full" style={{ paddingTop: 2 }}>
+                  <button type="button" onClick={() => setModoCrear(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: '1.5px dashed #cbd5e1', borderRadius: 8, padding: '8px 14px', color: '#4f46e5', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <Plus size={14} /> Registrar nuevo usuario
+                  </button>
+                </div>
+              ) : (
+                <div className="personal-form-field full" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 14 }}>
+                  <p style={{ margin: '0 0 10px', fontWeight: 700, fontSize: 12.5, color: '#374151' }}>Nuevo usuario</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                    <div>
+                      <input type="text" placeholder="RUT (ej: 12.345.678-9)" value={rutNuevo}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: nuevoFE.rut ? '1.5px solid #dc2626' : '1px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit' }}
+                        onChange={e => { setRutNuevo(formatRut(e.target.value)); clearNFE('rut') }} />
+                      {nuevoFE.rut && <span style={{ fontSize: 11, color: '#dc2626', display: 'block', marginTop: 2 }}>{nuevoFE.rut}</span>}
+                    </div>
+                    <div>
+                      <input type="text" placeholder="Nombres" value={nombresNuevo}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: nuevoFE.nombres ? '1.5px solid #dc2626' : '1px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit' }}
+                        onChange={e => { setNombresNuevo(e.target.value); clearNFE('nombres') }} />
+                      {nuevoFE.nombres && <span style={{ fontSize: 11, color: '#dc2626', display: 'block', marginTop: 2 }}>{nuevoFE.nombres}</span>}
+                    </div>
+                    <div>
+                      <input type="text" placeholder="Apellidos (2 mínimo)" value={apellidosNuevo}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: nuevoFE.apellidos ? '1.5px solid #dc2626' : '1px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit' }}
+                        onChange={e => { setApellidosNuevo(e.target.value); clearNFE('apellidos') }} />
+                      {nuevoFE.apellidos && <span style={{ fontSize: 11, color: '#dc2626', display: 'block', marginTop: 2 }}>{nuevoFE.apellidos}</span>}
+                    </div>
+                    <div>
+                      <input type="email" placeholder="Correo electrónico" value={emailNuevo}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: nuevoFE.email ? '1.5px solid #dc2626' : '1px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit' }}
+                        onChange={e => { setEmailNuevo(e.target.value); clearNFE('email') }} />
+                      {nuevoFE.email && <span style={{ fontSize: 11, color: '#dc2626', display: 'block', marginTop: 2 }}>{nuevoFE.email}</span>}
+                    </div>
+                  </div>
+
+                  {usuarioEncontrado && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5 }}>
+                      <span style={{ color: '#15803d', fontWeight: 600 }}>Usuario encontrado: {usuarioEncontrado.nombre}</span>
+                      <button type="button" onClick={() => seleccionarNuevo(usuarioEncontrado)}
+                        style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Seleccionar
+                      </button>
+                    </div>
+                  )}
+
+                  {usuarioEncontradoEmail && !usuarioEncontrado && (
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12.5 }}>
+                      <span style={{ color: '#15803d', fontWeight: 600 }}>Usuario registrado: {usuarioEncontradoEmail.nombre}</span>
+                      <button type="button" onClick={handleCrearUsuario}
+                        style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Seleccionar
+                      </button>
+                    </div>
+                  )}
+
+                  {!usuarioEncontrado && !usuarioEncontradoEmail && (
+                    <div style={{ marginBottom: 8 }}>
+                      <select value={rolNuevo}
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 7, border: nuevoFE.rol ? '1.5px solid #dc2626' : '1px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit' }}
+                        onChange={e => { setRolNuevo(e.target.value); clearNFE('rol') }}>
+                        <option value="">Seleccionar rol *</option>
+                        {ROLES_REEMPLAZO.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      </select>
+                      {nuevoFE.rol && <span style={{ fontSize: 11, color: '#dc2626', display: 'block', marginTop: 2 }}>{nuevoFE.rol}</span>}
+                    </div>
+                  )}
+
+                  {nuevoFE.server && (
+                    <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '6px 10px', marginBottom: 8 }}>
+                      {nuevoFE.server}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setModoCrear(false)}
+                      style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid #e2e8f0', background: '#fff', fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Cancelar
+                    </button>
+                    {!usuarioEncontrado && !usuarioEncontradoEmail && (
+                      <button type="button" onClick={handleCrearUsuario}
+                        disabled={!rutNuevo.trim() || !nombresNuevo.trim() || !apellidosNuevo.trim() || !emailNuevo.trim() || !rolNuevo || creandoUser}
+                        style={{ padding: '6px 14px', borderRadius: 7, border: 'none', background: '#4f46e5', color: '#fff', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: creandoUser ? 0.7 : 1 }}>
+                        {creandoUser ? 'Creando…' : 'Crear usuario'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="personal-form-field">
                 <label>Cargo</label>
                 <input value={form.cargo} onChange={e => set('cargo', e.target.value)}

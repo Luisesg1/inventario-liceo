@@ -55,9 +55,12 @@ const ESTADO_LABORAL_MAP = {
 }
 
 const ESTADO_CONTRATO_MAP = {
-  vigente:    { label: 'Vigente',    color: '#16a34a', bg: '#f0fdf4' },
-  por_vencer: { label: 'Por vencer', color: '#d97706', bg: '#fffbeb' },
-  vencido:    { label: 'Vencido',    color: '#dc2626', bg: '#fef2f2' },
+  vigente:     { label: 'Vigente',      color: '#16a34a', bg: '#f0fdf4' },
+  por_vencer:  { label: 'Por vencer',   color: '#d97706', bg: '#fffbeb' },
+  finalizado:  { label: 'Finalizado',   color: '#64748b', bg: '#f8fafc' },
+  no_renovado: { label: 'No renovado',  color: '#dc2626', bg: '#fef2f2' },
+  suspendido:  { label: 'Suspendido',   color: '#9333ea', bg: '#faf5ff' },
+  vencido:     { label: 'Vencido',      color: '#dc2626', bg: '#fef2f2' },
 }
 
 const TIPOS_DOC_MAP = {
@@ -527,7 +530,7 @@ export default function HojaVida({ usuario, permisos }) {
       if (filtros.estamento && c.estamento !== filtros.estamento) return false
       if (filtros.tipo_contrato && c.tipo_contrato !== filtros.tipo_contrato) return false
       if (filtros.cargo && c.cargo !== filtros.cargo) return false
-      if (filtros.estado && calcularEstadoContrato(c.fecha_termino) !== filtros.estado) return false
+      if (filtros.estado && (c.estado ?? 'vigente') !== filtros.estado) return false
       return true
     })
   }, [contrataciones, busq, filtros])
@@ -799,9 +802,9 @@ export default function HojaVida({ usuario, permisos }) {
                       <label>Estado contrato</label>
                       <select value={filtros.estado} onChange={e => setFiltro('estado', e.target.value)}>
                         <option value="">Todos</option>
-                        <option value="vigente">Vigente</option>
-                        <option value="por_vencer">Por vencer</option>
-                        <option value="vencido">Vencido</option>
+                        {Object.entries(ESTADO_CONTRATO_MAP).map(([k, v]) => (
+                          <option key={k} value={k}>{v.label}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="hv-filter-group">
@@ -860,7 +863,7 @@ export default function HojaVida({ usuario, permisos }) {
                           {c.estamento && <p className="hv-persona-sub">{ESTAMENTO_MAP[c.estamento] ?? c.estamento}</p>}
                         </td>
                         <td>{CONTRATO_MAP[c.tipo_contrato] ?? c.tipo_contrato ?? '—'}</td>
-                        <td><EstadoBadge estado={calcularEstadoContrato(c.fecha_termino)} /></td>
+                        <td><EstadoBadge estado={(c.estado ?? 'vigente')} /></td>
                         <td><span style={{ fontSize: 12.5, color: '#64748b' }}>{calcularAntiguedad(c.fecha_inicio ?? c.creado_en?.slice(0, 10)) ?? '—'}</span></td>
                         <td>
                           <button className="hv-btn hv-btn--primary hv-btn--sm" onClick={e => { e.stopPropagation(); abrirDetalle(c) }}>
@@ -925,7 +928,7 @@ export default function HojaVida({ usuario, permisos }) {
 
                 <div className="hv-detail-badges">
                   <EstadoBadge estado={hvPersona?.estado_laboral ?? 'activo'} mapa={ESTADO_LABORAL_MAP} />
-                  <EstadoBadge estado={calcularEstadoContrato(seleccionado.fecha_termino)} />
+                  <EstadoBadge estado={(seleccionado.estado ?? 'vigente')} />
                   {(hvPersona?.fecha_ingreso || seleccionado.fecha_inicio) && (
                     <span className="hv-badge" style={{ color: 'rgb(var(--primary-rgb, 26,35,126))', background: 'rgba(var(--primary-rgb, 26,35,126), 0.06)' }}>
                       {calcularAntiguedad(hvPersona?.fecha_ingreso ?? seleccionado.fecha_inicio ?? seleccionado.creado_en?.slice(0, 10))} de antigüedad
@@ -1004,7 +1007,7 @@ export default function HojaVida({ usuario, permisos }) {
                                     <td>{formatFecha(ct.fecha_inicio)}</td>
                                     <td>{formatFecha(ct.fecha_termino)}</td>
                                     <td>{ct.horas ?? '—'}</td>
-                                    <td><EstadoBadge estado={calcularEstadoContrato(ct.fecha_termino)} /></td>
+                                    <td><EstadoBadge estado={ct.estado ?? 'vigente'} /></td>
                                   </tr>
                                 ))}
                               </tbody>

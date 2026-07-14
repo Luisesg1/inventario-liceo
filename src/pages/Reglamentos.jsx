@@ -139,15 +139,19 @@ export default function Reglamentos({ usuario, permisos = {} }) {
   const mostrarAviso = (tipo, msg) => { setAviso({ tipo, msg }); setTimeout(() => setAviso(null), 5000) }
 
   // ── Cargar docs ─────────────────────────────────────────────────────────
+  const soloVigentes = !puedAdministrar && !puedCrear && !puedEditar
+
   const cargarDocs = useCallback(async () => {
     setCargando(true)
-    const { data, error } = await supabase
+    let q = supabase
       .from('reglamentos').select('*').eq('is_deleted', false)
       .order('creado_en', { ascending: false })
+    if (soloVigentes) q = q.eq('estado', 'Vigente')
+    const { data, error } = await q
     if (error) { mostrarAviso('error', 'Error al cargar documentos'); setCargando(false); return }
     setDocs(data ?? [])
     setCargando(false)
-  }, [])
+  }, [soloVigentes])
 
   useEffect(() => { cargarDocs() }, [cargarDocs])
 
@@ -458,11 +462,13 @@ export default function Reglamentos({ usuario, permisos = {} }) {
             <option value="">Todas las categorías</option>
             {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          {!soloVigentes && (
           <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
             style={{ flex: '0 0 140px', padding: '9px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#374151', background: '#f8fafc', cursor: 'pointer', outline: 'none', fontFamily: 'inherit' }}>
             <option value="">Todos los estados</option>
             {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
           </select>
+          )}
           <input type="date" value={filtroFechaDesde} onChange={e => setFiltroFechaDesde(e.target.value)}
             title="Desde (fecha publicación)"
             style={{ flex: '0 0 140px', padding: '9px 10px', borderRadius: 9, border: '1.5px solid #e2e8f0', fontSize: 13, color: '#374151', background: '#f8fafc', outline: 'none', fontFamily: 'inherit' }} />
