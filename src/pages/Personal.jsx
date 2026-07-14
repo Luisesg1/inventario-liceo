@@ -2235,7 +2235,7 @@ function ReemplazosTab({ usuario, permisos }) {
     setCargando(true); setErrorCarga('')
     const [{ data: rs, error: e1 }, { data: us }, { data: aus }, { data: cnts }] = await Promise.all([
       supabase.from('reemplazos').select('*').order('creado_en', { ascending: false }),
-      supabase.from('usuarios').select('id, nombre, rut, email, rol').order('nombre'),
+      supabase.from('usuarios').select('id, nombre, rut, email, rol').eq('is_deleted', false).order('nombre'),
       supabase.from('ausencias').select('id, tipo, usuario_id, usuario:usuario_id(id, nombre, rut, email), fecha_inicio, fecha_fin')
         .in('tipo', ['licencia_medica','cometido','permiso_administrativo'])
         .gte('fecha_fin', todayStr()).order('fecha_inicio', { ascending: false }).limit(50),
