@@ -873,7 +873,7 @@ function ContratacionesTab({ usuario, permisos }) {
     if (!desactivar) return
     setDesactivando(true)
     const { usuario: usr } = desactivar
-    const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', usr.id)
+    const { error } = await supabase.rpc('set_cuenta_activa', { p_usuario_id: usr.id, p_activo: false })
     if (error) { setMsgCuenta({ tipo: 'error', texto: 'Error al desactivar la cuenta: ' + error.message }); setDesactivando(false); setDesactivar(null); return }
     await supabase.rpc('log_auditoria', {
       p_accion: 'desactivar_cuenta',
@@ -903,7 +903,7 @@ function ContratacionesTab({ usuario, permisos }) {
     if (!reactivar) return
     setReactivando(true)
     const { contrato, usuario: usr } = reactivar
-    const { error } = await supabase.from('usuarios').update({ activo: true }).eq('id', usr.id)
+    const { error } = await supabase.rpc('set_cuenta_activa', { p_usuario_id: usr.id, p_activo: true })
     if (error) { setMsgCuenta({ tipo: 'error', texto: 'Error al reactivar la cuenta: ' + error.message }); setReactivando(false); setReactivar(null); return }
     await supabase.from('contrataciones').update({ estado: 'vigente' }).eq('id', contrato.id)
     await supabase.rpc('log_auditoria', {
