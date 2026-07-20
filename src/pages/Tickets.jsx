@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '../supabase'
+import { notificarNuevoTicket, notificarEstadoTicket } from '../services/notificacionesService'
 import { useRoles } from '../hooks/useRoles'
 import { labelDeRol } from '../config/roles'
 import './Tickets.css'
@@ -208,14 +209,12 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       creado_por_nombre,
     })
     if (!error) {
-      supabase.functions.invoke('notify-new-ticket', {
-        body: {
-          titulo,
-          descripcion:        form.descripcion.trim(),
-          lugar_falla:        form.lugar_falla.trim(),
-          creado_por_nombre,
-          correo_solicitante: form.correo_contacto.trim() || null,
-        },
+      notificarNuevoTicket({
+        titulo,
+        descripcion:        form.descripcion.trim(),
+        lugar_falla:        form.lugar_falla.trim(),
+        creado_por_nombre,
+        correo_solicitante: form.correo_contacto.trim() || null,
       }).catch(e => console.error('[notify-new-ticket]', e))
       await cargar()
       setExito(true)
@@ -250,14 +249,12 @@ export default function Tickets({ usuario, onTicketActualizado, filtroInicial = 
       onTicketActualizado?.()
       if (ticketDetalle.correo_contacto) {
         console.log('[notify-ticket-status] invocando para', ticketDetalle.correo_contacto, editEstado)
-        supabase.functions.invoke('notify-ticket-status', {
-          body: {
-            correo: ticketDetalle.correo_contacto,
-            nombre: ticketDetalle.creado_por_nombre,
-            area:   areaLabel(ticketDetalle),
-            estado: editEstado,
-            notas:  notasVal,   // solo la última nota va al correo
-          },
+        notificarEstadoTicket({
+          correo: ticketDetalle.correo_contacto,
+          nombre: ticketDetalle.creado_por_nombre,
+          area:   areaLabel(ticketDetalle),
+          estado: editEstado,
+          notas:  notasVal,   // solo la última nota va al correo
         }).then(({ data, error }) => {
           if (error) console.error('[notify-ticket-status] error:', JSON.stringify(error))
           else console.log('[notify-ticket-status] OK', data)

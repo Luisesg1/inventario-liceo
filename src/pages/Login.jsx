@@ -6,6 +6,7 @@ import {
   ArrowLeft, Check,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { validarCodigoInvitacion, registrarConInvitacion } from '../services/registroService'
 import './Login.css'
 
 const REQUISITOS_PASS = [
@@ -179,9 +180,7 @@ export default function Login({
     setCargando(true)
 
     // 1. Pre-validar el código de invitación antes de crear la cuenta
-    const { error: codigoError } = await supabase.functions.invoke('register-user', {
-      body: { codigo: regCodigo },
-    })
+    const { error: codigoError } = await validarCodigoInvitacion(regCodigo)
     if (codigoError) {
       setFieldError('codigo', 'El código de invitación no es válido. Revísalo e intenta nuevamente.')
       setCargando(false)
@@ -189,15 +188,13 @@ export default function Login({
     }
 
     // 2. Código válido — proceder con el registro completo
-    const { data: fnData, error: fnError } = await supabase.functions.invoke('register-user', {
-      body: {
-        codigo:    regCodigo,
-        nombre:    regNombres.trim(),
-        apellidos: regApellidos.trim(),
-        rut:       regRut.trim(),
-        email:     regEmail,
-        password:  regPass,
-      },
+    const { data: fnData, error: fnError } = await registrarConInvitacion({
+      codigo:    regCodigo,
+      nombre:    regNombres.trim(),
+      apellidos: regApellidos.trim(),
+      rut:       regRut.trim(),
+      email:     regEmail,
+      password:  regPass,
     })
     if (fnError || fnData?.error) {
       setError(fnData?.error || 'No se pudo crear la cuenta. Intenta nuevamente.')

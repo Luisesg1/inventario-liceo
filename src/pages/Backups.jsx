@@ -19,6 +19,7 @@ import {
   Info, Zap, ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { generarBackupMensual, restaurarBackup } from '../services/backupsService'
 import './Backups.css'
 
 const BUCKET = 'backups'
@@ -835,7 +836,7 @@ function ModalNuevo({ onClose, onCreado, usuario, upsertMeta, toast }) {
     avanzar(0)
     const timers = [700, 1500, 2400, 3200].map((d, i) => setTimeout(() => avanzar(i + 1), d))
     try {
-      const { data, error } = await supabase.functions.invoke('backup-mensual')
+      const { data, error } = await generarBackupMensual()
       timers.forEach(clearTimeout)
       if (error || !data?.ok) {
         setErrorMsg(data?.error || error?.message || 'No se pudo generar el respaldo.')
@@ -1087,7 +1088,7 @@ function ModalRestaurar({ estado, setEstado, onClose, onDone, registrarAuditoria
     avanzar(0)
     const timers = [800, 1800, 2800, 3800].map((d, i) => setTimeout(() => avanzar(i + 1), d))
     try {
-      const { data, error } = await supabase.functions.invoke('restaurar-backup', { body: { archivo: item.archivo } })
+      const { data, error } = await restaurarBackup(item.archivo)
       timers.forEach(clearTimeout)
       if (error || !data?.ok) {
         setProgreso(p => p.map(x => x.e === 'active' ? { ...x, e: 'error' } : x))

@@ -10,6 +10,7 @@ import {
 import { supabase } from '../supabase'
 import { getUserId } from '../utils/auth'
 import { crearUsuario as svcCrearUsuario } from '../services/usuariosService'
+import { notificarAusencia, notificarPermisoAdministrativo } from '../services/notificacionesService'
 import { labelDeRol } from '../config/roles'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
 import jsPDF from 'jspdf'
@@ -2381,14 +2382,12 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
             diasRestantes = Math.max(MAX_AUSENCIAS - diasUsados, 0)
           } catch { /* se envía igual */ }
           try {
-            const { error: fnError } = await supabase.functions.invoke('notify-permiso-administrativo', {
-              body: {
-                correo: correoSolicitante, nombre: nombrePersona,
-                fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin,
-                jornada: datos.jornada, periodo: datos.periodo ?? null,
-                horaInicio: datos.horaInicio ?? null, horaFin: datos.horaFin ?? null,
-                notas: datos.notas ?? null, diasRestantes, maxDias: MAX_AUSENCIAS,
-              },
+            const { error: fnError } = await notificarPermisoAdministrativo({
+              correo: correoSolicitante, nombre: nombrePersona,
+              fechaInicio: datos.fechaInicio, fechaFin: datos.fechaFin,
+              jornada: datos.jornada, periodo: datos.periodo ?? null,
+              horaInicio: datos.horaInicio ?? null, horaFin: datos.horaFin ?? null,
+              notas: datos.notas ?? null, diasRestantes, maxDias: MAX_AUSENCIAS,
             })
             setEmailNotif(fnError ? 'error' : 'ok')
           } catch { setEmailNotif('error') }
@@ -2396,9 +2395,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
           // Resto de tipos (días compensatorios, justificativos, etc.)
           // La licencia médica NO envía correo al trabajador
           try {
-            const { error: fnError } = await supabase.functions.invoke('notify-ausencia', {
-              body: { correo: correoSolicitante, destinatario: nombrePersona, persona: nombrePersona, modo: 'solicitante', ...detalle },
-            })
+            const { error: fnError } = await notificarAusencia({ correo: correoSolicitante, destinatario: nombrePersona, persona: nombrePersona, modo: 'solicitante', ...detalle })
             setEmailNotif(fnError ? 'error' : 'ok')
           } catch { setEmailNotif('error') }
         }
@@ -2414,9 +2411,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
           // evitar duplicado con el solicitante
           .filter(b => b.usuario.email.toLowerCase() !== (correoSolicitante ?? '').toLowerCase())
         for (const b of destinatarios) {
-          await supabase.functions.invoke('notify-ausencia', {
-            body: { correo: b.usuario.email, destinatario: b.usuario.nombre ?? null, persona: nombrePersona, modo: 'respaldo', ...detalle },
-          })
+          await notificarAusencia({ correo: b.usuario.email, destinatario: b.usuario.nombre ?? null, persona: nombrePersona, modo: 'respaldo', ...detalle })
         }
       } catch { /* silencioso */ }
     }
