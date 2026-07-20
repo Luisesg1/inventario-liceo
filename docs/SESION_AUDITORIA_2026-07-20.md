@@ -120,13 +120,43 @@ que valida `es_admin() OR gestionar_usuarios` server-side.
 
 ---
 
-## 8. Pendientes futuros (alta complejidad, no iniciados)
+## 8. Refactors estructurales — estado final
 
-Estos hallazgos de la auditoría anterior requieren cambios estructurales mayores:
+Los hallazgos de alta complejidad se abordaron en esta sesión:
 
-- **F07** — AuthContext: token refresh y manejo de sesión expirada
-- **F08** — React Router: migrar a forma declarativa
-- **F13** — TypeScript incremental
-- **F14** — Vitest: suite de pruebas
-- **F21** — Backups: alinear permisos con RLS
-- **F23** — Capa de servicios: separar lógica de negocio de componentes UI
+- **F07** ✅ — Sesión expirada: interceptor global de 401 en supabase.js dispara
+  evento `sesion-expirada`; App.jsx muestra banner y cierra sesión al instante
+  (antes: hasta 30s de espera). Helper `getAccessToken`/`getUserId` centraliza
+  los 8 `getSession()` dispersos. Commits `55c315c`, `15d30f2`.
+- **F14** ✅ — Vitest 4 + primera suite. `permisos.test.js` cubre invariantes de
+  seguridad del motor; `edgeFunctions.test.ts` cubre el contrato de servicios.
+  Scripts `npm test` / `npm run test:run`. Commits `ee5d907`, `1d3260d`.
+- **F21** ✅ — Backups admin-only end to end (backend ya lo exigía; el frontend
+  ofrecía permisos granulares fantasma). Módulo marcado `adminOnly`, excluido de
+  los editores de roles/usuarios; guardas de ruta en `esAdmin`. Commit `4e12b80`.
+- **F23** ✅ (núcleo) — Capa `src/services/`: TODA la comunicación con Edge
+  Functions pasa por servicios (edgeFunctions, usuarios, notificaciones, backups,
+  registro). Ninguna página invoca `functions/v1` ni `functions.invoke` directo.
+  Commits `1d3260d`, `3ee9759`. La extracción de los `supabase.from()` de tabla a
+  servicios se deja como mejora incremental (retorno decreciente; cada query es
+  específica de su página).
+- **F13** ✅ (setup incremental) — tsconfig con `allowJs`+`checkJs:false` (JS
+  convive sin type-check; los `.ts` sí se verifican), `strict` para código nuevo,
+  script `npm run typecheck`. Capa de servicios + `utils/auth` convertidos a `.ts`
+  con tipos. Las páginas `.jsx` se migran gradualmente. Commit `909aefb`.
+
+### F08 — React Router declarativo: DEUDA TÉCNICA CONSCIENTE (no se hará)
+
+**Decisión:** no migrar a `<Routes>/<Route>` puros. Razones:
+- El App.jsx actual ya usa React Router para la URL, pero renderiza la página vía
+  `paginaSegura` — un hub que centraliza TODAS las guardas de permiso en un solo
+  lugar (motor `utils/permisos.js`). Es más limpio y auditable que dispersar
+  guardas por rutas declarativas.
+- Cada página recibe props a medida (callbacks, `abrirBienId`, filtros) que no
+  mapean limpio a rutas declarativas sin lifting de estado o context.
+- Es un refactor grande del hub auth+routing que funciona en producción, con
+  **alto riesgo de regresión y cero cambio funcional**.
+
+Si en el futuro se agregan muchas rutas nuevas, evaluar una tabla data-driven
+(path → { pagina, element }) que conserve el hub `paginaSegura` en vez de una
+migración declarativa total.
