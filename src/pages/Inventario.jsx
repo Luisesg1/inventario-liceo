@@ -244,20 +244,23 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
       } else if (error?.code === '23505' || error?.status === 409) {
         // Unique conflict: el bien ya existe en Supabase (sync anterior incompleto).
         // Buscar por codigo_interno (si existe) para reemplazar el pendiente local.
-        if (payload.codigo_interno) {
+        // UNIQUE constraint es en 'codigo' — buscar el bien real por ese campo.
+        if (payload.codigo) {
           const { data: existente } = await supabase
             .from('bienes')
             .select()
-            .eq('codigo_interno', payload.codigo_interno)
+            .eq('codigo', payload.codigo)
             .single()
           if (existente) {
             eliminarPendiente(id)
             setBienes(prev => prev.map(b => b.id === id ? existente : b))
             ok++
+          } else {
+            // No encontrado — eliminar pendiente para evitar loop infinito.
+            eliminarPendiente(id)
+            setBienes(prev => prev.filter(b => b.id !== id))
           }
         } else {
-          // Sin codigo_interno no podemos identificar el bien — eliminar pendiente
-          // para evitar loop infinito; el bien puede ya estar en Supabase.
           eliminarPendiente(id)
           setBienes(prev => prev.filter(b => b.id !== id))
         }
