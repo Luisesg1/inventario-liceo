@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     // El motor de permisos y helpers son funciones puras: entorno node, sin DOM.
     environment: 'node',
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
   },
   build: {
     rollupOptions: {

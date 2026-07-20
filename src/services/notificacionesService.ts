@@ -5,14 +5,14 @@ import { supabase } from '../supabase'
 // decide si await + manejo de error o fire-and-forget con .catch(). Devuelven
 // la promesa de supabase.functions.invoke tal cual para no cambiar el contrato.
 
-export const notificarNuevoTicket = (body) =>
+export const notificarNuevoTicket = (body: Record<string, unknown>) =>
   supabase.functions.invoke('notify-new-ticket', { body })
 
-export const notificarEstadoTicket = (body) =>
+export const notificarEstadoTicket = (body: Record<string, unknown>) =>
   supabase.functions.invoke('notify-ticket-status', { body })
 
-export const notificarAusencia = (body) =>
+export const notificarAusencia = (body: Record<string, unknown>) =>
   supabase.functions.invoke('notify-ausencia', { body })
 
-export const notificarPermisoAdministrativo = (body) =>
+export const notificarPermisoAdministrativo = (body: Record<string, unknown>) =>
   supabase.functions.invoke('notify-permiso-administrativo', { body })
