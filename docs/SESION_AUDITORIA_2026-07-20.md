@@ -145,18 +145,9 @@ Los hallazgos de alta complejidad se abordaron en esta sesión:
   script `npm run typecheck`. Capa de servicios + `utils/auth` convertidos a `.ts`
   con tipos. Las páginas `.jsx` se migran gradualmente. Commit `909aefb`.
 
-### F08 — React Router declarativo: DEUDA TÉCNICA CONSCIENTE (no se hará)
-
-**Decisión:** no migrar a `<Routes>/<Route>` puros. Razones:
-- El App.jsx actual ya usa React Router para la URL, pero renderiza la página vía
-  `paginaSegura` — un hub que centraliza TODAS las guardas de permiso en un solo
-  lugar (motor `utils/permisos.js`). Es más limpio y auditable que dispersar
-  guardas por rutas declarativas.
-- Cada página recibe props a medida (callbacks, `abrirBienId`, filtros) que no
-  mapean limpio a rutas declarativas sin lifting de estado o context.
-- Es un refactor grande del hub auth+routing que funciona en producción, con
-  **alto riesgo de regresión y cero cambio funcional**.
-
-Si en el futuro se agregan muchas rutas nuevas, evaluar una tabla data-driven
-(path → { pagina, element }) que conserve el hub `paginaSegura` en vez de una
-migración declarativa total.
+- **F08** ✅ — Rutas declarativas. La cadena de ~35 `{paginaSegura === 'x' && ...}`
+  y el useEffect de redirección se reemplazaron por `<Routes>` (una `<Route>` por
+  path desde RUTA_A_PAGINA) + `<PaginaGuard>` que emite `<Navigate>` cuando el
+  motor redirige a una página segura, y `renderPagina()` (tabla data-driven).
+  Conserva el hub `paginaSegura` como fuente única de guardas — enfoque data-driven
+  de bajo riesgo, no una migración que dispersara las guardas. Commit `faa4029`.
