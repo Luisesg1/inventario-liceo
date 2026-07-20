@@ -155,19 +155,22 @@ export function construirPermisos(usuario, permisosRaw) {
     || can('ver_auditoria_personal')
     || can('ver_auditoria_reglamentos')
     || can('ver_auditoria_papelera')
-    || can('ver_actividad_backups')
+    // ver_actividad_backups NO se incluye: Backups es admin-only (esAdmin ya cubre al admin)
 
-  // Backups: módulo asignable por permisos (admin recibe todo por bypass).
+  // Backups: admin-only end to end. El backend (RLS del bucket 'backups' y de
+  // backups_meta, más las edge functions restaurar-backup/backup-mensual) exige
+  // rol='admin' en toda operación. Por eso el frontend gatea TODO en esAdmin: un
+  // no-admin nunca ve ni el módulo ni sus botones, aunque su JSONB traiga las claves.
   const permisosBackups = {
-    ver:               can('ver_backups'),
-    crear:             can('crear_backups'),
-    descargar:         can('descargar_backups'),
-    renombrar:         can('renombrar_backups'),
-    editarDescripcion: can('editar_descripcion_backups'),
-    duplicar:          can('duplicar_backups'),
-    restaurar:         can('restaurar_backups'),
-    eliminar:          can('eliminar_backups'),
-    verActividad:      can('ver_actividad_backups'),
+    ver:               esAdmin,
+    crear:             esAdmin,
+    descargar:         esAdmin,
+    renombrar:         esAdmin,
+    editarDescripcion: esAdmin,
+    duplicar:          esAdmin,
+    restaurar:         esAdmin,
+    eliminar:          esAdmin,
+    verActividad:      esAdmin,
   }
   const puedeVerBackups = permisosBackups.ver
 

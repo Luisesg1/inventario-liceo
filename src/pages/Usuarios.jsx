@@ -26,7 +26,7 @@ const CATEGORIAS_MODULOS = [
   { key: 'operacion',      label: 'Operación',      modulos: ['inventario', 'configurar_campos', 'personal', 'hoja_vida'] },
   { key: 'gestion',        label: 'Gestión',         modulos: ['ausencia', 'compensatorios', 'requerimientos'] },
   { key: 'soporte',        label: 'Soporte',          modulos: ['tickets'] },
-  { key: 'administracion', label: 'Administración',  modulos: ['reglamentos', 'ajustes', 'papelera', 'backups'] },
+  { key: 'administracion', label: 'Administración',  modulos: ['reglamentos', 'ajustes', 'papelera'] },
 ]
 
 // ── Requisitos de contraseña ───────────────────────────────────────────────

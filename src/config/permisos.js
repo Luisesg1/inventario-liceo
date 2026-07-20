@@ -180,7 +180,11 @@ export const MODULOS = [
     ],
   },
   {
-    key: 'backups', label: 'Backups', icon: '🗄️', pasoLabel: 'Backups',
+    key: 'backups', label: 'Backups', icon: '🗄️', pasoLabel: 'Backups', adminOnly: true,
+    // adminOnly: el backend (RLS del bucket 'backups' y la tabla backups_meta, más
+    // las edge functions restaurar-backup/backup-mensual) exige rol='admin' en TODAS
+    // las operaciones. Conceder estos permisos a un no-admin no funcionaría, así que
+    // el módulo se excluye de los editores de roles/usuarios y solo el admin lo usa.
     descripcion: 'Acceso al módulo de respaldos del sistema: crear, descargar, renombrar, restaurar, duplicar y eliminar respaldos, además de la línea de tiempo de actividad.',
     permisos: [
       { key: 'ver_backups',                     accion: 'ver',         label: 'Ver backups',              labelCorto: 'Ver backups', desc: 'Permite acceder al módulo de Backups y ver el historial completo de respaldos.' },
@@ -210,9 +214,14 @@ export const ACCIONES = [
   ...PERMISOS_LEGACY,
 ]
 
+// Módulos asignables en los editores de roles/usuarios. Excluye los adminOnly
+// (p. ej. Backups): su backend exige rol='admin', así que ofrecer sus permisos
+// a un no-admin sería engañoso. ACCIONES sí los conserva (admin bypass + derivaciones).
+const MODULOS_ASIGNABLES = MODULOS.filter(m => !m.adminOnly)
+
 // Grupos para el wizard de Usuarios (con paso y descripción)
 // Los pasos 1 y 2 son "Nivel de acceso" y "Módulos"; los módulos empiezan en 3.
-export const GRUPOS_USUARIOS = MODULOS.map((m, i) => ({
+export const GRUPOS_USUARIOS = MODULOS_ASIGNABLES.map((m, i) => ({
   key: m.key,
   label: m.label,
   paso: i + 3,
@@ -222,18 +231,18 @@ export const GRUPOS_USUARIOS = MODULOS.map((m, i) => ({
 }))
 
 // Grupos para el Mantenedor de Roles (con icono)
-export const GRUPOS_ROLES = MODULOS.map(m => ({
+export const GRUPOS_ROLES = MODULOS_ASIGNABLES.map(m => ({
   key: m.key,
   label: m.label,
   icon: m.icon,
   permisos: m.permisos.map(p => p.key),
 }))
 
-// Pasos del stepper del wizard, derivados del orden de MODULOS
-export const STEPS_MODULOS = MODULOS.map((m, i) => ({ n: i + 3, label: m.pasoLabel }))
+// Pasos del stepper del wizard, derivados del orden de MODULOS asignables
+export const STEPS_MODULOS = MODULOS_ASIGNABLES.map((m, i) => ({ n: i + 3, label: m.pasoLabel }))
 
-// Último paso del wizard = 2 pasos fijos + un paso por módulo
-export const ULTIMO_PASO = 2 + MODULOS.length
+// Último paso del wizard = 2 pasos fijos + un paso por módulo asignable
+export const ULTIMO_PASO = 2 + MODULOS_ASIGNABLES.length
 
 // Todas las claves de permiso en false — base para presets y merges
 export const PERMISOS_VACIO = Object.fromEntries(ACCIONES.map(a => [a.key, false]))
@@ -328,14 +337,12 @@ export const GUARDAS_RUTA = {
   personal_contrataciones:  ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_reemplazos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
   personal_documentos:      ['ver_contrataciones', 'ver_reemplazos', 'ver_documentos_personal'],
-  // Backups es un módulo asignable por permisos (admin lo recibe completo por
-  // bypass). El backend (RLS del bucket/tabla y las edge functions) sigue
-  // restringido a rol='admin', por lo que conceder estos permisos a un no-admin
-  // muestra el módulo pero las operaciones reales requieren rol admin.
   hoja_vida:                'ver_hoja_vida',
-  backups:                  'ver_backups',
-  backups_actividad:        'ver_actividad_backups',
-  backups_papelera:         'ver_backups',
+  // Backups es admin-only end to end (RLS del bucket/tabla + edge functions exigen
+  // rol='admin'). El gate de ruta lo refleja: solo admin accede a estas vistas.
+  backups:                  (perm) => perm.esAdmin,
+  backups_actividad:        (perm) => perm.esAdmin,
+  backups_papelera:         (perm) => perm.esAdmin,
 }
 
 // ─── Presets de rol (FUENTE ÚNICA) ──────────────────────────────────────────
