@@ -145,8 +145,11 @@ Deno.serve(async (req) => {
     // 3. Esperar un momento para que el trigger de BD (si existe) cree la fila primero
     await new Promise(r => setTimeout(r, 800))
 
-    // Eliminar fila orphan con mismo email pero distinto id (auth sin row, o soft-delete incompleto)
+    // Eliminar filas orphan con mismo email o mismo RUT pero distinto id
     await admin.from('usuarios').delete().eq('email', emailNorm).neq('id', userId)
+    if (rut?.trim()) {
+      await admin.from('usuarios').delete().eq('rut', rut.trim()).neq('id', userId)
+    }
 
     // 4. Upsert en tabla usuarios con RUT (funciona haya o no trigger previo)
     const { error: upsertError } = await admin.from('usuarios').upsert({
