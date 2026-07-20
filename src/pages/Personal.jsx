@@ -14,7 +14,7 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
-import { getAccessToken } from '../utils/auth'
+import { crearUsuario as svcCrearUsuario } from '../services/usuariosService'
 import './Personal.css'
 
 // ─── Constants ────────────────────────────────────────────────
@@ -2733,26 +2733,16 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
     }
 
     setCreandoUser(true)
-    try {
-      const token = await getAccessToken()
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo }),
-        }
-      )
-      const json = await res.json()
-      if (!res.ok) { setNFE('server', json.error ?? 'Error al crear el usuario.'); return }
-      const nuevoUsuario = { ...json.usuario, rut }
-      onUsuarioCreado?.(nuevoUsuario)
-      seleccionarNuevo(nuevoUsuario)
-    } catch {
-      setNFE('server', 'No se pudo conectar al servidor.')
-    } finally {
+    const { data: json, error } = await svcCrearUsuario({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo })
+    if (error) {
+      setNFE('server', error === 'No se pudo conectar.' ? 'No se pudo conectar al servidor.' : error)
       setCreandoUser(false)
+      return
     }
+    const nuevoUsuario = { ...json.usuario, rut }
+    onUsuarioCreado?.(nuevoUsuario)
+    seleccionarNuevo(nuevoUsuario)
+    setCreandoUser(false)
   }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: '' })) }

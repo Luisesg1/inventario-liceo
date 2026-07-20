@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Search, Shield, AlertCircle } from 'lucide-react'
 import { supabase } from '../supabase'
-import { getAccessToken } from '../utils/auth'
+import { crearUsuario as svcCrearUsuario, editarUsuario as svcEditarUsuario, eliminarUsuario as svcEliminarUsuario } from '../services/usuariosService'
 import './Usuarios.css'
 import ModalImportarUsuarios from './ModalImportarUsuarios'
 import HistorialUsuario from './HistorialUsuario'
@@ -870,31 +870,20 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     if (!ok) return
     setGuardando(true)
     setMensaje({ tipo: '', texto: '' })
-    const token = await getAccessToken()
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nombre: `${nombres.trim()} ${apellidos.trim()}`.trim(), rut: rut.trim(), email: email.trim(), rol }),
-        }
-      )
-      const json = await res.json()
-      if (!res.ok) {
-        setMensaje({ tipo: 'error', texto: json.error ?? 'Error desconocido.' })
-      } else {
-        setUsuarioCreado(json.usuario)
-        // Si el email falló, guardamos la contraseña temporal para mostrarla al admin
-        if (!json.emailEnviado && json.passwordTemporal) {
-          setPasswordTemporal(json.passwordTemporal)
-          setEmailErrorDetalle(json.emailError ?? null)
-        }
-        setPaso(2)
-        setMensaje({ tipo: '', texto: '' })
+    const { data: json, error } = await svcCrearUsuario({
+      nombre: `${nombres.trim()} ${apellidos.trim()}`.trim(), rut: rut.trim(), email: email.trim(), rol,
+    })
+    if (error) {
+      setMensaje({ tipo: 'error', texto: error })
+    } else {
+      setUsuarioCreado(json.usuario)
+      // Si el email falló, guardamos la contraseña temporal para mostrarla al admin
+      if (!json.emailEnviado && json.passwordTemporal) {
+        setPasswordTemporal(json.passwordTemporal)
+        setEmailErrorDetalle(json.emailError ?? null)
       }
-    } catch {
-      setMensaje({ tipo: 'error', texto: 'No se pudo conectar.' })
+      setPaso(2)
+      setMensaje({ tipo: '', texto: '' })
     }
     setGuardando(false)
   }
@@ -1304,25 +1293,17 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
 
   async function eliminarUsuario(userId) {
     setEliminandoId(userId)
-    try {
-      // 1. Revocar acceso en Supabase Auth (y limpiar permisos/ausencias)
-      const token = await getAccessToken()
-      const res = await supabase.functions.invoke('eliminar-usuario', {
-        body: { userId },
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (res.error || res.data?.error) {
-        throw new Error(res.data?.error ?? res.error?.message ?? 'Error al revocar acceso')
-      }
-
-      setUsuarios(prev => prev.filter(u => u.id !== userId))
-      setConfirmandoId(null)
-      if (panelActivo?.id === userId) setPanelActivo(null)
-    } catch (e) {
-      alert('Error al eliminar usuario: ' + (e.message ?? 'Error desconocido'))
-    } finally {
+    // 1. Revocar acceso en Supabase Auth (y limpiar permisos/ausencias)
+    const { error } = await svcEliminarUsuario(userId)
+    if (error) {
+      alert('Error al eliminar usuario: ' + error)
       setEliminandoId(null)
+      return
     }
+    setUsuarios(prev => prev.filter(u => u.id !== userId))
+    setConfirmandoId(null)
+    if (panelActivo?.id === userId) setPanelActivo(null)
+    setEliminandoId(null)
   }
 
   async function toggleActivo() {
@@ -1409,26 +1390,10 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     const passwordCambio = editPassword.trim().length > 0
 
     if (emailCambio || passwordCambio) {
-      const token = await getAccessToken()
       const body = { userId, ...(emailCambio && { email: editEmail.trim() }), ...(passwordCambio && { password: editPassword.trim() }) }
-
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editar-usuario`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(body),
-          }
-        )
-        const json = await res.json()
-        if (!res.ok) {
-          setMensajeEdit({ tipo: 'error', texto: json.error ?? 'Error al actualizar credenciales.' })
-          setGuardandoEdit(false)
-          return
-        }
-      } catch {
-        setMensajeEdit({ tipo: 'error', texto: 'No se pudo conectar con el servidor.' })
+      const { error } = await svcEditarUsuario(body)
+      if (error) {
+        setMensajeEdit({ tipo: 'error', texto: error === 'No se pudo conectar.' ? 'No se pudo conectar con el servidor.' : error })
         setGuardandoEdit(false)
         return
       }

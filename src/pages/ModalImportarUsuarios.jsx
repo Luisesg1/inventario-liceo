@@ -1,7 +1,7 @@
 // src/pages/ModalImportarUsuarios.jsx
 import { useState, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
-import { getAccessToken } from '../utils/auth'
+import { crearUsuario as svcCrearUsuario, editarUsuario as svcEditarUsuario } from '../services/usuariosService'
 import * as XLSX from 'xlsx'
 
 // ── Mapeo de roles ────────────────────────────────────────────────────────────
@@ -347,8 +347,6 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
     setImportando(true)
     setProgreso(0)
 
-    const token = await getAccessToken()
-
     const detalles = []
     const creds = []
     let creados = 0, actualizados = 0, erroresCreacion = 0
@@ -359,25 +357,17 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
       try {
         if (fila.estado === 'nuevo' || fila.decision === 'vincular') {
           const pass = passwordDesdeRut(fila.rut)
-          const res = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({
-                nombre:           `${fila.nombres} ${fila.apellidos}`.trim(),
-                rut:              fila.rut,
-                email:            fila.email,
-                rol:              fila.rolInterno,
-                passwordOverride: pass,
-                skipEmail:        !enviarCorreo,
-              }),
-            }
-          )
-          const json = await res.json()
-          if (!res.ok) {
+          const { data: json, error } = await svcCrearUsuario({
+            nombre:           `${fila.nombres} ${fila.apellidos}`.trim(),
+            rut:              fila.rut,
+            email:            fila.email,
+            rol:              fila.rolInterno,
+            passwordOverride: pass,
+            skipEmail:        !enviarCorreo,
+          })
+          if (error) {
             erroresCreacion++
-            detalles.push({ ...fila, _resultado: 'error', _msg: json.error ?? 'Error desconocido' })
+            detalles.push({ ...fila, _resultado: 'error', _msg: error })
           } else {
             creados++
             const etiqueta = fila.decision === 'vincular' ? '🔗 Vinculado' : '✅ Creado'
@@ -412,18 +402,10 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
           }
 
           // 2. Actualizar email en Supabase Auth
-          const authRes = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/editar-usuario`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ userId: existente.id, email: fila.email }),
-            }
-          )
-          const authJson = await authRes.json()
-          if (!authRes.ok) {
+          const { error: authError } = await svcEditarUsuario({ userId: existente.id, email: fila.email })
+          if (authError) {
             actualizados++
-            detalles.push({ ...fila, _resultado: 'advertencia', _msg: `Perfil actualizado, pero error en Auth: ${authJson.error}` })
+            detalles.push({ ...fila, _resultado: 'advertencia', _msg: `Perfil actualizado, pero error en Auth: ${authError}` })
           } else {
             actualizados++
             detalles.push({ ...fila, _resultado: 'actualizado', _msg: `Correo actualizado de ${existente.email} → ${fila.email}` })

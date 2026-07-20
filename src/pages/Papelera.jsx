@@ -8,7 +8,7 @@ import {
   Minus, BookOpen, HardDrive,
 } from 'lucide-react'
 import { supabase } from '../supabase'
-import { getAccessToken } from '../utils/auth'
+import { eliminarUsuario as svcEliminarUsuario } from '../services/usuariosService'
 
 // ── Configuración de conflictos por tabla ─────────────────────────────────
 const RESTORE_CONFIG = {
@@ -363,27 +363,15 @@ export default function Papelera({ usuario, permisos = {} }) {
   async function borrarRegistroFisico(item) {
     // Usuarios: se eliminan vía Edge Function (borra también en Auth).
     if (item.tabla === 'usuarios') {
-      try {
-        const token = await getAccessToken()
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ userId: item.id }),
-          }
-        )
-        if (res.ok) return null
-        // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
-        if (res.status === 400) {
-          const { error } = await supabase.from('usuarios').delete().eq('id', item.id)
-          return error ?? null
-        }
-        const json = await res.json().catch(() => ({}))
-        return { message: json.error ?? 'Error al eliminar usuario' }
-      } catch {
-        return { message: 'No se pudo conectar con el servidor.' }
+      const { error, status } = await svcEliminarUsuario(item.id)
+      if (!error) return null
+      // 400 = usuario ya no existe en Supabase Auth → eliminar registro directamente
+      if (status === 400) {
+        const { error: delError } = await supabase.from('usuarios').delete().eq('id', item.id)
+        return delError ?? null
       }
+      if (status === 0) return { message: 'No se pudo conectar con el servidor.' }
+      return { message: error }
     }
 
     // Backups: eliminar el objeto del bucket y la fila de metadatos.

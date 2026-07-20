@@ -8,7 +8,8 @@ import {
   Users, Gift, UserX, Download, Building2,
 } from 'lucide-react'
 import { supabase } from '../supabase'
-import { getAccessToken, getUserId } from '../utils/auth'
+import { getUserId } from '../utils/auth'
+import { crearUsuario as svcCrearUsuario } from '../services/usuariosService'
 import { labelDeRol } from '../config/roles'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
 import jsPDF from 'jspdf'
@@ -894,29 +895,16 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
 
     // Crear usuario real en el sistema vía edge function
     setCreandoUser(true)
-    try {
-      const token = await getAccessToken()
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo }),
-        }
-      )
-      const json = await res.json()
-      if (!res.ok) {
-        setNFE('server', json.error ?? 'Error al crear el usuario.')
-        return
-      }
-      const nuevoUsuario = { ...json.usuario, rut }
-      onUsuarioCreado(nuevoUsuario)
-      seleccionar(nuevoUsuario)
-    } catch {
-      setNFE('server', 'No se pudo conectar al servidor.')
-    } finally {
+    const { data: json, error } = await svcCrearUsuario({ nombre, rut, email: emailNuevo.trim(), rol: rolNuevo })
+    if (error) {
+      setNFE('server', error === 'No se pudo conectar.' ? 'No se pudo conectar al servidor.' : error)
       setCreandoUser(false)
+      return
     }
+    const nuevoUsuario = { ...json.usuario, rut }
+    onUsuarioCreado(nuevoUsuario)
+    seleccionar(nuevoUsuario)
+    setCreandoUser(false)
   }
 
   async function handleGuardar() {
