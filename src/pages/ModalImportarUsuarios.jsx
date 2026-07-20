@@ -1,6 +1,7 @@
 // src/pages/ModalImportarUsuarios.jsx
 import { useState, useRef, useCallback } from 'react'
 import { supabase } from '../supabase'
+import { getAccessToken } from '../utils/auth'
 import * as XLSX from 'xlsx'
 
 // ── Mapeo de roles ────────────────────────────────────────────────────────────
@@ -346,8 +347,7 @@ export default function ModalImportarUsuarios({ onCerrar, onImportado }) {
     setImportando(true)
     setProgreso(0)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
+    const token = await getAccessToken()
 
     const detalles = []
     const creds = []

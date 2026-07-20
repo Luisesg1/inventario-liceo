@@ -8,6 +8,7 @@ import {
   Minus, BookOpen, HardDrive,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { getAccessToken } from '../utils/auth'
 
 // ── Configuración de conflictos por tabla ─────────────────────────────────
 const RESTORE_CONFIG = {
@@ -363,8 +364,7 @@ export default function Papelera({ usuario, permisos = {} }) {
     // Usuarios: se eliminan vía Edge Function (borra también en Auth).
     if (item.tabla === 'usuarios') {
       try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        const token = sessionData?.session?.access_token
+        const token = await getAccessToken()
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/eliminar-usuario`,
           {

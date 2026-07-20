@@ -8,6 +8,7 @@ import {
   Users, Gift, UserX, Download, Building2,
 } from 'lucide-react'
 import { supabase } from '../supabase'
+import { getAccessToken, getUserId } from '../utils/auth'
 import { labelDeRol } from '../config/roles'
 import { getSaldoCompensatorio, descontarCompensatorios, restaurarCompensatorios } from './Compensatorios'
 import jsPDF from 'jspdf'
@@ -894,8 +895,7 @@ function ModalPermiso({ usuarios, usuarioActual, onClose, onGuardar, onGetPermis
     // Crear usuario real en el sistema vía edge function
     setCreandoUser(true)
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData?.session?.access_token
+      const token = await getAccessToken()
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
         {
@@ -2202,8 +2202,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
   }
 
   async function handleAgregarDia(fecha, motivo, fechaHasta) {
-    const { data: sessionData } = await supabase.auth.getSession()
-    const uid = sessionData?.session?.user?.id ?? null
+    const uid = await getUserId()
     // Construir el rango desde→hasta (un registro por día). Si no hay "hasta", un solo día.
     const fin = (fechaHasta && fechaHasta >= fecha) ? fechaHasta : fecha
     const rows = []

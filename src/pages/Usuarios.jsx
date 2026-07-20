@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Search, Shield, AlertCircle } from 'lucide-react'
 import { supabase } from '../supabase'
+import { getAccessToken } from '../utils/auth'
 import './Usuarios.css'
 import ModalImportarUsuarios from './ModalImportarUsuarios'
 import HistorialUsuario from './HistorialUsuario'
@@ -869,8 +870,7 @@ function ModalCrearUsuario({ onCerrar, onCreado }) {
     if (!ok) return
     setGuardando(true)
     setMensaje({ tipo: '', texto: '' })
-    const { data: sessionData } = await supabase.auth.getSession()
-    const token = sessionData?.session?.access_token
+    const token = await getAccessToken()
     try {
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
@@ -1306,10 +1306,10 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     setEliminandoId(userId)
     try {
       // 1. Revocar acceso en Supabase Auth (y limpiar permisos/ausencias)
-      const { data: { session } } = await supabase.auth.getSession()
+      const token = await getAccessToken()
       const res = await supabase.functions.invoke('eliminar-usuario', {
         body: { userId },
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (res.error || res.data?.error) {
         throw new Error(res.data?.error ?? res.error?.message ?? 'Error al revocar acceso')
@@ -1409,8 +1409,7 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
     const passwordCambio = editPassword.trim().length > 0
 
     if (emailCambio || passwordCambio) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData?.session?.access_token
+      const token = await getAccessToken()
       const body = { userId, ...(emailCambio && { email: editEmail.trim() }), ...(passwordCambio && { password: editPassword.trim() }) }
 
       try {

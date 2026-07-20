@@ -14,6 +14,7 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { supabase } from '../supabase'
+import { getAccessToken } from '../utils/auth'
 import './Personal.css'
 
 // ─── Constants ────────────────────────────────────────────────
@@ -2733,8 +2734,7 @@ function ModalReemplazo({ datos, ausenciaInicial, usuarios, ausencias, contratos
 
     setCreandoUser(true)
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData?.session?.access_token
+      const token = await getAccessToken()
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear-usuario`,
         {
