@@ -56,7 +56,11 @@ AS $$
     OR public.tiene_permiso('eliminar_usuario')
     -- Papelera (restaura/elimina filas de usuarios)
     OR public.tiene_permiso('restaurar_registros')
-    OR public.tiene_permiso('eliminar_permanentemente');
+    OR public.tiene_permiso('eliminar_permanentemente')
+    -- Hoja de Vida (lee usuarios para cruzar por RUT y mostrar estado de cuenta)
+    OR public.tiene_permiso('ver_hoja_vida')
+    OR public.tiene_permiso('crear_hoja_vida')
+    OR public.tiene_permiso('editar_hoja_vida');
 $$;
 
 GRANT EXECUTE ON FUNCTION public.puede_listar_usuarios() TO authenticated;
