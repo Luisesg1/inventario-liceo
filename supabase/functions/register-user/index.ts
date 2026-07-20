@@ -103,16 +103,19 @@ Deno.serve(async (req) => {
         console.error('[400] error no esperado de createUser:', msg)
         return json({ error: 'Error al crear la cuenta: ' + msg }, 400)
       }
-      // Email existe en auth — verificar si también existe en la tabla usuarios
-      const { data: usuarioExistente } = await admin
+      // Email existe en auth — verificar si también existe en la tabla usuarios (activo)
+      const { data: usuarioActivo } = await admin
         .from('usuarios')
         .select('id')
         .eq('email', emailNorm)
+        .eq('is_deleted', false)
         .maybeSingle()
-      if (usuarioExistente) {
+      if (usuarioActivo) {
         console.log('[400] cuenta activa duplicada para:', emailNorm)
         return json({ error: 'Ya existe una cuenta con ese correo electrónico.' }, 400)
       }
+      // Limpiar fila soft-deleted si existe (libera constraint unique email)
+      await admin.from('usuarios').delete().eq('email', emailNorm).eq('is_deleted', true)
       // Auth huérfano: buscar ID via SQL y eliminar
       console.log('[info] buscando auth huérfano para:', emailNorm)
       const { data: authHuerfanoId, error: rpcErr } = await admin.rpc('get_auth_user_id_by_email', { user_email: emailNorm })

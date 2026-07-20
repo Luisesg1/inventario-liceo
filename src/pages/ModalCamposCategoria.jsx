@@ -903,7 +903,7 @@ export default function ModalCamposCategoria({ catObj, usuario, onClose, onCatUp
                   Se actualizará la configuración de campos de la categoría seleccionada.<br />
                   Los cambios afectarán el formulario de creación y edición de bienes de esta categoría.
                 </p>
-              </div>
+              </div>    
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmGuardar(false)}
