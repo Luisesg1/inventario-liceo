@@ -5,7 +5,7 @@ const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://sistema.lic
   .split(',').map((s: string) => s.trim()).filter(Boolean)
 
 const corsHeaders = (origin: string | null) => ({
-  'Access-Control-Allow-Origin': origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  'Access-Control-Allow-Origin': origin && (ALLOWED_ORIGINS.includes(origin) || /^http:\/\/localhost(:\d+)?$/.test(origin)) ? origin : ALLOWED_ORIGINS[0],
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Vary': 'Origin',
 });
