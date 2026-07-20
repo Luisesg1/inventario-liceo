@@ -7,6 +7,11 @@ export default defineConfig({
   preview: {
     historyApiFallback: true,
   },
+  test: {
+    // El motor de permisos y helpers son funciones puras: entorno node, sin DOM.
+    environment: 'node',
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
+  },
   build: {
     rollupOptions: {
       output: {
