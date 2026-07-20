@@ -56,8 +56,28 @@ export const recoveryTokens = esRecuperacionHash
     }
   : null
 
+// Interceptor global: detecta respuestas 401 (JWT expirado/inválido) en cualquier
+// llamada a Supabase y dispara un evento único. Así la app reacciona de inmediato
+// —sin esperar el chequeo periódico de 30s— y puede mostrar un aviso claro.
+// Solo 401 (auth): un 403 es denegación de RLS por permisos, no sesión caída.
+let sesionExpiradaEmitida = false
+const fetchConInterceptor = async (input, init) => {
+  const res = await fetch(input, init)
+  if (res.status === 401 && !sesionExpiradaEmitida) {
+    sesionExpiradaEmitida = true
+    window.dispatchEvent(new CustomEvent('sesion-expirada'))
+  }
+  return res
+}
+
+// Permite rearmar el interceptor tras un nuevo login (la sesión anterior expiró
+// una vez; la nueva debe poder volver a emitir el evento si también cae).
+export const resetSesionExpirada = () => { sesionExpiradaEmitida = false }
+
 // Con PKCE, createClient detecta el ?code= automáticamente y dispara PASSWORD_RECOVERY
-export const supabase = createClient(url, key)
+export const supabase = createClient(url, key, {
+  global: { fetch: fetchConInterceptor },
+})
 
 // Limpiar flag de sessionStorage después de que Supabase procese el code
 if (codigoPKCE) {

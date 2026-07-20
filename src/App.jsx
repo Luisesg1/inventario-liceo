@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase, esRecuperacion, recoveryTokens } from './supabase'
+import { supabase, esRecuperacion, recoveryTokens, resetSesionExpirada } from './supabase'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import SetPassword from './pages/SetPassword'
@@ -124,6 +124,7 @@ export default function App() {
   const [filtroInicialTickets, setFiltroInicialTickets] = useState('')
   const [filtroInicialReqs,    setFiltroInicialReqs]    = useState(null)
   const [cuentaDesactivada,    setCuentaDesactivada]    = useState(false)
+  const [sesionExpirada,       setSesionExpirada]       = useState(false)
   const refreshTicketBadge = useRef(null)
   const procesandoCambio   = useRef(false)
   const modoRecovery       = useRef(esRecuperacion)
@@ -293,7 +294,7 @@ export default function App() {
       try {
         const { error } = await supabase.auth.getUser()
         if (error?.status === 401) {
-          await supabase.auth.signOut()
+          await manejarSesionExpirada()
         }
       } catch {
         // Error de red — ignorar
@@ -305,6 +306,17 @@ export default function App() {
       clearInterval(interval)
       window.removeEventListener('focus', check)
     }
+  }, [usuario?.id])
+
+  // ── Sesión expirada: reacción inmediata al primer 401 de cualquier llamada ──
+  // El interceptor global en supabase.js dispara 'sesion-expirada'. Aquí se
+  // cierra la sesión y se muestra un aviso claro, en vez de esperar el chequeo
+  // periódico o dejar al usuario con errores sueltos.
+  useEffect(() => {
+    if (!usuario) return
+    const onExpirada = () => manejarSesionExpirada()
+    window.addEventListener('sesion-expirada', onExpirada)
+    return () => window.removeEventListener('sesion-expirada', onExpirada)
   }, [usuario?.id])
 
   async function cargarPerfil(userId, forceSetPassword = false) {
@@ -327,6 +339,8 @@ export default function App() {
     }
 
     sesionCargada.current = true
+    resetSesionExpirada()
+    setSesionExpirada(false)
     setUsuario(data)
     if (data.rol !== 'admin') {
       const [{ data: rp }, { data: pd }] = await Promise.all([
@@ -345,6 +359,17 @@ export default function App() {
       setPermisosUsuario({ ver_auditoria_requerimientos: true, ver_auditoria_permisos: true, gestionar_tickets: true })
     }
     setMostrarSetPassword(modoRecovery.current || forceSetPassword || data.debe_cambiar_password === true)
+    setCargando(false)
+  }
+
+  async function manejarSesionExpirada() {
+    if (sesionCargada.current === false && !usuario) return
+    sesionCargada.current = false
+    forzarHome.current = true
+    await supabase.auth.signOut()
+    setUsuario(null)
+    setMostrarSetPassword(false)
+    setSesionExpirada(true)
     setCargando(false)
   }
 
@@ -374,6 +399,22 @@ export default function App() {
             </p>
             <button onClick={() => setCuentaDesactivada(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+      {sesionExpirada && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.55)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 28px 24px', maxWidth: 400, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 700, color: '#0f172a' }}>Sesión expirada</h3>
+            <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#475569', lineHeight: 1.5 }}>
+              Tu sesión expiró por seguridad. Vuelve a iniciar sesión para continuar.
+            </p>
+            <button onClick={() => setSesionExpirada(false)} style={{ width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', background: '#1a237e', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Iniciar sesión
             </button>
           </div>
         </div>
