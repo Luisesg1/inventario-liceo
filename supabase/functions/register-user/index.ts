@@ -145,6 +145,9 @@ Deno.serve(async (req) => {
     // 3. Esperar un momento para que el trigger de BD (si existe) cree la fila primero
     await new Promise(r => setTimeout(r, 800))
 
+    // Limpiar soft-deleted con mismo email antes de upsert (evita unique constraint)
+    await admin.from('usuarios').delete().eq('email', emailNorm).eq('is_deleted', true)
+
     // 4. Upsert en tabla usuarios con RUT (funciona haya o no trigger previo)
     const { error: upsertError } = await admin.from('usuarios').upsert({
       id: userId,
