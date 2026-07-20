@@ -241,6 +241,19 @@ export default function Inventario({ usuario, abrirBienId, onAbrirBienDone, abri
         eliminarPendiente(id)
         setBienes(prev => prev.map(b => b.id === id ? data : b))
         ok++
+      } else if (error?.code === '23505' || error?.status === 409) {
+        // Unique conflict: el bien ya existe en Supabase (sync anterior incompleto).
+        // Buscar por codigo_interno y reemplazar el pendiente local con el real.
+        const { data: existente } = await supabase
+          .from('bienes')
+          .select()
+          .eq('codigo_interno', payload.codigo_interno)
+          .single()
+        if (existente) {
+          eliminarPendiente(id)
+          setBienes(prev => prev.map(b => b.id === id ? existente : b))
+          ok++
+        }
       }
     }
     // 2) Ediciones pendientes (bienes existentes editados offline)
