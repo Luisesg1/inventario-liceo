@@ -517,7 +517,7 @@ export default function HojaVida({ usuario, permisos }) {
     setHvPersona(hvData)
 
     // Buscar usuario_id vinculado por RUT para consultar ausencias y compensatorios
-    const { data: usrData } = await supabase.from('usuarios').select('id, rut').in('rut', fmts)
+    const { data: usrData } = await supabase.from('usuarios').select('id, rut').eq('rut', rn)
     const userIds = (usrData ?? []).map(u => u.id)
 
     // Consultas paralelas
