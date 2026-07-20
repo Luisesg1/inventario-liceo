@@ -1315,15 +1315,6 @@ export default function Usuarios({ usuario, permisosAdmin = {} }) {
         throw new Error(res.data?.error ?? res.error?.message ?? 'Error al revocar acceso')
       }
 
-      // 2. Mover a papelera (mantiene historial, marca is_deleted=true)
-      const { error } = await supabase.rpc('soft_delete_usuario', {
-        p_id: userId,
-        p_usuario_id: usuario.id,
-        p_usuario_nombre: usuario.nombre,
-        p_usuario_rol: usuario.rol,
-      })
-      if (error) throw error
-
       setUsuarios(prev => prev.filter(u => u.id !== userId))
       setConfirmandoId(null)
       if (panelActivo?.id === userId) setPanelActivo(null)
