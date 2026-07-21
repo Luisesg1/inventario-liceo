@@ -121,6 +121,16 @@ function formatFecha(fecha) {
   if (!fecha) return '—'
   return new Date(fecha + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
 }
+function calcDias(a) {
+  if (!a.fecha_inicio || !a.fecha_fin) return '—'
+  if (a.jornada === 'medio_dia') return '½ día'
+  const s = new Date(a.fecha_inicio + 'T12:00:00')
+  const e = new Date(a.fecha_fin + 'T12:00:00')
+  if (isNaN(s) || isNaN(e) || e < s) return '—'
+  const d = Math.round((e - s) / 86400000) + 1
+  const usaCal = a.tipo === 'licencia_medica' || a.tipo === 'cometido'
+  return d === 1 ? '1 día' : `${d} días${usaCal ? '' : ' háb.'}`
+}
 function calcularEdad(fechaNac) {
   if (!fechaNac) return null
   const hoy = new Date(), nac = new Date(fechaNac + 'T12:00:00')
@@ -1065,8 +1075,8 @@ export default function HojaVida({ usuario, permisos }) {
                                             <td><span style={{ fontWeight: 500 }}>{TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo ?? '—'}</span></td>
                                             <td>{formatFecha(a.fecha_inicio)}</td>
                                             <td>{formatFecha(a.fecha_fin)}</td>
-                                            <td>{a.dias ?? '—'}</td>
-                                            <td style={{ fontSize: 12 }}>{a.jornada === 'completa' ? 'Completa' : a.jornada === 'media' ? 'Media' : a.periodo ? a.periodo : '—'}</td>
+                                            <td>{calcDias(a)}</td>
+                                            <td style={{ fontSize: 12 }}>{a.jornada === 'dia_completo' || a.jornada === 'completa' ? 'Día completo' : a.jornada === 'medio_dia' || a.jornada === 'media' ? `Medio día${a.periodo ? ` (${a.periodo.toUpperCase()})` : ''}` : a.jornada === 'personalizado' ? `${a.hora_inicio ?? ''}–${a.hora_fin ?? ''}` : a.jornada === 'reposo' ? 'Reposo' : a.jornada ?? '—'}</td>
                                             <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notas ?? '—'}</td>
                                           </tr>
                                         ))}
