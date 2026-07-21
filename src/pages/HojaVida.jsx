@@ -93,9 +93,11 @@ const ESTADO_ANOT_MAP = {
 }
 
 const TIPO_AUSENCIA_MAP = {
-  licencia_medica: 'Licencia médica', permiso_administrativo: 'Permiso administrativo',
-  vacaciones: 'Vacaciones', cometido: 'Cometido funcionario', justificativo: 'Justificativo',
-  feriado_legal: 'Feriado legal', otro: 'Otro',
+  licencia_medica:        'Licencia médica',
+  permiso_administrativo: 'Permiso administrativo',
+  justificativo:          'Ausencia sin justificar',
+  dias_compensatorios:    'Días compensatorios',
+  cometido:               'Cometido',
 }
 
 const ESTADO_AUSENCIA_MAP = {
