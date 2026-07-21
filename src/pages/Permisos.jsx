@@ -2321,6 +2321,7 @@ export default function Permisos({ usuario, permisos: permisosAcceso = {}, modoM
       tipo:           datos.tipoPermiso,
       notas:          datos.notas || null,
       recordatorio:   datos.recordatorio,
+      estado:         'aprobada',
     }
 
     let error
