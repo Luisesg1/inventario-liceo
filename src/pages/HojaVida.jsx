@@ -402,6 +402,10 @@ export default function HojaVida({ usuario, permisos }) {
   const [anotFiltroTipo, setAnotFiltroTipo] = useState('')
   const [anotFiltroEstado, setAnotFiltroEstado] = useState('')
 
+  // Ausencias filtros
+  const [ausFiltroTipo, setAusFiltroTipo] = useState('')
+  const [ausFiltroEstado, setAusFiltroEstado] = useState('')
+
   // Modal
   const [modal, setModal] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -679,6 +683,14 @@ export default function HojaVida({ usuario, permisos }) {
       return true
     })
   }, [anotaciones, anotFiltroTipo, anotFiltroEstado])
+
+  const ausenciasFiltradas = useMemo(() => {
+    return ausencias.filter(a => {
+      if (ausFiltroTipo && a.tipo !== ausFiltroTipo) return false
+      if (ausFiltroEstado && a.estado !== ausFiltroEstado) return false
+      return true
+    })
+  }, [ausencias, ausFiltroTipo, ausFiltroEstado])
 
   // ══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -1020,28 +1032,60 @@ export default function HojaVida({ usuario, permisos }) {
                   {/* Permisos y Licencias (desde ausencias + compensatorios) */}
                   {tabActiva === 'ausencias' && (
                     <div className="hv-card">
-                      <div className="hv-card-header"><h3>Permisos, Licencias y Ausencias</h3><p className="hv-card-sub">Sincronizado automáticamente desde Gestión de Ausencias y Compensatorios</p></div>
+                      <div className="hv-card-header">
+                        <div>
+                          <h3>Permisos, Licencias y Ausencias</h3>
+                          <p className="hv-card-sub">Sincronizado desde Gestión de Ausencias y Compensatorios</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {Object.entries(TIPO_AUSENCIA_MAP).map(([k, v]) => {
+                            const cnt = ausencias.filter(a => a.tipo === k).length
+                            if (!cnt) return null
+                            return <span key={k} className="hv-badge" style={{ cursor: 'pointer', background: ausFiltroTipo === k ? '#1a237e' : '#f1f5f9', color: ausFiltroTipo === k ? '#fff' : '#334155' }} onClick={() => setAusFiltroTipo(p => p === k ? '' : k)}>{v} ({cnt})</span>
+                          })}
+                          {compensatorios.length > 0 && <span className="hv-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>Compensatorios ({compensatorios.length})</span>}
+                        </div>
+                      </div>
+
                       {ausencias.length === 0 && compensatorios.length === 0 ? <EmptyState msg="Sin permisos, licencias ni ausencias registradas" /> : (
                         <>
                           {ausencias.length > 0 && (
-                            <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
-                              <table className="hv-table">
-                                <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Jornada</th><th>Estado</th><th>Observaciones</th></tr></thead>
-                                <tbody>
-                                  {ausencias.map(a => (
-                                    <tr key={a.id}>
-                                      <td>{TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo ?? '—'}</td>
-                                      <td>{formatFecha(a.fecha_inicio)}</td>
-                                      <td>{formatFecha(a.fecha_fin)}</td>
-                                      <td>{a.dias ?? '—'}</td>
-                                      <td style={{ fontSize: 12 }}>{a.jornada === 'completa' ? 'Completa' : a.jornada === 'media' ? 'Media' : a.periodo ? a.periodo : '—'}</td>
-                                      <td><EstadoBadge estado={a.estado ?? 'pendiente'} mapa={ESTADO_AUSENCIA_MAP} /></td>
-                                      <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notas ?? '—'}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
+                            <>
+                              <div className="hv-anot-filters" style={{ marginBottom: 8 }}>
+                                <select className="hv-filter-select" value={ausFiltroTipo} onChange={e => setAusFiltroTipo(e.target.value)}>
+                                  <option value="">Todos los tipos</option>
+                                  {Object.entries(TIPO_AUSENCIA_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                                </select>
+                                <select className="hv-filter-select" value={ausFiltroEstado} onChange={e => setAusFiltroEstado(e.target.value)}>
+                                  <option value="">Todos los estados</option>
+                                  {Object.keys(ESTADO_AUSENCIA_MAP).map(k => <option key={k} value={k}>{ESTADO_AUSENCIA_MAP[k]?.label ?? k}</option>)}
+                                </select>
+                                {(ausFiltroTipo || ausFiltroEstado) && <button className="hv-btn hv-btn--ghost hv-btn--sm" onClick={() => { setAusFiltroTipo(''); setAusFiltroEstado('') }}><X size={13} /> Limpiar</button>}
+                              </div>
+                              {ausenciasFiltradas.length === 0
+                                ? <EmptyState msg="Sin resultados para los filtros aplicados" />
+                                : (
+                                  <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
+                                    <table className="hv-table">
+                                      <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Jornada</th><th>Estado</th><th>Observaciones</th></tr></thead>
+                                      <tbody>
+                                        {ausenciasFiltradas.map(a => (
+                                          <tr key={a.id}>
+                                            <td><span style={{ fontWeight: 500 }}>{TIPO_AUSENCIA_MAP[a.tipo] ?? a.tipo ?? '—'}</span></td>
+                                            <td>{formatFecha(a.fecha_inicio)}</td>
+                                            <td>{formatFecha(a.fecha_fin)}</td>
+                                            <td>{a.dias ?? '—'}</td>
+                                            <td style={{ fontSize: 12 }}>{a.jornada === 'completa' ? 'Completa' : a.jornada === 'media' ? 'Media' : a.periodo ? a.periodo : '—'}</td>
+                                            <td><EstadoBadge estado={a.estado ?? 'pendiente'} mapa={ESTADO_AUSENCIA_MAP} /></td>
+                                            <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notas ?? '—'}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )
+                              }
+                            </>
                           )}
                           {compensatorios.length > 0 && (
                             <div style={{ marginTop: 16 }}>
