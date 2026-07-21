@@ -1057,11 +1057,7 @@ export default function HojaVida({ usuario, permisos }) {
                                   <option value="">Todos los tipos</option>
                                   {Object.entries(TIPO_AUSENCIA_MAP).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                                 </select>
-                                <select className="hv-filter-select" value={ausFiltroEstado} onChange={e => setAusFiltroEstado(e.target.value)}>
-                                  <option value="">Todos los estados</option>
-                                  {Object.keys(ESTADO_AUSENCIA_MAP).map(k => <option key={k} value={k}>{ESTADO_AUSENCIA_MAP[k]?.label ?? k}</option>)}
-                                </select>
-                                {(ausFiltroTipo || ausFiltroEstado) && <button className="hv-btn hv-btn--ghost hv-btn--sm" onClick={() => { setAusFiltroTipo(''); setAusFiltroEstado('') }}><X size={13} /> Limpiar</button>}
+                                {ausFiltroTipo && <button className="hv-btn hv-btn--ghost hv-btn--sm" onClick={() => setAusFiltroTipo('')}><X size={13} /> Limpiar</button>}
                               </div>
                               {ausenciasFiltradas.length === 0
                                 ? <EmptyState msg="Sin resultados para los filtros aplicados" />
