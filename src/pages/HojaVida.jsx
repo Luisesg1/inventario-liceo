@@ -1058,7 +1058,7 @@ export default function HojaVida({ usuario, permisos }) {
                                 : (
                                   <div className="hv-table-wrap" style={{ border: 'none', boxShadow: 'none' }}>
                                     <table className="hv-table">
-                                      <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Jornada</th><th>Estado</th><th>Observaciones</th></tr></thead>
+                                      <thead><tr><th>Tipo</th><th>Inicio</th><th>Fin</th><th>Días</th><th>Jornada</th><th>Observaciones</th></tr></thead>
                                       <tbody>
                                         {ausenciasFiltradas.map(a => (
                                           <tr key={a.id}>
@@ -1067,7 +1067,6 @@ export default function HojaVida({ usuario, permisos }) {
                                             <td>{formatFecha(a.fecha_fin)}</td>
                                             <td>{a.dias ?? '—'}</td>
                                             <td style={{ fontSize: 12 }}>{a.jornada === 'completa' ? 'Completa' : a.jornada === 'media' ? 'Media' : a.periodo ? a.periodo : '—'}</td>
-                                            <td><EstadoBadge estado={a.estado ?? 'pendiente'} mapa={ESTADO_AUSENCIA_MAP} /></td>
                                             <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.notas ?? '—'}</td>
                                           </tr>
                                         ))}
