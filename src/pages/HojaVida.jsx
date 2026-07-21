@@ -540,21 +540,12 @@ export default function HojaVida({ usuario, permisos }) {
       supabase.from('hv_anotaciones').select('*').eq('rut', rn).order('fecha', { ascending: false }),
     ]
 
-    // Ausencias: consultar por usuario_id, externo_rut y snapshot_rut
-    // Se usa .eq() con RUT normalizado (sin puntos/guiones) porque .in() con
-    // valores que contienen esos caracteres falla en PostgREST (error 400).
-    const selAus = 'id, tipo, fecha_inicio, fecha_fin, dias, estado, notas, jornada, periodo, hora_inicio, hora_fin, is_deleted, creado_en, usuario:usuario_id(id, nombre)'
-    const ausQ = []
-    if (userIds.length) {
-      ausQ.push(supabase.from('ausencias').select(selAus)
-        .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(100))
-    }
-    if (rn) {
-      ausQ.push(supabase.from('ausencias').select(selAus)
-        .eq('is_deleted', false).eq('externo_rut', rn).order('fecha_inicio', { ascending: false }).limit(100))
-      ausQ.push(supabase.from('ausencias').select(selAus)
-        .eq('is_deleted', false).eq('snapshot_rut', rn).order('fecha_inicio', { ascending: false }).limit(100))
-    }
+    // Ausencias: consultar por usuario_id (columnas externo_rut/snapshot_rut no existen en tabla)
+    const selAus = '*, usuario:usuario_id(id, nombre, email, rol, rut)'
+    const ausQ = userIds.length
+      ? [supabase.from('ausencias').select(selAus)
+          .eq('is_deleted', false).in('usuario_id', userIds).order('fecha_inicio', { ascending: false }).limit(200)]
+      : []
 
     // Compensatorios por usuario_id
     const compQ = userIds.length
