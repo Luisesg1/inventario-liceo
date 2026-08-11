@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
 const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
+const SENDER_EMAIL  = Deno.env.get('SENDER_EMAIL') ?? ADMIN_EMAIL
+const REPLY_TO      = Deno.env.get('REPLY_TO_EMAIL') ?? ADMIN_EMAIL
 const SUPABASE_URL  = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -101,7 +103,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: SENDER_EMAIL },
+        replyTo:     { name: 'Sistema de Gestión Liceo JHJ', email: REPLY_TO },
         to,
         subject:     `🎫 Nuevo ticket: ${titulo}`,
         htmlContent,

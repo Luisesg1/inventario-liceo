@@ -1,7 +1,9 @@
 // supabase/functions/crear-usuario/index.ts
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ADMIN_EMAIL = Deno.env.get("ADMIN_EMAIL") ?? "contacto.liceobjhj@gmail.com";
+const ADMIN_EMAIL  = Deno.env.get("ADMIN_EMAIL") ?? "contacto.liceobhjh@gmail.com";
+const SENDER_EMAIL = Deno.env.get("SENDER_EMAIL") ?? ADMIN_EMAIL;
+const REPLY_TO     = Deno.env.get("REPLY_TO_EMAIL") ?? ADMIN_EMAIL;
 
 const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? 'https://sistema.liceojhj.cl,https://liceojhj.cl,https://inventario-liceo.vercel.app')
   .split(',').map((s: string) => s.trim()).filter(Boolean)
@@ -196,7 +198,8 @@ async function enviarEmailBrevo({
         "Accept": "application/json",
       },
       body: JSON.stringify({
-        sender: { name: "Sistema de Gestión Liceo JHJ", email: ADMIN_EMAIL },
+        sender: { name: "Sistema de Gestión Liceo JHJ", email: SENDER_EMAIL },
+        replyTo: { name: "Sistema de Gestión Liceo JHJ", email: REPLY_TO },
         to: [{ email: para, name: nombreDestinatario }],
         subject: "Tu acceso al Sistema de Gestión Liceo JHJ",
         htmlContent: emailHtml({ nombreDestinatario, para, passwordTemporal, siteUrl }),

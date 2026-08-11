@@ -2,6 +2,8 @@
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
 const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
 const ADMIN_EMAIL_2 = Deno.env.get('ADMIN_EMAIL_2')
+const SENDER_EMAIL  = Deno.env.get('SENDER_EMAIL') ?? ADMIN_EMAIL
+const REPLY_TO      = Deno.env.get('REPLY_TO_EMAIL') ?? ADMIN_EMAIL
 
 Deno.serve(async (req) => {
   try {
@@ -62,7 +64,8 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
+        sender:      { name: 'Sistema de Gestión Liceo JHJ', email: SENDER_EMAIL },
+        replyTo:     { name: 'Sistema de Gestión Liceo JHJ', email: REPLY_TO },
         to:          destinatarios,
         subject:     `🎫 Nuevo ticket: ${area}`,
         htmlContent: html,

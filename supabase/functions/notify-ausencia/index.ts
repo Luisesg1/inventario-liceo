@@ -1,6 +1,10 @@
 
 const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY')!
 const ADMIN_EMAIL   = Deno.env.get('ADMIN_EMAIL')!
+// Remitente en dominio autenticado (contacto@liceojhj.cl). Reply-To al Gmail
+// para que las respuestas lleguen al buzón de siempre.
+const SENDER_EMAIL  = Deno.env.get('SENDER_EMAIL') ?? ADMIN_EMAIL
+const REPLY_TO      = Deno.env.get('REPLY_TO_EMAIL') ?? ADMIN_EMAIL
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -151,7 +155,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { 'api-key': BREVO_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sender:  { name: 'Sistema de Gestión Liceo JHJ', email: ADMIN_EMAIL },
+        sender:  { name: 'Sistema de Gestión Liceo JHJ', email: SENDER_EMAIL },
+        replyTo: { name: 'Sistema de Gestión Liceo JHJ', email: REPLY_TO },
         to:      [{ email: correo, name: destinatario }],
         subject,
         htmlContent,
